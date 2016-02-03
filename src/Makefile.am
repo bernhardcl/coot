@@ -234,8 +234,9 @@ coot_bin_SOURCES = \
 	c-interface-build-gui.cc \
 	c-interface-database.hh  \
 	c-interface-database.cc  \
-	c-interface-gui.cc	 \
-	c-interface-gtk2.cc	 \
+        c-interface-ensemble.cc	 \
+        c-interface-gui.cc	 \
+        c-interface-gtk2.cc	 \
 	c-interface-gtk-widgets.h \
 	c-interface-info.cc	 \
 	c-interface-kk.cc	 \
@@ -387,8 +388,9 @@ coot_bin_SOURCES = \
 	molecule-class-info-refine.cc   \
         molecule-class-info-kk.cc       \
 	molecule-class-info-surface.cc 	\
-	molecule-class-info-ncs.cc 	\
-	molecule-class-info-widget-work.cc \
+        molecule-class-info-ncs.cc 	\
+        molecule-class-info-ensemble.cc \
+        molecule-class-info-widget-work.cc \
 	mtz-column-auto-read.hh  \
 	named-rotamer-score.hh   \
 	nsv.cc nsv.hh    	 \

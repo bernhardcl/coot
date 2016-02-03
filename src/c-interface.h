@@ -6607,7 +6607,26 @@ return 0 on non-multimodel-molecule. */
 int single_model_view_prev_model_number(int imol);
 /* \} */
 
+/*  ----------------------------------------------------------------------- */
+/*                  ensemble view                                                     */
+/*  ----------------------------------------------------------------------- */
+/*! \name ensemble view */
 
+// BL says:: temporary name ensemble ghosts FIXME maybe
+
+/* \{ */
+/*! \brief set drawing state of ensemble ghosts for molecule number imol   */
+void set_draw_ensemble_ghosts(int imol, int istate);
+/*! \brief return the drawing state of enzemble ghosts for molecule number
+  imol.  Return -1 on imol is a bad molecule or no ghosts.  */
+int draw_ensemble_ghosts_state(int imol);
+
+/*! \brief set bond thickness of ensemble ghosts for molecule number imol   */
+void set_ensemble_ghost_bond_thickness(int imol, float f);
+/*! \brief update ensemble ghosts for molecule number imol */
+void ensemble_update_ghosts(int imol); /* update ghosts */
+void make_ensemble_ghosts_maybe(int imol);
+/* \} */
 
 /*  ----------------------------------------------------------------------- */
 /*                  update self                                             */

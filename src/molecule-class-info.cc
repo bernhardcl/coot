@@ -148,6 +148,8 @@ molecule_class_info_t::handle_read_draw_molecule(int imol_no_in,
       // LINK info:
       int n_models = atom_sel.mol->GetNumberOfModels();
       std::cout << "INFO:: Found " << n_models << " models\n";
+      // FIXME NOW add ensemble info here
+      fill_ensemble_info(); // returns nghosts
       for (int imod=1; imod<=n_models; imod++) {
 	 mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
 	 if (model_p) { 
@@ -1755,22 +1757,29 @@ void
 molecule_class_info_t::draw_molecule(short int do_zero_occ_spots,
 				     bool against_a_dark_background) {
 
-   if (has_model()) { 
+   if (has_model()) {
       if (draw_it == 1) {
-	 if (!cootsurface) { 
-	    deuterium_spots();
- 	    if (do_zero_occ_spots)
- 	       zero_occupancy_spots();
-	    display_bonds(against_a_dark_background);
-	    draw_fixed_atom_positions();
-	    if (show_ghosts_flag) {
-	       if (ncs_ghosts.size() > 0) {
-		  for (unsigned int ighost=0; ighost<ncs_ghosts.size(); ighost++) {
-		     display_ghost_bonds(ighost);
-		  }
-	       }
-	    }
-	 }
+         if (!cootsurface) {
+            deuterium_spots();
+            if (do_zero_occ_spots)
+               zero_occupancy_spots();
+            display_bonds(against_a_dark_background);
+            draw_fixed_atom_positions();
+            if (show_ghosts_flag) {
+               if (ncs_ghosts.size() > 0) {
+                  for (unsigned int ighost=0; ighost<ncs_ghosts.size(); ighost++) {
+                     display_ghost_bonds(ighost);
+                  }
+               }
+            }
+            if (show_ensemble_ghosts_flag) {
+               if (ensemble_ghosts.size() > 0) {
+                  for (unsigned int ighost=0; ighost<ensemble_ghosts.size(); ighost++) {
+                     display_ensemble_ghost_bonds(ighost);
+                  }
+               }
+            }
+         }
       }
    }
 }
@@ -1858,6 +1867,36 @@ molecule_class_info_t::display_ghost_bonds(int ighost) {
 	    }
 	    glEnd();
 	 }
+      }
+   }
+}
+
+void
+molecule_class_info_t::display_ensemble_ghost_bonds(int ighost) {
+
+
+   // hack in a value
+   bool against_a_dark_background = true;
+
+   if (ighost<int(ensemble_ghosts.size())) {
+      if (ensemble_ghosts[ighost].display_it_flag) {
+    glLineWidth(ensemble_ghost_bond_width);
+    int c;
+    for (int i=0; i<ensemble_ghosts[ighost].bonds_box.num_colours; i++) {
+       c = atom_colour(atom_sel.atom_selection[i]->element);
+       if (ensemble_ghosts[ighost].bonds_box.bonds_[i].num_lines > 0)
+          set_bond_colour_by_mol_no(ighost, against_a_dark_background);
+       glBegin(GL_LINES);
+       for (int j=0; j< ensemble_ghosts[ighost].bonds_box.bonds_[i].num_lines; j++) {
+          glVertex3f(ensemble_ghosts[ighost].bonds_box.bonds_[i].pair_list[j].positions.getStart().get_x(),
+           ensemble_ghosts[ighost].bonds_box.bonds_[i].pair_list[j].positions.getStart().get_y(),
+           ensemble_ghosts[ighost].bonds_box.bonds_[i].pair_list[j].positions.getStart().get_z());
+          glVertex3f(ensemble_ghosts[ighost].bonds_box.bonds_[i].pair_list[j].positions.getFinish().get_x(),
+           ensemble_ghosts[ighost].bonds_box.bonds_[i].pair_list[j].positions.getFinish().get_y(),
+           ensemble_ghosts[ighost].bonds_box.bonds_[i].pair_list[j].positions.getFinish().get_z());
+       }
+       glEnd();
+    }
       }
    }
 }
@@ -3023,6 +3062,7 @@ molecule_class_info_t::make_bonds_type_checked() {
    update_additional_representations(glci, g.Geom_p());
    update_fixed_atom_positions();
    update_ghosts();
+   update_ensemble_ghosts();
    update_extra_restraints_representation();
 
    if (debug)

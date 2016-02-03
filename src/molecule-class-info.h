@@ -168,6 +168,7 @@ namespace coot {
 	 display_it_flag = 1;
       }
       void update_bonds(mmdb::Manager *mol); // the parent's mol
+      void update_ensemble_bonds(mmdb::Manager *mol, int imod); // the parent's mol
       bool is_empty() { return (SelectionHandle == -1); }
       ncs_residue_info_t get_differences(mmdb::Residue *this_residue_p, 
 					 mmdb::Residue *master_residue_p, 
@@ -450,6 +451,13 @@ class molecule_class_info_t {
    std::vector<coot::ghost_molecule_display_t> strict_ncs_info;
    std::vector<coot::coot_mat44> strict_ncs_matrices;
 
+   // Ensemble ghost molecules:
+   //
+   std::vector<coot::ghost_molecule_display_t> ensemble_ghosts;
+   void update_ensemble_ghosts();
+   short int show_ensemble_ghosts_flag;
+   float ensemble_ghost_bond_width;
+
    std::vector <coot::atom_spec_t>
    find_water_baddies_AND(float b_factor_lim, const clipper::Xmap<float> &xmap_in,
 			  float map_sigma,
@@ -667,6 +675,7 @@ public:        //                      public
       draw_hydrogens_flag = 1;
       bond_width = 3.0; 
       ghost_bond_width = 2.0;
+      ensemble_ghost_bond_width = 1.0;
 
       // initial bonds type (checked and reset in handle_read_draw_molecule)
       bonds_box_type = coot::UNSET_TYPE;
@@ -747,6 +756,9 @@ public:        //                      public
       show_ghosts_flag = 0;
       is_dynamically_transformed_map_flag = 0;
       ncs_ghosts_have_rtops_flag = 0;
+
+      // Draw ensemble ghosts?
+      show_ensemble_ghosts_flag = 0;
 
       // contour by sigma
       contour_by_sigma_flag = 1;
@@ -1144,6 +1156,7 @@ public:        //                      public
 				       bool against_a_dark_background);
 
    void display_ghost_bonds(int ighost);
+   void display_ensemble_ghost_bonds(int ighost);
    void set_display_stick_mode_atoms(bool f) {
       display_stick_mode_atoms_flag = f;
    } 
@@ -1253,7 +1266,7 @@ public:        //                      public
    int draw_display_list_objects(int GL_context); // return number of display list objects drawn
    // return the display list object index
    int make_ball_and_stick(const std::string &atom_selection_str,
- 			   float bond_thickness, float sphere_size,
+            float bond_thickness, float sphere_size,
  			   bool do_spheres_flag, gl_context_info_t gl_info,
 			   const coot::protein_geometry *geom);
    // return the display list object info
@@ -2368,7 +2381,25 @@ public:        //                      public
    // do we need to encompass all atoms of that chain?
    std::pair<clipper::Coord_orth, double> chain_centre_and_radius(const std::string &chain_id) const;
 
-   
+   // ===================== Ensemble ghosts ===============================
+
+   void set_show_ensemble_ghosts(short int istate);
+   void set_ensemble_ghost_bond_thickness(float f);
+   int update_ensemble_ghosts_size();
+   short int has_models_p() { return (ensemble_ghosts.size() > 0) ? 1 : 0; }
+   float ensemble_ghost_bond_thickness() const {return int(ghost_bond_width);}
+   int draw_ensemble_ghosts_p() const { // needed for setting the Bond Parameters checkbutton
+      return show_ensemble_ghosts_flag;
+   }
+   int fill_ensemble_info();
+
+
+   std::vector<coot::ghost_molecule_display_t> get_ensemble_ghosts() const;
+
+   // FIXME:: not needed?!
+   std::vector<std::vector<std::string> > ensemble_ghost_chains() const;
+
+
 
 
    // ====================== SHELX stuff ======================================

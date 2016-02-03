@@ -415,6 +415,12 @@ low importance
 
 **** Python ****
 
+   o coot_toolbar_buttons: keep track rather than derive (or both as controL)
+     and together store handler_ids to be able to keep buttons but 
+     change functions
+
+   o coot_toolbar_combobox: add a label?
+
    o make coot_gui into a method?! Maybe resolves some issue, e.g. loosing entry
 
    o (toggle)toolbuttons for secondary structure restraints
