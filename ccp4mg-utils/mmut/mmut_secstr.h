@@ -1,6 +1,6 @@
 /*
      mmut/mmut_secstr.h: CCP4MG Molecular Graphics Program
-     Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2001-2005 University of York, CCLRC
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -21,9 +21,9 @@
 #ifndef __MMUT_SecStr__
 #define __MMUT_SecStr__
 
-#include <mmdb_manager.h>
-#include <mmut_manager.h>
-#include <mman_base.h>
+#include "mmdb2/mmdb_manager.h"
+#include "mmut_manager.h"
+#include "mman_base.h"
 #include <string>
 
 // The recognised secondary structure types
@@ -46,14 +46,14 @@ public :
  ~CSecStructure();
  
   int GetSecondaryStructure ( int &nres, mmdb::ivector &secstrout,
-            imatrix &hbondsout, int imodel=0 );
+            mmdb::imatrix &hbondsout, int imodel=0 );
   void SetParams (int nv,double *value, int niv, int *ivalue);
   int **GetHBonds (int imodel = 0);
   int *GetSecStr (int imodel = 0); 
   int SetFlagBulge ( int flag );
   std::string Print(int imodel = 0);
   void ClearMemory();
-  mmdb::PPAtom* GetHBondAtoms(int imodel=0);
+  mmdb::Atom*** GetHBondAtoms(int imodel=0);
 
  private:
 
@@ -63,14 +63,14 @@ public :
   int flagBulge;
 
   int nRes;
-  imatrix hbonds;
+  mmdb::imatrix hbonds;
   mmdb::ivector secstr;
-  mmdb::PPAtom *hbond_atoms;
+  mmdb::Atom** *hbond_atoms;
      
   int hbondsN;  //The first element dimension of hbonds - required for freeing memory
   void InitParams();
   int CalculateSecondaryStructure(int imodel = 0);
   int InitMemory( int nRes );
-  bool IsHBond ( mmdb::PResidue PCRes1, mmdb::PResidue PCRes );
+  bool IsHBond ( mmdb::Residue* PCRes1, mmdb::Residue* PCRes );
 };
 #endif

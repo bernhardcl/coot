@@ -24,9 +24,9 @@
 
 #include <utility>
 #include <string>
-#include <mmut_manager.h>
-#include <mman_base.h>
-#include <mmut_connectivity.h>
+#include "mmut_manager.h"
+#include "mman_base.h"
+#include "mmut_connectivity.h"
 
 
 DefineClass(CContact);
@@ -56,6 +56,7 @@ private:
   int test_VDW_radius;
   int label_VDW_radius;
   int exclude_hbondable;
+  int test_metal_coord_distance;
   mmdb::realtype simple_max_cutoff;
   mmdb::realtype simple_min_cutoff;
   mmdb::realtype VDW_fraction_min;

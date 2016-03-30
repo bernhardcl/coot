@@ -18,25 +18,30 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-lib_LTLIBRARIES=libccp4mg-utils.la
+SUBDIRS = util mmut pygl mgapp
 
+# lib_LTLIBRARIES=libccp4mg-utils.la
+
+# BL FIXME matrix.h (in fact all headers still needed?)
 pkginclude_HEADERS = geomutil.h mgtree.h cartesian.h matrix.h quat.h ppmutil.h
 pkgincludedir = $(includedir)/coot/ccp4mg-utils
 
-EXTRA_DIST = convert.sh get-new-utils.sh
+EXTRA_DIST = convert.sh get-new-utils.sh get-all-new-utils.sh
 
 AM_CPPFLAGS =  \
 	$(MMDB_CXXFLAGS) \
-	$(LIBPNG_CFLAGS)
+	-I$(top_srcdir)/ccp4mg-utils/util 
+# BL FIXME maybe not needed any more
+#	$(LIBPNG_CFLAGS)
 
-libccp4mg_utils_la_SOURCES = geomutil.cc mgtree.cc cartesian.cc \
-	matrix.cc quat.cc ppmutil.cc
+#libccp4mg_utils_la_SOURCES = geomutil.cc mgtree.cc cartesian.cc \
+#	matrix.cc quat.cc ppmutil.cc
 
 
-libccp4mg_utils_la_LIBADD = \
-   $(LIBPNG_LIBS)
+#libccp4mg_utils_la_LIBADD = \
+#   $(LIBPNG_LIBS)
 
-libccp4mg_utils_la_LDFLAGS = $(SHARED_LDFLAGS)
+#libccp4mg_utils_la_LDFLAGS = $(SHARED_LDFLAGS)
 
 # -lgomp
 

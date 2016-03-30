@@ -1,6 +1,8 @@
 /*
      mmut/mmut_sbase.cc: CCP4MG Molecular Graphics Program
      Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2009-2010 University of York
+     Copyright (C) 2012 STFC
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -26,17 +28,17 @@
 #include <stdlib.h>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <algorithm>
-#include <sstream>
-#include <mmdb_manager.h>
-#include <mmut_manager.h>
-#include <mmut_sbase.h>
-#include <mmdb_sbase.h>
-#include <mmdb_graph.h>
-#include <mmdb_tables.h>
-#include <mgtree.h>
-#include <mgutil.h>
+#include "mmdb2/mmdb_manager.h"
+#include "mmut_manager.h"
+#include "mmut_sbase.h"
+//#include "mmdb2/mmdb_sbase.h"
+//#include "mmdb2/mmdb_graph.h"
+#include "mmdb2/mmdb_tables.h"
+#include "mgtree.h"
+#include "mgutil.h"
 
 using namespace std;
 
@@ -51,19 +53,18 @@ bool CCompoundGroup::groupMatch[13][13] = {
  {false,false,false,false,true ,false,false,false,false,false,false,false,true}, 
  {false,false,false,false,false,true ,false,false,false,false,false,false,true}, 
  {false,false,false,false,false,false,true ,true ,true ,false,false,false,true}, 
- {false,false,false,false,false,false,false,true ,false,false,false,false,true}, 
- {false,false,false,false,false,false,false,false,true ,false,false,false,true}, 
- {false,false,false,false,false,false,false,false,false,true ,false,false,true}, 
- {false,false,false,false,false,false,false,false,false,false,true ,false,true}, 
+ {false,false,false,false,false,false,false,true ,true ,true ,true ,false,true}, 
+ {false,false,false,false,false,false,false,true ,true ,true ,true ,false,true}, 
+ {false,false,false,false,false,false,false,true ,true ,true ,true ,false,true}, 
+ {false,false,false,false,false,false,false,true ,true ,true ,true ,false,true}, 
  {false,false,false,false,false,false,false,false,false,false,false,true ,true}, 
  {true ,true ,true ,true ,true ,true ,true ,true ,true ,true ,true ,true ,true} };
 
 
 const char *CCompoundGroup::cifGroupNames[12] = { "peptide", "D-peptide", "L-peptide", 
-						  "DNA/RNA", "DNA", "RNA", 
-						  "saccharide", "pyranose",
-						  "D-saccharid","L-saccharid", 
-						  "solvent","non-polymer" };
+			     "DNA/RNA", "DNA", "RNA", 
+		 "saccharide", "pyranose", "D-saccharid","L-saccharid", 
+			     "solvent","non-polymer" };
 int CCompoundGroup::groupCode[12] = { RESTYPE_PEPTIDE, RESTYPE_DPEPTIDE,  RESTYPE_LPEPTIDE, 
 		      RESTYPE_NUCL,RESTYPE_DNA, RESTYPE_RNA, 
 	     RESTYPE_SACH, RESTYPE_SACH, RESTYPE_DSACH, RESTYPE_LSACH, 
@@ -79,7 +80,7 @@ int CLibAtom::hbCode[6] = { HBTYPE_UNKNOWN,HBTYPE_NEITHER, HBTYPE_HYDROGEN,
  
 int CLibBond::nBondCodes = 6;
 const char *CLibBond::bondCharCode[6] = { "single" , "double", "triple", 
-					  "aromatic", "deloc", "metal" };
+				    "aromatic", "deloc", "metal" };
 int CLibBond::bondCode[6] = {  BONDTYPE_SINGLE, BONDTYPE_DOUBLE, 
 			       BONDTYPE_TRIPLE, BONDTYPE_AROMATIC, 
                                BONDTYPE_DELOC, BONDTYPE_METAL};
@@ -139,8 +140,8 @@ Tree CMGSBase::GetMonomerLibraryTree(const char *monomer_name){
   return tree;
 }
 
-mmdb::PPAtom CMGSBase::GetMonomerLibraryStructure(const char *monomer_name){
-  mmdb::PPAtom mon_atoms=0;
+PPCAtom CMGSBase::GetMonomerLibraryStructure(const char *monomer_name){
+  PPCAtom mon_atoms=0;
   if(SBase) return 0;
   LoadedPCSBStructure monlib;
   CSBStructure *pStruct = GetStructure(monomer_name,monlib);
@@ -149,12 +150,12 @@ mmdb::PPAtom CMGSBase::GetMonomerLibraryStructure(const char *monomer_name){
   if(pStruct){
     Tree tree = GetMonomerLibraryTree(monomer_name);
     // Then make some atoms, populate mon_atoms, etc. After lunch.
-    mon_atoms = new mmdb::PAtom[tree.GetNumberOfVertices()];
+    mon_atoms = new PCAtom[tree.GetNumberOfVertices()];
     std::vector<Cartesian> carts = tree.GetAllCartesians();
     //std::cout << carts.size() << " " << tree.GetNumberOfVertices() <<  " " << pStruct->nAtoms << "\n";
     for(unsigned i=0;i<carts.size();i++){
       //std::cout << carts[i] << ", "<< pStruct->Atom[i]->pdb_name << " " << pStruct->Atom[i]->element << " " << pStruct->Atom[i]->energyType << "\n";
-      mon_atoms[i] = new mmdb::Atom();
+      mon_atoms[i] = new CAtom();
       //mon_atoms[i]->x = carts[i].get_x();
       //mon_atoms[i]->y = carts[i].get_y();
       //mon_atoms[i]->z = carts[i].get_z();
@@ -203,8 +204,8 @@ int CMGSBase::InitSBase(char *sb) {
   int nload = 21;
   LoadedPCSBStructure dummy;
   const char *load[] = { "ALA","GLY","SER","THR","ASP","GLU","ASN","GLN",
-			 "LEU","ILE","PHE","TYR","HIS","CYS","MET","TRP",
-			 "ARG","LYS","PRO","VAL","HOH" };
+                   "LEU","ILE","PHE","TYR","HIS","CYS","MET","TRP",
+		   "ARG","LYS","PRO","VAL","HOH" };
   if (strlen(sb)>0) {
     SBase  = new CSBase ();
     RC = SBase->LoadIndex1("CCP4_SBASE");
@@ -264,7 +265,7 @@ PCSBStructure CMGSBase::GetStructure( const ResName resNam ,
   LoadedPCSBStructure_iter p = loadedPStruct.find(resn);
   if (p!=loadedPStruct.end()) return p->second;
 
-  Pmmdb::mmcif::File file = new mmdb::mmcif::File;
+  PCMMCIFFile file = new CMMCIFFile;
 
   // Look in users monomer library first
   if ( strlen(user_monomers_dir)>1 ) {
@@ -337,7 +338,10 @@ CMGSBase::~CMGSBase() {
 //-----------------------------------------------------------------------
   int i;
   LoadedPCSBStructure_iter p = loadedPStruct.begin();
-  while (p != loadedPStruct.end()) delete p->second;
+  while (p != loadedPStruct.end()){
+    delete p->second;
+    p++;
+  }
   if (SBase) delete SBase;
   for ( i = 0; i < nLinks; i++ ){
     if(link[i])
@@ -347,14 +351,14 @@ CMGSBase::~CMGSBase() {
 
 
 //-----------------------------------------------------------------------------
-PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::File file ,
+PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const PCMMCIFFile file ,
                         const bool unscramble ) {
 //-----------------------------------------------------------------------------
   // Load the monomer info from CIF file
   //std::cout << "CMGSBase::LoadCifMonomer " << mon << "\n"; std::cout.flush();
   int RC,N;
-  mmdb::mmcif::PLoop Loop;
-  mmdb::mmcif::PData dataBlock;
+  PCMMCIFLoop Loop;
+  PCMMCIFData dataBlock;
   char dataName[200];
   char id[100];
   char comp_group[100];
@@ -416,6 +420,7 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
     RC = CIFGetString ( new_atom->pdb_name, Loop,CIFTAG_COMP_ATOM_ID,N,sizeof(new_atom->pdb_name),"");
     if ( RC || (!new_atom->pdb_name) ) {
       delete structure;
+      delete new_atom;
       return NULL;
     }
     RC = CIFGetString ( new_atom->sca_name, Loop,CIFTAG_COMP_ALT_ATOM_ID,N,sizeof(new_atom->sca_name),"");
@@ -443,7 +448,6 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
     int nBonds =  Loop->GetLoopLength();
     AtomName atom1,atom2;
     for (int N=0;N<nBonds;N++) {
-      CSBBond *new_bond =  new CSBBond();
       RC = CIFGetString(atom1,Loop,CIFTAG_COMP_BOND_ATOM_1,N,sizeof(atom1),"");
       if ( RC || (!atom1) ) {
         delete structure;
@@ -451,6 +455,7 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
       }
       RC = CIFGetString(atom2,Loop,CIFTAG_COMP_BOND_ATOM_2,N,sizeof(atom2),"");
 
+      CSBBond *new_bond =  new CSBBond();
       for ( int j = 0; j < structure->nAtoms; j++ ) {
         if ( strcmp (atom1, structure->Atom[j]->pdb_name) == 0 ) new_bond->atom1 = j+1;
         if ( strcmp (atom2, structure->Atom[j]->pdb_name) == 0 ) new_bond->atom2 = j+1;
@@ -458,7 +463,7 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
       //cout << "bond " << structure->Atom[new_bond->atom1-1]->pdb_name << " " << structure->Atom[new_bond->atom2-1]->pdb_name<< endl;
      //RC = CIFGetString(bt,Loop,CIFTAG_COMP_BOND_TYPE,N,10,"");
      //bondType=encodeBondType(bt);
-     mmdb::realtype length;
+     realtype length;
      RC = CIFGetReal1( length,Loop, "value_dist", N );
       if (new_bond->atom1>0 && new_bond->atom2>0) {
         new_bond->length = length;
@@ -493,19 +498,19 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
     int nAngles =  Loop->GetLoopLength();
     AtomName atom1,atom2,atom3;
     for (int N=0;N<nAngles;N++) {
-      CSBAngle *new_angle =  new CSBAngle();
       RC = CIFGetString(atom1,Loop,CIFTAG_COMP_BOND_ATOM_1,N,sizeof(atom1),"");
       if ( RC || (!atom1) ) {
         return structure;
       }
       RC = CIFGetString(atom2,Loop,CIFTAG_COMP_BOND_ATOM_2,N,sizeof(atom2),"");
       RC = CIFGetString(atom3,Loop,"atom_id_3",N,sizeof(atom3),"");
+      CSBAngle *new_angle =  new CSBAngle();
       for ( int j = 0; j < structure->nAtoms; j++ ) {
         if ( strcmp (atom1, structure->Atom[j]->pdb_name) == 0 ) new_angle->atom1 = j+1;
         if ( strcmp (atom2, structure->Atom[j]->pdb_name) == 0 ) new_angle->atom2 = j+1;
         if ( strcmp (atom3, structure->Atom[j]->pdb_name) == 0 ) new_angle->atom3 = j+1;
       }
-      mmdb::realtype angle;
+      realtype angle;
       RC = CIFGetReal1( angle,Loop, "value_angle", N );
       if (new_angle->atom1>0 && new_angle->atom2>0 && new_angle->atom3>0) {
         //std::cout << "Adding angle " << atom1 << " " << atom2 << " " << atom3 << "\n";
@@ -556,7 +561,6 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
     int nTorsions =  Loop->GetLoopLength();
     AtomName atom1,atom2,atom3,atom4;
     for (int N=0;N<nTorsions;N++) {
-      CSBTorsion *new_torsion =  new CSBTorsion();
       RC = CIFGetString(atom1,Loop,CIFTAG_COMP_BOND_ATOM_1,N,sizeof(atom1),"");
       if ( RC || (!atom1) ) {
         return structure;
@@ -564,13 +568,14 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
       RC = CIFGetString(atom2,Loop,CIFTAG_COMP_BOND_ATOM_2,N,sizeof(atom2),"");
       RC = CIFGetString(atom3,Loop,"atom_id_3",N,sizeof(atom3),"");
       RC = CIFGetString(atom4,Loop,"atom_id_4",N,sizeof(atom4),"");
+      CSBTorsion *new_torsion =  new CSBTorsion();
       for ( int j = 0; j < structure->nAtoms; j++ ) {
         if ( strcmp (atom1, structure->Atom[j]->pdb_name) == 0 ) new_torsion->atom1 = j+1;
         if ( strcmp (atom2, structure->Atom[j]->pdb_name) == 0 ) new_torsion->atom2 = j+1;
         if ( strcmp (atom3, structure->Atom[j]->pdb_name) == 0 ) new_torsion->atom3 = j+1;
         if ( strcmp (atom4, structure->Atom[j]->pdb_name) == 0 ) new_torsion->atom4 = j+1;
       }
-      mmdb::realtype torsion;
+      realtype torsion;
       RC = CIFGetReal1( torsion,Loop, "value_angle", N );
       if (new_torsion->atom1>0 && new_torsion->atom2>0 && new_torsion->atom3>0 && new_torsion->atom4>0) {
         //std::cout << "Adding torsion " << atom1 << " " << atom2 << " " << atom3 << " " << atom4 << "\n";
@@ -612,11 +617,11 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
     int nChirals =  Loop->GetLoopLength();
     AtomName atom1,atom2,atom3,atom4;
     for (int N=0;N<nChirals;N++) {
-      CSBTorsion *new_torsion =  new CSBTorsion();
       RC = CIFGetString(atom1,Loop,"atom_id_centre",N,sizeof(atom1),"");
       if ( RC || (!atom1) ) {
         return structure;
       }
+      CSBTorsion *new_torsion =  new CSBTorsion();
       RC = CIFGetString(atom2,Loop,"atom_id_1",N,sizeof(atom2),"");
       RC = CIFGetString(atom3,Loop,"atom_id_2",N,sizeof(atom3),"");
       RC = CIFGetString(atom4,Loop,"atom_id_3",N,sizeof(atom4),"");
@@ -712,16 +717,16 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
             LoadedPCSBStructure &monlist ) {
 //------------------------------------------------------------------
   PCSBStructure pStruct;
-  Pmmdb::mmcif::File file;
-  mmdb::mmcif::PLoop Loop;
-  mmdb::mmcif::PData dataBlock;
+  PCMMCIFFile file;
+  PCMMCIFLoop Loop;
+  PCMMCIFData dataBlock;
   int RC,N;
   char id[500];
   char code[500];
   std::map<std::string,std::string> codes;
   int nmon = 0;
 
-  file = new mmdb::mmcif::File;
+  file = new CMMCIFFile;
   
   RC = file->ReadMMCIFFile ( filename );
   if (RC!=0) return nmon; 
@@ -744,7 +749,7 @@ PCSBStructure CMGSBase::LoadCifMonomer (const ResName mon, const Pmmdb::mmcif::F
   }
 
   delete file;
-  file = new mmdb::mmcif::File;  
+  file = new CMMCIFFile;  
   RC = file->ReadMMCIFFile ( filename );
 
   for ( std::map<std::string,std::string>::iterator p = codes.begin(); 
@@ -887,7 +892,7 @@ std::string  CMGSBase::ListMonomer(char *mon, bool unremediated) {
 
 
 //------------------------------------------------------------------------
-std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
+std::string CMGSBase::AssignAtomType ( PCResidue pRes,
        LoadedPCSBStructure monlib,
        std::map<std::string,std::string> &customResSynonym,
        int udd_sbaseCompoundID,int udd_sbaseAtomOrdinal,
@@ -895,7 +900,7 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
 //------------------------------------------------------------------------
 
   int RC;
-  mmdb::PPAtom pAtom;
+  PPCAtom pAtom;
   int ia, j, k, nAtominRes,nmatch,alt_nmatch;
   bool got_alt_names,try_atom_match,use_alt_names = false;          
   PCSBStructure pSbaseRes = NULL;
@@ -904,7 +909,7 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
   const char *nucl_flags[] = { "+","r","d" }; 
   int n_nucleic_acid = 5;
 
-  mmdb::ivector imatch;
+  ivector imatch;
 
   int tolMatch;
   int Hflag;
@@ -914,7 +919,7 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
   AtomName name1,name2,name3;
   std::ostringstream output;
 
-  //mmdb::PPAtom atomTable;
+  //PPCAtom atomTable;
   //int nAtomTable;
 
   pRes->GetResidueID ( AtomID );
@@ -1067,6 +1072,7 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
    // Try again ignoring spaces in names
     try_atom_match = true;
     got_alt_names = true;
+    bool iflip = false;
     if (!strncmp(pSbaseRes->Atom[0]->sca_name,"   ",3))got_alt_names=false;
     while (try_atom_match) {
       nmatch = 0;
@@ -1084,6 +1090,12 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
           }
           if ( strcmp (name1,name2) == 0 ) {
             pAtom[ia]->PutUDData(udd_sbaseAtomOrdinal,j);
+	    if(strcmp(pAtom[ia]->element,"  ")==0){
+               strcpy(pAtom[ia]->element,pSbaseRes->Atom[j]->element);
+            } else if(strncmp(pAtom[ia]->element,pSbaseRes->Atom[j]->element,2)!=0){
+               output << "Warning, element name " << pAtom[ia]->element << " does not match dictionary name " << pSbaseRes->Atom[j]->element << " for " << AtomID <<  "\n";
+               strcpy(pAtom[ia]->element,pSbaseRes->Atom[j]->element);
+            }
             pAtom[ia]->PutUDData(udd_atomEnergyType, 
   	       LibAtom(pSbaseRes->Atom[j]->energyType,pAtom[ia]->element));
             nmatch++;
@@ -1096,10 +1108,11 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
         }
       }
       //cout <<  pRes->name << " " << use_alt_names << " " << got_alt_names<< " " << nAtominRes << " " << nmatch << " " << alt_nmatch << endl;
-      if (alt_nmatch<=nmatch) {
+      if (alt_nmatch<=nmatch||iflip) {
         try_atom_match = false;
       } else {
         use_alt_names = !use_alt_names;
+        iflip = true;
       }
     }
 
@@ -1108,6 +1121,7 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
     // Can stop now if all matched
     if ( nmatch == nAtominRes ) {
       delete [] pAtom; 
+      HandleTerminii(pRes,udd_atomEnergyType);
       return output.str();
     }
 
@@ -1140,7 +1154,7 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
     // name monomer in the library
     // But only do this for limited number of atoms
 
-    if ( nAtominRes> 1 && nAtominRes < 30 ) {
+    if ( nAtominRes> 1 && nAtominRes < 10 ) {
       
       GetVectorMemory ( imatch,2000 , 0);
       for ( j = 0; j < 2000 ; j++ ) imatch[j] = -1;
@@ -1169,13 +1183,12 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
           }
         }
       } else {
-	 char *altloc = (char *) "";
-	 RC = MatchGraphs( pRes, Hflag, false, altloc, pSbaseRes, nmatch,imatch,tolMatch );
-      }
+        RC = MatchGraphs( pRes, Hflag, false, "", pSbaseRes, nmatch,imatch,tolMatch );
 
 
         //printf("%s MatchGraphs Nmatch %i nAtominRes %i\n",AtomID,nmatch,nAtominRes);
-      delete aL;
+      }
+      delete [] aL;
       FreeVectorMemory (occupancy,0 );
 
       // The graphs match - so is good match for monomer but has
@@ -1193,11 +1206,12 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
           } 
           else {
             // This atom is not part of the graph matching fragment
-	     pAtom[ia]->PutUDData(udd_atomEnergyType,LibAtom((char *) "",pAtom[ia]->element));
+            pAtom[ia]->PutUDData(udd_atomEnergyType,LibAtom("",pAtom[ia]->element));
           }  //pAtom[ia]->GetUDData(udd_atomEnergyType,itype);
         }
         FreeVectorMemory(imatch,0);
 	delete [] pAtom; 
+        HandleTerminii(pRes,udd_atomEnergyType);
 	return output.str();
       } 
       else {
@@ -1217,28 +1231,60 @@ std::string CMGSBase::AssignAtomType ( mmdb::PResidue pRes,
     for (j=0;j < nAtominRes;j++) {
       pAtom[j]->GetUDData(udd_atomEnergyType,itype);
       if (itype <= 0)
-	 pAtom[j]->PutUDData(udd_atomEnergyType,LibAtom((char *) "",pAtom[j]->element));
+        pAtom[j]->PutUDData(udd_atomEnergyType,LibAtom("",pAtom[j]->element));
       //cout << "Assigned atom type " << LibAtom("",pAtom[j]->element) << endl;
     }
     //return 1;
-  } 
+  }
+
+
   //else {
     //RC = GraphSearch ( pRes, pSbaseRes, nAtominRes, nMatchAtom, matchAtom);
   //}
+
+  HandleTerminii(pRes,udd_atomEnergyType);
   delete [] pAtom;
   return output.str();
 }
 
 
-int CMGSBase::MatchGraphs(mmdb::PResidue pRes,int Hflag, bool Cflag, 
-                          const pstr altLoc, 
+int CMGSBase::HandleTerminii(PCResidue pRes, int udd_atomEnergyType ) {
+  // Check for peptide chain terminii to fix the typing of N and O
+  PCAtom pAtom;
+  const char *Nnames[] = { "N", "NT" };
+  const char *Onames[] = { "O", "OXT" , "OE" };
+  if ( isAminoacid(pRes->name) ) {
+    //cout << "isAminoacid " << pRes->name << pRes->seqNum << endl;
+    if ( pRes->index == 0 ) {
+      for (int ia=0; ia<2; ia++ ) {
+        pAtom = pRes->GetAtom(Nnames[ia],"*","*");
+        //cout << "first " << pRes->name << pRes->seqNum << pAtom << " " << LibAtom("NC2","N") <<endl;
+        if (pAtom) pAtom->PutUDData(udd_atomEnergyType,LibAtom("NC2","N"));
+      }
+    }
+    // Test if last in chain or the next residue is not amino acid
+    else if ( (pRes->index == pRes->chain->GetNumberOfResidues()-1) ||
+	      !( isAminoacid(pRes->chain->GetResidue(pRes->index+1)->name) ) ) {
+      for (int ia=0; ia<3; ia++ ) {
+        pAtom = pRes->GetAtom(Onames[ia],"*","*");
+        //cout << "last " << pRes->name << pRes->seqNum << pAtom << " " << LibAtom("OC","O") << endl;
+        if (pAtom) pAtom->PutUDData(udd_atomEnergyType,LibAtom("OC","O"));
+      }
+    }
+  }
+  return 0;
+}
+
+
+int CMGSBase::MatchGraphs(PCResidue pRes,int Hflag, Boolean Cflag, 
+                          cpstr altLoc, 
                           PCSBStructure pSbaseRes, int &nMatched,
-			  mmdb::ivector match, int tolMatch ) {
+			  ivector match, int tolMatch ) {
   
-  Pmmdb::math::Graph G,G1;
-  Pmmdb::math::GraphMatch U;
-  mmdb::ivector      F1,F2;
-  mmdb::realtype     p1,p2;
+  PCGraph G,G1;
+  PCGraphMatch U;
+  ivector      F1,F2;
+  realtype     p1,p2;
   int     rc,htype;
   int nInResidue,minMatch,natMatch;
 
@@ -1254,7 +1300,7 @@ int CMGSBase::MatchGraphs(mmdb::PResidue pRes,int Hflag, bool Cflag,
   // Using LibCheck/Refmac libraries - need to do it manually
   // Create a graph of the model residue             
   //cout << " MatchGraphs " <<   pRes->name << " " << pRes->GetNumberOfAtoms() << " atoms in dbase frag " << pSbaseRes->nAtoms << endl;                                                               
-  G = new mmdb::math::Graph ( pRes,altLoc );
+  G = new CGraph ( pRes,altLoc );
   if (Hflag>=1) {
     htype = getElementNo(pstr("H"));
     if (Hflag==2)  G->HideType    ( htype );
@@ -1271,13 +1317,13 @@ int CMGSBase::MatchGraphs(mmdb::PResidue pRes,int Hflag, bool Cflag,
   }
 
   // Create a graph of the SBase monomer
-  G1 = new mmdb::math::Graph();
+  G1 = new CGraph();
   std::vector<int> ia_index;
   int nn = 0;
   std::vector<int> ia_revert;
   for (int ia=0;ia<pSbaseRes->nAtoms;ia++) {
     if (Hflag<=0 || strcmp(pSbaseRes->Atom[ia]->element," H") != 0 ) {
-      G1->AddVertex ( new mmdb::math::Vertex(
+      G1->AddVertex ( new CVertex(
                  getElementNo(pSbaseRes->Atom[ia]->element),
                  pSbaseRes->Atom[ia]->pdb_name) );
       ia_index.push_back(++nn);
@@ -1292,7 +1338,7 @@ int CMGSBase::MatchGraphs(mmdb::PResidue pRes,int Hflag, bool Cflag,
     ia1 = pSbaseRes->Bond[ib]->atom1 - 1;
     ia2 = pSbaseRes->Bond[ib]->atom2 - 1;
     if ( ia_index[ia1] >= 0 && ia_index[ia2] >= 0 ) {
-      G1->AddEdge ( new mmdb::math::Edge(ia_index[ia1],ia_index[ia2], BOND_SINGLE) );
+      G1->AddEdge ( new CEdge(ia_index[ia1],ia_index[ia2], BOND_SINGLE) );
       //cout << "Edge " << ia_index[ia1] << " " << ia_index[ia2] << endl;
     }
   }
@@ -1308,7 +1354,7 @@ int CMGSBase::MatchGraphs(mmdb::PResidue pRes,int Hflag, bool Cflag,
     minMatch = nInResidue;
 
   // Try matching the two graphs
-  U = new mmdb::math::GraphMatch();
+  U = new CGraphMatch();
   U->MatchGraphs ( G,G1,minMatch );
 
   
@@ -1342,12 +1388,12 @@ int CMGSBase::MatchGraphs(mmdb::PResidue pRes,int Hflag, bool Cflag,
 }
 
 //------------------------------------------------------------------------
-std::string CMGSBase::ListAtomType ( PCMMUTManager molHnd, mmdb::PResidue pRes,
+std::string CMGSBase::ListAtomType ( PCMMUTManager molHnd, PCResidue pRes,
         int udd_sbaseCompoundID,
         int udd_sbaseAtomOrdinal, int udd_atomEnergyType ) {
 //------------------------------------------------------------------------
  
-  mmdb::PPAtom pAtom;
+  PPCAtom pAtom;
   int nAtominRes,ia, j;
   pstr compoundID = NULL;
   int atomType;
@@ -1380,13 +1426,13 @@ int CMGSBase::LoadSynonyms( pstr filename ) {
 //-------------------------------------------------------------------
   int RC;
   CFile f;
-  mmdb::mmcif::PLoop Loop=NULL;
-  Pmmdb::mmcif::File file;
-  mmdb::mmcif::PData dataBlock;
+  PCMMCIFLoop Loop=NULL;
+  PCMMCIFFile file;
+  PCMMCIFData dataBlock;
   ResName id,alt_id;
   std::string str_id, str_alt_id;
 
-  file = new mmdb::mmcif::File;
+  file = new CMMCIFFile;
   RC = file->ReadMMCIFFile ( filename );
   //printf("file %s %i RC %i\n",filename,file,RC);
   dataBlock = file->GetCIFData ( "comp_synonym_list" );
@@ -1417,13 +1463,13 @@ int CMGSBase::LoadMonLib (pstr filename ) {
   // Load the monomer link info from CIF file
   int RC,n;
   CFile f;
-  mmdb::mmcif::PLoop Loop1=NULL;
-  Pmmdb::mmcif::File file;
-  mmdb::mmcif::PData dataBlock;
+  PCMMCIFLoop Loop1=NULL;
+  PCMMCIFFile file;
+  PCMMCIFData dataBlock;
   char dataName[200];
 
  
-  file = new mmdb::mmcif::File;
+  file = new CMMCIFFile;
   RC = file->ReadMMCIFFile ( filename );
   //printf("file %i RC %i\n",file,RC);
   dataBlock = file->GetCIFData ( "link_list" );
@@ -1455,12 +1501,23 @@ int CMGSBase::LoadMonLib (pstr filename ) {
     }
   }
 
-  //for ( n = 0; n < nLinks; n++ ) link[n]->Print();
- 
+  //if (nLinks>=0) for ( n = 0; n <= nLinks; n++ ) link[n]->Print();
+
   if (file) delete file;
    
 
   return 0;
+}
+
+//------------------------------------------------------------------
+int CMGSBase::AddLink ( pstr resName1 , pstr atmName1, pstr resName2 , pstr atmName2  ) {
+//------------------------------------------------------------------
+  nLinks++;
+  //cout << "CMGSBase::AddLink " << nLinks << " " << resName1 << " " << atmName1 << " " <<  resName2 << " " << atmName2 << endl;
+  link[nLinks] = new MGCLink();
+  link[nLinks]->lg2.Set( resName1,"","*", atmName1);
+  link[nLinks]->lg1.Set( resName2,"", "*", atmName2);
+  return nLinks;
 }
 
 //-----------------------------------------------------------------
@@ -1478,7 +1535,7 @@ MGCLink::~MGCLink() {
 }
 
 //----------------------------------------------------------------
-int  MGCLink::GetCif(  mmdb::mmcif::PLoop Loop1, int N ) {
+int  MGCLink::GetCif(  PCMMCIFLoop Loop1, int N ) {
 //----------------------------------------------------------------
   int RC;
   pstr cmp,modif,grp;
@@ -1504,10 +1561,10 @@ int  MGCLink::GetCif(  mmdb::mmcif::PLoop Loop1, int N ) {
 }
 
 //---------------------------------------------------------------
-int MGCLink::GetCifBond (mmdb::mmcif::PData dataBlock ){
+int MGCLink::GetCifBond (PCMMCIFData dataBlock ){
 //---------------------------------------------------------------
   int RC;
-  mmdb::mmcif::PLoop Loop;
+  PCMMCIFLoop Loop;
   pstr at;
 
   Loop = dataBlock->GetLoop ( CIFCAT_LINK_BOND );
@@ -1539,7 +1596,7 @@ MGCLinkGroup::MGCLinkGroup ( ): group() {
 }
 
 //------------------------------------------------------------------------
-void MGCLinkGroup::Set ( char *comp, char *modif, char *grp, const char *atm ) {
+void MGCLinkGroup::Set ( const char *comp, const char *modif, const char *grp, const char *atm ) {
 //------------------------------------------------------------------------
   if ( comp) strcpy(compId,comp);
   if ( modif) strcpy(modId,modif);
@@ -1561,8 +1618,10 @@ void MGCLinkGroup::Print() {
 //------------------------------------------------------------------------
 bool MGCLinkGroup::Match ( int grp, pstr comp, pstr atm ) {
 //------------------------------------------------------------------------
-  
-  //printf ( "match group %i %i comp *%s* *%s* atom *%s* *%s* \n", group.code,grp,comp,compId,atom,atm);
+  //if (group.code < 0 || group.Match(grp)) {
+  // printf ( "match group %i %i comp *%s* *%s* atom *%s* *%s* \n", group.code,grp,comp,compId,atom,atm);
+  //  cout << group.Match(grp) << " " << strcmp(comp,compId) << " " << strcmp(atom,atm) << endl;
+    //}
   if ( (group.code < 0 || group.Match(grp)) &&
        ((strlen(compId)<1 ) || (strcmp(comp,compId)==0) ) 
        && ((strlen(atom)<1) || (strcmp(atom,atm)==0) ) ) {
@@ -1584,19 +1643,19 @@ void CCompoundGroup::Set ( int cd ) {
   code = cd;
 }
 //------------------------------------------------------------------------
-void CCompoundGroup::Set ( pstr name ) {
+void CCompoundGroup::Set ( cpstr name ) {
 //------------------------------------------------------------------------
   code = GetCifGroupCode ( name );
   //printf("Compound %s %i\n",name,code);
 }
 
 //------------------------------------------------------------------------
-int CCompoundGroup::GetCifGroupCode ( pstr name ) {
+int CCompoundGroup::GetCifGroupCode ( cpstr name ) {
 //------------------------------------------------------------------------
   int i;
   int retCode = RESTYPE_UNKNOWN;
 
-  if ( !name) return -1;
+  if ( !name || strcmp(name,"*")==0) return -1;
 
   for ( i = 0; i < 11; i++ ) {
     if ( strcmp ( name , cifGroupNames[i]) == 0 ) {
@@ -1620,7 +1679,7 @@ int CMGSBase::LoadEnerLib (pstr filename ) {
 //------------------------------------------------------------------
   // Load the monomer link info from CIF file
   int RC;
-  mmdb::mmcif::PLoop Loop1;
+  PCMMCIFLoop Loop1;
   CIF =  new CMMCIFData();
   RC = CIF->ReadMMCIFData ( filename );
   if ( RC ) {
@@ -1690,7 +1749,7 @@ int CMGSBase::LoadEleLib (pstr filename ) {
 //------------------------------------------------------------------
   // Load the monomer link info from CIF file
   int RC;
-  mmdb::mmcif::PLoop Loop2;
+  PCMMCIFLoop Loop2;
   CIF =  new CMMCIFData();
   RC = CIF->ReadMMCIFData ( filename );
   if ( RC ) {
@@ -1773,13 +1832,13 @@ int  CMGSBase::GetNofLibAtoms() {
 
 
 //--------------------------------------------------------------
-int CMGSBase::LibAtom ( pstr atomType ) {
+int CMGSBase::LibAtom ( cpstr atomType ) {
 //--------------------------------------------------------------
-   return LibAtom(atomType,(char *) "");
+  return LibAtom(atomType,"");
 }
 
 //--------------------------------------------------------------
-int CMGSBase::LibAtom ( pstr atomType, pstr element ) {
+int CMGSBase::LibAtom ( cpstr atomType, cpstr element ) {
 //--------------------------------------------------------------
   int i;
   //cout << "element" << element << "*" << endl;
@@ -1805,9 +1864,8 @@ int CMGSBase::LibAtom ( pstr atomType, pstr element ) {
   }
   
   //cout << "defaulting to C" << endl;
-  const char *local_element = " C";
   for (i = 0; i < nLibElements; i++ ) {
-    if ( strcmp(libElement[i]->name,local_element)==0 ) 
+    if ( strcmp(libElement[i]->name," C")==0 ) 
         return libElement[i]->defaultAtomIndex;
   }
   return -1; 
@@ -1816,7 +1874,7 @@ int CMGSBase::LibAtom ( pstr atomType, pstr element ) {
 
 
 //--------------------------------------------------------------
-int CMGSBase::LibAtom ( pstr resType, int atomIndex ) {
+int CMGSBase::LibAtom ( cpstr resType, int atomIndex ) {
 //--------------------------------------------------------------
   int i;
   PCSBStructure p_sbase_struct;
@@ -1904,7 +1962,7 @@ CLibAtom::~CLibAtom() {
 }
 
 //---------------------------------------------------------------
-int CLibAtom::GetCif( mmdb::mmcif::PLoop Loop, int N ) {
+int CLibAtom::GetCif( PCMMCIFLoop Loop, int N ) {
 //----------------------------------------------------------------
   int RC;
   char hbtype[10];
@@ -1955,7 +2013,7 @@ CLibBond::~CLibBond() {
 }
 
 //---------------------------------------------------------------
-int CLibBond::GetCif( mmdb::mmcif::PLoop Loop, int N ) {
+int CLibBond::GetCif( PCMMCIFLoop Loop, int N ) {
 //----------------------------------------------------------------
   int RC;
   char bt[10];
@@ -2018,7 +2076,7 @@ void CLibElement::Justify( pstr el, pstr elo ) {
   
 }
 //---------------------------------------------------------------
-int CLibElement::GetCif( mmdb::mmcif::PLoop Loop, int N,  CMGSBase *p_sbase ) {
+int CLibElement::GetCif( PCMMCIFLoop Loop, int N,  CMGSBase *p_sbase ) {
 //----------------------------------------------------------------
   int RC;
   char type [energy_type_len+1];

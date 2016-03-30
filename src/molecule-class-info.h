@@ -66,6 +66,10 @@ enum {CONTOUR_UP, CONTOUR_DOWN};
 #include "coot-utils/coot-shelx.hh"
 #include "utils/coot-utils.hh"
 
+// for ribbons
+#include "ccp4mg-utils/pygl/cdisplayobject.h"
+#include "ccp4mg-utils/util/CParamsManager.h"
+
 #include "protein_db/protein_db_utils.h"
 
 #include "select-atom-info.hh"
@@ -114,6 +118,7 @@ namespace molecule_map_type {
 #include "atom-attribute.hh"
 #include "extra-restraints-representation.hh"
 #include "additional-representation.hh"
+#include "ribbon-settings.hh"
 #include "fragment-info.hh"
 #include "atom-name-bits.hh"
 #include "rama-rota-score.hh"
@@ -362,6 +367,16 @@ class molecule_class_info_t {
    // default.
    void draw_transparent_molecular_surface(); // the function to draw surface transparently
    
+   // CCP4MG ribbons
+   Displayobject Ribbons;
+   CParamsManager ribbon_params;
+   CParamsManager ccp4mg_global_params;
+
+   // CCP4MG spheroids
+   Displayobject AnisoSpheroids;
+
+   // to get colours for elements
+   std::vector<float> get_atom_colour_from_element(const char *element);
    // difference map negative level colour relative to positive level:
    float rotate_colour_map_for_difference_map; // 240.0 default colour_map_rotation
 
@@ -756,6 +771,57 @@ public:        //                      public
       cootsurface = NULL; // no surface initial, updated by make_surface()
       theSurface = 0;
       transparent_molecular_surface_flag = 0;
+
+      // CCP4MG stuff
+      // ribbons
+      cootribbons = 0;
+      ribbon_settings = new coot::ribbon_settings_t();
+      Ribbons = Displayobject();
+      // aniso atoms
+      cootanisospheroids = 0;
+      AnisoSpheroids = Displayobject();
+      // settings FIXME:: which ones are global and which local!?
+      // do we need a by model distinction!?
+      // anisou_style needs a setting (maybe), all glyco not there yet
+     ccp4mg_global_params.SetInt("solid_quality", 1);
+     ccp4mg_global_params.SetInt("smoot_line", 1);
+     ccp4mg_global_params.SetInt("use_vbo", 1);
+     ccp4mg_global_params.SetInt("force_use_va", 0);
+      ribbon_params.SetFloat("cylinder_width", 0.2);
+      ribbon_params.SetFloat("nucleic_stick_width", 0.2);
+      ribbon_params.SetFloat("ballstick_stick", 0.1);
+      ribbon_params.SetFloat("ribbon_width", 2.5);
+      ribbon_params.SetFloat("alpha_helix_width", 1.5);
+      ribbon_params.SetFloat("helix_tube_diameter", 1.5);
+      ribbon_params.SetFloat("arrow_width", 2.2);
+      ribbon_params.SetFloat("arrow_length", 2.2);
+      ribbon_params.SetFloat("worm_width", 0.2);
+      ribbon_params.SetFloat("loop_frac", 1.0);
+      ribbon_params.SetFloat("sphere_radii_scale", 0.8);
+      ribbon_params.SetFloat("ball_radii_scale", 0.2);
+      ribbon_params.SetFloat("dashed_bond_length", 0.3);
+      ribbon_params.SetFloat("pyramid_size", 0.1);
+      ribbon_params.SetFloat("anisou_scale", 1.0);
+      ribbon_params.SetFloat("trace_cutoff", 4.8);
+      ribbon_params.SetFloat("base_block_thickness", 0.2);
+      ribbon_params.SetFloat("opacity", 0.5);
+      ribbon_params.SetInt("bond_width", 2);
+      ribbon_params.SetInt("fat_bond_width", 4);
+      ribbon_params.SetInt("thin_bond_width", 4);
+      ribbon_params.SetInt("ribbon_style", 0);
+      ribbon_params.SetInt("two_colour_ribbon", 0);
+      ribbon_params.SetInt("grey_ribbon_edge", 0);
+      ribbon_params.SetInt("helix_style", 0);
+      ribbon_params.SetInt("flatten_loop", 0);
+      ribbon_params.SetInt("flatten_beta", 1);
+      ribbon_params.SetInt("deloc_ring", 0);
+      ribbon_params.SetInt("show_multiple_bonds", 0);
+      ribbon_params.SetInt("anisou_scale_byvdw", 0);
+      ribbon_params.SetInt("spline_beta_flat", 1);
+      ribbon_params.SetInt("smooth_helix", 0);
+      ribbon_params.SetInt("spline_beta_flat", 1);
+      ribbon_params.SetInt("dashed_bonds", 0);
+      ribbon_params.SetInt("transparent", 0);
 
       //
       theMapContours.first = 0;
@@ -1252,6 +1318,14 @@ public:        //                      public
    void draw_density_map(short int display_list_for_maps_flag,
 			 short int main_or_secondary);
    void draw_surface();
+   void draw_ribbons();
+   void make_ribbons();
+   void set_ribbon_param(const std::string &name, int value);
+   void set_ribbon_param(const std::string &name, float value);
+   void set_global_ccp4mg_param(const std::string &name, int value);
+   void set_global_ccp4mg_param(const std::string &name, float value);
+   void make_aniso_spheroids();
+   void draw_aniso_spheroids();
    void draw_dipoles() const;
    bool has_display_list_objects();
    int draw_display_list_objects(int GL_context); // return number of display list objects drawn
@@ -2198,6 +2272,11 @@ public:        //                      public
 
    // LMB surface
    coot::surface *cootsurface;
+
+   // ribbons
+   int cootribbons;
+   coot::ribbon_settings_t *ribbon_settings;
+   int cootanisospheroids;
 
    // for widget label:
    std::string cell_text_with_embeded_newline() const;

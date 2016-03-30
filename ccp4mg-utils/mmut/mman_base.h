@@ -1,6 +1,6 @@
 /*
      mmut/mman_base.h: CCP4MG Molecular Graphics Program
-     Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2001-2005 University of York, CCLRC
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -21,7 +21,7 @@
 #ifndef __MMAN_Base__
 #define __MMAN_Base__
 
-#include <mmut_manager.h>
+#include "mmut_manager.h"
 
 DefineClass(CMMANBase);
 DefineStreamFunctions(CMMANBase);
@@ -37,14 +37,14 @@ class CMMANBase {
 
   int SetSelHandle ( const int selHndin);
   int SetSelHandle ( const int iset, const int selHndin, const PCMMUTManager molHndin=NULL);
-  int GetSelection (mmdb::PPAtom &atomTable, int & nAtoms, const int model = 0 );
-  int GetSelection (const int iset, mmdb::PPAtom &atomTable, int & nAtoms ,const int model = 0);
-  int GetSelection (const int iset,mmdb::PPResidue &resTable, int & nRes, const int model = 0 );
-  int GetSelection ( mmdb::PPResidue &resTable, int & nRes, const int model = 0 );
+  int GetSelection (mmdb::Atom** &atomTable, int & nAtoms, const int model = 0 );
+  int GetSelection (const int iset, mmdb::Atom** &atomTable, int & nAtoms ,const int model = 0);
+  int GetSelection (const int iset,mmdb::Residue** &resTable, int & nRes, const int model = 0 );
+  int GetSelection ( mmdb::Residue** &resTable, int & nRes, const int model = 0 );
   void ClearSelection (const int iset=-1, const int clear_selHnd=1);
-  int  GetOneModel(const int iset,const int selH, mmdb::PPAtom &atomTable ,
+  int  GetOneModel(const int iset,const int selH, mmdb::Atom** &atomTable ,
                         int &nAtoms, const int model);
-  int  GetOneModel(const int iset,const int selH, mmdb::PPResidue &resTable ,
+  int  GetOneModel(const int iset,const int selH, mmdb::Residue** &resTable ,
                          int &nRes, const int model);
   void SetExclusions(const int ex_solvent, const int ex_hydrogen, const int ex_alternate, const char* use_al="");
 
@@ -58,7 +58,7 @@ class CMMANBase {
   int exclude_solvent;
   int exclude_hydrogen;
   int exclude_alternate;
-  char* use_altLoc;
+  const char* use_altLoc;
   bool own_selHnds;
   int selMode[MAXSETS];
   PCMMUTManager molHnds[MAXSETS];

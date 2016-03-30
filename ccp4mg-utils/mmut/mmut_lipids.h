@@ -21,7 +21,7 @@
 #define _CCP4_MMUT_LIPIDS_H_
 #include <vector>
 #include <utility>
-#include <mman_manager.h>
+#include "mmut_manager.h"
 #include "atom_util.h"
 #include <mgtree.h>
 
@@ -54,7 +54,7 @@ class MMUTLipid{
   void SetMainSelectionHandle(const int i) {main_selhnd=i;};
 };
 
-std::vector<MMUTLipid> MMUTLipidCalculate(CMMANManager *molHnd, int selHnd, int minimum_chain_length=8);
-int MMUTLipidAnalyse(CMMANManager *molHnd, int selHnd, int minimum_chain_length=8);
+std::vector<MMUTLipid> MMUTLipidCalculate(CMMUTManager *molHnd, int selHnd, int minimum_chain_length=8);
+int MMUTLipidAnalyse(CMMUTManager *molHnd, int selHnd, int minimum_chain_length=8);
 
 #endif //_CCP4_MMUT_LIPIDS_H_

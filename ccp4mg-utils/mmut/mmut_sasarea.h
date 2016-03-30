@@ -24,8 +24,8 @@
 
 #include <string>
 
-#include <mmut_manager.h>
-#include <mman_base.h>
+#include "mmut_manager.h"
+#include "mman_base.h"
 
 enum SASMethods { SURFACEPOINTS , WODAKJANIN , LEERICHARDS };
 
@@ -57,7 +57,7 @@ private:
   mmdb::realtype brick_margin;   
   mmdb::realtype point_density;
   int exclude_solvent;
-  AltLoc keep_altLoc;
+  mmdb::AltLoc keep_altLoc;
 
   // the derived data
   int atomUDDHnd;
@@ -68,7 +68,7 @@ private:
   int WodakAndJanin( mmdb::realtype *radwithhoh,int imodel);
   int SurfacePoints( mmdb::realtype *radwithhoh,int imodel);
   int ResSASArea (int imodel);
-  //int GetAtomTypes(int natoms, mmdb::PPAtom selected_atoms, 
+  //int GetAtomTypes(int natoms, PPCAtom selected_atoms, 
     //	int iatom_types[], int iatom_types_lookup[] );
   void  SortAB(mmdb::realtype *arci, mmdb::realtype *arcf, int &karc);
   void ArcLap(mmdb::realtype *arci, mmdb::realtype *arcf, int &karc);

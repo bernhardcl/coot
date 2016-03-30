@@ -2178,6 +2178,12 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
 	 // 
 	 graphics_info_t::molecules[ii].draw_surface();
 
+         // ribbons
+         graphics_info_t::molecules[ii].draw_ribbons();
+
+         // solid ccp4mg ellipsoids
+         graphics_info_t::molecules[ii].draw_aniso_spheroids();
+
 	 // extra restraints - thin blue lines or some such
 	 graphics_info_t::molecules[ii].draw_extra_restraints_representation();
 

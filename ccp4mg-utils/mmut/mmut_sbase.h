@@ -1,6 +1,8 @@
 /*
      mmut/mmut_sbase.h: CCP4MG Molecular Graphics Program
      Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2009-2011 University of York
+     Copyright (C) 2012 STFC
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -18,11 +20,11 @@
 */
 
 
+#define __CCP4Sbase__
 #ifndef __CCP4Sbase__ 
 #define __CCP4Sbase__
-#include <mmdb_manager.h>
-#include <mmut_manager.h>
-#include <mmdb_sbase.h>
+#include "mmdb2/mmdb_manager.h"
+#include "mmut_manager.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -108,6 +110,7 @@ enum { RESTYPE_PEPTIDE, RESTYPE_DPEPTIDE, RESTYPE_LPEPTIDE,
        RESTYPE_NUCL,RESTYPE_DNA, RESTYPE_RNA,
        RESTYPE_SACH, RESTYPE_DSACH, RESTYPE_LSACH,
        RESTYPE_SOLVENT, RESTYPE_SOLUTE,RESTYPE_NONPOLY, RESTYPE_PSEUDO,
+       RESTYPE_METAL,
        RESTYPE_UNKNOWN };
 
 // Atom hydrogen bonding type - following definitions in ener_lib.cif
@@ -118,8 +121,11 @@ enum { HBTYPE_UNKNOWN, HBTYPE_NEITHER, HBTYPE_HYDROGEN, HBTYPE_DONOR,
 enum { BONDTYPE_UNKNOWN, BONDTYPE_SINGLE, BONDTYPE_DOUBLE, BONDTYPE_TRIPLE,
        BONDTYPE_AROMATIC, BONDTYPE_METAL, BONDTYPE_DELOC };
 
-typedef std::map<std::string,PCSBStructure> LoadedPCSBStructure;
-typedef std::map<std::string,PCSBStructure>::iterator LoadedPCSBStructure_iter;
+class CSBStructure;
+class CompoundID;
+
+typedef std::map<std::string,CSBStructure*> LoadedPCSBStructure;
+typedef std::map<std::string,CSBStructure*>::iterator LoadedPCSBStructure_iter;
 
 DefineClass ( CCompundGroup);
 
@@ -129,8 +135,8 @@ class CCompoundGroup {
  public:
   CCompoundGroup();
   void Set ( int cd);
-  void Set ( pstr name );
-  static int GetCifGroupCode ( pstr name);
+  void Set ( mmdb::cpstr name );
+  static int GetCifGroupCode ( mmdb::cpstr name);
   bool Match ( int cd );
   static bool groupMatch[13][13];
   static const char *cifGroupNames[12];
@@ -149,17 +155,17 @@ friend class MGCLink;
 
  public:  
   MGCLinkGroup ();
-  void Set ( pstr comp, pstr modif, pstr grp, cpstr atm );
+  void Set ( mmdb::cpstr comp, mmdb::cpstr modif, mmdb::cpstr grp, mmdb::cpstr atm );
   ~MGCLinkGroup();
   void Print();
-  bool Match( int grp, pstr comp, pstr atm );
+  bool Match( int grp, mmdb::pstr comp, mmdb::pstr atm );
  
 
- protected:
+ private:
   CompoundID compId;
   CompoundID modId;
   CCompoundGroup group;
-  AtomName atom;
+  mmdb::AtomName atom;
   
 };
 
@@ -172,16 +178,16 @@ class MGCLink {
  public:
   MGCLink();
   ~MGCLink();
-  int GetCif(mmdb::mmcif::PLoop Loop, int N);
+  int GetCif(mmdb::mmcif::Loop *Loop, int N);
   void Print();
   
-  //protected:
-  CompoundID id;
   MGCLinkGroup lg1;
   MGCLinkGroup lg2;
-  int GetCifBond ( mmdb::mmcif::PData dataBlock );
+  int GetCifBond ( mmdb::mmcif::Data* dataBlock );
  
-  //int cifGroupCode( pstr cifGroup);
+  private:
+   CompoundID id;
+  //int cifGroupCode( mmdb::pstr cifGroup);
  
 };
 
@@ -191,12 +197,12 @@ class CLibElement {
   friend class CMGSBase;
  public:
   CLibElement();
-  CLibElement ( pstr el, int atomIndex );
-  static void Justify(pstr el, pstr elo);
-  int GetCif (mmdb::mmcif::PLoop Loop, int N, CMGSBase *p_sbase);
+  CLibElement ( mmdb::pstr el, int atomIndex );
+  static void Justify(mmdb::pstr el, mmdb::pstr elo);
+  int GetCif (mmdb::mmcif::Loop* Loop, int N, CMGSBase *p_sbase);
   void SetDefaultLibAtom( CMGSBase *p_sbase);
-  Element name;
-  Element bad_name;
+  mmdb::Element name;
+  mmdb::Element bad_name;
   int defaultAtomIndex;  //default LibAtom index
   mmdb::realtype maxBondRad;
 
@@ -209,20 +215,20 @@ class CLibAtom {
  public:
   CLibAtom();
   ~CLibAtom();
-  int GetCif(mmdb::mmcif::PLoop Loop, int N);
+  int GetCif(mmdb::mmcif::Loop* Loop, int N);
 
   char type [energy_type_len+1];
   int hbType;
   mmdb::realtype vdwRadius;
   mmdb::realtype vdwHRadius;
   mmdb::realtype ionRadius;
-  Element element;
+  mmdb::Element element;
   mmdb::realtype charge;
 
   static int nHbCodes;
   static const char *hbCharCode[6];
   static int hbCode[6];
-  int encodeHbType( pstr hb);
+  int encodeHbType( mmdb::pstr hb);
   const char* getHBType();
 
 };
@@ -235,7 +241,7 @@ class CLibBond {
  public:
   CLibBond();
   ~CLibBond();
-  int GetCif (mmdb::mmcif::PLoop Loop, int N);
+  int GetCif (mmdb::mmcif::Loop* Loop, int N);
   
   char atomType1[energy_type_len+1];
   char atomType2[energy_type_len+1];
@@ -247,7 +253,7 @@ class CLibBond {
   static int nBondCodes;
   static const char *bondCharCode[6];
   static int bondCode[6];
-  static int encodeBondType( pstr ty );
+  static int encodeBondType( mmdb::pstr ty );
 
 };
 
@@ -257,39 +263,41 @@ class CMGSBase {
 public:
   CMGSBase(char *mon_dir ,char *user_mon_dir,char *sb, char *ener_lib, char *mon_lib, char *ele_lib );
   ~CMGSBase();
-  int LoadMonLib ( pstr filename );
-  int LoadEnerLib ( pstr filename );
-  int LoadEleLib ( pstr filename );
-  int LoadSynonyms (pstr filename );
+  int LoadMonLib ( mmdb::pstr filename );
+  int LoadEnerLib ( mmdb::pstr filename );
+  int LoadEleLib ( mmdb::pstr filename );
+  int LoadSynonyms (mmdb::pstr filename );
   std::string  ListMonomer(char *mon, bool unremediated=false);
   void InitialiseErrorReporting () { reported_errors.clear(); }
-  std::string AssignAtomType ( mmdb::PResidue pRes,
+  std::string AssignAtomType ( mmdb::Residue* pRes,
       LoadedPCSBStructure monlib,
       std::map<std::string,std::string> &customResSynonym,
       int udd_sbaseCompoundID,int udd_sbaseAtomOrdinal, 
       int udd_atomEnergyType, const bool unremediated= false );
-  std::string ListAtomType ( PCMMUTManager molHnd, mmdb::PResidue pRes,
+  std::string ListAtomType ( PCMMUTManager molHnd, mmdb::Residue* pRes,
   int udd_sbaseCompoundID, int udd_sbaseAtomOrdinal, int udd_atomEnergyType );
-  //int GraphSearch ( mmdb::PResidue pRes, PCSBStructure &pSbaseRes,
+  //int GraphSearch ( mmdb::Residue* pRes, PCSBStructure &pSbaseRes,
   //     int &nAtom, mmdb::ivector &nMatchAtom, imatrix &matchAtom  );
 
   PCSBStructure GetStructure ( const ResName resNam , LoadedPCSBStructure monlib, const bool unremediated=false);
   int LoadMonomerLibrary( char* filename, LoadedPCSBStructure &monlib);
-  PCSBStructure LoadCifMonomer ( const ResName resNam , const Pmmdb::mmcif::File file, const bool unscramble=true );
-  int MatchGraphs(mmdb::PResidue pRes,int Hflag, bool Cflag, const pstr altLoc, 
-		  PCSBStructure pSbaseRes, int &nMatched,
-		  mmdb::ivector match, int minMatchSize );
+  PCSBStructure LoadCifMonomer ( const ResName resNam , const PCMMCIFFile file, const bool unscramble=true );
+  int MatchGraphs(mmdb::Residue* pRes,int Hflag, bool Cflag, mmdb::cpstr altLoc, 
+                          PCSBStructure pSbaseRes, int &nMatched,
+		      mmdb::ivector match, int minMatchSize );
   //PCLibAtom LibAtom (char *);
-  int LibAtom(char*);
-  int LibAtom(char *, char *);
-  int LibAtom ( pstr resType, int atomIndex );
+  int LibAtom(const char*);
+  int LibAtom(const char *, const char *);
+  int LibAtom ( mmdb::cpstr resType, int atomIndex );
   int GetNofLibAtoms();
   //PCLibAtom LibAtom ( int index );
   PCLibElement LibElement ( char *);
   PCLibBond LibBond ( char *, char *);
   int maxAtomInRes;
   Tree GetMonomerLibraryTree(const char *monomer_name);
-  mmdb::PPAtom GetMonomerLibraryStructure(const char *monomer_name);
+  mmdb::Atom** GetMonomerLibraryStructure(const char *monomer_name);
+  int HandleTerminii(mmdb::Residue* pRes, int udd_atomEnergyType);
+  int AddLink ( mmdb::pstr resName1 , mmdb::pstr atmName1, mmdb::pstr resName2 , mmdb::pstr atmName2);
 
   //private:
 
@@ -297,7 +305,7 @@ public:
   char user_monomers_dir[500];
   int InitSBase(char *sb);
   void CreateLibElements();
-  //int MatchGraphs  (Pmmdb::math::Graph G1, Pmmdb::math::Graph G2);
+  //int MatchGraphs  (PCGraph G1, PCGraph G2);
     
   int graphSearchMode;
   static PCSBase SBase;
@@ -312,7 +320,7 @@ public:
   // This needs to be reinitiallised for each new loaded structure
   std::map<std::string,int> reported_errors;
   
-  mmdb::mmcif::PData CIF;
+   mmdb::mmcif::Data *CIF;
   int nLinks;
   // Ooch again!
   MGCLink *link[100];
@@ -328,6 +336,5 @@ public:
 
   mmdb::realtype fracMatch;
 };
-
 
 #endif

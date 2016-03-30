@@ -1,6 +1,6 @@
 /*
      mmut/mmut_util.h: CCP4MG Molecular Graphics Program
-     Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2001-2005 University of York, CCLRC
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -21,7 +21,7 @@
 #ifndef __MMUT_Util__
 #define __MMUT_Util__
 
-#include <mmdb_manager.h>
+#include "mmdb2/mmdb_manager.h"
 #include <vector>
 #include <cartesian.h>
 
@@ -50,13 +50,13 @@ inline void setintpp(int **a, int i, int j, int val){
 
 }
 
-inline mmdb::realtype getrealp(realtype *a, int i){
+inline mmdb::realtype getrealp(mmdb::realtype *a, int i){
 
   return a[i];
 
 }
 
-inline mmdb::realtype getrealpp(realtype **a, int i, int j){
+inline mmdb::realtype getrealpp(mmdb::realtype **a, int i, int j){
 
   return a[i][j];
 
@@ -78,6 +78,29 @@ void printrealpp(mmdb::realtype **a, int rows, int cols);
 void printintp(int *a, int size);
 void printintpp(int **a, int rows, int cols);
 
-std::vector<Cartesian> mmdb::PPAtomsToCartesians(int natoms, mmdb::PPAtom atoms);
+std::vector<Cartesian> PPCAtomsToCartesians(int natoms, mmdb::Atom** atoms);
+
+/*
+PPCChain GetChainTable(CMMDBManager *molHnd, int model, int &nChains);
+
+PPCResidue GetResidueTable(CMMDBManager *molHnd, int &nResidues);
+PPCResidue GetResidueTable(CMMDBManager *molHnd, int model, const char* chainID, int &nResidues);
+PPCResidue GetResidueTable(CMMDBManager *molHnd, int model, int chainNo, int &nResidues);
+PPCResidue GetResidueTable(CMMDBManager *molHnd, const char* CID, int &nResidues);
+
+PPCAtom GetAtomTable(CMMDBManager *molHnd, int &nAtoms);
+PPCAtom GetAtomTable(CMMDBManager *molHnd, int model, const char* chainID, int seqNo, const char* insCode, int &nAtoms);
+PPCAtom GetAtomTable(CMMDBManager *molHnd, int model, int chainNo, int seqNo, const char* insCode, int &nAtoms);
+PPCAtom GetAtomTable(CMMDBManager *molHnd, int model, const char* chainID, int resNo, int &nAtoms);
+PPCAtom GetAtomTable(CMMDBManager *molHnd, int model, int chainNo, int resNo, int &nAtoms);
+PPCAtom GetAtomTable(CMMDBManager *molHnd, const char* CID, int &nAtoms);
+
+PPCAtom GetAtomTable(CResidue *res, int &nAtoms);
+
+PPCModel GetModelSelIndex(CMMDBManager *molHnd, int selHnd, int &nModels);
+PPCChain GetChainSelIndex(CMMDBManager *molHnd, int selHnd, int &nChains);
+PPCResidue GetResidueSelIndex(CMMDBManager *molHnd, int selHnd, int &nResidues);
+PPCAtom GetAtomSelIndex(CMMDBManager *molHnd, int selHnd, int &nAtoms);
+*/
 
 #endif

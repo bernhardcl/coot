@@ -32,17 +32,33 @@ Liz Potterton Aug03
 #include <stdlib.h>
 #include <sstream>
 #include <iomanip>
-#include <mman_base.h>
-#include <mmdb_manager.h>
-#include <mmut_manager.h>
-#include <mman_manager.h>
-#include <mmut_contact.h>
-#include <mmut_sbase.h>
+#include "mman_base.h"
+#include "mmdb2/mmdb_manager.h"
+#include "mmdb2/mmdb_tables.h"
+#include "mmut_manager.h"
+#include "mman_manager.h"
+#include "mmut_contact.h"
 #include <connect.h>
 #include <vector>
 #include <mgutil.h>
 
 using namespace std;
+
+typedef mmdb::Atom** PPCAtom;
+typedef mmdb::Atom* PCAtom;
+typedef mmdb::Atom CAtom;
+typedef mmdb::Residue** PPCResidue;
+typedef mmdb::Residue* PCResidue;
+typedef mmdb::Residue CResidue;
+typedef mmdb::Chain** PPCChain;
+typedef mmdb::Chain* PCChain;
+typedef mmdb::Chain CChain;
+typedef mmdb::Model** PPCModel;
+typedef mmdb::Model* PCModel;
+typedef mmdb::Model CModel;
+typedef mmdb::Contact* PSContact;
+typedef mmdb::AtomBond* PSAtomBond;
+using namespace mmdb;
 
 //---------------------------------------------------------------------
 CContact::CContact( PCMMUTManager molHndin, int selHndin,
@@ -91,6 +107,7 @@ void CContact::SetParams(int nv, double *value, int niv, int *ivalue) {
   test_VDW_radius = ivalue[0];
   label_VDW_radius = ivalue[1];
   exclude_hbondable = ivalue[2];
+  test_metal_coord_distance= ivalue[3];
   simple_min_cutoff = value[0];
   simple_max_cutoff = value[1];
   VDW_fraction_min = value[2];
@@ -117,13 +134,13 @@ int CContact::Calculate(bool separate_models )  {
 //-------------------------------------------------------------------
 int CContact::Calculate0(int model)  {
 //-------------------------------------------------------------------
-  mmdb::PPAtom selAtoms;
-  mmdb::PPAtom selAtoms2;
+  PPCAtom selAtoms;
+  PPCAtom selAtoms2;
   int nSelAtoms,nSelAtoms2; 
 
-  mmdb::realtype min_cutoff,max_cutoff,frac;
-  mmdb::realtype vdw1,vdw2;
-  mmdb::Contact *contacts = NULL;
+  realtype min_cutoff,max_cutoff,frac;
+  realtype vdw1,vdw2;
+  PSContact contacts = NULL;
   int ncontacts;
 
   int n;
@@ -143,7 +160,7 @@ int CContact::Calculate0(int model)  {
   //cout << "nSelAtoms " << model << " " << nSelAtoms << " " << nSelAtoms2 << endl;
   if ( nSelAtoms <= 0 || nSelAtoms2 <= 0 ) return 1;
   // Find the close contacts between two sets of atoms
-  mmdb::mat44 * TMatrix=0;
+  mat44 * TMatrix=0;
   if(test_VDW_radius==1) {
     min_cutoff = 5.0 * VDW_fraction_min;
     max_cutoff = 5.0 * VDW_fraction_max;
@@ -164,6 +181,12 @@ int CContact::Calculate0(int model)  {
   // Loop over the contacts testing VDW distance
   if(test_VDW_radius==1 || label_VDW_radius) {
     for (n=0;n<ncontacts;n++) {
+      if(test_metal_coord_distance){
+        if((selAtoms[contacts[n].id1]->isMetal())&&contacts[n].dist>dynamic_cast<PCMMANManager>(molHnds[0])->GetMetalCoordinationDistance(selAtoms[contacts[n].id1]))
+          continue;
+        if((selAtoms2[contacts[n].id2]->isMetal())&&contacts[n].dist>dynamic_cast<PCMMANManager>(molHnds[0])->GetMetalCoordinationDistance(selAtoms2[contacts[n].id2]))
+          continue;
+      }
       vdw1=dynamic_cast<PCMMANManager>(molHnds[0])->GetAtomVDWRadius(selAtoms[contacts[n].id1]);
       if (molHnds[1])
         vdw2=dynamic_cast<PCMMANManager>(molHnds[1])->GetAtomVDWRadius(selAtoms2[contacts[n].id2]);
@@ -196,9 +219,17 @@ int CContact::Calculate0(int model)  {
 	     selAtoms[contacts[n].id1],selAtoms2[contacts[n].id2]);
 
       if ( (bb == 0 || (exclude_hbondable==0 && bb==5)) &&
-         molHnds[0]->doAltLocMatch(selAtoms[contacts[n].id1],selAtoms2[contacts[n].id2]) )
-        close_contacts.AddUniqueConnection(selAtoms[contacts[n].id1],
-        selAtoms2[contacts[n].id2],FloatToString(contacts[n].dist,"%.1f"));
+         molHnds[0]->doAltLocMatch(selAtoms[contacts[n].id1],selAtoms2[contacts[n].id2]) ){
+         //std::cout << int((selAtoms[contacts[n].id2]->isMetal())) << "\n"; std::cout.flush();
+         if(!(test_metal_coord_distance)||
+           (selAtoms[contacts[n].id1]->isMetal())&&contacts[n].dist<dynamic_cast<PCMMANManager>(molHnds[0])->GetMetalCoordinationDistance(selAtoms[contacts[n].id1]) ||
+           (selAtoms2[contacts[n].id2]->isMetal())&&contacts[n].dist<dynamic_cast<PCMMANManager>(molHnds[0])->GetMetalCoordinationDistance(selAtoms2[contacts[n].id2]) ||
+           (!(selAtoms[contacts[n].id1]->isMetal())&&!(selAtoms2[contacts[n].id2]->isMetal()))
+           ){
+             close_contacts.AddUniqueConnection(selAtoms[contacts[n].id1],
+             selAtoms2[contacts[n].id2],FloatToString(contacts[n].dist,"%.1f"));
+         }
+       }
     }
   }
     	
@@ -212,10 +243,10 @@ std::string CContact::Print(bool geometry) {
 //-----------------------------------------------------------------------
 
   std::ostringstream output;
-  std::vector<mmdb::PAtom>::iterator i = close_contacts.pAtom1.begin();
-  std::vector<mmdb::PAtom>::iterator j = close_contacts.pAtom2.begin();
+  std::vector<PCAtom>::iterator i = close_contacts.pAtom1.begin();
+  std::vector<PCAtom>::iterator j = close_contacts.pAtom2.begin();
   std::string first,second;
-  mmdb::realtype dist,vdw1,vdw2,sum_vdw,frac;
+  realtype dist,vdw1,vdw2,sum_vdw,frac;
   output.setf(ios::fixed);
   output.setf(ios::showpoint);
   output.setf(ios::left,ios::adjustfield);

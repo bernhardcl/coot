@@ -1,0 +1,58 @@
+fix doublication of files, e.g. rgbreps.cc in coot-surface?!
+   at the moment removed in coot-surface as it exists in mg/util
+   there may be more
+
+./ccp4mg-utils/cartesian.cc
+./ccp4mg-utils/util/cartesian.cc
+
+./ccp4mg-utils/geomutil.cc
+./ccp4mg-utils/geomutil.h
+./ccp4mg-utils/util/geomutil.cc
+./ccp4mg-utils/util/geomutil.h
+
+./ccp4mg-utils/matrix.cc
+./ccp4mg-utils/matrix.h
+./ccp4mg-utils/util/matrix.cc
+./ccp4mg-utils/util/matrix.h
+
+./ccp4mg-utils/util/mginterrupt.h
+./surface/mginterrupt.h
+
+./ccp4mg-utils/mgtree.cc
+./ccp4mg-utils/mgtree.h
+./ccp4mg-utils/util/mgtree.cc
+./ccp4mg-utils/util/mgtree.h
+
+./ccp4mg-utils/ppmutil.cc
+./ccp4mg-utils/ppmutil.h
+./ccp4mg-utils/pygl/ppmutil.cc
+./ccp4mg-utils/pygl/ppmutil.h
+
+./ccp4mg-utils/quat.cc
+./ccp4mg-utils/quat.h
+./ccp4mg-utils/util/quat.cc
+./ccp4mg-utils/util/quat.h
+
+./ccp4mg-utils/util/rgbreps.cc
+./ccp4mg-utils/util/rgbreps.h
+./coot-surface/rgbreps.cc
+./coot-surface/rgbreps.h
+
+
+fix string to char* warnings in (for Stuart actually!!!):
+	mmut/mmut_manager.cc
+	mmut/mman_manager.cc
+	mmut/mmut_sbase.cc
+	mmut/mman_base.cc 
+	mgapp/mg_colour.cc
+
+FLAG DGLEW_BUILD for windows maybe cleverer
+
+
+# notes 28/3/16
+remove mmdb_sbase.h and mmdb_graph.h from mmut_sbase.cc
+ maybe just define __CCP4Sbase__
+Now: assume we dont need sbase any more?!
+
+rm mmut from mmut/mmut_rdkit.h in mman_manager.cc
+rm rdkit from GraphMol/RWMol.h in mmut_bonds.cc

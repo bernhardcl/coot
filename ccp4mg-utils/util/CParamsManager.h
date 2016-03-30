@@ -1,6 +1,7 @@
 /*
      util/CParamsManager.h: CCP4MG Molecular Graphics Program
      Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2009 University of York
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -26,13 +27,18 @@ class CParamsManager {
  private:
   std::map < std::string,int > Ints;
   std::map < std::string, float > Floats;
+  std::map < std::string, std::string > Strings;
  public:
   CParamsManager();
   ~CParamsManager();
-  void SetFloat ( const std::string &key, const float value ){ Floats[key] = value;}
-  void SetInt ( const std::string &key, const int value ) {Ints[key]=value;  }
+  void SetString ( const std::string &key, const std::string &value );
+  void SetFloat ( const std::string &key, const float value );
+  void SetInt ( const std::string &key, const int value );
+  std::string GetString ( const std::string &key ) const;
   float GetFloat ( const std::string &key ) const;
   int GetInt ( const std::string &key )const;
+  void PrintElements ( std::ostream &c ) const;
+  void PrintElements () const;
 };
 
 #endif

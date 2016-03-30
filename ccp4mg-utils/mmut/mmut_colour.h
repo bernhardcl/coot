@@ -1,6 +1,6 @@
 /*
      mmut/mmut_colour.h: CCP4MG Molecular Graphics Program
-     Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2001-2005 University of York, CCLRC
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -34,8 +34,8 @@ public:
   CColours();
   ~CColours();
     
-  static int SetColours(int n, const char *cols[] );
-  static int GetCode ( int nAppCol, psvector appCol, mmdb::ivector code );
+  static int SetColours(int n, char *cols[] );
+  static int GetCode ( int nAppCol, psvector appCol, ivector code );
 
   protected:
   static int nColours;
@@ -53,20 +53,20 @@ class CColourScheme {
 public:
   CColourScheme();
   ~CColourScheme();
-  int SetScheme ( int n, const char *typs[], const char *cols[]);
-  int SetScheme ( int n,  int ityps[], const char *cols[]);
-  int SetScheme ( int n, mmdb::realtype rngs[], int bns[], const char *cols[]);	
+  int SetScheme (int n, char *typs[], char *cols[]);
+  int SetScheme ( int n, int ityps[], char *cols[]);
+  int SetScheme ( int n, realtype rngs[], int bns[], char *cols[]);	
 
  protected:
   int defColour;
   int nTypes;
   psvector types;
-  mmdb::ivector itypes; 
+  ivector itypes; 
   rvector ranges;
-  mmdb::ivector bins;
-  mmdb::ivector iranges;
+  ivector bins;
+  ivector iranges;
   psvector colours;
-  mmdb::ivector codes;
+  ivector codes;
   void FreeMemory();
 };
 
@@ -102,7 +102,7 @@ public :
   \param selHndin A handle for the MMDB selection - i.e. the molecule object
   \param scheme A pointer to the CColourSchemes class which has the definition of the colour schemes.  There is only one instance of this class created by the MG. 
   */
-  CMolColour( mmdb::PManager molHndin , int selHndin ,
+  CMolColour( PCMMDBManager molHndin , int selHndin ,
     PCColourSchemes scheme);
  
  // Destructor
@@ -119,7 +119,7 @@ public :
 private:
 
   // the input data
-  mmdb::PManager molHnd;
+  PCMMDBManager molHnd;
   CColourSchemes *colourSchemes;
   int selHnd;
 
@@ -130,7 +130,7 @@ private:
 
   // the derived data
   int natoms;
-  mmdb::ivector colour;
+  ivector colour;
 
   int Clear();
   int ReColour ();

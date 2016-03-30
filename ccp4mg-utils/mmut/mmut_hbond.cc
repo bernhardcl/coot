@@ -32,18 +32,31 @@ Liz Potterton Oct02
 #include <stdlib.h>
 #include <sstream>
 #include <iomanip>
-#include <mman_base.h>
-#include <mmdb_manager.h>
-#include <mmut_manager.h>
-#include <mman_manager.h>
-#include <mmut_hbond.h>
-#include <mmut_sbase.h>
+#include "mman_base.h"
+#include "mmdb2/mmdb_manager.h"
+#include "mmut_manager.h"
+#include "mman_manager.h"
+#include "mmut_hbond.h"
 #include <connect.h>
 #include <vector>
 #include <mgutil.h>
 using namespace std;
 
-
+typedef mmdb::Atom** PPCAtom;
+typedef mmdb::Atom* PCAtom;
+typedef mmdb::Atom CAtom;
+typedef mmdb::Residue** PPCResidue;
+typedef mmdb::Residue* PCResidue;
+typedef mmdb::Residue CResidue;
+typedef mmdb::Chain** PPCChain;
+typedef mmdb::Chain* PCChain;
+typedef mmdb::Chain CChain;
+typedef mmdb::Model** PPCModel;
+typedef mmdb::Model* PCModel;
+typedef mmdb::Model CModel;
+typedef mmdb::Contact* PSContact;
+typedef mmdb::AtomBond* PSAtomBond;
+using namespace mmdb;
 
 //---------------------------------------------------------------------
 CHBond::CHBond( PCMMUTManager molHndin, int selHndin,
@@ -76,7 +89,8 @@ void CHBond::InitParams() {
 //-------------------------------------------------------------------
   //params
   min_D_A = 2.0;
-  max_D_A = 3.9;
+  max_D_A = 3.6;
+  max_D_A_S = 3.9;
   max_H_A = 2.5;
   min_DD_D_A = 90 * PI/180.0;
   min_D_A_AA = 90 * PI/180.0;
@@ -91,11 +105,12 @@ void CHBond::SetParams(int nv, double *value) {
 
   min_D_A = value[0];
   max_D_A = value[1];
-  max_H_A = value[2];
-  min_DD_D_A = value[3] * PI/180.0;
-  min_D_A_AA = value[4] * PI/180.0;
-  min_H_A_AA = value[5] * PI/180.0;
-  min_D_H_A = value[6] * PI/180.0;
+  max_D_A_S = value[2];
+  max_H_A = value[3];
+  min_DD_D_A = value[4] * PI/180.0;
+  min_D_A_AA = value[5] * PI/180.0;
+  min_H_A_AA = value[6] * PI/180.0;
+  min_D_H_A = value[7] * PI/180.0;
 
 }
 
@@ -116,25 +131,25 @@ int CHBond::Calculate(bool separate_models)  {
 //-------------------------------------------------------------------
 int CHBond::Calculate0(int model)  {
 //-------------------------------------------------------------------
-  mmdb::PPAtom donorAtoms = NULL;
-  mmdb::PPAtom acceptorAtoms = NULL;
-  mmdb::PPAtom overlapAtoms = NULL;
+  PPCAtom donorAtoms = NULL;
+  PPCAtom acceptorAtoms = NULL;
+  PPCAtom overlapAtoms = NULL;
   int nDonors,nAcceptors;
   int udd,udd2;
   int loop,nLoops = 1;
-  int uddD = -1, uddA = -1,selHndD = -1, selHndA = -1;
-  PCMMUTManager molHndD = 0,molHndA = 0;
-  int selHndDonors,selHndAcceptors,selHndHydrogens,selHndOverlap = -1;
-  mmdb::Contact *contacts = NULL;
+  int uddD,uddA,selHndD,selHndA;
+  PCMMUTManager molHndD,molHndA;
+  int  selHndDBoth,selHndABoth,selHndDonors,selHndAcceptors,selHndHydrogens,selHndOverlap;
+  PSContact contacts = NULL;
   int ncontacts;
   int nOverlap = 0;
- 
+
   int RC,hbtype1,hbtype2,accept;
   int i,n;
-  SAtomBond *donorBond = 0;
-  SAtomBond *acceptorBond = 0;
+  mmdb::AtomBond *donorBond = 0;
+  mmdb::AtomBond *acceptorBond = 0;
   int nDBonds,nABonds,nH;
-  mmdb::realtype H_A, D_H_A;
+  realtype H_A, D_H_A;
   int donor_angles_OK;
 
   //std::ostringstream label;
@@ -158,8 +173,8 @@ int CHBond::Calculate0(int model)  {
   // For two sets of atoms - do the sets overlap?
   if (nLoops == 2 && molHnds[0] == molHnds[1]) {
     selHndOverlap = molHnds[0]->NewSelection();
-    molHnds[0]->Select ( selHndOverlap,mmdb::STYPE_ATOM,selHnds[0],mmdb::SKEY_NEW );    
-    molHnds[0]->Select ( selHndOverlap,mmdb::STYPE_ATOM,selHnds[1],SKEY_AND );    
+    molHnds[0]->Select ( selHndOverlap,STYPE_ATOM,selHnds[0],SKEY_NEW );    
+    molHnds[0]->Select ( selHndOverlap,STYPE_ATOM,selHnds[1],SKEY_AND );    
     molHnds[0]->GetSelIndex(selHndOverlap,overlapAtoms,nOverlap);
     //cout << "nOverlap " << nOverlap << endl;
   }
@@ -195,30 +210,48 @@ int CHBond::Calculate0(int model)  {
     //cout << "molHndD " << molHndD << " selHndD " << selHndD << endl;
     //cout << "molHndA " << molHndA << " selHndA " << selHndA << endl;
 
-  selHndDonors = molHndD->NewSelection();
-  molHndD->Select ( selHndDonors,mmdb::STYPE_ATOM,selHndD,mmdb::SKEY_NEW );
+  selHndDBoth = molHndD->NewSelection();
+  molHndD->Select ( selHndDBoth,STYPE_ATOM,selHndD,SKEY_NEW );
   if (model > 0 && model <= molHndD->GetNumberOfModels() )
-    molHndD->Select (selHndDonors,mmdb::STYPE_ATOM,model,"*",mmdb::ANY_RES,
-         "*",mmdb::ANY_RES, "*","*","*","*","*",SKEY_AND);
-  molHndD->SelectUDD (selHndDonors,mmdb::STYPE_ATOM,uddD,
-            HBTYPE_DONOR,HBTYPE_BOTH,SKEY_AND);
+    molHndD->Select (selHndDBoth,STYPE_ATOM,model,"*",ANY_RES,
+         "*",ANY_RES, "*","*","*","*","*",SKEY_AND);
+  molHndD->SelectUDD (selHndDBoth,STYPE_ATOM,uddD,
+            'B','B',SKEY_AND);
+
+  selHndABoth = molHndA->NewSelection();
+  molHndA->Select ( selHndABoth,STYPE_ATOM,selHndA,SKEY_NEW );
+  if (model > 0 && model <= molHndA->GetNumberOfModels() )
+    molHndA->Select (selHndABoth,STYPE_ATOM,model,"*",ANY_RES,
+         "*",ANY_RES, "*","*","*","*","*",SKEY_AND);
+  molHndA->SelectUDD (selHndABoth,STYPE_ATOM,uddA,
+            'B','B',SKEY_AND);
+
+  selHndDonors = molHndD->NewSelection();
+  molHndD->Select ( selHndDonors,STYPE_ATOM,selHndD,SKEY_NEW );
+  if (model > 0 && model <= molHndD->GetNumberOfModels() )
+    molHndD->Select (selHndDonors,STYPE_ATOM,model,"*",ANY_RES,
+         "*",ANY_RES, "*","*","*","*","*",SKEY_AND);
+  molHndD->SelectUDD (selHndDonors,STYPE_ATOM,uddD,
+            'D','D',SKEY_AND);
+  molHndD->Select(selHndDonors,STYPE_ATOM,selHndDBoth,SKEY_OR);
   molHndD->GetSelIndex(selHndDonors,donorAtoms,nDonors);
 
   selHndAcceptors = molHndA->NewSelection();
-  molHndA->Select ( selHndAcceptors,mmdb::STYPE_ATOM,selHndA,mmdb::SKEY_NEW );
+  molHndA->Select ( selHndAcceptors,STYPE_ATOM,selHndA,SKEY_NEW );
   if (model > 0 && model <= molHndA->GetNumberOfModels() )
-    molHndA->Select (selHndAcceptors,mmdb::STYPE_ATOM,model,"*",mmdb::ANY_RES,
-         "*",mmdb::ANY_RES, "*","*","*","*","*",SKEY_AND);
-  molHndA->SelectUDD (selHndAcceptors,mmdb::STYPE_ATOM,uddA,
-           HBTYPE_BOTH,HBTYPE_ACCEPTOR,SKEY_AND);
+    molHndA->Select (selHndAcceptors,STYPE_ATOM,model,"*",ANY_RES,
+         "*",ANY_RES, "*","*","*","*","*",SKEY_AND);
+  molHndA->SelectUDD (selHndAcceptors,STYPE_ATOM,uddA,
+           'A','A',SKEY_AND);
+  molHndA->Select(selHndAcceptors,STYPE_ATOM,selHndABoth,SKEY_OR);
   molHndA->GetSelIndex(selHndAcceptors,acceptorAtoms,nAcceptors);
 
 
   // And are there any actual real hydrogen atoms?
   selHndHydrogens = molHndD->NewSelection();
-  molHndD->Select ( selHndHydrogens,mmdb::STYPE_ATOM,selHndD,mmdb::SKEY_NEW );    
-  molHndD->SelectUDD (selHndHydrogens,mmdb::STYPE_ATOM,uddD,
-            HBTYPE_HYDROGEN,HBTYPE_HYDROGEN,SKEY_AND);
+  molHndD->Select ( selHndHydrogens,STYPE_ATOM,selHndD,SKEY_NEW );    
+  molHndD->SelectUDD (selHndHydrogens,STYPE_ATOM,uddD,
+            'H','H',SKEY_AND);
 
   /*
   cout << "nDonors " << nDonors << " ";
@@ -235,10 +268,13 @@ int CHBond::Calculate0(int model)  {
   //cout << " nDonors " << nDonors << " nAcceptors " << nAcceptors << endl;
   if ( nDonors > 0 && nAcceptors > 0 ) {
     // Find close contacts beteen donors and acceptors
-    mmdb::mat44 * TMatrix=0;
+    mat44 * TMatrix=0;
 
+    realtype max_D = max_D_A;
+    if(max_D_A_S>max_D)
+      max_D = max_D_A_S;
     molHnds[0]->SeekContacts ( donorAtoms,nDonors,acceptorAtoms,nAcceptors,
-        min_D_A,max_D_A,0,contacts,ncontacts, 0,TMatrix, 0 , 0);
+        min_D_A,max_D,0,contacts,ncontacts, 0,TMatrix, 0 , 0);
 
     //cout << "ncontacts " << ncontacts << endl;
     if ( !contacts ||  ncontacts <= 0 ) {
@@ -340,12 +376,19 @@ int CHBond::Calculate0(int model)  {
             }
 	  }
   	  if  ( donor_angles_OK > 0) {
-            if (loop==1)
-              hbonds.AddConnection(acceptorAtoms[contacts[n].id2],
-               donorAtoms[contacts[n].id1],FloatToString(contacts[n].dist,"%.1f"));
-            else
-              hbonds.AddConnection(donorAtoms[contacts[n].id1],
-             acceptorAtoms[contacts[n].id2],FloatToString(contacts[n].dist,"%.1f"));
+            if (loop==1){
+              if(
+                 (((strcmp(acceptorAtoms[contacts[n].id2]->element," S"))==0||(strcmp(donorAtoms[contacts[n].id1]->element," S")==0))&&contacts[n].dist<=max_D_A_S)
+               ||(((strcmp(acceptorAtoms[contacts[n].id2]->element," S"))!=0&&(strcmp(donorAtoms[contacts[n].id1]->element," S")!=0))&&contacts[n].dist<=max_D_A)
+               )
+              hbonds.AddConnection(acceptorAtoms[contacts[n].id2],donorAtoms[contacts[n].id1],FloatToString(contacts[n].dist,"%.1f"));
+            }else{
+              if(
+                 (((strcmp(acceptorAtoms[contacts[n].id2]->element," S"))==0||(strcmp(donorAtoms[contacts[n].id1]->element," S")==0))&&contacts[n].dist<=max_D_A_S)
+               ||(((strcmp(acceptorAtoms[contacts[n].id2]->element," S"))!=0&&(strcmp(donorAtoms[contacts[n].id1]->element," S")!=0))&&contacts[n].dist<=max_D_A)
+               )
+              hbonds.AddConnection(donorAtoms[contacts[n].id1],acceptorAtoms[contacts[n].id2],FloatToString(contacts[n].dist,"%.1f"));
+            }
           }
         }
       }
@@ -378,16 +421,16 @@ int CHBond::LoadUDDHBType(PCMMUTManager molH ) {
   int nchains = molH->GetNumberOfChains(1);
   int nr0,nat0;
   int udd;
-  //char *foo;
+  //char foo[32];
 
-  udd = molH->GetUDDHandle ( mmdb::UDR_ATOM,"hbtype" );
+  udd = molH->GetUDDHandle ( UDR_ATOM,"hbtype" );
   if (udd <= 0 ) {
     udd = -1;
-    udd = molH->RegisterUDInteger ( mmdb::UDR_ATOM,"hbtype" );
+    udd = molH->RegisterUDInteger ( UDR_ATOM,"hbtype" );
     if (udd <= 0 ) return udd;
   }
   //cout << "HBond udd " << udd << endl;
-  mmdb::PPAtom atomTable = NULL;
+  PPCAtom atomTable = NULL;
   for (int im=1;im<=molH->GetNumberOfModels();im++) {
     for (int ic=0;ic<nchains;ic++) {
       nr0 = molH->GetNumberOfResidues(im,ic);
@@ -410,15 +453,15 @@ int CHBond::LoadUDDHBType(PCMMUTManager molH ) {
 std::string CHBond::Print(bool geometry) {
 //-----------------------------------------------------------------------
 
-  SAtomBond *donorBond = 0;
-  SAtomBond *acceptorBond = 0;
+  mmdb::AtomBond *donorBond = 0;
+  mmdb::AtomBond *acceptorBond = 0;
   int nDBonds,nABonds;
 
   std::ostringstream output;
   std::string first,second,first_bonded,second_bonded;
   float first_angle, second_angle, distance;
-  std::vector<mmdb::PAtom>::iterator i = hbonds.pAtom1.begin();
-  std::vector<mmdb::PAtom>::iterator j = hbonds.pAtom2.begin();
+  std::vector<PCAtom>::iterator i = hbonds.pAtom1.begin();
+  std::vector<PCAtom>::iterator j = hbonds.pAtom2.begin();
   PCMMUTManager molHnd0,molHnd1;
   output.setf(ios::fixed);
   output.setf(ios::showpoint);

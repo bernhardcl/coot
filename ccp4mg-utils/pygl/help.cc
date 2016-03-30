@@ -1,6 +1,8 @@
 /*
      pygl/help.cc: CCP4MG Molecular Graphics Program
      Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2009-2010 University of York
+     Copyright (C) 2012 STFC
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -17,11 +19,16 @@
      GNU Lesser General Public License for more details.
 */
 
-#if defined (_WIN32)
+#if defined (_WIN32) && not defined (WINDOWS_MINGW)
 #include <windows.h>
 #if !defined (__GNUC__)
 #define snprintf _snprintf
 #endif
+#endif
+
+#if defined (linux)
+#undef GLX_GLXEXT_LEGACY
+#define GL_GLEXT_PROTOTYPES
 #endif
 
 #ifdef USE_GLX
@@ -36,7 +43,7 @@
 
 #define GLUT_DISABLE_ATEXIT_HACK
 
-#ifdef __APPLE_CC__
+#if defined (__APPLE_CC__) && ! defined (NO_APPLE_SPECIFICS)
 #include <OpenGL/OpenGL.h>
 #include <OpenGL/glu.h>
 #include <ApplicationServices/ApplicationServices.h>
@@ -63,6 +70,7 @@
 #endif
 */
 
+#include <algorithm>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -77,6 +85,60 @@
 #include "plane.h"
 #include "cartesian.h"
 #include "matrix.h"
+#include "geomutil.h"
+
+#if defined (_WIN32)
+void BlendFuncSeparate(GLenum, GLenum, GLenum, GLenum);
+#endif
+
+// These are  helper functions which don't depend on an OPENGL context.
+//
+#if defined (_WIN32) && not defined (WINDOWS_MINGW)
+#define EXAMPLE_DLL __declspec(dllexport)
+image_info __stdcall EXAMPLE_DLL get_pixdata(int trans=0);
+void __stdcall EXAMPLE_DLL write_pixdata(const char *filename, int width=-1, int height=-1, int trans=0);
+int __stdcall EXAMPLE_DLL findprimc(const std::vector<Cartesian> &xyzbox, const std::vector<Cartesian> &primorigin, const Cartesian &origin, const matrix &objrotmat);
+int __stdcall EXAMPLE_DLL findprimc(double *xyzmpc, double *xyzmmc, double *xyzpmc, double *xyzppc, std::vector<Cartesian> primorigin, Cartesian origin, matrix objrotmat);
+int __stdcall EXAMPLE_DLL findprimc_main(const Cartesian &xyzmpf, const Cartesian &xyzmpb, const Cartesian &xyzmmf, const Cartesian &xyzmmb, const Cartesian &xyzpmf, const Cartesian &xyzpmb, const Cartesian &xyzppf, const Cartesian &xyzppb, const std::vector<Cartesian> &primorigin,const Cartesian &origin,const matrix &objrotmat);
+std::vector<Cartesian> __stdcall EXAMPLE_DLL getxyzc(double x,double y);
+const double* __stdcall EXAMPLE_DLL GLf2f(const GLfloat *in, int size);
+const GLfloat* __stdcall EXAMPLE_DLL f2GLf(double *in, int size);
+const GLfloat* __stdcall EXAMPLE_DLL buildrotmatrix_from_c(matrix a);
+const GLfloat* __stdcall EXAMPLE_DLL buildrotmatrix(
+GLfloat a0, GLfloat a1, GLfloat a2, GLfloat a3, 
+GLfloat a4, GLfloat a5, GLfloat a6, GLfloat a7, 
+GLfloat a8, GLfloat a9, GLfloat a10, GLfloat a11, 
+GLfloat a12, GLfloat a13, GLfloat a14, GLfloat a15);
+int __stdcall EXAMPLE_DLL CheckIfStereoAvailable(void);
+int __stdcall EXAMPLE_DLL CheckIfAlphaAvailable(void);
+image_info_yuv_t __stdcall EXAMPLE_DLL get_yuvdata(int trans=0);
+Volume __stdcall EXAMPLE_DLL GetClippingPlanes();
+Volume __stdcall EXAMPLE_DLL GetFrontAndBackClippingPlanes();
+bool __stdcall EXAMPLE_DLL isPointInClippingVolume(const Cartesian &p, const Volume &v);
+void __stdcall EXAMPLE_DLL SetupFBOBlending();
+#else
+image_info get_pixdata(int trans=0);
+void write_pixdata(const char *filename, int width=-1, int height=-1, int trans=0);
+int findprimc(const std::vector<Cartesian> &xyzbox, const std::vector<Cartesian> &primorigin, const Cartesian &origin, const matrix &objrotmat);
+int findprimc(double *xyzmpc, double *xyzmmc, double *xyzpmc, double *xyzppc, std::vector<Cartesian> primorigin, Cartesian origin, matrix objrotmat);
+int findprimc_main(const Cartesian &xyzmpf, const Cartesian &xyzmpb, const Cartesian &xyzmmf, const Cartesian &xyzmmb, const Cartesian &xyzpmf, const Cartesian &xyzpmb, const Cartesian &xyzppf, const Cartesian &xyzppb, const std::vector<Cartesian> &primorigin,const Cartesian &origin,const matrix &objrotmat);
+std::vector<Cartesian> getxyzc(double x,double y);
+const double* GLf2f(const GLfloat *in, int size);
+const GLfloat* f2GLf(double *in, int size);
+const GLfloat* buildrotmatrix_from_c(matrix a);
+const GLfloat* buildrotmatrix(
+GLfloat a0, GLfloat a1, GLfloat a2, GLfloat a3, 
+GLfloat a4, GLfloat a5, GLfloat a6, GLfloat a7, 
+GLfloat a8, GLfloat a9, GLfloat a10, GLfloat a11, 
+GLfloat a12, GLfloat a13, GLfloat a14, GLfloat a15);
+int CheckIfStereoAvailable(void);
+int CheckIfAlphaAvailable(void);
+image_info_yuv_t get_yuvdata(int trans=0);
+Volume GetClippingPlanes();
+Volume GetFrontAndBackClippingPlanes();
+bool isPointInClippingVolume(const Cartesian &p, const Volume &v);
+void SetupFBOBlending();
+#endif
 
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643
@@ -99,7 +161,7 @@ void Win32Error(void){
     (LPTSTR) &lpMsgBuf,
     0,
     NULL );
-    printf("Error: %d %s\n",dw,(LPTSTR)lpMsgBuf);
+    printf("Error: %ld %s\n",dw,(LPTSTR)lpMsgBuf);
 }
 
 void OffScreenBuffer::setupDIB(){
@@ -429,7 +491,7 @@ OffScreenBuffer::OffScreenBuffer(unsigned w, unsigned h){
 
   offcontext = glXCreateContext(dpy, visinfo, 0, GL_FALSE);
 
-#elif defined (__APPLE_CC__)
+#elif defined (__APPLE_CC__) && ! defined (NO_APPLE_SPECIFICS)
 /*
   if(!glut_ctx)
     glut_ctx = CGLGetCurrentContext();
@@ -477,12 +539,12 @@ OffScreenBuffer::OffScreenBuffer(unsigned w, unsigned h){
 #endif
 }
 
-#if defined (_WIN32)
+#if defined (_WIN32) && not defined (WINDOWS_MINGW)
 static int stereo_available;
 #endif
 
 void SetStereoAvailable(int stereo_available_in){
-#if defined (_WIN32)
+#if defined (_WIN32) && not defined (WINDOWS_MINGW)
   stereo_available = stereo_available_in;
 #endif
 }
@@ -579,7 +641,7 @@ int CheckIfStereoAvailable(void){
   WNDCLASS wc;
   HWND hWnd;
   HDC hDC;
-  HGLRC hRC;
+  //HGLRC hRC;
 	
   // register window class
   wc.style = CS_OWNDC;
@@ -597,7 +659,7 @@ int CheckIfStereoAvailable(void){
   // create main window
   hWnd = CreateWindow("GLSample", "OpenGL Sample", 
                       WS_CAPTION | WS_POPUPWINDOW,
-                      0, 0, 256, 256,
+                      0, 0, 10, 10,
                       NULL, NULL, GetModuleHandle(NULL), NULL );
 
   PIXELFORMATDESCRIPTOR pfd;
@@ -625,23 +687,23 @@ int CheckIfStereoAvailable(void){
         DestroyWindow(hWnd);
 	return 0;
   }
-  BOOL bStereoAvailable;
+  //BOOL bStereoAvailable;
 
   format = GetPixelFormat (hDC);
   DescribePixelFormat (hDC, format, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
   if ((pfd.dwFlags & PFD_STEREO) == 0){
-    printf("Windows does not think stereo is available\n");
+    //printf("Windows does not think stereo is available\n"); fflush(stdout);
     DestroyWindow(hWnd);
     return 0;
   }else{
-    printf("Windows thinks stereo is available\n");
+    //printf("Windows thinks stereo is available\n"); fflush(stdout);
     DestroyWindow(hWnd);
     return 1;
   }
   DestroyWindow(hWnd);
   return 0;
-#elif defined(__APPLE_CC__)
+#elif defined (__APPLE_CC__) && ! defined (NO_APPLE_SPECIFICS)
   CGLPixelFormatObj pixelFormatObj ;
   GLint numPixelFormats ;
   CGOpenGLDisplayMask displayMask = CGDisplayIDToOpenGLDisplayMask( CGMainDisplayID() ) ;
@@ -749,6 +811,9 @@ int findprimc_main(const Cartesian &xyzmpf, const Cartesian &xyzmpb, const Carte
   unsigned int j;
   Cartesian prim;
 
+  Cartesian front = Cartesian::MidPoint(objrotmat*xyzmmf,objrotmat*xyzppf);
+  Cartesian back  = Cartesian::MidPoint(objrotmat*xyzmmb,objrotmat*xyzppb);
+
   std::vector<Cartesian> points;
   std::vector<Cartesian>::const_iterator point;
 
@@ -785,6 +850,8 @@ int findprimc_main(const Cartesian &xyzmpf, const Cartesian &xyzmpb, const Carte
   int clicked = 0;
   int clicked_prim = -1;
 
+  double mindist = 1.0e+8;
+
   for(j=0;j<primorigin.size();j++){
     prim = primorigin[j];
     clicked = 1;
@@ -794,8 +861,9 @@ int findprimc_main(const Cartesian &xyzmpf, const Cartesian &xyzmpb, const Carte
       n = plane->get_normal();
       n.normalize();
       p2prim = *point-prim;
-      if(n.DotProduct(n,p2prim)>0.0)
+      if(n.DotProduct(n,p2prim)>0.0){
         clicked = 0;
+      }
       point++;
       plane++;
     }
@@ -806,21 +874,32 @@ int findprimc_main(const Cartesian &xyzmpf, const Cartesian &xyzmpb, const Carte
     
     plane = planes.begin();
     point = points.begin();
+    //std::cout << "prim: " << prim << std::endl; 
     while(plane!=planes.end()&&clicked){
       n = plane->get_normal();
+      //std::cout << "point: " << *point << std::endl; 
+      //std::cout << n << std::endl;
       p2prim = *point-prim;
+      //std::cout << "p2prim: " << p2prim << std::endl; 
       n.normalize();
       p2prim.normalize();
-      if(n.DotProduct(n,p2prim)>1e-3)
+      //std::cout <<  n.DotProduct(n,p2prim) << std::endl;
+      if(n.DotProduct(n,p2prim)>1e-3){
 	clicked = 0;
+      }
       point++;
       plane++;
     }
     if(clicked) {
-      clicked_prim = j;
-      break;
+      std::vector<double> linedist = DistanceBetweenPointAndLine(front,back,prim);
+      double dist = fabs(linedist[0]);
+      if(dist<mindist){
+        clicked_prim = j;
+	mindist = dist;
+      }
     }
   }
+  //std::cout << clicked_prim << " " << mindist << std::endl;
 
   return clicked_prim;
   
@@ -956,18 +1035,42 @@ Volume GetClippingPlanes(){
   nearclip.Normalize();
   farclip.Normalize();
 
-
+  // these 1001 and 500.5 need *not* to be hardwired.
   GLint param0,param1;
+  // This only works for xy-plane clips!!!!!!
   glGetIntegerv(GL_CLIP_PLANE0,&param0);
   glGetIntegerv(GL_CLIP_PLANE1,&param1);
   GLdouble eqn0[4], eqn1[4];
+  
+  double origscale = 1.0/(nearclip.get_D() + farclip.get_D());
+  double origfard = farclip.get_D();
+  double origneard = nearclip.get_D();
+
   if(param0&&param1){
     glGetClipPlane(GL_CLIP_PLANE0,eqn0);
     glGetClipPlane(GL_CLIP_PLANE1,eqn1);
     double scale = (eqn0[3] + eqn1[3])/(nearclip.get_D() + farclip.get_D());
     double diff = 0.5*(nearclip.get_D()-farclip.get_D());
+    double offset = ((eqn0[3] - eqn1[3])/eqn0[2] - 1001)*0.5*eqn0[2];
     farclip.set_D(farclip.get_D()*scale-diff);
     nearclip.set_D(nearclip.get_D()*scale+diff);
+    farclip.set_D(farclip.get_D()+offset);
+    nearclip.set_D(nearclip.get_D()-offset);
+  }
+
+  if(glIsEnabled(GL_FOG)){
+    GLfloat start;
+    GLfloat end;
+    glGetFloatv(GL_FOG_START,&start);
+    glGetFloatv(GL_FOG_END,&end);
+    double mmscale = 1.0/(sqrt(MM(0,0)*MM(0,0) + MM(0,1)*MM(0,1) + MM(0,2)*MM(0,2)));
+    double fogscale = mmscale*origscale*(2*(end-start));
+    double fogdiff = 0.5*(origneard-origfard);
+    double fogoffset = (start - 500.5)*mmscale;
+    if(fabs((origfard*fogscale-fogdiff+fogoffset) - origfard)>fabs(farclip.get_D() - origfard)){
+      farclip.set_D(origfard*fogscale-fogdiff);
+      farclip.set_D(farclip.get_D()+fogoffset);
+    }
   }
 
   Volume v;
@@ -985,4 +1088,13 @@ Volume GetClippingPlanes(){
 
 bool isPointInClippingVolume(const Cartesian &p, const Volume &v){
   return v.PointInVolume(p);
+}
+
+void SetupFBOBlending(){
+//#ifdef  __APPLE_CC__
+#if ! defined (_WIN32)
+glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+#else
+BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+#endif
 }

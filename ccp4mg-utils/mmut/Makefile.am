@@ -27,22 +27,30 @@ GTKGL_CONTEXT_LIBS   = $(GTKGL_LIBS) $(GTKGLEXT_LIBS)
 # remove this from coot dependencies:
 # 	$(top_builddir)/mmtz-extras/libcoot-mmtz-extras.la 
 
-lib_LTLIBRARIES=libccp4mg-mmut.la
+lib_LTLIBRARIES=libccp4mg-mmut.la \
+	libccp4mg-atom_util.la
 
 include_HEADERS=splineinfo.h
+
+libccp4mg_atom_util_la_SOURCES = \
+	atom_util.cc atom_util.h
+
+libccp4mg_atom_util_la_LDFLAGS = -L. -L../util -lccp4mg-bezier -lccp4mg-pygl_coord -lccp4mg-mgutil -lccp4mg-rgbreps
 
 libccp4mg_mmut_la_SOURCES = \
 	mmut_manager.cc mmut_util.cc mman_manager.cc	\
 	mmut_manager.h mmut_util.h mman_manager.h	\
 	mman_base.cc mmut_secstr.cc mmut_bonds.cc	\
 	mman_base.h mmut_secstr.h mmut_bonds.h		\
-	mmut_sbase.cc mmut_sasarea.cc mmut_connectivity.cc	\
-	mmut_sbase.h mmut_sasarea.h mmut_connectivity.h	\
+	mmut_sasarea.cc mmut_connectivity.cc	\
+	mmut_sasarea.h mmut_connectivity.h	\
 	mmut_hbond.cc mmut_contact.cc mmut_basepairs.cc	\
 	mmut_hbond.h mmut_contact.h mmut_basepairs.h	\
 	mmut_spline.cc mmut_lipids.cc mmut_morph.cc	\
-	mmut_lipids.h mmut_morph.h	\
-	mmut_nma.cc mmut_colour.cc mmut_nma.h mmut_colour.h
+	mmut_lipids.h mmut_morph.h mmut_rdkit.h 	\
+	mmut_rdkit.cc mmut_rdkit.h 	\
+	mmut_srs.cc mmut_srs.h 		\
+	mmut_nma.cc mmut_nma.h
 
 
 # must have GUILE and GUILE_GTK flags before $(INCLUDES), and this 
@@ -54,7 +62,7 @@ AM_CXXFLAGS = \
 	-DPKGDATADIR='"$(pkgdatadir)"' \
 	-DPACKAGE_LOCALE_DIR='"$(pkgdatadir)/locale"' \
 	-DDATADIR='"$(datadir)"'    \
-	$(COOT_WINDOWS_CFLAGS) 
+	$(RDKIT_CXXFLAGS) $(COOT_WINDOWS_CFLAGS) 
 
 
 # SWIG_FLAGS is something of a misnomer.  It actually defines
@@ -62,10 +70,9 @@ AM_CXXFLAGS = \
 # correct callbacks in both GTK1 and GTK2 regimes.
 #
 INCLUDES = \
-	-I$(top_srcdir)/ccp4mg-utils/util	\
-	-I$(top_srcdir)/ccp4mg-utils/mmut	\
-	-I$(top_srcdir)/ccp4mg-utils/pygl	\
-	-I$(top_srcdir)/ccp4mg-utils	\
+	-I$(top_srcdir)			\
+	-I$(top_srcdir)/ccp4mg-utils/mmut \
+	-I$(top_srcdir)/ccp4mg-utils/util \
 	$(GTKGL_CONTEXT_CFLAGS)		\
 	$(LIBGLADE_CFLAGS)		\
 	@GTK_CFLAGS@ 			\

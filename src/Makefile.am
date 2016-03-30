@@ -81,7 +81,22 @@ COOT_EXTRA_LIBS = \
 	$(top_builddir)/coords/libcoot-coords.la      		\
 	$(top_builddir)/coot-surface/libcoot-surface.la  	\
 	$(top_builddir)/surface/libccp4mg-surface.la  		\
-	$(top_builddir)/ccp4mg-utils/libccp4mg-utils.la 	\
+	$(top_builddir)/ccp4mg-utils/util/libccp4mg-bezier.la   \
+	$(top_builddir)/ccp4mg-utils/util/libccp4mg-mginterrupt.la      \
+	$(top_builddir)/ccp4mg-utils/util/libccp4mg-mgutil.la   \
+	$(top_builddir)/ccp4mg-utils/util/libccp4mg-paramsmanager.la    \
+	$(top_builddir)/ccp4mg-utils/util/libccp4mg-pygl_coord.la       \
+	$(top_builddir)/ccp4mg-utils/util/libccp4mg-redirect.la         \
+	$(top_builddir)/ccp4mg-utils/util/libccp4mg-rgbreps.la  \
+	$(top_builddir)/ccp4mg-utils/mmut/libccp4mg-atom_util.la        \
+	$(top_builddir)/ccp4mg-utils/mmut/libccp4mg-mmut.la     \
+	$(top_builddir)/ccp4mg-utils/pygl/libccp4mg-cprim.la    \
+	$(top_builddir)/ccp4mg-utils/pygl/libccp4mg-font_cache.la    \
+	$(top_builddir)/ccp4mg-utils/pygl/libccp4mg-opengl.la   \
+	$(top_builddir)/ccp4mg-utils/pygl/libccp4mg-ppmutil.la  \
+	$(top_builddir)/ccp4mg-utils/pygl/libccp4mg-psutil.la   \
+	$(top_builddir)/ccp4mg-utils/pygl/libccp4mg-symmetry.la         \
+	$(top_builddir)/ccp4mg-utils/mgapp/libccp4mg-mgapp.la         \
 	$(top_builddir)/coot-utils/libcoot-map-heavy.la  	\
 	$(top_builddir)/coot-utils/libcoot-map-utils.la  	\
 	$(top_builddir)/coot-utils/libcoot-coord-extras.la  	\
@@ -182,8 +197,14 @@ AM_CXXFLAGS = \
 # correct callbacks in both GTK1 and GTK2 regimes.
 #
 #
+# BL FIXME should make Path for headers in mg dir so that I dont need to 
+# include explicitly here, I think. 
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
+	-I$(top_srcdir)/ccp4mg-utils/util \
+	-I$(top_srcdir)/ccp4mg-utils/mmut \
+	-I$(top_srcdir)/ccp4mg-utils/pygl \
+	-I$(top_srcdir)/ccp4mg-utils/mgapp \
 	$(RDKIT_CXXFLAGS) 		\
 	$(ENHANCED_LIGAND_TOOLS_CFLAGS) \
 	$(WITH_GUILE_CFLAGS)		\
@@ -270,6 +291,7 @@ coot_bin_SOURCES = \
 	c-interface-residues.cc	 \
 	c-interface-refmac.cc	 \
 	c-interface-refmac.h	 \
+	c-interface-ribbons.cc	 \
 	c-interface-scm.hh	 \
 	c-interface-scm.cc	 \
 	c-interface-sequence.cc  \
@@ -393,6 +415,7 @@ coot_bin_SOURCES = \
 	molecule-class-info-residues.cc \
 	molecule-class-info-refine.cc   \
         molecule-class-info-kk.cc       \
+	molecule-class-info-ribbons.cc 	\
 	molecule-class-info-surface.cc 	\
 	molecule-class-info-ncs.cc 	\
 	molecule-class-info-widget-work.cc \
@@ -473,7 +496,7 @@ fix_nomenclature_errors_LDADD = \
         $(top_builddir)/coot-utils/libcoot-map-heavy.la    \
 	$(top_builddir)/geometry/libcoot-geometry.la    	\
 	$(top_builddir)/coords/libcoot-coords.la      		\
-	$(top_builddir)/ccp4mg-utils/libccp4mg-utils.la 	\
+	$(top_builddir)/ccp4mg-utils/util/libccp4mg-pygl_coord.la 	\
 	$(top_builddir)/coot-utils/libcoot-coord-extras.la	\
 	$(top_builddir)/coot-utils/libcoot-coord-utils.la	\
 	$(top_builddir)/coot-utils/libcoot-map-utils.la		\

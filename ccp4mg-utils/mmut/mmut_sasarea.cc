@@ -37,10 +37,11 @@ Hacked to CSASArea class structure Liz Potterton 2002
 #include <stdlib.h>
 #include <sstream>
 #include <iomanip>
-#include <mman_base.h>
-#include <mmut_manager.h>
-#include <mman_manager.h>
-#include <mmut_sasarea.h>
+#include "mman_base.h"
+#include "mmut_manager.h"
+#include "mman_manager.h"
+#include "mmut_sasarea.h"
+#include "mmut_srs.h"
 #include "mginterrupt.h"
 
 #define MAXPNT 1500      
@@ -50,6 +51,21 @@ Hacked to CSASArea class structure Liz Potterton 2002
 #define PI 3.141592653589793238462643
 
 using namespace std;
+
+typedef mmdb::Atom** PPCAtom;
+typedef mmdb::Atom* PCAtom;
+typedef mmdb::Atom CAtom;
+typedef mmdb::Residue** PPCResidue;
+typedef mmdb::Residue* PCResidue;
+typedef mmdb::Residue CResidue;
+typedef mmdb::Chain** PPCChain;
+typedef mmdb::Chain* PCChain;
+typedef mmdb::Chain CChain;
+typedef mmdb::Model** PPCModel;
+typedef mmdb::Model* PCModel;
+typedef mmdb::Model CModel;
+typedef mmdb::Contact* PSContact;
+using namespace mmdb;
 
 //---------------------------------------------------------------------
 CSASArea::CSASArea( PCMMUTManager molHndin, int selHndin) : 
@@ -150,7 +166,7 @@ int CSASArea::Calculate_Contact ( void )  {
 //-------------------------------------------------------------------
   int rv,i,j;
   int tmp_selHnd,local_selHnd, nSelAtoms,nSelAtoms1;
-  mmdb::PPAtom selAtoms,selAtoms1;
+  PPCAtom selAtoms,selAtoms1;
   rvector radwithhoh;
 
   if ( !selHnds[0] || ! selHnds[1]) return 1;
@@ -167,8 +183,8 @@ int CSASArea::Calculate_Contact ( void )  {
   // Initialise UDD
   int nchains = molHnds[0]->GetNumberOfChains(0);
   int nr0,nat0,nat_set;
-  mmdb::PPResidue resTable;
-  mmdb::PPAtom atomTable;
+  PPCResidue resTable;
+  PPCAtom atomTable;
   for (int ic=0;ic<nchains;ic++) {
     resTable = NULL;
     molHnds[0]->GetResidueTable(0,ic,resTable,nr0);
@@ -192,12 +208,12 @@ int CSASArea::Calculate_Contact ( void )  {
   tmp_selHnd=molHnds[0]->NewSelection();
   local_selHnd = molHnds[0]->NewSelection();
   // Initially select whole res 
-  molHnds[0]->SelectNeighbours(tmp_selHnd,mmdb::STYPE_RESIDUE,selAtoms1,
-			      nSelAtoms1,0.0,10.0,mmdb::SKEY_NEW);
+  molHnds[0]->SelectNeighbours(tmp_selHnd,STYPE_RESIDUE,selAtoms1,
+			      nSelAtoms1,0.0,10.0,SKEY_NEW);
 
 
-  molHnds[0]->Select(local_selHnd,mmdb::STYPE_ATOM,tmp_selHnd,mmdb::SKEY_NEW);
-  molHnds[0]->Select(local_selHnd,mmdb::STYPE_ATOM,selHnds[0],SKEY_AND);
+  molHnds[0]->Select(local_selHnd,STYPE_ATOM,tmp_selHnd,SKEY_NEW);
+  molHnds[0]->Select(local_selHnd,STYPE_ATOM,selHnds[0],SKEY_AND);
 
   // Diagnostic
   //molHnds[0]->GetSelIndex(local_selHnd,tmpAtoms,nTmp);
@@ -242,7 +258,7 @@ int CSASArea::Calculate_Contact ( void )  {
 //-------------------------------------------------------------------
 int CSASArea::Calculate (int imodel,bool separate_models)  {
 //-------------------------------------------------------------------
-   int rv = 0;
+  int rv;
   if ( molHnds[0]->GetNumberOfModels() == 1)
     rv = Calculate0(1);
   else if (imodel>0 && imodel <=  molHnds[0]->GetNumberOfModels()) 
@@ -265,14 +281,14 @@ int CSASArea::Calculate (int imodel,bool separate_models)  {
 int CSASArea::Calculate0 (int imodel)  {
 //-------------------------------------------------------------------
 
-  int RC = 0, i,j,nat;
-  mmdb::PPAtom selected_atoms;
+  int RC, i,j,nat;
+  PPCAtom selected_atoms;
   rvector radwithhoh;
 
   // Initiallise mmdb udd
   int nr0,nat0;
-  mmdb::PPAtom atomTable;
-  mmdb::PPResidue resTable;
+  PPCAtom atomTable;
+  PPCResidue resTable;
   int im,fm,lm,nchains;
   int nat_set = 0;
 
@@ -349,29 +365,29 @@ int CSASArea::Calculate0 (int imodel)  {
 
 
 //-----------------------------------------------------------------------
-int CSASArea::LeeAndRichards(mmdb::realtype *radwithhoh,int imodel,int imode,
+int CSASArea::LeeAndRichards(realtype *radwithhoh,int imodel,int imode,
                      int local_selHnd ){
 //-----------------------------------------------------------------------
 
-  PCBrick brick;
-  mmdb::realtype total_carea;
+  mmdb::Brick* brick;
+  realtype total_carea;
   int i,j,k,l,nnbr;
-  mmdb::realtype aarc,xr,yr,zr,rr,rrx2,rrsq;
+  realtype aarc,xr,yr,zr,rr,rrx2,rrsq;
   int x,y,z,ix,iy,iz;
-  mmdb::realtype sumr, dx, dy, dz, dijsq,rj;
-  mmdb::realtype *rnnbr;
-  mmdb::realtype **xyznnbr;
+  realtype sumr, dx, dy, dz, dijsq,rj;
+  realtype *rnnbr;
+  realtype **xyznnbr;
   int nzp;
-  mmdb::realtype zgrid,rsec2r,rsecr,rsec2n,rsecn;
-  mmdb::realtype *arci, *arcf;
-  mmdb::realtype arcsum;
+  realtype zgrid,rsec2r,rsecr,rsec2n,rsecn;
+  realtype *arci, *arcf;
+  realtype arcsum;
   int karc;
-  mmdb::realtype *dsq,  *d;
-  mmdb::realtype *dxn,  *dyn;
-  mmdb::realtype alpha, beta, ti, tf;
-  mmdb::realtype aarea,carea,aarea0;
+  realtype *dsq,  *d;
+  realtype *dxn,  *dyn;
+  realtype alpha, beta, ti, tf;
+  realtype aarea,carea,aarea0;
   int skip_plane;
-  mmdb::PPAtom selected_atoms, tmp_sel_atoms[2];
+  PPCAtom selected_atoms, tmp_sel_atoms[2];
   int natoms_sel, tmp_natoms[2];
 
   if (imode == 0) {
@@ -387,7 +403,7 @@ int CSASArea::LeeAndRichards(mmdb::realtype *radwithhoh,int imodel,int imode,
     molHnds[1]->GetSelIndex(selHnds[1],tmp_sel_atoms[1],tmp_natoms[1]);
     //cout << "tmp_natoms " << tmp_natoms[0] << " " << tmp_natoms[1] << endl;
     natoms_sel = tmp_natoms[0]+tmp_natoms[1];
-    selected_atoms= new mmdb::PAtom[natoms_sel];
+    selected_atoms= new PCAtom[natoms_sel];
     for (i=0;i<tmp_natoms[0];i++) selected_atoms[i] = tmp_sel_atoms[0][i];
     j = tmp_natoms[0];
     for (i=0;i<tmp_natoms[1];i++) {
@@ -397,16 +413,16 @@ int CSASArea::LeeAndRichards(mmdb::realtype *radwithhoh,int imodel,int imode,
   }
   //cout << "LeeAndRichards natoms_sel" << natoms_sel << endl;
 
-  arci = new mmdb::realtype[ICT];
-  arcf = new mmdb::realtype[ICT];
-  dxn = new mmdb::realtype[MAXNNBR];
-  dyn = new mmdb::realtype[MAXNNBR];
-  d = new mmdb::realtype[MAXNNBR];
-  dsq = new mmdb::realtype[MAXNNBR];
-  rnnbr = new mmdb::realtype[MAXNNBR];
-  xyznnbr = new mmdb::realtype*[MAXNNBR];
+  arci = new realtype[ICT];
+  arcf = new realtype[ICT];
+  dxn = new realtype[MAXNNBR];
+  dyn = new realtype[MAXNNBR];
+  d = new realtype[MAXNNBR];
+  dsq = new realtype[MAXNNBR];
+  rnnbr = new realtype[MAXNNBR];
+  xyznnbr = new realtype*[MAXNNBR];
   for(i=0;i<MAXNNBR;i++)
-    xyznnbr[i] = new mmdb::realtype[3];
+    xyznnbr[i] = new realtype[3];
 
   total_carea = 0.0;
 
@@ -608,19 +624,19 @@ int CSASArea::LeeAndRichards(mmdb::realtype *radwithhoh,int imodel,int imode,
 }
 
 //-------------------------------------------------------------------------
-int CSASArea::WodakAndJanin(mmdb::realtype *radwithhoh,int imodel){
+int CSASArea::WodakAndJanin(realtype *radwithhoh,int imodel){
 //-------------------------------------------------------------------------
 
-  mmdb::PPAtom selected_atoms;
+  PPCAtom selected_atoms;
   int natoms_sel;
   GetSelection ( selected_atoms, natoms_sel,imodel);
   // This doesn't seem to want to work
-  mmdb::realtype b,bpr,ri,rj,dij;
+  realtype b,bpr,ri,rj,dij;
   int i,j;
  
-  mmdb::realtype A;
-  mmdb::realtype B;
-  mmdb::realtype S;
+  realtype A;
+  realtype B;
+  realtype S;
 
   for(i=0;i<natoms_sel;i++){
     if(!selected_atoms[i]->Ter) {
@@ -677,24 +693,24 @@ int CSASArea::WodakAndJanin(mmdb::realtype *radwithhoh,int imodel){
 }
 
 //-------------------------------------------------------------------------
-int CSASArea::SurfacePoints(mmdb::realtype *radwithhoh,int imodel) {
+int CSASArea::SurfacePoints(realtype *radwithhoh,int imodel) {
 //-------------------------------------------------------------------------
 
-  mmdb::PPAtom selected_atoms;
+  PPCAtom selected_atoms;
   int natoms_sel;
   GetSelection ( selected_atoms, natoms_sel,imodel);
-  PCBrick brick;
+  mmdb::Brick* brick;
 
   int i,j,k,x,y,z;
   int nAtomTypes,atom_type;
-  mmdb::realtype ri,rj,rk,sarea,points,equat,vert,phi,theta;
-  mmdb::realtype hor,trunc,rxy,rz;
+  realtype ri,rj,rk,sarea,points,equat,vert,phi,theta;
+  realtype hor,trunc,rxy,rz;
   int nvert,ipt,nhor;
-  mmdb::realtype ***xyzsph;
+  realtype ***xyzsph;
   int nnbr, ix, iy, iz;
-  mmdb::realtype sumr, dx, dy, dz, dijsq;
-  mmdb::realtype **xyznnbr;
-  mmdb::realtype *rnnbr;
+  realtype sumr, dx, dy, dz, dijsq;
+  realtype **xyznnbr;
+  realtype *rnnbr;
   int *nptsph;
   int issurface;
   int *npoint;
@@ -702,20 +718,21 @@ int CSASArea::SurfacePoints(mmdb::realtype *radwithhoh,int imodel) {
  
   npoint = new int[natoms_sel];
 
-  nAtomTypes = dynamic_cast<PCMMANManager>(molHnds[0])->GetMGSBase()->GetNofLibAtoms();
+  std::map<std::string,MMUTSRSAtomInfo> srsAtoms = dynamic_cast<PCMMANManager>(molHnds[0])->GetSrsAtoms();
+  nAtomTypes = srsAtoms.size();
   //cout << "nAtomTypes" << nAtomTypes << endl;
   
-  xyzsph = new mmdb::realtype**[nAtomTypes];
+  xyzsph = new realtype**[nAtomTypes];
   for(i=0;i<nAtomTypes;i++){
-    xyzsph[i] = new mmdb::realtype*[MAXPNT];
+    xyzsph[i] = new realtype*[MAXPNT];
     for(j=0;j<MAXPNT;j++)
-      xyzsph[i][j] = new mmdb::realtype[3];
+      xyzsph[i][j] = new realtype[3];
   }
 
-  rnnbr = new mmdb::realtype[MAXNNBR];
-  xyznnbr = new mmdb::realtype*[MAXNNBR];
+  rnnbr = new realtype[MAXNNBR];
+  xyznnbr = new realtype*[MAXNNBR];
   for(i=0;i<MAXNNBR;i++)
-    xyznnbr[i] = new mmdb::realtype[3];
+    xyznnbr[i] = new realtype[3];
 
   nptsph = new int[nAtomTypes];
 
@@ -726,8 +743,10 @@ int CSASArea::SurfacePoints(mmdb::realtype *radwithhoh,int imodel) {
 
   molHnds[0]->MakeBricks(selected_atoms,natoms_sel,brick_margin,(HOHrad+2.0)*2.0);
 
+  std::map<std::string,MMUTSRSAtomInfo>::const_iterator srsAtoms_iter = srsAtoms.begin();
+
   for(i=0;i<nAtomTypes;i++){
-      ri =  dynamic_cast<PCMMANManager>(molHnds[0])->GetMGSBase()->libAtom[i].vdwRadius;
+      ri = srsAtoms_iter->second.vdw_radius();
       //cout << "Atom type rad " << ri << endl;
       sarea = 4*PI*ri*ri;
       points = sarea*point_density;
@@ -739,16 +758,16 @@ int CSASArea::SurfacePoints(mmdb::realtype *radwithhoh,int imodel) {
       trunc = 0.0;
 
       for(j=0;j<nvert;j++){
-        phi = (mmdb::realtype)j*PI/vert;
+        phi = (realtype)j*PI/vert;
         hor = sin(phi)*equat - trunc;
         nhor = (int)hor;
         if(j==0) nhor =1;
-        trunc = (mmdb::realtype)nhor - hor;
+        trunc = (realtype)nhor - hor;
         rxy = sin(phi)*ri;
         rz = cos(phi)*ri;
 
         for(k=0;k<nhor-1;k++){
-          theta = 2.0*PI*(mmdb::realtype)k/(realtype)nhor;
+          theta = 2.0*PI*(realtype)k/(realtype)nhor;
           ipt++;
           if(ipt>MAXPNT){
             cout << "npt > MAXPNT in solvent accessible area calc\n";
@@ -762,6 +781,7 @@ int CSASArea::SurfacePoints(mmdb::realtype *radwithhoh,int imodel) {
         }
       }
       nptsph[i] = ipt;
+      srsAtoms_iter++;
   }
 
   for(i=0;i<nAtomTypes;i++)
@@ -770,7 +790,8 @@ int CSASArea::SurfacePoints(mmdb::realtype *radwithhoh,int imodel) {
 
   for(i=0;i<natoms_sel;i++){
     npoint[i]=0;
-    atom_type = dynamic_cast<PCMMANManager>(molHnds[0])->GetAtomEnergyType(selected_atoms[i]);
+    // FIXME This may not be efficient!
+    atom_type = std::distance(srsAtoms.begin(),srsAtoms.find(std::string(dynamic_cast<PCMMANManager>(molHnds[0])->GetAtomEnergyType(selected_atoms[i]))));
     if(!selected_atoms[i]->Ter) {
     // Should be an if water, etc condition here.
     ri = radwithhoh[i];
@@ -845,9 +866,9 @@ int CSASArea::SurfacePoints(mmdb::realtype *radwithhoh,int imodel) {
   delete [] xyznnbr;
 
   for(i=0;i<natoms_sel;i++){
-    total_area += (mmdb::realtype)npoint[i];
+    total_area += (realtype)npoint[i];
     if(!selected_atoms[i]->Ter) {
-      selected_atoms[i]->PutUDData(atomUDDHnd,(mmdb::realtype)npoint[i]/point_density);
+      selected_atoms[i]->PutUDData(atomUDDHnd,(realtype)npoint[i]/point_density);
     }else{
       selected_atoms[i]->PutUDData(atomUDDHnd,0.0);
     }
@@ -863,10 +884,10 @@ int CSASArea::SurfacePoints(mmdb::realtype *radwithhoh,int imodel) {
 int CSASArea::ResSASArea (int imodel) {
 //--------------------------------------------------------------------
   // Sum over all atoms in a residue for residue SAS area
-  mmdb::realtype sas,tot;
+  realtype sas,tot;
   int nr0,nat0, ntot, RC;
-  mmdb::PPAtom atomTable;
-  mmdb::PPResidue resTable;
+  PPCAtom atomTable;
+  PPCResidue resTable;
   int first_model=1;
   int last_model=1;
   if (imodel == 0 && molHnds[0]->GetNumberOfModels() > 1) {
@@ -908,10 +929,10 @@ int CSASArea::ResSASArea (int imodel) {
 //-----------------------------------------------------------------------
 std::string CSASArea::Print(int imodel, string selection1, int set_selHnd1, string selection2, int set_selHnd2 ) {
 //-----------------------------------------------------------------------
-  mmdb::PPAtom selected_atoms;
-  mmdb::PPResidue selected_res;
+  PPCAtom selected_atoms;
+  PPCResidue selected_res;
   int RC,i,natoms_sel,nres_sel;
-  mmdb::realtype sas,total, set_total1,set_total2 ;
+  realtype sas,total, set_total1,set_total2 ;
   std::ostringstream output;
 
   output.setf(ios::fixed);
@@ -974,10 +995,10 @@ std::string CSASArea::Print(int imodel, string selection1, int set_selHnd1, stri
 
 
 //----------------------------------------------------------------
-void CSASArea::SortAB(mmdb::realtype *arci, mmdb::realtype *arcf, int &karc)  {
+void CSASArea::SortAB(realtype *arci, realtype *arcf, int &karc)  {
 //----------------------------------------------------------------
   int i,j,it;
-  mmdb::realtype aa,bb,temp;
+  realtype aa,bb,temp;
 
   for(j=0;j<=karc;j++){
     aa = arci[j];
@@ -1000,9 +1021,9 @@ void CSASArea::SortAB(mmdb::realtype *arci, mmdb::realtype *arcf, int &karc)  {
 
 
 //--------------------------------------------------------------
-void CSASArea::ArcLap(mmdb::realtype *arci, mmdb::realtype *arcf, int &karc)  {
+void CSASArea::ArcLap(realtype *arci, realtype *arcf, int &karc)  {
 //--------------------------------------------------------------
-  mmdb::realtype t;
+  realtype t;
   int k,l,ks;//,m;
 
   t = arcf[0];

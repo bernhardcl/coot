@@ -2010,10 +2010,18 @@ mmdb_version=1.25.2
 mmdb_version=1.25.3
 mmdb_version=2.0.1
 mmdb_version=2.0.2
+mmdb_version=2.0.5
 #mmdb_server_dir=ftp://ftp.ccp4.ac.uk/opensource
-mmdb_server_dir=$extras_place
+#mmdb_server_dir=$extras_place
+mmdb_server_dir=ftp://ftp.ccp4.ac.uk/opensource
 echo ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
 ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
+
+# FIXME - no test yet, just build ccp4srs as well
+# need data too?! Where to install?!
+ccp4srs_version=35
+$(WGET) -O ccp4srs_$ccp4srs_version.tgz http://fg.oisin.rc-harwell.ac.uk/scm/loggerhead/ccp4srs/trunk/tarball/$ccp4srs_version
+ftp://ftp.ccp4.ac.uk/opensource/ccp4srs-data-20150205.tar.gz
 
 (
 date
@@ -2023,7 +2031,16 @@ cd  mmdb2-$mmdb_version
 pwd
 ./configure $generic_prefix $shared_flag
 $MAKE
+$MAKE install 
+
+# FIXME add here (not ideal) installation of ccp4srs
+tar xzf ${AUTOBUILD_SOURCES}/ccp4srs_$ccp4srs_version.tgz
+cd ccp4srs/trunk
+pwd
+./configure $generic_prefix $shared_flag CPPFLAGS=-I$install_top_dir/include LDFLAGS=-L$install_top_dir/lib 
+$MAKE
 $MAKE install
+
 ) > $HOSTLOGDIR/02-mmdb.txt 2>&1
 else
    echo not building mmdb:

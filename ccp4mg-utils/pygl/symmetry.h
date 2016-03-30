@@ -1,6 +1,8 @@
 /*
      pygl/symmetry.h: CCP4MG Molecular Graphics Program
      Copyright (C) 2001-2008 University of York, CCLRC
+     Copyright (C) 2009-2011 University of York
+     Copyright (C) 2012 STFC
 
      This library is free software: you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public License
@@ -25,8 +27,8 @@
 #include <string>
 #include <math.h>
 #include <mman_manager.h>
-#include <mmdb_atom.h>
-#include <mmdb_cryst.h>
+#include <mmdb2/mmdb_atom.h>
+#include <mmdb2/mmdb_cryst.h>
 #include "cartesian.h"
 
 #include "matrix.h"
@@ -60,11 +62,11 @@ class molecule_extents_t {
    // left, right, minimum and maximum in x;
    // top, bottom, minimum and maximum in y;
 
-   mmdb::PPAtom extents_selection;
+   mmdb::Atom** extents_selection;
 
  public:
 
-   molecule_extents_t(mmdb::PPAtom SelAtoms, int nSelAtoms); 
+   molecule_extents_t(mmdb::Atom** SelAtoms, int nSelAtoms); 
    ~molecule_extents_t();
    Cartesian get_front(); 
    Cartesian get_back(); 
@@ -78,12 +80,14 @@ class molecule_extents_t {
       //coord_to_unit_cell_translations(Cartesian point,
 				      //atom_selection_container_t AtomSel); 
 
-   std::vector<symm_trans_t> which_box(Cartesian point,PCMMANManager molhnd, mmdb::PPAtom SelAtoms, int nSelAtoms, Cartesian tl, Cartesian tr, Cartesian br, Cartesian bl);
-   std::vector<symm_trans_t> GetUnitCellOps(PCMMANManager molhnd, int xshifts, int yshifts, int zshifts) ;
+   std::vector<symm_trans_t> which_box_contacts(Cartesian point,CMMANManager* molhnd, int selHnd, Cartesian tl, Cartesian tr, Cartesian br, Cartesian bl, float radius);
+   std::vector<symm_trans_t> which_box(Cartesian point,CMMANManager* molhnd, mmdb::Atom** SelAtoms, int nSelAtoms, Cartesian tl, Cartesian tr, Cartesian br, Cartesian bl, float radius);
+   std::vector<symm_trans_t> GetUnitCellOps(CMMANManager* molhnd, int xshifts, int yshifts, int zshifts) ;
 
-   mmdb::PPAtom trans_sel(mmdb::CMMDBCryst *my_cryst, symm_trans_t symm_trans) const;
+   mmdb::Atom** trans_sel(mmdb::Cryst *my_cryst, symm_trans_t symm_trans) const;
 
-   bool point_is_in_box(Cartesian point, mmdb::PPAtom TransSel) const;
+   bool point_is_in_box(Cartesian point, mmdb::Atom** TransSel) const;
+   bool point_is_near_centre_of_box(Cartesian point, mmdb::Atom** TransSel, float radius) const;
 
 };
 
@@ -101,29 +105,33 @@ class Cell_Translation {
 class Symmetry {
     std::vector<symm_trans_t> symm_trans;
     PCMMANManager molhnd;
-    mmdb::PPAtom SelAtoms;
+    mmdb::Atom** SelAtoms;
     int nSelAtoms;
+    int selHnd;
     Cartesian point;
     Cartesian tl;
     Cartesian tr;
     Cartesian br;
     Cartesian bl;
-    Pmmdb::CMMDBCryst my_cryst_p;
-    std::vector<mmdb::PPAtom> symmetries;
+    mmdb::Cryst* my_cryst_p;
+    std::vector<mmdb::Atom**> symmetries;
     void clear_symmetries();
+    void init(CMMANManager *molhnd_in, mmdb::Atom** SelAtoms_in, int nSelAtoms_in, Cartesian point_in, Cartesian tl_in, Cartesian tr_in, Cartesian br_in, Cartesian bl_in, int draw_unit_cell=0, int xshifts=0, int yshifts=0, int zshifts=0, float radius=50, int draw_contacts=0);
   public:
-    Symmetry(CMMANManager *molhnd_in, mmdb::PPAtom SelAtoms_in, int nSelAtoms_in, Cartesian point_in, Cartesian tl_in, Cartesian tr_in, Cartesian br_in, Cartesian bl_in, int draw_unit_cell=0, int xshifts=0, int yshifts=0, int zshifts=0);
+    Symmetry(CMMANManager *molhnd_in, int selHnd_in, Cartesian point_in, Cartesian tl_in, Cartesian tr_in, Cartesian br_in, Cartesian bl_in, int draw_unit_cell=0, int xshifts=0, int yshifts=0, int zshifts=0, float radius=50, int draw_contacts=0);
     ~Symmetry();
-    mmdb::PPAtom trans_sel(const symm_trans_t &symm_tran) const;
+    mmdb::Atom** trans_sel(const symm_trans_t &symm_tran) const;
     void AddSymmetry(float symm_distance);
-    std::vector<mmdb::PPAtom> GetSymmetries();
+    std::vector<mmdb::Atom**> GetSymmetries();
     std::vector<symm_trans_t> GetSymmTrans(void){return symm_trans;};
 
     std::vector<matrix> GetSymmetryMatrices() const;
     std::vector<int> GetSymmetryMatrixNumbers() const;
     std::vector<Cartesian> GetUnitCell() const;
-    mmdb::PPAtom GetSymmetry(int nsym);
+    mmdb::Atom** GetSymmetry(int nsym);
     unsigned int GetNumSymmetries();
+    double ExtentSize();
+    std::vector<double> Extent();
     
 };
 

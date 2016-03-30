@@ -21,19 +21,19 @@
 #define _CCP4_MMUT_BASE_PAIRS_H_
 #include <vector>
 #include <utility>
-#include <mman_manager.h>
 #include "atom_util.h"
 
+class CMMANManager;
 class CNABasePairs{
-  std::vector<std::pair<mmdb::PResidue,mmdb::PResidue> > base_pairs;
-  std::vector<std::pair<double*,double*> > colours;
+  std::vector<std::pair<mmdb::Residue*,mmdb::Residue*> > base_pairs;
+  std::vector<std::pair<const double*,const double*> > colours;
  public:
   CNABasePairs(){};
-  void Calculate(CMMANManager *molHnd, int selHnd, mmdb::PPAtom selAtoms, int nSelAtoms, AtomColourVector *atom_colour_vector);
-  CNABasePairs(CMMANManager *molHnd, int selHnd, mmdb::PPAtom selAtoms, int nSelAtoms, AtomColourVector *atom_colour_vector);
-  mmdb::PResidue GetPairedResidue(const mmdb::PResidue res_in) const ;
+  void Calculate(CMMANManager *molHnd, int selHnd, mmdb::Atom** selAtoms, int nSelAtoms, const AtomColourVector &atom_colour_vector, double *hb_params_array=NULL);
+  CNABasePairs(CMMANManager *molHnd, int selHnd, mmdb::Atom** selAtoms, int nSelAtoms, const AtomColourVector &atom_colour_vector);
+  const mmdb::Residue* GetPairedResidue(const mmdb::Residue* res_in) const ;
   int GetPairedResidueIndex(const int i) const ;
-  std::vector<std::pair<mmdb::PResidue,mmdb::PResidue> > GetPairs() const {return base_pairs;};
-  std::vector<std::pair<double*,double*> > GetColours() const {return colours;};
+  std::vector<std::pair<mmdb::Residue*,mmdb::Residue*> > GetPairs() const {return base_pairs;};
+  const std::vector<std::pair<const double*,const double*> > GetColours() const {return colours;};
 };
 #endif //_CCP4_MMUT_BASE_PAIRS_H_
