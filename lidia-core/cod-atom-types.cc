@@ -117,14 +117,12 @@ cod::atom_types_t::get_cod_atom_types(RDKit::ROMol &rdkm,
 
 // static
 bool
-cod::atom_types_t::atomRingSorter(std::vector<int> &r1, std::vector<int> &r2) {
+cod::atom_types_t::atomRingSorter(const std::vector<int> &r1, const std::vector<int> &r2) {
 
    return (r1.size() < r2.size());
 }
 
 
-
-// ret
 void
 cod::atom_types_t::handle_bigger_rings_from_fused_rings(RDKit::ROMol &rdkm,
 							const std::vector<std::vector<int> > &fused_rings) {
@@ -901,3 +899,4 @@ cod::atom_types_t::sort_neighbours(const std::vector<std::string> &neighbours_in
 #endif // MAKE_ENHANCED_LIGAND_TOOLS
 
 
+#endif // MAKE_ENHANCED_LIGAND_TOOLS
