@@ -1,4 +1,6 @@
 
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+
 #include "rdkit-interface.hh"
 #include "GraphMol/Rings.h"
 #include "GraphMol/RingInfo.h"
@@ -896,6 +898,6 @@ cod::atom_types_t::sort_neighbours(const std::vector<std::string> &neighbours_in
 }
 
 
-
+#endif // MAKE_ENHANCED_LIGAND_TOOLS
 
 
