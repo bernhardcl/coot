@@ -31,6 +31,8 @@ FIX COOT_REFMAC_DIR for x86 windows with spaces (and/or umlauts)!
 -- before 0.8
 
 Windows:
+ o replace msys with HOME in wincoot build scripts
+ o in general make wincoot build more general/compatible
  o check installer on win 8 (hangs after finished)
  o distribute src code!!!
  o change runwincoot.bat to (win)coot.bat
@@ -113,6 +115,8 @@ scripting exercise
 ----------------
 
 **** General ****
+
+   o better error messages when ccp4 (e.g. libcheck) is not available
 
    o user defined click shoudl stay cross haired as long as there is 
 	clicks pending (count the clicks?!)
@@ -421,6 +425,9 @@ low importance
 
 **** Python ****
 
+
+   o keep refmac pid to cancel and kill refmac in download pdbe
+
    o get recent ebi skip queue and timeout if 404 return (esp for pics
 	which are not there - any more)
    
@@ -536,6 +543,8 @@ low importance
 
 
 **** Windows ****
+
+   o make batch msi (using msiwrapperbatch and config file)
 
    o fix runwincoot.bat when PYTHONPATH points to a pygtk installation.
 
