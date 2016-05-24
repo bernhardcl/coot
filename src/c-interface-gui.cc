@@ -5752,6 +5752,11 @@ calc_and_set_optimal_b_factor ( GtkWidget *w ) {
 	float sharpening_limit = graphics_info_t::map_sharpening_scale_limit;
 	int imol = graphics_info_t::imol_map_sharpening;
 	float Bopt = optimal_B_kurtosis(imol);
+   if (fabs(Bopt-graphics_info_t::map_sharpening_scale_limit) <= 0.1) {
+      std::string txt;
+      txt = "INFO:: Optimisation did NOT converge.\n The value may be bogus.";
+      info_dialog_and_text(txt.c_str());
+   }
 	GtkWidget *h_scale = lookup_widget(w, "map_sharpening_hscale");
 	GtkAdjustment *adj = GTK_RANGE(h_scale)->adjustment;
         gtk_adjustment_set_value(adj, Bopt);
