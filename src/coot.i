@@ -27,6 +27,7 @@
 #include "coot-version.hh"
 #include "get-monomer.hh"
 #include "globularize.hh"
+#include "cfc.hh"
 %}
 
 
@@ -75,4 +76,8 @@ namespace std {
 %include "coot-version.hh"
 %include "get-monomer.hh"
 %include "globularize.hh"
+%include "cfc.hh"
 %include "../coords/phenix-geo.hh"
+
+# ignore some functions with c++ objects
+%ignore rigid_body_fit_with_residue_range();
