@@ -211,8 +211,8 @@ AM_CPPFLAGS = \
 
 pkginclude_HEADERS = crunch-model.hh
 
-libexec_PROGRAMS = coot-bin
-bin_PROGRAMS = density-score-by-residue-real fix-nomenclature-errors dynarama-real
+libexec_PROGRAMS = coot-bin dynarama-bin
+bin_PROGRAMS = density-score-by-residue-real fix-nomenclature-errors
 dist_bin_SCRIPTS = coot density-score-by-residue dynarama
 check_PROGRAMS = test-coot-align test-cholesky
 
@@ -586,8 +586,8 @@ density_score_by_residue_real_LDADD  =	\
 	$(MMDB_LIBS)		\
 	$(GSL_LIBS)
 
-dynarama_real_SOURCES = dynarama-main.cc rama_plot.cc rama_mousey.cc
-dynarama_real_LDADD = \
+dynarama_bin_SOURCES = dynarama-main.cc rama_plot.cc rama_mousey.cc
+dynarama_bin_LDADD = \
         $(top_builddir)/coords/libcoot-coords.la                \
         $(top_builddir)/utils/libcoot-utils.la  \
         $(top_builddir)/coot-utils/libcoot-coord-utils.la       \
