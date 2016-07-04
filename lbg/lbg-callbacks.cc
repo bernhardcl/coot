@@ -186,7 +186,7 @@ on_clear_toolbutton_clicked(GtkToolButton *button, gpointer user_data) {
    GtkWidget *canvas = get_canvas_from_scrolled_win(GTK_WIDGET(user_data));
    lbg_info_t *l = static_cast<lbg_info_t *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
    if (l)
-      l->clear();
+      l->clear(true);
 }
 
 extern "C" G_MODULE_EXPORT void
@@ -367,7 +367,7 @@ on_lbg_open_filechooserdialog_response(GtkDialog       *dialog,
       lbg_info_t *l = static_cast<lbg_info_t *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
       if (l) {
 	 std::string file_name = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(l->open_dialog));
-	 l->import_mol_from_file(file_name);
+	 l->import_molecule_from_file(file_name);
       }
    }
    gtk_widget_hide(GTK_WIDGET(dialog));
@@ -657,7 +657,7 @@ on_lbg_key_toggle_toolbutton_toggled(GtkToggleToolButton *button, gpointer user_
 }
 
 extern "C" G_MODULE_EXPORT void
-on_lbg_charge_toolbutton_toggled(GtkToggleToolButton *togglebutton, gpointer user_data) {
+on_lbg_charge_toggle_toolbutton_toggled(GtkToggleToolButton *togglebutton, gpointer user_data) {
    GtkWidget *canvas = GTK_WIDGET(user_data);
    lbg_handle_toggle_button(togglebutton, canvas, lbg_info_t::CHARGE);
 }
@@ -798,18 +798,22 @@ on_lbg_view_rotate_apply_button_clicked(GtkButton *button, gpointer user_data) {
       std::cout << "failed to get lbg_info_t from " << canvas << std::endl;
    } else {
       // something
+      std::string angle_str = gtk_entry_get_text(GTK_ENTRY(l->lbg_view_rotate_entry));
+      l->rotate_z_molecule(angle_str);
    } 
 }
 
 extern "C" G_MODULE_EXPORT void
 on_lbg_view_flip_around_x_button_clicked(GtkButton *button, gpointer user_data) {
+
    GtkWidget *canvas = GTK_WIDGET(user_data);
    lbg_info_t *l = static_cast<lbg_info_t *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
    if (!l) {
       std::cout << "failed to get lbg_info_t from " << canvas << std::endl;
    } else {
       // something
-   } 
+      l->flip_molecule(widgeted_molecule_t::X_AXIS);
+   }
 }
 
 extern "C" G_MODULE_EXPORT void
@@ -820,7 +824,8 @@ on_lbg_view_flip_around_y_button_clicked(GtkButton *button, gpointer user_data) 
       std::cout << "failed to get lbg_info_t from " << canvas << std::endl;
    } else {
       // something
-   } 
+      l->flip_molecule(widgeted_molecule_t::Y_AXIS);
+   }
 }
 
 extern "C" G_MODULE_EXPORT void
