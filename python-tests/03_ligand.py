@@ -304,6 +304,5 @@ class LigandTestFunctions(unittest.TestCase):
             cif_file_name = tlc_text + "-pyrogen.cif"
             print "INFO:: pyrogen will try to read pdb file %s" %pdb_file_name
             imol = handle_read_draw_molecule_with_recentre(pdb_file_name, 0)
-            print "INFO:: pyrogen test will try to read %s!" %pdb_file_name
             # add test for chirality in the dictionary here
             self.assertTrue(valid_model_molecule_qm(imol))
