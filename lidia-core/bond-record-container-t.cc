@@ -965,4 +965,4 @@ cod::bond_record_container_t::get_bond_distance_from_model(const std::string &at
 
 }
 
-#endif // MAKE_ENHANCED_LIGAND_TOOLS
+#endif // ENHANCED_LIGAND_TOOLS

@@ -956,7 +956,7 @@ cod::atom_types_t::sort_neighbours(const std::vector<std::string> &neighbours_in
 }
 
 
-#endif // MAKE_ENHANCED_LIGAND_TOOLS
+
 
 // return 0,0 on failure
 std::pair<unsigned int, unsigned int>

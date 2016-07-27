@@ -298,9 +298,11 @@ class LigandTestFunctions(unittest.TestCase):
                 else:
                     arg_list = ["--no-mogul", "-M", "--residue-type", tlc_text, smiles]
             popen_status = popen_command("pyrogen", arg_list, [], log_file_name, True)
-            self.assertTrue(popen_status == 0)
+            self.assertEqual(popen_status, 0 ,
+                             "WARNING:: OOps - pyrogen exited with status: %i" %popen_status)
             pdb_file_name = tlc_text + "-pyrogen.pdb"
             cif_file_name = tlc_text + "-pyrogen.cif"
             imol = handle_read_draw_molecule_with_recentre(pdb_file_name, 0)
+            print "INFO:: pyrogen test will try to read %s!" %pdb_file_name
             # add test for chirality in the dictionary here
             self.assertTrue(valid_model_molecule_qm(imol))
