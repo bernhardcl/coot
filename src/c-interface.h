@@ -942,6 +942,18 @@ are not (or may not be) on the same scale).
 */
 int blob_under_pointer_to_screen_centre();
 
+#ifdef __cplusplus
+#ifdef USE_GUILE
+/*! \brief return scheme false or a list of molecule number and an atom spec  */
+SCM select_atom_under_pointer_scm();
+#endif
+
+#ifdef USE_PYTHON
+/*! \brief return Python false or a list of molecule number and an atom spec  */
+PyObject *select_atom_under_pointer_py();
+#endif
+#endif /* __cplusplus */
+
 /* \} */
 
 /*  --------------------------------------------------------------------- */
@@ -2692,6 +2704,7 @@ void set_go_to_atom_molecule(int imol);
 void unset_go_to_atom_widget(); /* unstore the static go_to_atom_window */
 
 
+
 /* \} */
 
 
@@ -3615,6 +3628,9 @@ int read_small_molecule_cif(const char *file_name);
 
 int read_small_molecule_data_cif(const char *file_name);
 
+int read_small_molecule_data_cif_and_make_map_using_coords(const char *file_name, 
+							   int imol_coords);
+
 /* \} */
 
 /*  ----------------------------------------------------------------------- */
@@ -4343,6 +4359,10 @@ void graphics_to_b_factor_representation(int imol);
 void graphics_to_b_factor_cas_representation(int imol);
 /*! \brief draw molecule number imol coloured by occupancy */
 void graphics_to_occupancy_representation(int imol);
+/*! \brief draw molecule number imol in CA+Ligands mode coloured by user-defined atom colours */
+void graphics_to_user_defined_atom_colours_representation(int imol);
+/*! \brief draw molecule number imol all atoms coloured by user-defined atom colours */
+void graphics_to_user_defined_atom_colours_all_atoms_representation(int imol);
 /*! \brief what is the bond drawing state of molecule number imol  */
 int graphics_molecule_bond_type(int imol); 
 /*! \brief scale the colours for colour by b factor representation */
@@ -4350,6 +4370,15 @@ int set_b_factor_bonds_scale_factor(int imol, float f);
 /*! \brief change the representation of the model molecule closest to
   the centre of the screen */
 void change_model_molecule_representation_mode(int up_or_down);
+
+/*! \brief make the carbon atoms for molecule imol be grey
+ */
+void set_use_grey_carbons_for_molecule(int imol, short int state);
+/*! \brief set the colour for the carbon atoms 
+
+can be not grey if you desire, r, g, b in the range 0 to 1.
+ */
+void set_grey_carbon_colour(int imol, float r, float g, float b);
 
 
 /*! \brief make a ball and stick representation of imol given atom selection
@@ -5129,6 +5158,8 @@ void set_edit_chi_angles_reverse_fragment_state(short int istate);
 void setup_torsion_general(short int state);
 /* No need for this to be exported to scripting */
 void toggle_torsion_general_reverse();
+
+void setup_residue_partial_alt_locs(short int state);
 
 /* \} */
 
@@ -6137,6 +6168,12 @@ PyObject *add_dipole_for_residues_py(int imol, PyObject *residue_specs);
 int make_and_draw_patterson(const char *mtz_file_name, 
 			    const char *f_col, 
 			    const char *sigf_col);
+/*! \brief Make a patterson molecule
+
+\return a new molecule number or -1 on failure */
+int make_and_draw_patterson_using_intensities(const char *mtz_file_name, 
+					      const char *i_col, 
+					      const char *sigi_col);
 
 /*  ----------------------------------------------------------------------- */
 /*                  Laplacian                                               */

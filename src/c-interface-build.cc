@@ -2178,6 +2178,7 @@ int renumber_residue_range(int imol, const char *chain_id,
 	       graphics_info_t g;
 	       graphics_draw();
 	       g.update_go_to_atom_window_on_changed_mol(imol);
+	       g.update_geometry_graphs(g.molecules[imol].atom_sel, imol);
 	    }
 	 }
       }
@@ -2203,6 +2204,9 @@ int change_residue_number(int imol, const char *chain_id, int current_resno, con
       graphics_info_t::molecules[imol].change_residue_number(chain_id_str, current_resno, current_inscode_str, new_resno, new_inscode_str);
       graphics_draw();
       idone = 1;
+      graphics_info_t g;
+      g.update_go_to_atom_window_on_changed_mol(imol);
+      g.update_geometry_graphs(g.molecules[imol].atom_sel, imol);
    } 
    std::string cmd = "change-residue-number";
    std::vector<coot::command_arg_t> args;
@@ -2576,7 +2580,8 @@ void
 reset_b_factor_residue_range(int imol, const char *chain_id, int ires1, int ires2) {
 
    if (is_valid_model_molecule(imol)) {
-     graphics_info_t::molecules[imol].set_b_factor_residue_range(std::string(chain_id), ires1, ires2, graphics_info_t::default_new_atoms_b_factor);
+      graphics_info_t::molecules[imol].set_b_factor_residue_range(std::string(chain_id), ires1, ires2,
+								  graphics_info_t::default_new_atoms_b_factor);
    } else {
       std::cout << "WARNING:: invalid model molecule number in reset_b_factor_residue_range "
 		<< imol << std::endl;
@@ -2591,6 +2596,70 @@ reset_b_factor_residue_range(int imol, const char *chain_id, int ires1, int ires
    add_to_history_typed(cmd, args);
 
 }
+
+#ifdef USE_PYTHON
+void set_b_factor_residues_py(int imol, PyObject *residue_specs_b_value_tuple_list_py) {
+
+   if (is_valid_model_molecule(imol)) {
+      if (PyList_Check(residue_specs_b_value_tuple_list_py)) {
+	 unsigned int l = PyObject_Length(residue_specs_b_value_tuple_list_py);
+	 if (l > 0) {
+	    std::vector<std::pair<coot::residue_spec_t, double> > rbs;
+	    for (unsigned int i=0; i<l; i++) {
+	       PyObject *tuple_py = PyList_GetItem(residue_specs_b_value_tuple_list_py, i);
+	       if (PyTuple_Check(tuple_py)) {
+		  unsigned int l2 = PyObject_Length(tuple_py);
+		  if (l2 == 2) {
+		     PyObject *spec_py = PyTuple_GetItem(tuple_py, 0);
+		     PyObject *bfac_py = PyTuple_GetItem(tuple_py, 1);
+		     if (PyFloat_Check(bfac_py) || PyInt_Check(bfac_py)) {
+			coot::residue_spec_t spec = residue_spec_from_py(spec_py);
+			double b = PyFloat_AsDouble(bfac_py);
+			std::pair<coot::residue_spec_t, double> p(spec, b);
+			rbs.push_back(p);
+		     }
+		  }
+	       }
+	    }
+	    graphics_info_t::molecules[imol].set_b_factor_residues(rbs);
+	 }
+      }
+   }
+}
+#endif // USE_PYTHON
+
+#ifdef USE_GUILE
+void set_b_factor_residues_scm(int imol, SCM residue_specs_b_value_tuple_list_scm) {
+
+   if (is_valid_model_molecule(imol)) {
+      if (scm_is_true(scm_list_p(residue_specs_b_value_tuple_list_scm))) {
+	 SCM l_scm = scm_length(residue_specs_b_value_tuple_list_scm);
+	 unsigned int l = scm_to_int(l_scm);
+	 if (l > 0) {
+	    std::vector<std::pair<coot::residue_spec_t, double> > rbs;
+	    for (unsigned int i=0; i<l; i++) {
+	       SCM item_scm = scm_list_ref(residue_specs_b_value_tuple_list_scm,
+					   SCM_MAKINUM(l));
+	       if (scm_is_true(scm_list_p(item_scm))) {
+		  SCM l2_scm = scm_length(item_scm);
+		  unsigned int l2 = scm_to_int(l2_scm);
+		  if (l2 == 2) {
+		     SCM spec_scm = scm_list_ref(item_scm, SCM_MAKINUM(0));
+		     SCM    b_scm = scm_list_ref(item_scm, SCM_MAKINUM(1));
+		     coot::residue_spec_t spec = residue_spec_from_scm(spec_scm);
+		     double b = scm_to_double(b_scm);
+		     std::pair<coot::residue_spec_t, double> p(spec, b);
+		     rbs.push_back(p);
+		  }
+	       }
+	    }
+	    graphics_info_t::molecules[imol].set_b_factor_residues(rbs);
+	 }
+      }
+   }
+}
+#endif // USE_GUILE
+
 
 
 
@@ -3082,6 +3151,8 @@ int clear_and_update_molecule(int molecule_number, SCM molecule_expression) {
 	 state = 1;
 	 graphics_info_t::molecules[molecule_number].replace_molecule(mol);
 	 graphics_draw();
+	 graphics_info_t g;
+	 g.update_geometry_graphs(g.molecules[molecule_number].atom_sel, molecule_number);
       }
    } else {
       std::cout << "WARNING:: " << molecule_number << " is not a valid model molecule"
@@ -3169,6 +3240,7 @@ void change_chain_id(int imol, const char *from_chain_id, const char *to_chain_i
 							  to_resno);
       graphics_draw();
       g.update_go_to_atom_window_on_changed_mol(imol);
+      g.update_geometry_graphs(g.molecules[imol].atom_sel, imol);
    }
 } 
 
@@ -3187,6 +3259,7 @@ SCM change_chain_id_with_result_scm(int imol, const char *from_chain_id, const c
 					   to_resno);
       graphics_draw();
       g.update_go_to_atom_window_on_changed_mol(imol);
+      g.update_geometry_graphs(g.molecules[imol].atom_sel, imol);
       r = SCM_EOL;
       r = scm_cons(scm_makfrom0str(p.second.c_str()), r);
       r = scm_cons(SCM_MAKINUM(p.first), r);
@@ -3212,6 +3285,7 @@ PyObject *change_chain_id_with_result_py(int imol, const char *from_chain_id, co
    
       graphics_draw();
       g.update_go_to_atom_window_on_changed_mol(imol);
+      g.update_geometry_graphs(g.molecules[imol].atom_sel, imol);
       v = PyList_New(2);
       PyList_SetItem(v, 0, PyInt_FromLong(r.first));
       PyList_SetItem(v, 1, PyString_FromString(r.second.c_str()));
@@ -3284,7 +3358,7 @@ SCM list_nomenclature_errors_scm(int imol) {
    SCM r = SCM_EOL;
    if (v.size()) { 
       for(int i=v.size()-1; i>=0; i--) {
-	 r = scm_cons(scm_residue(v[i].second), r);
+	 r = scm_cons(residue_spec_to_scm(v[i].second), r);
       }
    }
    return r;
@@ -3301,7 +3375,7 @@ PyObject *list_nomenclature_errors_py(int imol) {
    if (v.size()) {
       r = PyList_New(v.size());
       for (unsigned int i=0; i<v.size(); i++) { 
-	 PyList_SetItem(r, i, py_residue(v[i].second));
+	 PyList_SetItem(r, i, residue_spec_to_py(v[i].second));
       }
    } 
    return r;
@@ -4866,7 +4940,7 @@ SCM add_linked_residue_scm(int imol, const char *chain_id, int resno, const char
 
       if (do_fit_and_refine) { 
 	 if (! new_res_spec.unset_p()) {
-	    r = scm_residue(new_res_spec);
+	    r = residue_spec_to_scm(new_res_spec);
 	    if (is_valid_map_molecule(imol_refinement_map())) {
 	       const clipper::Xmap<float> &xmap =
 		  g.molecules[imol_refinement_map()].xmap;
@@ -4921,7 +4995,7 @@ PyObject *add_linked_residue_py(int imol, const char *chain_id, int resno, const
 
       if (do_fit_and_refine) {
          if (! new_res_spec.unset_p()) {
-            r = py_residue(new_res_spec);
+            r = residue_spec_to_py(new_res_spec);
             if (is_valid_map_molecule(imol_refinement_map())) {
                const clipper::Xmap<float> &xmap =
                   g.molecules[imol_refinement_map()].xmap;

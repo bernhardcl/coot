@@ -18,20 +18,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-if COOT_USE_PYTHON
-
-# if coot.py is called __init.py and goes in site-packages/coot/
-#dist_pkgpython_SCRIPTS = __init__.py
-#dist_python_SCRIPTS = coot.pth
-
-#__init__.py: coot.py
-#	cp coot.py __init__.py
-
-
-dist_python_SCRIPTS = coot.py coot.pth
-
-
-endif
 
 
 ######## 20091001 ########################################################
@@ -213,8 +199,8 @@ AM_CPPFLAGS = \
 
 pkginclude_HEADERS = crunch-model.hh
 
-libexec_PROGRAMS = coot-bin
-bin_PROGRAMS = density-score-by-residue-real fix-nomenclature-errors
+libexec_PROGRAMS = coot-bin density-score-by-residue-bin
+bin_PROGRAMS =  fix-nomenclature-errors
 dist_bin_SCRIPTS = coot density-score-by-residue
 check_PROGRAMS = test-coot-align test-cholesky
 
@@ -278,6 +264,7 @@ coot_bin_SOURCES = \
 	c-interface-sequence.cc  \
 	c-interface-sequence.hh  \
 	c-interface-sfs.cc	 \
+	c-interface-sharpen.cc   \
 	c-interface-superpose.cc \
 	c-interface-validate.cc	 \
 	c-interface-view.cc	 \
@@ -289,9 +276,11 @@ coot_bin_SOURCES = \
 	c-interface-test.cc      \
 	cc-interface.hh		 \
 	cc-interface-ncs.hh      \
-	cc-interface-network.hh  	\
+	cc-interface-network.hh  \
 	cc-interface-mogul.hh    \
 	cc-interface-scripting.hh \
+	cc-interface-user-defined-atom-colours.hh \
+	cc-interface-user-defined-atom-colours.cc \
 	callbacks.c callbacks.h	 \
         canvas-fixes.hh          \
 	cfc.cc cfc.hh            \
@@ -388,6 +377,7 @@ coot_bin_SOURCES = \
 	ligand-check.hh          \
         map-statistics.hh        \
 	molecule-class-info.cc 	 \
+	molecule-class-info-bonds.cc    \
 	molecule-class-info-maps.cc 	\
 	molecule-class-info-maps-2.cc 	\
 	molecule-class-info-kdc.cc      \
@@ -400,6 +390,7 @@ coot_bin_SOURCES = \
 	molecule-class-info-refine.cc   \
         molecule-class-info-kk.cc       \
 	molecule-class-info-surface.cc 	\
+	molecule-class-info-patterson.cc \
 	molecule-class-info-ncs.cc 	\
 	molecule-class-info-widget-work.cc \
 	mtz-column-auto-read.hh  \
@@ -455,11 +446,15 @@ coot_bin_SOURCES = \
 	atom-selection.hh 	 \
 	ncs.hh 		         \
 	model-view.hh 		 \
+	view.hh 		 \
 	new-centre.hh
 
 if COOT_USE_PYTHON
    coot_bin_SOURCES += coot_wrap_python_gtk2.cc
    EXTRA_DIST += coot_wrap_python_pre_gtk2.cc 
+endif
+if COOT_USE_PYTHON
+dist_python_SCRIPTS = coot.py coot.pth
 endif
 
 
@@ -578,8 +573,8 @@ test_coot_align_LDADD =	\
 # test_lbg_graph_LDADD = $(MMDB_LIBS)
 
 
-density_score_by_residue_real_SOURCES = density-score-by-residue-src.cc
-density_score_by_residue_real_LDADD  =	\
+density_score_by_residue_bin_SOURCES = density-score-by-residue-src.cc
+density_score_by_residue_bin_LDADD  =	\
 	$(top_builddir)/geometry/libcoot-geometry.la    	\
 	$(top_builddir)/coords/libcoot-coords.la 		\
 	$(top_builddir)/mini-mol/libcoot-mini-mol.la 		\

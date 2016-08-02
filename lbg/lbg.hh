@@ -917,9 +917,11 @@ private:
    
    std::string get_smiles_string_from_mol_rdkit() const;
    std::vector<alert_info_t> alerts(const RDKit::ROMol &mol) const;
-   void rdkit_mol_post_read_handling(RDKit::RWMol *m, const std::string &file_name);
+   void rdkit_mol_post_read_handling(RDKit::RWMol *m, const std::string &file_name, unsigned int iconf=0);
 #ifdef USE_PYTHON   
    PyObject *silicos_it_qed_default_func;
+   PyObject *silicos_it_qed_properties_func;
+   PyObject *silicos_it_qed_pads;
    PyObject * get_callable_python_func(const std::string &module_name,
 				       const std::string &function_name) const;
    PyObject *user_defined_alerts_smarts_py;
@@ -967,7 +969,7 @@ public:
       
    // toggle button modes, mutually exclusive
    enum { NONE, TRIANGLE, SQUARE, PENTAGON, HEXAGON, HEXAGON_AROMATIC, HEPTAGON, OCTAGON,
-	  ATOM_C, ATOM_N, ATOM_O, ATOM_S, ATOM_P, ATOM_F, ATOM_CL, ATOM_I, ATOM_BR, ATOM_X,
+	  ATOM_C, ATOM_N, ATOM_O, ATOM_H, ATOM_S, ATOM_P, ATOM_F, ATOM_CL, ATOM_I, ATOM_BR, ATOM_X,
 	  CHARGE, ADD_SINGLE_BOND, ADD_DOUBLE_BOND, ADD_TRIPLE_BOND, ADD_STEREO_OUT_BOND,
 	  DELETE_MODE};
 #if ( ( (GTK_MAJOR_VERSION == 2) && (GTK_MINOR_VERSION > 11) ) || GTK_MAJOR_VERSION > 2)
@@ -1006,9 +1008,12 @@ public:
    GtkWidget *lbg_show_alerts_checkbutton; 
    GtkWidget *lbg_get_drug_dialog;
    GtkWidget *lbg_get_drug_entry;
+   GtkWidget *lbg_get_drug_menuitem;
    GtkWidget *lbg_flip_rotate_hbox;
    GtkWidget *lbg_clean_up_2d_toolbutton;
    GtkWidget *lbg_search_database_frame;
+   GtkWidget *lbg_view_rotate_entry;
+   GtkWidget *lbg_qed_properties_progressbars[8];
 //    GtkWidget *lbg_nitrogen_toggle_toolbutton;
 //    GtkWidget *lbg_carbon_toggle_toolbutton;
 //    GtkWidget *lbg_oxygen_toggle_toolbutton;
@@ -1054,7 +1059,7 @@ public:
    } 
    bool in_delete_mode_p() const { return in_delete_mode_; }
    double radius(int n_edges) const; // depends on zoom? (for future).
-   void clear();
+   void clear(bool do_descriptor_updates);
    std::string get_stroke_colour(int i, int n) const;
    void drag_canvas(int mouse_x, int mouse_y);
    void write_pdf(const std::string &file_name) const;
@@ -1070,12 +1075,15 @@ public:
 #ifdef HAVE_CCP4SRS   
    void search() const;
 #endif   
+   void import_molecule_from_file(const std::string &file_name); // mol or cif
+   void import_molecule_from_cif_file(const std::string &file_name); // cif
    // 20111021 try to read file_name as a MDL mol or a mol2 file.
    void import_mol_from_file(const std::string &file_name);
    // read an MDL mol file.
    widgeted_molecule_t  import_mol_file(const lig_build::molfile_molecule_t &mol_in,
 					const std::string &filename,
 					mmdb::Manager *pdb_mol);
+   void import_via_rdkit_from_restraints_dictionary(const coot::dictionary_residue_restraints_t &dict, bool show_hydrogens_status);
 
    void import_mol_from_smiles_file(const std::string &file_name);
    void import_mol_from_smiles_string(const std::string &smiles);
@@ -1124,6 +1132,9 @@ public:
    std::string get_smiles_string(const RDKit::ROMol &mol) const;
 
    void update_qed(const RDKit::RWMol &rdkm);
+   void update_qed_properties(const std::vector<std::pair<double, double> > &d);
+   void reset_qed_properties_progress_bars(); // on exception on molecule editing and clear()
+   
    void update_alerts(const RDKit::RWMol &rdkm);
    std::string get_smiles_string_from_mol(const RDKit::RWMol &mol) const;
    bool bond_pick_pending;
@@ -1277,6 +1288,11 @@ public:
       all_additional_representations_off_except_func = f;
    }
 
+   // flipping
+   void flip_molecule(int axis);
+   void rotate_z_molecule(double angle); // in degrees
+   void rotate_z_molecule(const std::string &angle); // in degrees (used in on_lbg_view_rotate_apply_button_clicked
+                                                     // callback).
 
    // -- actually run the functions if they were set:
    void orient_view(int imol,

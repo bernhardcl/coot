@@ -1223,6 +1223,7 @@ coot_save_state_and_exit(int retval, int save_state_flag) {
 #ifdef WINDOWS_MINGW
    clipper::ClipperInstantiator::instance().destroy();
 #endif
+
    exit(retval);
 } 
 
@@ -3475,12 +3476,12 @@ new_close_molecules(GtkWidget *window) {
 		  GtkWidget *window = lookup_widget(w, "sequence_view_dialog");
 		  if (window) { 
 		     gtk_widget_destroy(window);
-		  } else { 
+		  } else {
 		     window = lookup_widget(w, "nsv_dialog");
 		     if (window) 
 			gtk_widget_destroy(window);
 		  }
-	       } 
+	       }
 #endif
 	       //graphics_info_t::molecules[imol].close_yourself();
 	       close_molecule(imol);
@@ -5160,7 +5161,7 @@ void fill_chi_angles_vbox(GtkWidget *vbox) {
 
    graphics_info_t g;
    gchar *strval = (gchar *) gtk_object_get_user_data(GTK_OBJECT(vbox));
-   g.fill_chi_angles_vbox(vbox, strval);
+   g.fill_chi_angles_vbox(vbox, strval, graphics_info_t::EDIT_CHI);
 }
 
 
@@ -5409,6 +5410,10 @@ void nsv(int imol) {
 	    new exptl::nsv(g.molecules[imol].atom_sel.mol, name, imol,
 			   g.use_graphics_interface_flag,
 			   g.nsv_canvas_pixel_limit);
+	 // I think that there is a false positive for scan-build here.
+	 // The memory for sequence view is deleted before the new
+	 // pointer is assigned.
+	 g.set_sequence_view_is_displayed(seq_view->Canvas(), imol);
       }
    }
 #endif // defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
@@ -5473,6 +5478,9 @@ void sequence_view_old_style(int imol) {
 	 coot::sequence_view *seq_view =
 	    new coot::sequence_view(g.molecules[imol].atom_sel.mol,
 				    short_name, imol);
+	 // I think that there is a false positive for scan-build here.
+	 // The memory for sequence view is deleted before the new
+	 // pointer is assigned.
 	 g.set_sequence_view_is_displayed(seq_view->Canvas(), imol);
       }
    }

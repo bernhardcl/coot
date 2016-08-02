@@ -225,7 +225,8 @@ coot::atom_tree_t::fill_torsions(const coot::dictionary_residue_restraints_t &re
       // std::cout << " debug:: " << quads.size() << " quads" << std::endl;
       for (unsigned int iquad=0; iquad<quads.size(); iquad++) {
 	 bool inserted = 0;
-	 for (unsigned int iv=0; iv<atom_vertex_vec.size(); iv++) {
+	 int n_atom_vertex = atom_vertex_vec.size();
+	 for (int iv=0; iv<n_atom_vertex; iv++) {
 	    if (iv == quads[iquad].index2) {
 	       for (unsigned int ifo=0; ifo<atom_vertex_vec[iv].forward.size(); ifo++) { 
 		  if (atom_vertex_vec[iv].forward[ifo] == quads[iquad].index3) {
@@ -754,6 +755,19 @@ coot::atom_tree_t::get_unique_moving_atom_indices(const std::string &atom1,
 
 }
 
+// give the user access, so that they know which atoms are moving.
+std::vector<int>
+coot::atom_tree_t::get_moving_atom_indices(const std::string &atom1,
+					   const std::string &atom2,
+					   bool reversed_flag) {
+   std::vector<int> r;
+   std::vector<coot::map_index_t> m = get_unique_moving_atom_indices(atom1, atom2, reversed_flag);
+   for (unsigned int i=0; i<m.size(); i++) { 
+      if (m[i].is_assigned())
+	 r.push_back(m[i].index());
+   }
+   return r;
+}
 
 
 // Throw exception on unable to rotate atoms.

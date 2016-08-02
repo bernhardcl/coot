@@ -128,8 +128,10 @@ namespace coot {
 	  CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR=14,
 	  CA_BONDS_PLUS_LIGANDS_AND_SIDECHAINS=17,
 	  COLOUR_BY_MOLECULE_BONDS=8,
-	  COLOUR_BY_RAINBOW_BONDS=9, COLOUR_BY_B_FACTOR_BONDS=10,
-	  COLOUR_BY_OCCUPANCY_BONDS=11};
+	  COLOUR_BY_RAINBOW_BONDS=9,
+	  COLOUR_BY_B_FACTOR_BONDS=10,
+	  COLOUR_BY_OCCUPANCY_BONDS=11,
+	  COLOUR_BY_USER_DEFINED_COLOURS_BONDS=12 };
 
    enum { RESIDUE_NUMBER_UNSET = -1111};
 
@@ -516,13 +518,7 @@ class molecule_class_info_t {
    std::vector<coot::dots_representation_info_t> dots;
    coot::colour_t dots_colour;
    bool dots_colour_set;
-   coot::at_dist_info_t closest_atom(const coot::Cartesian &pt,
-				     bool ca_check_flag) const;
-   coot::at_dist_info_t closest_atom(const coot::Cartesian &pt,
-				     bool ca_check_flag,
-				     const std::string &chain_id,
-				     bool use_this_chain_id) const;
-   
+
    // return -1 on not found
    int get_atom_index(mmdb::Atom *atom) { 
      int idx = -1;
@@ -727,6 +723,10 @@ public:        //                      public
       bond_width = 3.0;
       display_stick_mode_atoms_flag = false;
 
+      // bespoke colouring
+      use_bespoke_grey_colour_for_carbon_atoms = false;
+      bespoke_carbon_atoms_colour = coot::colour_t(0.6, 0.6, 0.6);
+
       // 
       rotate_colour_map_for_difference_map = 240.0; // degrees
 
@@ -821,7 +821,11 @@ public:        //                      public
 
    coot::colour_t get_bond_colour_by_mol_no(int icolour, bool against_a_dark_background);
 	   
-   void set_bond_colour_by_colour_wheel_position(int i, int bond_type);
+   void set_bond_colour_by_colour_wheel_position(int i, int bonds_box_type);
+   bool use_bespoke_grey_colour_for_carbon_atoms;
+   coot::colour_t bespoke_carbon_atoms_colour;
+   void set_use_bespoke_carbon_atom_colour(bool state) { use_bespoke_grey_colour_for_carbon_atoms = state; }
+   void set_bespoke_carbon_atom_colour(const coot::colour_t &col) { bespoke_carbon_atoms_colour = col; }
 
    std::string name_; // otherwise get and set, so make it public.
 
@@ -873,6 +877,10 @@ public:        //                      public
 		       std::string sigf_col,
 		       float map_sampling_rate);
    
+   bool make_patterson_using_intensities(std::string mtz_file_name,
+					 std::string i_col,
+					 std::string sigi_col,
+					 float map_sampling_rate);
 
    atom_selection_container_t atom_sel;
 
@@ -953,6 +961,7 @@ public:        //                      public
 
    void set_b_factor_residue_range(const std::string &chain_id, int ires1, int ires2, float b_val);
    void set_b_factor_atom_selection(const atom_selection_container_t &asc, float b_val, bool moving_atoms);
+   void set_b_factor_residues(const std::vector<std::pair<coot::residue_spec_t, double> > &rbs); // all atoms of specified
 
 
    std::vector<coot::atom_spec_t> fixed_atom_specs;
@@ -1059,6 +1068,7 @@ public:        //                      public
    void b_factor_representation();
    void b_factor_representation_as_cas();
    void occupancy_representation();
+   void user_defined_colours_representation(coot::protein_geometry *geom_p, bool all_atoms_mode); // geom needed for ligands
 
    void make_bonds_type_checked(); 
 
@@ -2350,6 +2360,17 @@ public:        //                      public
    void add_strict_ncs_matrix(const std::string &chain_id,
 			      const std::string &target_chain_id,
 			      const coot::coot_mat44 &m);
+   
+   // trivial helper class for add_molecular_symmetry_matrices()
+   class quad_d_t {
+   public:
+      double x, y, z, t;
+      quad_d_t(const double &x_in, const double &y_in, const double &z_in, const double &t_in) {
+	 x = x_in; y = y_in; z = z_in; t = t_in;
+      }
+      quad_d_t() {}
+   };
+   void add_molecular_symmetry_matrices(); // process REMARK 350s
 
    // the first value is if we should apply the matrix or not (we may not have ghosts)
    std::pair<bool, clipper::RTop_orth>
@@ -2522,6 +2543,12 @@ public:        //                      public
    void set_residue_name(std::string chain_id, int res_no, std::string ins_code, std::string new_name);
 
 
+   coot::at_dist_info_t closest_atom(const coot::Cartesian &pt,
+				     bool ca_check_flag) const;
+   coot::at_dist_info_t closest_atom(const coot::Cartesian &pt,
+				     bool ca_check_flag,
+				     const std::string &chain_id,
+				     bool use_this_chain_id) const;
    coot::at_dist_info_t closest_atom(const coot::Cartesian &pt) const;
 
 
@@ -3012,13 +3039,21 @@ public:        //                      public
 			const std::string &atom_name,
 			const coot::protein_geometry &geom);
 
-
-
    void update_bonds_using_phenix_geo(const coot::phenix_geo_bonds &b);
 
    void globularize();
 
    bool is_EM_map() const;
+
+   void residue_partial_alt_locs_split_residue(coot::residue_spec_t spec,
+					       int i_bond,
+					       double theta,  // degrees
+					       bool wag_the_dog,
+					       coot::protein_geometry *geom);
+
+   void set_user_defined_colour_indices_by_residues(const std::vector<std::pair<coot::residue_spec_t, int> > &cis);
+   void set_user_defined_colour_indices(const std::vector<std::pair<coot::atom_spec_t, int> > &cis);
+   void clear_user_defined_atom_colours();
    
 };
 

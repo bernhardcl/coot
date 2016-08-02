@@ -344,65 +344,6 @@ namespace coot {
       clipper::Coord_orth pos;
    };
 
-   // This is for a Pymol-like feature to switch between views:
-   // 
-   class view_info_t {
-   public:
-      float zoom;
-      coot::Cartesian rotation_centre;
-      std::string view_name;
-      std::string description;
-      bool is_simple_spin_view_flag;
-      bool is_action_view_flag;
-      int n_spin_steps;
-      float degrees_per_step;
-      float quat[4];
-      std::string action;
-      view_info_t(float *quat_in, const coot::Cartesian &rot_centre_in,
-		  float zoom_in, const std::string &view_name_in) {
-	is_simple_spin_view_flag = 0;
-	is_action_view_flag = 0;
-	 zoom = zoom_in;
-	 rotation_centre = rot_centre_in;
-	 view_name = view_name_in;
-	 for (int i=0; i<4; i++) 
-	    quat[i] = quat_in[i];
-      }
-      view_info_t() {
-      	is_simple_spin_view_flag = 0;
-	is_action_view_flag = 0;
-      }
-      // a spin view 
-      view_info_t(const std::string &view_name_in, int nsteps, float degrees_total) {
-	is_simple_spin_view_flag = 1;
-	is_action_view_flag = 0;
-	view_name = view_name_in;
-	n_spin_steps = nsteps;
-	if (n_spin_steps > 0) 
-	  degrees_per_step = degrees_total/n_spin_steps;
-	else 
-	  degrees_per_step = 0.5;
-      }
-      // an action view
-      view_info_t(const std::string &view_name_in, const std::string &funct) {
-	is_action_view_flag = 1;
-	view_name = view_name_in;
-	action = funct;
-      }
-      bool matches_view (const coot::view_info_t &view) const;
-      float quat_length() const;
-      void add_description(const std::string &descr) { 
-	description = descr;
-      }
-      static view_info_t interpolate(const view_info_t &view1,
-				     const view_info_t &view2,
-				     int n_steps);
-      static float dot_product(const view_info_t &view1,
-			       const view_info_t &view2);
-
-      friend std::ostream& operator<<(std::ostream &stream, 
-				      view_info_t &view);
-   };
 
    enum tube_end_t { NO_ENDS, FLAT_ENDS, ROUND_ENDS};  // use gluDisk or gluSphere.
 
@@ -506,6 +447,7 @@ namespace coot {
 } // namespace coot
 
 
+#include "view.hh"
 #include "lsq-dialog-values.hh"
 #include "select-atom-info.hh"
 #include "gl-bits.hh"
@@ -717,10 +659,8 @@ class graphics_info_t {
    //
    static std::string directory_for_fileselection;
    static std::string directory_for_saving_for_fileselection;
-#if (GTK_MAJOR_VERSION > 1)
    static std::string directory_for_filechooser;
    static std::string directory_for_saving_for_filechooser;
-#endif // GTK_MAJOR_VERSION
 
    // distance object vector, and angle
    static std::vector<coot::simple_distance_object_t> *distance_object_vec;
@@ -818,6 +758,7 @@ class graphics_info_t {
    void check_if_in_lsq_plane_define(GdkEventButton *event);
    void check_if_in_lsq_plane_deviant_atom_define(GdkEventButton *event);
    void check_if_in_torsion_general_define(GdkEventButton *event);
+   void check_if_in_residue_partial_alt_locs(GdkEventButton *event);
    void check_if_in_base_pairing_define(GdkEventButton *event);
    void check_if_in_multi_residue_torsion_define(GdkEventButton *event);
    void check_if_in_fixed_atom_define(GdkEventButton *event,
@@ -1509,6 +1450,7 @@ public:
    static short int quanta_like_zoom_flag; 
 
    static float box_radius;
+   static float box_radius_em;
 
    static float iso_level_increment; 
    static float diff_map_iso_level_increment;
@@ -2066,6 +2008,12 @@ public:
    static short int in_torsion_general_define;
    // static int rot_trans_atom_index_rotation_origin_atom; old naive way.
    static mmdb::Atom *rot_trans_rotation_origin_atom; // "Eugene's way"
+
+   static int imol_residue_partial_alt_locs;
+   static short int in_residue_partial_alt_locs_define;
+   static coot::residue_spec_t residue_partial_alt_locs_spec;
+   void residue_partial_alt_locs_split_residue(int i_bond, bool wag_the_dog);
+   static double residue_partial_alt_locs_rotate_fragment_angle;
 
    static short int in_user_defined_define; 
 
@@ -3086,9 +3034,11 @@ public:
    static bool      edit_chi_angles_reverse_fragment; 
    static coot::atom_spec_t chi_angles_clicked_atom_spec;
    void execute_edit_chi_angles(int atom_index, int imol);
-   int wrapped_create_edit_chi_angles_dialog(const std::string &res_type);
+   enum edit_chi_edit_type { UNSET, EDIT_CHI, RESIDUE_PARTIAL_ALT_LOCS};
+   int wrapped_create_edit_chi_angles_dialog(const std::string &res_type, 
+					     edit_chi_edit_type mode);
    // used by above:
-   int fill_chi_angles_vbox(GtkWidget *vbox, std::string res_type);
+   int fill_chi_angles_vbox(GtkWidget *vbox, std::string res_type, edit_chi_edit_type mode);
    void clear_out_container(GtkWidget *vbox);
    static std::string chi_angle_alt_conf;
 
@@ -3111,7 +3061,9 @@ public:
 						   GdkEventMotion *event);
 
    static short int moving_atoms_move_chis_flag;
-   void setup_flash_bond_internal(int ibond);
+   void setup_flash_bond_using_moving_atom_internal(int ibond);
+
+   void setup_flash_bond(int imol, coot::residue_spec_t residue_spec, int i_bond);
 
    //! angle in degrees.
    void rotate_chi(double x, double y); // a 'callback' from the
@@ -3689,6 +3641,8 @@ public:
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec();
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec(int imol);
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec_internal(int imol);
+   static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec_simple();
+
    // this can return -1 if there is no active atom molecule.
    int copy_active_atom_molecule();
 

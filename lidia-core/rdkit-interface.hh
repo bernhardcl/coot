@@ -52,6 +52,10 @@ namespace coot {
    // tinker with mol
    void set_3d_conformer_state(RDKit::RWMol *mol); // hack the setting of 3D state, seems not to
                                                    // be done for mdl files when zs are 0.
+   bool has_zero_coords(RDKit::RWMol *mol, unsigned int iconf); // e.g. reading from a MolFile,
+                                            // all coords are 0.0.
+                                            // in such a case we need to do a Compute2DCoords()
+                                            // before showing the molecule in lidia.
    void rdkit_mol_sanitize(RDKit::RWMol &mol);
    // tinker with mol
    void mogulify_mol(RDKit::RWMol &mol);
@@ -70,7 +74,9 @@ namespace coot {
    std::string add_H_to_ring_N_as_needed(RDKit::RWMol *mol,
 				  int idx, const std::string &atom_name,
 				  const dictionary_residue_restraints_t &restraints); 
-   
+
+   // can throw an RDKit::ConformerException (std::exception)
+   // can return -1 if current conformer is 3D.
    int add_2d_conformer(RDKit::ROMol *rdkmol_in, double weight_for_3d_distances); // tweak rdkmol_in
    RDKit::Bond::BondType convert_bond_type(const std::string &t);
 
@@ -164,6 +170,9 @@ namespace coot {
    RDKit::Atom::ChiralType get_chiral_tag_v2(mmdb::Residue *residue_p,
 					     const dictionary_residue_restraints_t &restraints,
 					     mmdb::Atom *atom_p);
+
+   bool cip_rank_sorter(const std::pair<const RDKit::Atom *, unsigned int> &at_1,
+			const std::pair<const RDKit::Atom *, unsigned int> &at_2);
 
    // are all the bonds between the atoms (in the vector) all aromatic?
    //

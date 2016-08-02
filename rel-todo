@@ -1,36 +1,56 @@
  
  0.8.4
 
-   o on startup, if COOT_SCHEME_EXTRA_DIR is set then
-     ~/.coot-preferences is not read/executed. It should do both. Was this a 
-     problem only in refinememnt branch?
+   o things that don't sphere refine: 2d6b
 
-   o Miguel OXT problems.  Add to the test suite.
+   o improve the animation on go to ligand - I mean the reorientation of 
+     the ligand, don't just jump
 
-   o fix up hydrogenize and flev interface (is cprodrg still a part of ccp4?)
+   o look s at 3x32 colour by chain (dont doownload the map) 72A shouldnt draw the hydrogen bond to C.
 
-   o ligand distortions represenation (vs dictionary) should be in "Ligand" 
-     menu
+* Done
 
-   o optionally attach generic display object to molecule numbers so that 
-     the objects are undisplayed when the molecule number is undisplayed.
+   o environment distances for neighbouring residues - use dictionary
+     group to exclude contacts along the link for particular group types
+
+* Done
+
+   o on hector: ./coot-bin --no-graphics [Ctrl-D] vs:
+                ./coot-bin --no-graphics --python [Ctrl-D] 
+     the first crashes, the second works as expected.
+
+     on pc:  ./coot-bin --no-graphics [Ctrl-D]
+             -> hangs 
+
+#0  0x00007f60541ebdd4 in _nv012tls () from /usr/lib64/tls/libnvidia-tls.so.304.51
+#1  0x000000325e4a8243 in ?? () from /usr/lib64/libGL.so.1
+#2  0x000000325e48576a in ?? () from /usr/lib64/libGL.so.1
+#3  0x0000003253c0eb9c in _dl_fini () from /lib64/ld-linux-x86-64.so.2
+#4  0x0000003254435de2 in exit () from /lib64/libc.so.6
+#5  0x00007f6059a0ebcf in scm_shell () from /home/emsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/lib/libguile.so.17
+
+    so not my bug, I guess.
+
+     on pc:  ./coot-bin --no-graphics --python [Ctrl-D]
+             -> exits as expected.
+
+   o why is sequence view so slow to open now?
+
+* Done
+
+     Here is a bad spacing example scan-map/3K1L-DmL.pdb
+
+* Can't be bothered to fix it.
+
+   o Does "Phosphorylate this residue" work in Python mode?
+
+* Seems OK.
+
+   o Fix the python version of the JLigand interface.
+
+   o fix up hydrogenize and flev interface
 
 * Done.
-
-   o Display Ligand Distortrions for 3GP.
-
-   o repair 72A with alt conf and Sphere refine it.
-
-   o clean this up:
-
-dictionary_residue_restraints_t&, mmdb::Residue*, const std::string&)’:
-../../coot/coot-utils/coot-tree-extras.cc:229: warning: comparison between signed and unsigned integer expressions
-../../coot/coot-utils/coot-tree-extras.cc: In member function ‘std::pair<int, std::vector<coot::map_index_t, std::allocator<coot::map_index_t> > > coot::atom_tree_t::get_forward_atoms(const coot::map_index_t&, const coot::map_index_t&) const’:
-../../coot/coot-utils/coot-tree-extras.cc:1161: warning: comparison between signed and unsigned integer expressions
-
-
-   o when you fail to read a pdb file, it should not then go on to try
-     to read it as a small molecule cif if it does not exist.
 
    o does map scrolling work after running refmac (or via ligand check, perhaps)?
 
@@ -45,17 +65,8 @@ dictionary_residue_restraints_t&, mmdb::Residue*, const std::string&)’:
    o Can you make recent file work with coot - saving/reading the
      local recent files file?
 
-   o Does "Phosphorylate this residue" work in Python mode?
-
-   o Fix the python version of the JLigand interface.
-
    o Make the "failed to read PDB file" info available from the GUI -
      a pop-up or so.
-
-   o Why is "k" - fill sidechain so slow? (fixed now with 
-     forced ROTAMERMODELOWRES).
-
-* Done?
 
 
    o Coot crashed:
@@ -608,4 +619,72 @@ Yes.
    o Bond colour slider (edit -> bond colours) is broken.
 
 * Fixed.
+
+   o clean this up:
+
+dictionary_residue_restraints_t&, mmdb::Residue*, const std::string&)’:
+../../coot/coot-utils/coot-tree-extras.cc:229: warning: comparison between signed and unsigned integer expressions
+../../coot/coot-utils/coot-tree-extras.cc: In member function ‘std::pair<int, std::vector<coot::map_index_t, std::allocator<coot::map_index_t> > > coot::atom_tree_t::get_forward_atoms(const coot::map_index_t&, const coot::map_index_t&) const’:
+../../coot/coot-utils/coot-tree-extras.cc:1161: warning: comparison between signed and unsigned integer expressions
+
+
+* Done.
+
+
+   o Ben: When saving a dictionary after chiral centre modification, then the output
+     file is practically empty.
+
+* Done.
+
+     When I use the restraints editor, and edit the chirality (positive to negative) the console says 
+
+comp_id :DRG:, tlc :DRG:, name ::, group :non-polymer: n_atoms: 34 n_H_atoms: 17 desc-level :.:
+INFO:: wrote mmCIF "coot-tmp-restraints.cif"
+INFO:: restraints for "" were replaced
+
+     And the restraints are not updated
+
+* Done.  Now allow blank name.
+
+   o optionally attach generic display object to molecule numbers so that 
+     the objects are undisplayed when the molecule number is undisplayed.
+
+* Done.
+
+   o on startup, if COOT_SCHEME_EXTRAS_DIR is set then
+     ~/.coot-preferences is not read/executed. It should do both. Was this a 
+     problem only in refinement branch?
+
+* Looks OK to me.  It does both on master pc.
+
+   o Miguel OXT problems.  Add to the test suite.
+
+* Done (no test).
+
+   o read unmerged data from pdbx. e.g.?
+
+* Punt
+
+   o ligand distortions represenation (vs dictionary) should be in "Ligand" 
+     menu
+
+* Done
+
+   o Display Ligand Distortrions for 3GP.
+
+* Looks fine - what did I mean?
+
+   o repair 72A with alt conf and Sphere refine it.
+
+* Done.
+
+   o when you fail to read a pdb file, it should not then go on to try
+     to read it as a small molecule cif if it does not exist.
+
+* Punt
+
+   o Why is "k" - fill sidechain so slow? (fixed now with 
+     forced ROTAMERMODELOWRES).
+
+* Done?
 

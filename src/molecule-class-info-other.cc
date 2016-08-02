@@ -1110,7 +1110,7 @@ molecule_class_info_t::delete_residue_hydrogens(const std::string &chain_id, int
 		     mmdb::PPAtom residue_atoms;
 		     int nResidueAtoms;
 		     res->GetAtomTable(residue_atoms, nResidueAtoms);
-		     for (unsigned int iat=0; iat<nResidueAtoms; iat++) {
+		     for (int iat=0; iat<nResidueAtoms; iat++) {
 			std::string ele(residue_atoms[iat]->element);
 			if (ele == " H") {
 			   residue_has_hydrogens = 1;
@@ -1251,11 +1251,12 @@ molecule_class_info_t::delete_residue_with_full_spec(int imodel,
 				    res->DeleteAtom(i);
 				    was_deleted = 1;
 				 }
-                 // delete pointer if all atoms were deleted
-                 // should probably delete res too!?
-                 if (deleted_atom.size() == n_atoms) {
-                    residue_for_deletion = NULL;
-                 }
+				 // delete pointer if all atoms were deleted
+				 // should probably delete res too!?
+				 unsigned int ui_n_atoms = n_atoms;
+				 if (deleted_atom.size() == ui_n_atoms) {
+				    residue_for_deletion = NULL;
+				 }
 			      }
 			   }
 			}
@@ -2448,7 +2449,7 @@ coot::goto_residue_string_info_t::goto_residue_string_info_t(const std::string &
       std::string::size_type l = goto_residue_string.length();
       std::string number_string = "";
       std::string chain_id_string = ""; 
-      for (int i=0; i<l; i++) { 
+      for (std::string::size_type i=0; i<l; i++) { 
 	 if (coot::util::is_number(goto_residue_string[i])) {
 	    number_string += goto_residue_string[i];
 	    res_no_is_set = true;
@@ -2743,7 +2744,7 @@ molecule_class_info_t::res_name_from_serial_number(std::string chain_id, unsigne
 	 mmdb::Chain *chain_p = atom_sel.mol->GetChain(1,ichain);
 	 std::string mol_chain_id(chain_p->GetChainID());
 	 if (mol_chain_id == std::string(chain_id)) {
-	    int nres = chain_p->GetNumberOfResidues();
+	    unsigned int nres = chain_p->GetNumberOfResidues();
 	    if (serial_number < nres) {
 	       int ch_n_res;
 	       mmdb::PResidue *residues;
@@ -3285,7 +3286,7 @@ molecule_class_info_t::get_clash_score(const coot::minimol::molecule &a_rotamer)
 		     bool is_standard_aa = false;
 		     if (coot::util::is_standard_residue_name(residue_name))
 			is_standard_aa = true;
-		     for (int iat=0; iat<a_rotamer[ifrag][ires].n_atoms(); iat++) {
+		     for (unsigned int iat=0; iat<a_rotamer[ifrag][ires].n_atoms(); iat++) {
 			d_atom = clipper::Coord_orth::length(a_rotamer[ifrag][ires][iat].pos, atom_sel_atom);
 			if (d_atom < dist_crit) {
 			   int atom_sel_atom_resno = atom_sel.atom_selection[i]->GetSeqNum();
@@ -4650,16 +4651,16 @@ molecule_class_info_t::split_residue_internal(mmdb::Residue *residue, const std:
 					      short int use_residue_mol_flag) {
 
    std::pair<bool,std::string> p(0,"");
-   mmdb::PResidue *SelResidues = new mmdb::PResidue;
    std::string ch(residue->GetChainID());
-   
-   SelResidues = &residue; // just one
+
+   // mmdb::Residue **SelResidues = new mmdb::Residue *; // memory leak
+   mmdb::Residue **SelResidues = &residue; // just one
 
    // std::cout << "==================== in split_residue_internal ============= " << std::endl;
 
    atom_selection_container_t asc;
    if (!use_residue_mol_flag) { 
-      mmdb::Manager *mov_mol = create_mmdbmanager_from_res_selection(SelResidues,
+      mmdb::Manager *mov_mol = create_mmdbmanager_from_res_selection(SelResidues,    // class function
 								    1, 0, 0, altconf, 
 								    ch, 1);
       
@@ -5087,7 +5088,7 @@ molecule_class_info_t::merge_molecules(const std::vector<atom_selection_containe
 
             // BL says:: some  mild hacking, but we need to return a proper state and the added chains
             istat = 0;
-            for (int i=0; i<add_state.second.size(); i++) {
+            for (unsigned int i=0; i<add_state.second.size(); i++) {
                resulting_chain_ids.push_back(add_state.second[i]);
             }
 	    if (add_state.first) { 
@@ -5538,7 +5539,7 @@ molecule_class_info_t::renumber_residue_range_old(const std::string &chain_id,
 	 int iser = -1; // unset
 
 	 int chain_n_residues = chain_p_active->GetNumberOfResidues();
-	 for (unsigned int ichres=0; ichres<chain_n_residues; ichres++) {
+	 for (int ichres=0; ichres<chain_n_residues; ichres++) {
 	    mmdb::Residue *ch_res = chain_p_active->GetResidue(ichres);
 	    int ch_res_seq_num = ch_res->GetSeqNum();
 	    std::string ch_res_ins_code = ch_res->GetInsCode();
@@ -6329,6 +6330,8 @@ molecule_class_info_t::draw_display_list_objects(int GL_context) {
    if (draw_it) { 
       if (display_list_tags.size() > 0) { 
 	 glEnable(GL_LIGHTING);
+	 glEnable(GL_LIGHT0);
+	 glEnable(GL_LIGHT1);
 	 std::vector<coot::display_list_object_info>::const_iterator it;
 	 for (it=display_list_tags.begin(); it!=display_list_tags.end(); it++) {
 	    if (! it->is_closed) { 
@@ -6444,7 +6447,7 @@ molecule_class_info_t::make_ball_and_stick(const std::string &atom_selection_str
 
       GLfloat  mat_specular[]  = {0.8, 0.8, 0.8, 1.0};
       GLfloat  mat_ambient[]   = {0.2, 0.2, 0.2, 1.0};
-      GLfloat  mat_diffuse[]   = {0.7, 0.7, 0.7, 1.0};
+      // GLfloat  mat_diffuse[]   = {0.7, 0.7, 0.7, 1.0};
       GLfloat  mat_shininess[] = {50.0};
       
       glShadeModel(GL_SMOOTH);
@@ -6670,7 +6673,7 @@ molecule_class_info_t::set_b_factor_residue_range(const std::string &chain_id,
    int nSelAtoms;
    int SelHnd = atom_sel.mol->NewSelection();
    
-   atom_sel.mol->SelectAtoms(SelHnd, 0, (char *) chain_id.c_str(),
+   atom_sel.mol->SelectAtoms(SelHnd, 0, chain_id.c_str(),
 			     ires1, "*",
 			     ires2, "*",
 			     "*", // residue name
@@ -6772,6 +6775,31 @@ molecule_class_info_t::set_b_factor_atom_selection(const atom_selection_containe
   have_unsaved_changes_flag = 1;
   make_bonds_type_checked();
 }
+
+// all atoms of specified
+void
+molecule_class_info_t::set_b_factor_residues(const std::vector<std::pair<coot::residue_spec_t, double> > &rbs) {
+
+   for (unsigned int i=0; i<rbs.size(); i++) { 
+      const coot::residue_spec_t &spec = rbs[i].first;
+      double b = rbs[i].second;
+      mmdb::Residue *residue_p = get_residue(spec);
+      if (residue_p) {
+	 mmdb::Atom **residue_atoms = 0;
+	 int n_residue_atoms;
+	 residue_p->GetAtomTable(residue_atoms, n_residue_atoms);
+	 for (int j=0; j<n_residue_atoms; j++) {
+	    residue_atoms[j]->tempFactor = b;
+	 }
+      } else {
+	 std::cout << "WARNING:: No residue for spec " << spec << std::endl;
+      }
+   }
+   have_unsaved_changes_flag = 1;
+   atom_sel.mol->FinishStructEdit();
+   make_bonds_type_checked();
+}
+
 
 
 // Change chain id
@@ -8076,7 +8104,7 @@ void
 molecule_class_info_t::draw_dots() {
 
    if (draw_it) { 
-      for (int iset=0; iset<dots.size(); iset++) {
+      for (unsigned int iset=0; iset<dots.size(); iset++) {
 	 if (dots[iset].is_open_p() == 1) {
 	    glPointSize(2);
 	    unsigned int n_atoms = dots[iset].points.size();
