@@ -2035,10 +2035,11 @@ def add_view_to_views_panel(view_name, view_number):
 
 # a button is a list of [label, callback, text_description]
 #
-def dialog_box_of_buttons(window_name, geometry, buttons, close_button_label):
+def dialog_box_of_buttons(window_name, geometry, buttons,
+                          close_button_label, post_hook=None):
    return dialog_box_of_buttons_with_check_button(window_name, geometry,
                                                   buttons, close_button_label,
-                                                  False, False, False)
+                                                  False, False, False, post_hook)
 
 # geometry is an improper list of ints
 #
@@ -2050,6 +2051,9 @@ def dialog_box_of_buttons(window_name, geometry, buttons, close_button_label):
 # If check_button_label is False, don't make one, otherwise create with
 # the given label and "on" state
 #
+# Add a post hook, to execute a function after the dialog is closed.
+# Default is None.
+#
 # Note:
 #  - if label is "HSep" a horizontal separator is inserted instead of a button
 #  - the description is optional
@@ -2058,7 +2062,8 @@ def dialog_box_of_buttons_with_check_button(window_name, geometry,
                                             buttons, close_button_label,
                                             check_button_label,
                                             check_button_func,
-                                            check_button_is_initially_on_flag):
+                                            check_button_is_initially_on_flag,
+                                            post_close_hook=None):
    
 
    def add_text_to_text_widget(text_box, description):
@@ -2068,6 +2073,10 @@ def dialog_box_of_buttons_with_check_button(window_name, geometry,
                             background = "#c0e6c0")
       textbuffer.insert_with_tags_by_name(start, description, "tag")
 
+   def close_cb_func(*args):
+      # should we check if post_close_hook is a callable func?
+      post_close_hook()
+      window.destroy()
    # main line
    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
    scrolled_win = gtk.ScrolledWindow()
@@ -2102,7 +2111,7 @@ def dialog_box_of_buttons_with_check_button(window_name, geometry,
    outside_vbox.pack_start(h_sep, False, False, 2)
    ok_button = gtk.Button(close_button_label)
    outside_vbox.pack_end(ok_button, False, False, 0)
-   ok_button.connect("clicked", lambda w: window.destroy())
+   ok_button.connect("clicked", close_cb_func, window, post_close_hook)
 	
    window.show_all()
    return inside_vbox
@@ -5093,6 +5102,8 @@ def click_protein_db_loop_gui():
                      toggle_active_mol(imol)
                      toggle_display_mol(imol)
 
+                  loop_mols.append(imol_loops_consolidated)
+
                   dialog_box_of_buttons("Loop Candidates",
                                         [360, 200],
                                         [["Original loop", lambda func:
@@ -5103,8 +5114,9 @@ def click_protein_db_loop_gui():
                                          ["Toggle All Candidate Loops", lambda func:
                                           toggle_func(imol_loops_consolidated)]
                                          ] + buttons,
-                                        " Close ")
-                  
+                                        " Close ",
+                                        lambda: map(lambda im: (set_mol_displayed(im, 0), set_mol_active(im,0)), loop_mols))
+                 
       user_defined_click(n, pick_func)
       
    generic_number_chooser(range(2,10), 4,
