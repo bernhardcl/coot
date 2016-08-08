@@ -1438,6 +1438,7 @@ public:
      return directory_for_filechooser;
    }
 
+   static float b_factor_scale;
    
    static int map_line_width;
 

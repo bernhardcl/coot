@@ -184,7 +184,7 @@ int graphics_info_t::lsq_mov_imol = -1;
 // LSQ dialog values
 lsq_dialog_values_t graphics_info_t::lsq_dialog_values;
 
-
+float graphics_info_t::b_factor_scale            =  1.0;
 
 // side by side stereo?
 short int graphics_info_t::in_side_by_side_stereo_mode = 0;

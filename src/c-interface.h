@@ -6032,7 +6032,7 @@ void set_map_sharpening_scale_limit(float f);
 /*	Density Map Kurtosis							*/
 /* ----------------------------------------------------------------------------	*/
 float optimal_B_kurtosis(int imol);
-
+void set_b_factor_scale( double );
 
 /*  ----------------------------------------------------------------------- */
 /*           Intermediate Atom Manipulation                                 */
