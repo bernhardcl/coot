@@ -2069,7 +2069,7 @@ if test -n "$build_fftw" ; then
 ${WGET} $extras_place/fftw-2.1.5.tar.gz
 ${WGET} $win_extras_place/fftw-2.1.5_shared.patch
 ${WGET} $win_extras_place/fix_shared_makefiles.sh
-${WGTE} $win_extras_place/fix_libfftw.la.sh
+${WGET} $win_extras_place/fix_libfftw.la.sh
 #${WGET} $extras_place/fftw-configure-stuff.tar.gz
 (
 date
@@ -3478,9 +3478,8 @@ export LDFLAGS="-Wl,--large-address-aware"
 echo From tar file: ${AUTOBUILD_SOURCES}/$coot_version.tar.gz
 echo building in: $PWD
 echo ./configure $coot_prefix \
-    --with-mmdb-prefix=$install_top_dir \
-    --with-ssmlib-prefix=$install_top_dir \
     --with-fftw-prefix=$install_top_dir \
+    $goocanvas_args     \
     $glut_prefix        \
     COOT_BUILD_INFO_STRING="$coot_build_info_string" \
     $guile_scripting          \
@@ -3490,9 +3489,8 @@ echo ./configure $coot_prefix \
     $coot_extra_args   
 
 ./configure $coot_prefix \
-    --with-mmdb-prefix=$install_top_dir \
-    --with-ssmlib-prefix=$install_top_dir \
     --with-fftw-prefix=$install_top_dir \
+    $goocanvas_args     \
     $glut_prefix        \
     COOT_BUILD_INFO_STRING="$coot_build_info_string" \
     $guile_scripting          \
