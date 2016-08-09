@@ -2075,7 +2075,8 @@ def dialog_box_of_buttons_with_check_button(window_name, geometry,
 
    def close_cb_func(*args):
       # should we check if post_close_hook is a callable func?
-      post_close_hook()
+      if post_close_hook:
+         post_close_hook()
       window.destroy()
    # main line
    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
