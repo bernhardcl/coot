@@ -6605,6 +6605,16 @@ void change_peptide_carbonyl_by_current_button_pos(int ix, int iy) {
 
 } 
 
+void
+set_b_factor_scale( double bfs ){
+        if( bfs > 0)
+                graphics_info_t::b_factor_scale = bfs;
+        else
+                graphics_info_t::b_factor_scale = 1.0;
+}
+
+
+
 /*  ----------------------------------------------------------------------- */
 /*                  cif stuff                                               */
 /*  ----------------------------------------------------------------------- */
@@ -7254,7 +7264,7 @@ void citation_notice_off() {
 
    graphics_info_t::show_citation_notice = 0;
 
-} 
+}
 
 /*  ----------------------------------------------------------------------- */
 /*                  cursor function                                         */

@@ -624,6 +624,49 @@ coot::geometry_graphs::render_geometry_distortion_blocks_internal_linear(const c
    }
 }
 
+void
+coot::geometry_graphs::render_b_factor_blocks(  int imol,
+                                                int chain_number,
+                                                const std::string  &chain_id,
+                                                int offset,
+                                                const std::vector<coot::b_factor_block_info_t> &biv,
+                                                double scale ) {
+   int this_resno;
+
+   if (chain_number < int(chain_index.size()))
+      chain_index[chain_number] = chain_id;
+
+   int min_resno = offset + 1;
+   int max_resno = offset + biv.size();
+   int nres = biv.size();
+   if ( biv.size() > 0) {
+      for (unsigned int i=0; i<biv.size(); i++)
+         if (biv[i].resno > max_resno)
+            max_resno = biv[i].resno;
+
+      nres = max_resno - min_resno + 1;
+      offsets[chain_number] = offset;
+      draw_chain_axis(nres, chain_number);
+      draw_chain_axis_tick_and_tick_labels(min_resno, max_resno, chain_number);
+      blocks[chain_number].resize(nres+1); // needs to index max_resno
+     
+      std::string inscode("");
+      std::string at_name(" CA ");
+      std::string altconf("");
+      for (unsigned int i=0; i<biv.size(); i++) {
+         this_resno = i + offset;
+         coot::atom_spec_t atom_spec(chain_id, biv[i].resno, inscode, biv[i].atom_name, altconf);
+         geometry_graph_block_info block_info(imol, biv[i].resno, atom_spec, biv[i].b_factor_var,
+                                              biv[i].info_string, canvas);
+                block_info.distortion*= scale;
+
+         plot_block(block_info, offset, chain_number);
+      }
+      label_chain(chain_id, chain_number);
+   }
+}
+
+
 // Note: offset is 0 for a chain starting at 1.
 void
 coot::geometry_graphs::render_b_factor_blocks(int imol,

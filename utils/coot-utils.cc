@@ -801,12 +801,26 @@ bool
 coot::util::extension_is_for_scripts(const std::string &ext) {
 
    bool r = false;
-   if ((ext == ".py") ||
-       (ext == ".scm"))
+#ifdef USE_PYTHON
+   if (ext == ".py")
+       r = true;
+#endif // USE_PYTHON
+#ifdef USE_GUILE
+   if (ext == ".scm")
       r = true;
+#endif // USE_GUILE
    return r; 
 } 
 
+bool
+coot::util::extension_is_for_maps(const std::string &ext) {
+
+   bool r = false;
+   if ((ext == ".map") ||
+       (ext == ".ccp4"))
+      r = true;
+   return r;
+}
 
 short int
 coot::is_mmcif_filename(const std::string &filename) {

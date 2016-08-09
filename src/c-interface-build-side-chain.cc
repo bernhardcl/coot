@@ -984,6 +984,10 @@ void fill_partial_residues(int imol) {
       graphics_draw();
 
       if (imol_map > -1) { 
+         // turn off backup
+         make_backup(imol);
+         int backup_mode = backup_state(imol);
+         turn_off_backup(imol);
 	 int refinement_replacement_state = refinement_immediate_replacement_state();
 	 set_refinement_immediate_replacement(1);
       	 for (unsigned int i=0; i<m_i_info.residues_with_missing_atoms.size(); i++) {
@@ -994,11 +998,14 @@ void fill_partial_residues(int imol) {
       	    std::string altconf("");
 	    short int is_water = 0;
 	    // hmmm backups are being done....
+            // dealt with?!
       	    g.refine_residue_range(imol, chain_id, chain_id, resno, inscode, resno, inscode,
 				   altconf, is_water);
 	    accept_regularizement();
       	 }
 	 set_refinement_immediate_replacement(refinement_replacement_state);
+         if (backup_mode)
+               turn_on_backup(imol);
       } else {
 	 g.show_select_map_dialog();
       } 

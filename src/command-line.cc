@@ -403,7 +403,8 @@ command_line_data::handle_immediate_settings() {
 
 // add any pdb files not alread added with --pdb/coords/xyzin
 // BL:: extend to mtzs (auto) and scripts (the easier ones)
-// maybe the name should be change then...
+// and maps...
+// maybe the name of the function should be change then...
 void
 command_line_data::roberto_pdbs(int argc, char **argv) {
 
@@ -421,7 +422,11 @@ command_line_data::roberto_pdbs(int argc, char **argv) {
      if (coot::util::extension_is_for_scripts(coot::util::file_name_extension(file)))
        if (std::find(script.begin(), script.end(), file) == script.end())
          script.push_back(file);
-     
+
+     if (coot::util::extension_is_for_maps(coot::util::file_name_extension(file)))
+       if (std::find(maps.begin(), maps.end(), file) == maps.end())
+         maps.push_back(file);
+
    }
 }
 

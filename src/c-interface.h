@@ -6032,7 +6032,7 @@ void set_map_sharpening_scale_limit(float f);
 /*	Density Map Kurtosis							*/
 /* ----------------------------------------------------------------------------	*/
 float optimal_B_kurtosis(int imol);
-
+void set_b_factor_scale( double );
 
 /*  ----------------------------------------------------------------------- */
 /*           Intermediate Atom Manipulation                                 */
@@ -6201,6 +6201,7 @@ int laplacian (int imol);
 PyObject *get_pkgdatadir_py();
 #endif /* USE_PYTHON */
 #ifdef USE_GUILE
+// note: built-ins: (%package-data-dir) and %guile-build-info
 SCM get_pkgdatadir_scm();
 #endif
 #endif /*  __cplusplus */
