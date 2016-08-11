@@ -20,7 +20,8 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc.,  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+# 02110-1301, USA
 
 
 # Fire up the coot scripting gui.  This function is called from the
@@ -2074,10 +2075,10 @@ def dialog_box_of_buttons_with_check_button(window_name, geometry,
       textbuffer.insert_with_tags_by_name(start, description, "tag")
 
    def close_cb_func(*args):
-      # should we check if post_close_hook is a callable func?
       if post_close_hook:
          post_close_hook()
       window.destroy()
+
    # main line
    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
    scrolled_win = gtk.ScrolledWindow()

@@ -555,12 +555,12 @@ function post_install_slim {
 	libexec/findwaters-bin             \
 	libexec/findligand-bin             \
 	libexec/mini-rsr-bin               \
+	libexec/density-score-by-residue-bin  \
 	bin/coot                           \
         bin/findwaters                     \
 	bin/findligand                     \
 	bin/guile                          \
-	bin/density-score-by-residue       \
-	bin/density-score-by-residue-real  \
+	bin/coot-density-score-by-residue       \
 	bin/coot-available-comp-id         \
 	bin/coot-compare-dictionaries      \
 	bin/coot-dictionary-bond-distributions \
@@ -3610,6 +3610,7 @@ pwd
 gzip -dc ${AUTOBUILD_SOURCES}/$coot_version.tar.gz | tar xf -
 coot_dir_name=`echo $coot_version | sed 's/-revision.*//'`
 cd $coot_dir_name
+patch -p0 < ${AUTOBUILD_SOURCES}/coot-0.8.5-fedora.patch
 
 if test -n "$glib_installed" ; then
     coot_extra_args="$coot_extra_args --with-glib-prefix=$install_top_dir"
@@ -3978,17 +3979,17 @@ if [ "$run_tests" = true ] ; then
 	          # only copy over the binary files if they are not there
 	          # already (checked by publish executable).
 	          #
-	          echo $publish $bin_tar_file
-	          $publish $bin_tar_file
-	          echo $publish $bin_tar_file.md5sum
-	          $publish $bin_tar_file.md5sum
+	          echo $publish $bin_tar_file $BINARY_TAR_DEST_DIR
+	          $publish $bin_tar_file $BINARY_TAR_DEST_DIR
+	          echo $publish $bin_tar_file.md5sum $BINARY_TAR_DEST_DIR
+	          $publish $bin_tar_file.md5sum $BINARY_TAR_DEST_DIR
 	          # echo $publish $binary_type_latest
 	          # publish $binary_type_latest
 	          echo $publish --no-server-check ChangeLog
 	          $publish --no-server-check ChangeLog
 	          echo $publish --no-server-check coot-README
 	          $publish --no-server-check coot-README
-                  if [ -z "$build_coot_prerelease" ] ; then 
+                  if [ -z "$build_coot_prerelease" ] ; then
    	             echo $publish  --no-server-check RELEASE-NOTES
 	             $publish --no-server-check RELEASE-NOTES
                   else 
