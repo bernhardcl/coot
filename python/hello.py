@@ -51,16 +51,19 @@ def coot_says_hello():
    if hour < 12: time_str = "Morning"
    elif hour < 18: time_str = "Afternoon"
    else : time_str = "Evening"
+   name_strings = []
    try:
-
       import pwd
       user = getpass.getuser()
       name_string = pwd.getpwnam(user).pw_gecos
       name_strings = name_string.split()
-
    except:
-      # no user found - shouldn't happen
-      name_strings = ["anonymous", "Coot", "user"]
+      if is_windows():
+         user = getpass.getuser()
+         name_strings = user.split()
+      if not name_strings:
+         # fall back if no user found - shouldn't happen
+         name_strings = ["anonymous", "Coot", "user"]
     
    # reverse name_strings if locale is japanese
    l1 = os.getenv("LANG")
