@@ -113,6 +113,7 @@ cd -
 # the same coot version for both
 # give up after 3 tries
 coot_version_status=1
+coot_test_status=1
 build_cycle=0
 minor_build_cycle=0
 build_installer=0
@@ -269,9 +270,9 @@ do
 done
 else
  # this is for installer only
- coot_test_status=0
  rm /z/make_installer_only
  . ${HOME}/wincoot-installer-variables
+ coot_test_status=0
 fi
 
 # flag for makensis, i.e. overwrite binary dir when stable release
