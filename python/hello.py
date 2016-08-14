@@ -58,12 +58,8 @@ def coot_says_hello():
       name_string = pwd.getpwnam(user).pw_gecos
       name_strings = name_string.split()
    except:
-      if is_windows():
-         user = getpass.getuser()
-         name_strings = user.split()
-      if not name_strings:
-         # fall back if no user found - shouldn't happen
-         name_strings = ["anonymous", "Coot", "user"]
+      name_string = getpass.getuser()
+      name_strings = name_string.split()
     
    # reverse name_strings if locale is japanese
    l1 = os.getenv("LANG")
