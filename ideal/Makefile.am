@@ -27,8 +27,10 @@ lib_LTLIBRARIES=libcoot-ideal.la
 
 EXTRA_DIST = notes Makefile.simple molmantest.cc test-indexing.hh test-indexing.cc
 
-pkginclude_HEADERS =  test-indexing.hh simple-restraint.hh pepflip.hh regularize-minimol.hh lograma.h \
+pkginclude_HEADERS =  test-indexing.hh simple-restraint.hh pepflip.hh \
+	regularize-minimol.hh lograma.h \
 	parallel-planes.hh torsion-bonds.hh extra-restraints.hh
+
 pkgincludedir = $(includedir)/coot/ideal
 
 AM_CPPFLAGS = \
@@ -69,7 +71,8 @@ libcoot_ideal_la_LIBADD =                 \
    $(MMDB_LIBS) $(CLIPPER_LIBS) $(GSL_LIBS)
 
 
-libcoot_ideal_la_SOURCES = simple-restraint.cc chirals.cc  extra-restraints.cc \
+libcoot_ideal_la_SOURCES = simple-restraint.cc \
+	mods.cc distortion.cc chirals.cc flanking.cc gradients.cc extra-restraints.cc \
 	pepflip.cc regularize-minimol.cc lograma.cpp \
         extra-restraints-kk.cc simple-restraint-kk.cc torsion-bonds.cc \
 	coot-compare-residues.hh coot-compare-residues.cc link-restraints.cc \
@@ -149,4 +152,4 @@ logramatest_LDADD = \
 	$(RDKIT_LIBS) \
 	$(CLIPPER_LIBS) $(GSL_LIBS)
 
-dist_bin_SCRIPTS = coot.mini-rsr
+dist_bin_SCRIPTS = coot-mini-rsr

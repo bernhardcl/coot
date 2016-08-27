@@ -12,8 +12,8 @@ if not os.getenv("CLIBD"):
     prodrg_params = os.path.join(clibd, "prodrg.param")
     if os.path.isfile(prodrg_params):
         os.environ["CLIBD"] = clibd
-        print "BL INFO:: found prodrg.param"
-        print "          and set CLIBD to", clibd
+        # print "BL INFO:: found prodrg.param"
+        # print "          and set CLIBD to", clibd
     else:
         # print "BL ERROR:: no prodrg.param available"
         # print "searched in ", clibd
@@ -21,7 +21,8 @@ if not os.getenv("CLIBD"):
             # we don't want to know that you can't find old programs
             pass
         else:
-           print "Sorry, prodrg module not available"
+           # print "Sorry, prodrg module not available" # noisy and we don't care
+           pass
         # should load rest?
         # i.e. stop here?
     
@@ -45,7 +46,7 @@ if home:
     prodrg_xyzin      = os.path.join(home, "Projects",
                                      "build-xp-python", "lbg", "prodrg-in.mdl")
 else:
-    print "BL DEBUG:: buggery home is", home  # FIXME
+    print "BL WARNING:: Problem: home is", home  # FIXME
 sbase_to_coot_tlc = "../../build-xp-python/lbg/.sbase-to-coot-comp-id"
 
 # this is latest!!!!
@@ -346,7 +347,7 @@ def new_molecule_by_smiles_string(tlc_text, smiles_text, force_libcheck=False):
        smiles_input.write(smiles_text)
        smiles_input.close()
 
-       libcheck_exe_file = find_exe(libcheck_exe, "CCP4_BIN", "PATH")
+       libcheck_exe_file = find_exe(libcheck_exe, "CBIN", "CCP4_BIN", "PATH")
 
        if (not libcheck_exe_file):
            print " BL WARNING:: libcheck not found!"

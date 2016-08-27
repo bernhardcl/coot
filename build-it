@@ -415,6 +415,11 @@ proxy_host=${proxy_host:=myproxy.com}
 proxy_port=${proxy_port:=800}
 no_proxy=${no_proxy:=".corp.net.com"}
 
+# set this to true if you want to run the test suite and make binary 
+# bundles (needs test data and the CCP4 suite):
+#
+run_tests=${run_tests:=false}
+
 # This is where the compiled binaries/libraries/data get installed:
 # Note that the directory name must NOT end in a /
 #
@@ -427,7 +432,7 @@ AUTOBUILD_INSTALLED=${AUTOBUILD_INSTALLED:=${HOME}/autobuild/${OS}-${HOST}}
 # 
 # AUTOBUILD_BUILD=${HOME}/autobuild
 # I'm putting my build on "scratch space"
-AUTOBUILD_BUILD=${AUTOBUILD_BUILD:=$HOME/autobuild}
+AUTOBUILD_BUILD=${AUTOBUILD_BUILD:=$HOME/autobuild/building}
 
 # This is where the build logs go:
 # suggested value:
@@ -473,6 +478,15 @@ BINARY_INSTALL_CMD=www-placement
 # this "publish" mechanism (to be overwritten as needed)
 publish=${publish:=:}
 publish_logs=${publish_logs:=:}
+
+# if umask was not set, then use 0022
+# umask 0022
+if [ -z "$umask" ] ; then
+   umask 0022
+else 
+   umask $umask
+fi
+
 
 # When we fail to extract the correct tar file from the web site, what
 # shall we build instead?
@@ -538,17 +552,19 @@ function post_install_slim {
 
     file_list="etc info man share libexec  \
 	libexec/coot-bin                   \
+	libexec/findwaters-bin             \
+	libexec/findligand-bin             \
+	libexec/mini-rsr-bin               \
+	libexec/density-score-by-residue-bin  \
 	bin/coot                           \
         bin/findwaters                     \
-	bin/findwaters-real                \
-	bin/findligand bin/findligand-real \
+	bin/findligand                     \
 	bin/guile                          \
-	bin/density-score-by-residue       \
-	bin/density-score-by-residue-real  \
-	bin/coot.available-comp-id         \
-	bin/coot.compare-dictionaries      \
-	bin/coot.dictionary-bond-distributions \
-	bin/coot.make-shelx-restraints \
+	bin/coot-density-score-by-residue       \
+	bin/coot-available-comp-id         \
+	bin/coot-compare-dictionaries      \
+	bin/coot-dictionary-bond-distributions \
+	bin/coot-make-shelx-restraints \
         bin/curl \
 	$keep_lib_archs"
 
@@ -1347,12 +1363,25 @@ else
 fi
 
 
-if [ ! -e "$AUTOBUILD_BUILD" ] ; then
-   mkdir "$AUTOBUILD_BUILD" 
+# create $AUTOBUILD_BUILD directory
+
+if [ ! -d "$AUTOBUILD_BUILD" ] ; then
+   mkdir "$AUTOBUILD_BUILD"
    if [ $? -ne 0 ] ; then
-	echo mkdir of the AUTOBUILD_BUILD \(i.e. "$AUTOBUILD_BUILD"\) failed.
-        my_exit 2
+
+        prev_dir=$(dirname $AUTOBUILD_BUILD)
+        echo $prev_dir
+        if [ ! -d "$prev_dir" ] ; then
+           mkdir $prev_dir
+           mkdir "$AUTOBUILD_BUILD"
+        fi
    fi
+
+   if [ ! -d "$AUTOBUILD_BUILD" ] ; then
+      # echo mkdir of the AUTOBUILD_BUILD \(i.e. "$AUTOBUILD_BUILD"\) failed.
+      my_exit 2
+   fi
+
 fi
    
 
@@ -1396,7 +1425,6 @@ release_server_dir=http://lmb.bioch.ox.ac.uk/coot/software/source/releases
 release_server_dir=http://www2.mrc-lmb.cam.ac.uk/groups/murshudov/coot/source/releases/
 release_server_dir=http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/source/releases
 #
-extras_place=http://www2.mrc-lmb.cam.ac.uk/Groups/murshudov/coot/dependencies
 extras_place=http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/dependencies
 
 
@@ -1518,17 +1546,27 @@ if [ "$build_coot_prerelease" = 1 ] ; then
       generic_prefix="--prefix=${AUTOBUILD_INSTALLED}-pre-release-${build_type} ${config_extras:-}"
       coot_prefix="$generic_prefix"
       install_top_dir=${AUTOBUILD_INSTALLED}-pre-release-${build_type}
+      # python seems to link OK on Darwin, so no need for this jiggery pokery
+      if [ $(uname) != Darwin ] ; then
+         python_lib_flags=LDFLAGS="-Wl,--rpath=${AUTOBUILD_INSTALLED}-pre-release-${build_type}/lib"
+      fi
     else 
       # don't use pre-release
       generic_prefix="--prefix=$AUTOBUILD_INSTALLED-${build_type} ${config_extras:-}"
       coot_prefix="$generic_prefix"
       install_top_dir=${AUTOBUILD_INSTALLED}-${build_type}
+      if [ $(uname) != Darwin ] ; then
+         python_lib_flags=LDFLAGS="-Wl,--rpath=${AUTOBUILD_INSTALLED}-pre-release-${build_type}/lib"
+      fi
     fi
 else 
    # not pre-release
    generic_prefix="--prefix=$AUTOBUILD_INSTALLED-${build_type} ${config_extras:-}"
    install_top_dir=${AUTOBUILD_INSTALLED}-${build_type}
    coot_prefix="$generic_prefix"
+   if [ $(uname) != Darwin ] ; then
+      python_lib_flags=LDFLAGS="-Wl,--rpath=${AUTOBUILD_INSTALLED}-${build_type}/lib"
+   fi
 fi
 PATH=$install_top_dir/bin:$PATH
 
@@ -1986,7 +2024,7 @@ fi #  ENABLE_GUILE_COOT
 # 2.5.1 it is python2.5, not python2.5.1
 #
 python_version=python2.7
-pver=2.7.11
+pver=2.7.12
 
 if [ $ENABLE_PYTHON_COOT = yes ] ; then 
    $install_top_dir/bin/python -V
@@ -2278,8 +2316,6 @@ fi
 # -----------------------------------------------------------------------------
 #
 
-extras_place=http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/dependencies
-
 #
 # libccp4: (not fortran)
 if test -n "$build_ccp4c" ; then 
@@ -2334,6 +2370,8 @@ mmdb_version=1.25.2
 mmdb_version=1.25.3
 mmdb_version=2.0.1
 mmdb_version=2.0.2
+mmdb_version=2.0.5
+mmdb_version=2.0.11
 # mmdb_server_dir=ftp://ftp.ccp4.ac.uk/opensource
 mmdb_server_dir=$extras_place
 echo ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
@@ -2431,7 +2469,8 @@ if test -n "$build_clipper" ; then
     #
     echo BUILDING clipper:
     # clipper_version is for the file name on the server, clipper_dir_version is the directory 
-    # that files untars into.
+    # that files untars into (20160713 with Marcin in control of the tar dist now they are the 
+    # same, it seems?).
     clipper_version=20ac
     clipper_version=2.1-081118-ac
     clipper_version=2.1-081201-ac
@@ -2441,7 +2480,9 @@ if test -n "$build_clipper" ; then
     clipper_version=2.1-091215-ac
     clipper_version=2.1-100511-ac
     clipper_version=2.1
+    clipper_version=2.1.20160708
     clipper_dir_version=2.1
+    clipper_dir_version=$clipper_version
     # ${WGET} http://www.ysbl.york.ac.uk/~cowtan/clipper/clipper-$clipper_version.tar.gz
 
     # 20110921 hack in a temporary solution, while Kevin's new clipper
@@ -2451,7 +2492,8 @@ if test -n "$build_clipper" ; then
     # ${WGET} $extras_place/clipper-$clipper_hack_version.tar.gz
 
     # now clipper has all the bits.
-    ${WGET} $extras_place/clipper-$clipper_version.tar.gz
+    # ${WGET} $extras_place/clipper-$clipper_version.tar.gz
+    ${WGET} ftp://ftp.ccp4.ac.uk/opensource/clipper-$clipper_version.tar.gz
 
     (
     gzip -dc ${AUTOBUILD_SOURCES}/clipper-$clipper_version.tar.gz | tar xf -
@@ -2474,6 +2516,28 @@ if test -n "$build_clipper" ; then
     # despite our having build fftw for ourselves - I need to stop
     # that (because of clipper's m4/fftw.m4)
     
+    save_libs="$LIBS"
+    export LIBS="-L$install_top_dir/lib:$LIBS"
+    if [ -z "$LIBS" ] ; then
+      save_libs=
+      export LIBS=-L$install_top_dir/lib
+    else 
+      save_libs="$LIBS"
+      export LIBS=-L$install_top_dir/lib:$LIBS
+    fi
+    echo now we have LIBS $LIBS
+
+    echo ./configure --prefix=$install_top_dir \
+	--enable-mmdb=$install_top_dir \
+	--enable-ccp4=$install_top_dir \
+	--enable-shared  \
+	--enable-mmdb    \
+	--enable-cif     \
+	--enable-ccp4    \
+	--enable-minimol \
+	--enable-cns     \
+       CXXFLAGS="-g -O2 -fno-strict-aliasing"
+
     ./configure --prefix=$install_top_dir \
 	--enable-mmdb=$install_top_dir \
 	--enable-ccp4=$install_top_dir \
@@ -2484,6 +2548,7 @@ if test -n "$build_clipper" ; then
 	--enable-minimol \
 	--enable-cns     \
        CXXFLAGS="-g -O2 -fno-strict-aliasing"
+    export LIBS="$save_libs"
     # 20110921 I don't think we need these flags any longer
     #        CCP4_CXXFLAGS=-I$install_top_dir/include CCP4_LIBS=$install_top_dir/lib/libccp4c.la
     # we don't want to make the clipper executables, so let's cd in to the clipper libs and 
@@ -2579,6 +2644,8 @@ if [ "$build_gtkglext" = 1 ] ; then
         patch_file_1=gtk-gtkglwidget.c-for-modern-gtk-for-2.18.patch
         patch_file_2=gtkglext-context-finalize.diff
         patch_file_3=gtkglext-multisample.patch.patch
+        patch_file_4=gtkglext-pangox.patch
+        patch_file_5=gtkglext-gdkglfont.patch
 
         if pkg-config gtk+-2.0 --atleast-version 2.20 ; then
            patch_file_1=gtk-gtkglwidget.c-for-modern-gtk.patch
@@ -2589,6 +2656,14 @@ if [ "$build_gtkglext" = 1 ] ; then
 	${WGET} $extras_place/$patch_file_1
         ${WGET} $extras_place/$patch_file_2
         ${WGET} $extras_place/$patch_file_3
+        ${WGET} $extras_place/$patch_file_4
+        ${WGET} $extras_place/$patch_file_5
+
+        # we need extra patch to get rid of pangox dependency in
+        # configure and stop gdkglfont-x11.c getting compiled by
+        # removing references to it and its object from
+        # gdk/x11/Makefile.  Either that or get a nice new gtkglext by
+        # doing make dist from git (see hal Project).
 
         if patch -p0 < ${AUTOBUILD_SOURCES}/$patch_file_1 ; then 
             echo gtkglext patched patch_file_1 good.
@@ -2610,6 +2685,20 @@ if [ "$build_gtkglext" = 1 ] ; then
         fi
      else 
         echo version of gtk is old, no need to patch gtkglext.
+     fi
+
+     # get rid of font stuff.
+     if patch -p0 < ${AUTOBUILD_SOURCES}/$patch_file_4 ; then 
+         echo gtkglext patched patch_file_4 good.
+     else 
+         echo gtkglext patch_file_4 failed.
+         my_exit 2
+     fi
+     if patch -p0 < ${AUTOBUILD_SOURCES}/$patch_file_5 ; then 
+         echo gtkglext patched patch_file_5 good.
+     else 
+         echo gtkglext patch_file_5 failed.
+         my_exit 2
      fi
    
      if [ $OS = Darwin ] ; then
@@ -2649,7 +2738,9 @@ if [ "$build_gtkglext" = 1 ] ; then
     # capture the status from the subshell, if an error, exit the main shell too.
     status=$?
     echo status from gtkglext build was $status
-    if [ $status = 2 ] ; then 
+    if [ $status = 2 ] ; then
+       echo that\'s an error.
+       echo perhaps libXt-devel is missing\?
        my_exit 2
     fi
 else
@@ -2717,9 +2808,9 @@ if test -n "$build_python" ; then
 
    cd Python-$pver
 
-   echo INFO:: ./configure $generic_prefix $python_spec_flags for python
-   # BL comment may need --enable-shared for python-config to pick up ldflags properly!?
-   if ./configure $generic_prefix --enable-shared $python_spec_flags ; then
+   echo INFO:: ./configure $generic_prefix $python_spec_flags $python_lib_flags for python
+   # 
+   if ./configure $generic_prefix --enable-shared $python_spec_flags $python_lib_flags ; then
      echo INFO:: make for python
      if $MAKE ; then
         echo INFO:: make install for python
@@ -3037,6 +3128,7 @@ fi
 # ${WGET} http://ftp.gnu.org/gnu/guile/guile-${guile_version}.tar.gz
 ${WGET} http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/guile/guile-${guile_version}.tar.gz
 ${WGET} $extras_place/guile-1.8.7-updated.patch
+${WGET} $extras_place/guile-1.8.8-gc-segment.c.patch
 
  
 # if debian, unset LD_LIBRARY_PATH and set it back again when done.
@@ -3063,6 +3155,7 @@ if [ "$need_guile_unused_values_patch" = true ] ; then
 else
    additional_unused_arg=
 fi
+
 # arg to guile's configure
 ./configure $generic_prefix \
      CFLAGS="-I$install_top_dir/include $additional_unused_arg -O" \
@@ -3079,6 +3172,11 @@ if [ "$need_guile_unused_values_patch" = true ] ; then
 else
    echo not applying guile unused values patch
 fi
+# fedora 24 doesn't like the parethenses around a particular if expression
+# gcc 6.1.1 - harmless for others
+#
+patch -p0 < ${AUTOBUILD_SOURCES}/guile-1.8.8-gc-segment.c.patch
+
 echo =========== make ====================
 $MAKE
 status=$?
@@ -3366,75 +3464,100 @@ fi
 #################################################################
 # 
 
-raster3d_version=3.0-3
-# raster3d depends on libgd to make png images
-${WGET} http://skuld.bmsc.washington.edu/raster3d/Raster3D_$raster3d_version.tar.gz
+if [ -e $install_top_dir/bin/render ] ; then
+   echo not building Raster3D render
+else
 
-if [ -e ${AUTOBUILD_SOURCES}/Raster3D_3.0-3.tar.gz ] ; then
+   raster3d_version=3.0-3
+   # raster3d depends on libgd to make png images
+   ${WGET} http://skuld.bmsc.washington.edu/raster3d/Raster3D_$raster3d_version.tar.gz
 
-   ( 
-    date
-    pwd
-    # build libgd
-    #
-    system_has_libgd=false
-    if [ -e /usr/include/gd.h ] ; then
-       system_has_libgd=true
-    fi
-    
-    echo system_has_libgd: $system_has_libgd
+   if [ ! -e ${AUTOBUILD_SOURCES}/Raster3D_$raster3d_version.tar.gz ] ; then
 
-    if [ $system_has_libgd = false ] ; then 
-       if [ ! -e $install_top_dir/include/gd.h ] ; then
-   	   # Amazon file names too long, so force output name with -O
-           ${WGET} https://github.com/libgd/libgd/releases/download/gd-2.1.1/libgd-2.1.1.tar.gz -O ${AUTOBUILD_SOURCES}/libgd-2.1.1.tar.gz
-	   gzip -dc ${AUTOBUILD_SOURCES}/libgd-2.1.1.tar.gz | tar xf -
-	   cd libgd-2.1.1
-	   bash ./configure --prefix=$install_top_dir
-	   if $MAKE ; then
-	      make install
-	   fi
-	   cd - 
+      echo missing Raster3D tar file
+
+   else
+      ( 
+       date
+       pwd
+       # build libgd
+       #
+       system_has_libgd=false
+       if [ -e /usr/include/gd.h ] ; then
+          system_has_libgd=true
        fi
-    else 
-       echo $install_top_dir/include/gd.h exists - skip libgd build
-    fi
+       echo system_has_libgd: $system_has_libgd
 
-   ) > $HOSTLOGDIR/15-libgd.log
-    
-   ( 
-    date
-    pwd
-    # build render
-    #
-    system_has_libgd=false
-    if [ -e /usr/include/gd.h ] ; then
-       system_has_libgd=true
-    fi
-    if [ ! -e $install_top_dir/bin/render ] ; then 
-       # now build it.
-       gzip -dc ${AUTOBUILD_SOURCES}/Raster3D_$raster3d_version.tar.gz | tar xf -
-       cd Raster3D_$raster3d_version
-       make linux # fixme for Darwin
-       # add the gd support directory
-
-       if [ $system_has_libgd = false ] ; then 
-          sed -ibackup \
-             -e "s?=.-lgd?=  -L$prefix/lib -lgd?" \
-             -e "s?=.-DGD_SUPPORT?=  -DGD_SUPPORT -I$prefix/include?" \
-          Makefile.incl
+       if [ "$system_has_libgd" = false ] ; then
+          echo checking for existance of $install_top_dir/include/gd.h
+          if [ ! -e $install_top_dir/include/gd.h ] ; then
+              echo get and build libgd...
+   	      # Amazon file names too long, so force output name with -O
+              ${WGET} https://github.com/libgd/libgd/releases/download/gd-2.1.1/libgd-2.1.1.tar.gz -O ${AUTOBUILD_SOURCES}/libgd-2.1.1.tar.gz
+	      gzip -dc ${AUTOBUILD_SOURCES}/libgd-2.1.1.tar.gz | tar xf -
+   	      cd libgd-2.1.1
+	      bash ./configure --prefix=$install_top_dir
+	      if $MAKE ; then
+	         make install
+	      fi
+	      cd - 
+          else
+              echo $install_top_dir/include/gd.h exists - skip libgd build
+          fi
+       else 
+          echo $install_top_dir/include/gd.h exists - skip libgd build
        fi
+
+      ) > $HOSTLOGDIR/15-libgd.log
+    
+      ( 
+       date
+       pwd
+       # build render
+       #
+       system_has_libgd=false
+       if [ -e /usr/include/gd.h ] ; then
+          system_has_libgd=true
+       fi
+       if [ ! -e $install_top_dir/bin/render ] ; then 
+          # now build it.
+          gzip -dc ${AUTOBUILD_SOURCES}/Raster3D_$raster3d_version.tar.gz | tar xf -
+          cd Raster3D_$raster3d_version
+
+          make linux # FIXME for Darwin
+
+          # compiling libgd so that render links against it depend on libjpeg-turbo-devel
+          # having been installed.  i.e. /usr/lib/libjpeg.so should exist
+
+          # add the gd support directory
+          #
+          system_has_libgd=false
+          if [ -e /usr/include/gd.h ] ; then
+             system_has_libgd=true
+          fi
+          echo system_has_libgd: $system_has_libgd
+          if [ "$system_has_libgd" = false ] ; then 
+             sed -ibackup \
+                -e "s?=.-lgd?=  -L$install_top_dir/lib -lgd?" \
+                -e "s?=.-DGD_SUPPORT?=  -DGD_SUPPORT -I$install_top_dir/include?" \
+                -e 's/  TDEFS =.*/  TDEFS =/' \
+                -e 's/  TLIBS =.*/  TLIBS =/' \
+             Makefile.incl
+          fi
        
-       if $MAKE render ; then 
-  	  make prefix=$install_top_dir install
-	  # did that work?  I doubt it. Let's do it by hand
-	  cp render $install_top_dir/bin/
+          if $MAKE render ; then 
+  	     make prefix=$install_top_dir install
+	     # did that work?  I doubt it. Let's do it by hand
+             if [ ! -e $install_top_dir/bin/render ] ; then
+  	        cp render $install_top_dir/bin/
+             fi
+          fi
+          cd -
+       else 
+          echo $install_top_dir/bin/render already exists, no build
        fi
-       cd -
-    else 
-      echo $install_top_dir/bin/render already exists, no build
-    fi
-    ) > $HOSTLOGDIR/15-raster3d.log
+       ) > $HOSTLOGDIR/15-raster3d.log
+   fi
 fi
 
 
@@ -3735,6 +3858,10 @@ fi
 
 # clear up the library dependencies
 
+if [ "$build_coot_prerelease" = 1 ] ; then
+   pre_release_str=-pre-release
+fi
+
 clear_up_type=
 if [ $shared_static_flag != "--disable-static" ] ; then
     clear_up_type=clear-static
@@ -3745,9 +3872,9 @@ fi
 
 if [ $clear_up_type != "" ] ; then 
    if [ "$ENABLE_PYTHON_COOT" = "yes" ] ; then 
-      slim_dir=$(dirname $install_top_dir)/coot-${OS}-${systype}-gtk2-python
+      slim_dir=$(dirname $install_top_dir)/coot-${OS}-${systype}${pre_release_str}-gtk2-python
    else
-      slim_dir=$(dirname $install_top_dir)/coot-${OS}-${systype}-gtk2
+      slim_dir=$(dirname $install_top_dir)/coot-${OS}-${systype}${pre_release_str}-gtk2
    fi
    echo post-install slim... >&2
    post_install_slim $install_top_dir $slim_dir $clear_up_type 
@@ -3851,17 +3978,17 @@ if [ "$run_tests" = true ] ; then
 	          # only copy over the binary files if they are not there
 	          # already (checked by publish executable).
 	          #
-	          echo $publish $bin_tar_file
-	          $publish $bin_tar_file
-	          echo $publish $bin_tar_file.md5sum
-	          $publish $bin_tar_file.md5sum
+	          echo $publish $bin_tar_file $BINARY_TAR_DEST_DIR
+	          $publish $bin_tar_file $BINARY_TAR_DEST_DIR
+	          echo $publish $bin_tar_file.md5sum $BINARY_TAR_DEST_DIR
+	          $publish $bin_tar_file.md5sum $BINARY_TAR_DEST_DIR
 	          # echo $publish $binary_type_latest
 	          # publish $binary_type_latest
 	          echo $publish --no-server-check ChangeLog
 	          $publish --no-server-check ChangeLog
 	          echo $publish --no-server-check coot-README
 	          $publish --no-server-check coot-README
-                  if [ -z "$build_coot_prerelease" ] ; then 
+                  if [ -z "$build_coot_prerelease" ] ; then
    	             echo $publish  --no-server-check RELEASE-NOTES
 	             $publish --no-server-check RELEASE-NOTES
                   else 

@@ -31,21 +31,23 @@
 #include "geometry/protein-geometry.hh"
 #include "utils/coot-utils.hh"
 
-#include <sys/types.h> // for stating
-#include <sys/stat.h>
+// #include <sys/types.h> // for stating
+// #include <sys/stat.h>
 
 #if !defined _MSC_VER
 #include <unistd.h>
 #else
 #define DATADIR "C:/coot/share"
 #define PKGDATADIR DATADIR
-#define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
-#define S_ISREG(m)  (((m) & S_IFMT) == S_IFREG)
+// stop using these, use win-compat functions
+// #define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
+// #define S_ISREG(m)  (((m) & S_IFMT) == S_IFREG)
 #endif
 
 #include "clipper/core/clipper_util.h"
 
 #include "compat/coot-sysdep.h"
+#include "utils/win-compat.hh"
 
 #include "lbg-graph.hh"
 
@@ -74,11 +76,11 @@ coot::protein_geometry::init_refmac_mon_lib(std::string ciffilename, int read_nu
    // 
    read_number = read_number_in;
 
-   struct stat buf;
-   int istat = stat(ciffilename.c_str(), &buf);
+   //    struct stat buf;
+   //    int istat = stat(ciffilename.c_str(), &buf);
    // Thanks Ezra Peisach for this this bug report
 
-   if (istat != 0) {
+   if (! is_regular_file(ciffilename)) {
       std::string s = "WARNING: in init_refmac_mon_lib, file \"";
       s += ciffilename;
       s += "\" not found.";
@@ -86,12 +88,8 @@ coot::protein_geometry::init_refmac_mon_lib(std::string ciffilename, int read_nu
       rmit.error_messages.push_back(s);
       rmit.success = false;
       return rmit;
-   }
 
-   if (! S_ISREG(buf.st_mode)) {
-      std::cout << "WARNING: in init_refmac_mon_lib \"" << ciffilename
-		<< "\" not read.  It is not a regular file.\n";
-   } else { 
+   } else {
 
       int ierr = ciffile.ReadMMCIFFile(ciffilename.c_str());
       std::string comp_id_1; 
@@ -206,9 +204,10 @@ coot::protein_geometry::init_refmac_mon_lib(std::string ciffilename, int read_nu
 		     }
 		  }
 		  
-		  if (! handled) 
-		     std::cout << "in init_refmac_mon_lib() null loop for catagory "
-			       << cat_name << std::endl; 
+		  if (! handled)   // this can happen if there is not an atom loop, e.g. dictionary
+		                   // with one atom e.g. AM.cif (Americium ion)
+		     std::cout << "WARNING:: in init_refmac_mon_lib() null loop for catagory "
+			       << cat_name << " file: " << ciffilename << std::endl; 
 		  
 	       } else {
                
@@ -1056,6 +1055,11 @@ coot::protein_geometry::chem_comp(mmdb::mmcif::PLoop mmCIFLoop) {
       ierr = mmCIFLoop->GetInteger(number_atoms_nh, "number_atoms_nh", j);
       ierr_tot += ierr;
 
+      char *release_status_cs = mmCIFLoop->GetString("release_status", j, ierr);
+      std::string release_status;
+      if (release_status_cs)
+	 release_status = release_status_cs; // can be "OBS" or "REL"
+      
       // If desc_level is in the file, extract it, otherwise set it to "None"
       // 
       s = mmCIFLoop->GetString("desc_level", j, ierr);
@@ -1076,18 +1080,7 @@ coot::protein_geometry::chem_comp(mmdb::mmcif::PLoop mmCIFLoop) {
       if (ierr_tot != 0) {
 	 std::cout << "oops:: ierr_tot was " << ierr_tot << std::endl;
       } else { 
-
-	 if (false) {
-	    std::cout << "in chem_comp(), adding chem_comp, description_level is :"
-		      << description_level << ":" << std::endl;
-
-	    std::cout << "Adding :" << id << ":\n :" << three_letter_code << ":\n name:" << name
-		      << ":\n group:" << group << ": " << number_atoms_all << " "
-		      << number_atoms_nh << " :" << description_level << ":" << std::endl;
-	 }
-
 	 delete_mon_lib(id); // delete it if it exists already.
-
 	 mon_lib_add_chem_comp(id, three_letter_code, name,
 			       group, number_atoms_all, number_atoms_nh,
 			       description_level);
@@ -2826,13 +2819,13 @@ coot::protein_geometry::init_standard() {
    std::string mon_lib_dir; 
    short int env_dir_fails = 0;
    int istat;
-   struct stat buf;
+
+   // struct stat buf;
    char *cmld = NULL;
    
    char *s = getenv("COOT_REFMAC_LIB_DIR");
    if (s) {
-      istat = stat(s, &buf);
-      if (istat) { 
+      if (! is_dir_or_link(s)) { 
 	 env_dir_fails = 1;
 	 std::cout << "WARNING:: Coot REFMAC dictionary override COOT_REFMAC_LIB_DIR"
 		   << "failed to find a dictionary " << s << std::endl;
@@ -2847,7 +2840,7 @@ coot::protein_geometry::init_standard() {
       if (cmld) {
 	 mon_lib_dir = cmld;
       }
-   } 
+   }
       
    if (!s || env_dir_fails) {
 
@@ -2855,12 +2848,11 @@ coot::protein_geometry::init_standard() {
 
       // Next try CLIBD_MON:
       s = getenv("CLIBD_MON");
-#ifdef WINDOWS_MINGW
-      s = (char *)coot::util::remove_trailing_slash(s).c_str();
-#endif
       if (s) {
-	 istat = stat(s, &buf);
-	 if (istat) { 
+
+	 std::string ss(s); // might have trailing "/"
+	 ss = coot::util::remove_trailing_slash(ss);
+	 if (! is_dir_or_link(ss)) { 
 	    env_dir_fails = 1;
 	 } else {
 	    env_dir_fails = 0;
@@ -2891,8 +2883,7 @@ coot::protein_geometry::init_standard() {
 	    // OK, CCP4 failed to give us a dictionary, now try the
 	    // version that comes with Coot:
 
-	    int istat = stat(hardwired_default_place.c_str(), &buf);
-	    if (istat == 0) {
+	    if (is_dir_or_link(hardwired_default_place)) {
 	       mon_lib_dir = hardwired_default_place;
 	    } else {
 
@@ -2904,8 +2895,7 @@ coot::protein_geometry::init_standard() {
 		  std::string lib_dir = util::append_dir_dir(s, "share");
 		  lib_dir = util::append_dir_dir(lib_dir, "coot");
 		  lib_dir = util::append_dir_dir(lib_dir, "lib");
-		  istat = stat(lib_dir.c_str(), &buf);
-		  if (istat == 0) {
+		  if (is_dir_or_link(lib_dir)) {
 		     mon_lib_dir = lib_dir;
 		  } else {
 		     std::cout << "WARNING:: COOT_PREFIX set, but no dictionary lib found\n";
@@ -2925,18 +2915,15 @@ coot::protein_geometry::init_standard() {
       // contains the linkages:
       filename += "/data/monomers/list/mon_lib_list.cif";
       if (using_clibd_mon) {
-	 filename = mon_lib_dir;
-	 filename += "list/mon_lib_list.cif";
+	 filename = util::remove_trailing_slash(mon_lib_dir);
+	 filename += "/list/mon_lib_list.cif";
       }
       // now check that that file is there:
-      struct stat buf;
-      int istat = stat(filename.c_str(), &buf);
-      if ((istat == 0) && (! S_ISREG(buf.st_mode))) {
-	 std::cout << "ERROR: dictionary " << filename
-		   << " is not a regular file" << std::endl;
+      if (! is_regular_file(filename)) {
+	 std::cout << "ERROR: dictionary " << filename << " is not a regular file"
+		   << std::endl;
       } else {
 	 // OK 
-	 
       }
    } else { 
       std::cout << "WARNING: Failed to read restraints dictionary. "
@@ -2981,38 +2968,13 @@ int
 coot::protein_geometry::refmac_monomer(const std::string &s, // dir
 				       const std::string &protein_mono) { // extra path to file
    
-   std::string filename = s; 
-   filename = util::append_dir_file(s, protein_mono);
-   struct stat buf;
-   int istat = stat(filename.c_str(), &buf);
-   if (istat == 0) { 
-      if (S_ISREG(buf.st_mode)) {
-	 init_refmac_mon_lib(filename, read_number);
-	 read_number++;
-      } else {
-
-#if defined(WINDOWS_MINGW) || defined(_MSC_VER)
-	 
-	 // indenting goes strange if you factor out the else code here.
-	 
-	 if (! S_ISDIR(buf.st_mode) ) {
-	    std::cout << "WARNING: " << filename 
-		      << ": no such file (or directory)\n";
-	 } else { 
-	    std::cout << "ERROR: file " << filename
-		      << " is not a regular file" << std::endl;
-	 }
-#else
-	 if (! S_ISDIR(buf.st_mode) && 
-	     ! S_ISLNK(buf.st_mode) ) {
-	    std::cout << "WARNING: " << filename 
-		      << ": no such file (or directory)\n";
-	 } else { 
-	    std::cout << "ERROR: file " << filename
-		      << " is not a regular file" << std::endl;
-	 }
-#endif
-      }
+   std::string filename = util::append_dir_file(s, protein_mono);
+   if (is_regular_file(filename)) {
+      init_refmac_mon_lib(filename, read_number);
+      read_number++;
+   } else {
+      std::cout << "WARNING: file " << filename << " is not a regular file"
+		<< std::endl;
    }
    return read_number;
 }
@@ -3426,9 +3388,7 @@ coot::protein_geometry::hydrogens_connect_file(const std::string &resname,
 coot::simple_cif_reader::simple_cif_reader(const std::string &cif_dictionary_file_name) {
    
    mmdb::mmcif::File ciffile;
-   struct stat buf;
-   int istat = stat(cif_dictionary_file_name.c_str(), &buf);
-   if (istat != 0) {
+   if (! is_regular_file(cif_dictionary_file_name)) {
       std::cout << "WARNIG:: cif dictionary " << cif_dictionary_file_name
 		<< " not found" << std::endl;
    } else {

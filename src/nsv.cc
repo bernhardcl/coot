@@ -24,7 +24,7 @@
 #endif
 
 
-#if defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
+#if defined(HAVE_GNOME_CANVAS)
 
 // Don't forget to enable
 // g.set_sequence_view_is_displayed(seq_view->Canvas(), imol) in nsv()
@@ -51,7 +51,10 @@ exptl::nsv::nsv(mmdb::Manager *mol,
 		const std::string &molecule_name,
 		int molecule_number_in,
 		bool use_graphics_interface_in) {
-   
+
+   // This is weird (isn't it?)
+   //
+   std::cout << "nsv weird" << std::endl;
    points_max = 22500;
    nsv(mol, molecule_name, molecule_number_in, use_graphics_interface_in);
 }
@@ -69,10 +72,10 @@ exptl::nsv::nsv(mmdb::Manager *mol,
    GtkWidget *top_lev = gtk_dialog_new();
    gtk_object_set_data(GTK_OBJECT(top_lev), "nsv_dialog", top_lev);
    GtkWidget *vbox = GTK_DIALOG(top_lev)->vbox;
-   canvas = GTK_CANVAS(gtk_canvas_new());
+   canvas = GNOME_CANVAS(gnome_canvas_new()); // gnome_canvas_new_aa() is very slow
    GtkWidget *name_label = gtk_label_new(molecule_name.c_str());
    gtk_box_pack_start(GTK_BOX(vbox), name_label, FALSE, FALSE, 1);
-   GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+   scrolled_window = gtk_scrolled_window_new(NULL, NULL);
    gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(scrolled_window), TRUE, TRUE, 1);
    gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window),
 					 GTK_WIDGET(canvas));
@@ -91,7 +94,9 @@ exptl::nsv::nsv(mmdb::Manager *mol,
    gtk_object_set_user_data(GTK_OBJECT(top_lev),
 			    GINT_TO_POINTER(molecule_number));
 
-   setup_canvas(mol, scrolled_window);
+   g_object_set_data(G_OBJECT(canvas), "nsv", (gpointer) this); // used to regenerate.
+
+   setup_canvas(mol);
    gtk_widget_show(scrolled_window);
 		      
    if (use_graphics_interface_flag) { 
@@ -108,11 +113,10 @@ exptl::nsv::nsv(mmdb::Manager *mol,
 
 // static 
 void
-exptl::nsv::on_nsv_close_button_clicked     (GtkButton *button,
-					     gpointer         user_data)
-{
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				     "nsv_dialog");
+exptl::nsv::on_nsv_close_button_clicked(GtkButton *button,
+					gpointer user_data) {
+   
+   GtkWidget *window = lookup_widget(GTK_WIDGET(button), "nsv_dialog");
    gtk_widget_destroy(window);
 }
 
@@ -123,28 +127,28 @@ exptl::nsv::on_nsv_dialog_destroy (GtkObject *obj,
 
    GtkWidget *dialog = (GtkWidget *) user_data;
    int imol = GPOINTER_TO_INT(gtk_object_get_user_data(GTK_OBJECT(dialog)));
+
+   std::cout << "DEBUG:: on_nsv_dialog_destroy() called for molecule " << imol << std::endl;
    set_sequence_view_is_displayed(0, imol);
 } 
 
-
+#include "utils/win-compat.hh"
 
 void
-exptl::nsv::setup_canvas(mmdb::Manager *mol, GtkWidget *scrolled_window) {
+exptl::nsv::setup_canvas(mmdb::Manager *mol) {
 
-#if defined(WINDOWS_MINGW) || defined(_MSC_VER)
-   fixed_font_str = "monospace";
-#else
-   fixed_font_str = "fixed";
-   fixed_font_str = "Sans 9";
-#endif
+   fixed_font_str = coot::get_fixed_font();
+
    pixels_per_letter = 10; // 10 for my F10 box
    pixels_per_chain  = 12;
 
    bool debug = true;
 
-#ifdef HAVE_GTK_CANVAS
-   gtk_canvas_init();
-#endif   
+   if (! scrolled_window)
+      return;
+   
+   if (! mol)
+      return;
 
    std::vector<chain_length_residue_units_t> rcv = get_residue_counts(mol);
    if (rcv.size() > 0) {
@@ -190,6 +194,11 @@ exptl::nsv::setup_canvas(mmdb::Manager *mol, GtkWidget *scrolled_window) {
 	 // 
 	 std::map <std::string, std::pair<int, int> > chain_id_graph_map;
 
+	 
+	 // x_offset below.
+	 // double resno_range_max_d = double(points_max + x_offset)/double(pixels_per_letter);
+	 // int resno_range_max = int(resno_range_max_d);
+
 	 // 100 is good for 2 chains
 	 // 
 
@@ -203,7 +212,7 @@ exptl::nsv::setup_canvas(mmdb::Manager *mol, GtkWidget *scrolled_window) {
 	 // the size of the canvas (e.g. long chain, we see only part
 	 // of it at one time).
 
-	 if (debug) { 
+	 if (debug) {
 	    std::cout << "DEBUG:: in setup_canvas(), total_res_range: " << total_res_range
 		      << " canvas_x_size " << canvas_x_size << " and canvas_y_size "
 		      << canvas_y_size << std::endl;
@@ -244,7 +253,7 @@ exptl::nsv::setup_canvas(mmdb::Manager *mol, GtkWidget *scrolled_window) {
 	    std::cout << "DEBUG:: rcv.size(): " << rcv.size() << std::endl;
 	    std::cout << "DEBUG:: canvas_y_size: " << canvas_y_size << std::endl;
 	    std::cout << "DEBUG:: scroll_height: " << scroll_height << std::endl;
-	    std::cout << "DEBUG:: gtk_canvas_set_scroll_region "
+	    std::cout << "DEBUG:: gnome_canvas_set_scroll_region "
 		      << left_limit << " " << upper_limit << " "
 		      << scroll_width << " " << scroll_height << std::endl;
 	 }
@@ -266,18 +275,17 @@ exptl::nsv::setup_canvas(mmdb::Manager *mol, GtkWidget *scrolled_window) {
 
 	 // if you want to change this multiplier, test vs 3GP.pdb,
 	 // 3mdo, tut-modern, 2vtu, 3g5u, others?
-	 // 
+	 //
 	 double x_offset = - 0.0666 * total_res_range * pixels_per_letter + total_res_range * 0.65;
 
 	 if (debug)
 	    std::cout << " -> x_offset:" << x_offset << std::endl;
 
- 	 gtk_canvas_set_scroll_region(canvas, left_limit, upper_limit,
+ 	 gnome_canvas_set_scroll_region(canvas, left_limit, upper_limit,
  				      scroll_width, scroll_height);
 	 origin_marker();
 	 draw_axes(rcv, lowest_resno, biggest_res_number, x_offset);
 	 mol_to_canvas(mol, lowest_resno, x_offset);
-	 
 
       } else {
 	 std::cout << "Some residues have insertion codes, this is not coded for"
@@ -303,14 +311,22 @@ exptl::nsv::mol_to_canvas(mmdb::Manager *mol, int lowest_resno, double x_offset)
 }
 
 void
-exptl::nsv::chain_to_canvas(mmdb::Chain *chain_p, int position_number, int lowest_resno, double x_offset) {
+exptl::nsv::regenerate(mmdb::Manager *mol) {
+
+   clear_canvas();
+   setup_canvas(mol);
+} 
+
+void
+exptl::nsv::chain_to_canvas(mmdb::Chain *chain_p, int chain_position_number, int lowest_resno, double x_offset) {
 
    int nres = chain_p->GetNumberOfResidues();
    GtkCanvasItem *item;
 
    for (int ires=0; ires<nres; ires++) {
       mmdb::Residue *residue_p = chain_p->GetResidue(ires);
-      add_text_and_rect(residue_p, position_number, lowest_resno, x_offset);  // adds items to canvas_item_vec
+      add_text_and_rect(residue_p, chain_position_number,
+			lowest_resno, x_offset);  // adds items to canvas_item_vec
    }
 
    // now the chain label:
@@ -320,37 +336,39 @@ exptl::nsv::chain_to_canvas(mmdb::Chain *chain_p, int position_number, int lowes
    // On jackal it needs to be more left? Why? The font is wider?
    // How do I check the font width?
    x -= 10 + x_offset;
-   double y = -pixels_per_chain * position_number - 6;
-   item = gtk_canvas_item_new(gtk_canvas_root(canvas),
-			      GTK_CANVAS_TYPE_CANVAS_TEXT,
-			      "text", chain_label.c_str(),
-			      "x", x,
-			      "y", y,
-			      "anchor", GTK_ANCHOR_WEST,
-			      "font", fixed_font_str.c_str(),
-			      NULL);
+   double y = -pixels_per_chain * chain_position_number - 6;
+
+   item = gnome_canvas_item_new(gnome_canvas_root(canvas),
+				GNOME_TYPE_CANVAS_TEXT,
+				"text", chain_label.c_str(),
+				"x", x,
+				"y", y,
+				"anchor", GTK_ANCHOR_WEST,
+				"fill_color", "#111111",
+				"font", fixed_font_str.c_str(),
+				NULL);
    canvas_item_vec.push_back(item);
 }
 
 
 bool
 exptl::nsv::add_text_and_rect(mmdb::Residue *residue_p,
-			      int position_number,
+			      int chain_position_number,
 			      int lowest_resno,
 			      double x_offset) {
 
    bool too_wide = false;
-   if (residue_p) { 
+   if (residue_p) {
       mmdb::Atom *at = coot::util::intelligent_this_residue_mmdb_atom(residue_p);
       coot::atom_spec_t at_spec(at);
       std::string res_code =
 	 coot::util::three_letter_to_one_letter_with_specials(residue_p->GetResName());
       std::string colour = "black";
       double x = (residue_p->GetSeqNum() - lowest_resno + 1) * pixels_per_letter - x_offset;
-      double y = - pixels_per_chain * position_number - 6;
+      double y = - pixels_per_chain * chain_position_number - 6;
       
       exptl::nsv::spec_and_object *so = 
-	 new exptl::nsv::spec_and_object(molecule_number, at_spec, position_number);
+	 new exptl::nsv::spec_and_object(molecule_number, at_spec, chain_position_number);
       
       // It seems that I don't need the following, the letter seems to
       // be being clicked even if we click off the actual black of the
@@ -376,8 +394,9 @@ exptl::nsv::add_text_and_rect(mmdb::Residue *residue_p,
       
       if (x1 < points_max) { 
 	 GtkCanvasItem *rect_item;
-	 rect_item = gtk_canvas_item_new(gtk_canvas_root(canvas),
-					 GTK_CANVAS_TYPE_CANVAS_RECT,
+
+	 rect_item = gnome_canvas_item_new(gnome_canvas_root(canvas),
+					 GNOME_TYPE_CANVAS_RECT,
 					 "x1", x1,
 					 "y1", y1,
 					 "x2", x2,
@@ -392,8 +411,11 @@ exptl::nsv::add_text_and_rect(mmdb::Residue *residue_p,
 
 	 GtkCanvasItem *text_item;
 	 std::string colour = colour_by_secstr(residue_p);
-	 text_item = gtk_canvas_item_new(gtk_canvas_root(canvas),
-					 GTK_CANVAS_TYPE_CANVAS_TEXT,
+	 if (false)
+	    std::cout << "drawing text for res " << coot::residue_spec_t(residue_p) << " "
+		      << res_code << " " << x << " " << y << std::endl;
+	 text_item = gnome_canvas_item_new(gnome_canvas_root(canvas),
+					 GNOME_TYPE_CANVAS_TEXT,
 					 "text", res_code.c_str(),
 					 "x", x,
 					 "y", y,
@@ -406,9 +428,27 @@ exptl::nsv::add_text_and_rect(mmdb::Residue *residue_p,
 	 canvas_item_vec.push_back(text_item);
       } else {
 	 too_wide = true;
+	 std::cout << "too wide x1 " << x1 << " "
+		   << coot::residue_spec_t(residue_p) << std::endl;
       }
    }
    return too_wide;
+}
+
+void
+exptl::nsv::clear_canvas() {
+
+   if (canvas) { 
+
+      GnomeCanvasGroup *root = GNOME_CANVAS_GROUP(gnome_canvas_root(GNOME_CANVAS(canvas)));
+      GList *temp_list = root->item_list;
+      int i=0;
+      while(temp_list != NULL) {
+	    GnomeCanvasItem *item = GNOME_CANVAS_ITEM(temp_list->data);
+	    temp_list = temp_list->next;
+	    gtk_object_destroy(GTK_OBJECT(item));
+      }
+   }
 }
 
 
@@ -416,8 +456,8 @@ exptl::nsv::add_text_and_rect(mmdb::Residue *residue_p,
 // static
 gint
 exptl::nsv::letter_event (GtkObject *obj,
-			    GdkEvent *event,
-			    gpointer data) {
+			  GdkEvent *event,
+			  gpointer data) {
 
    exptl::nsv::spec_and_object spec_obj = *((exptl::nsv::spec_and_object *) data);
 
@@ -436,12 +476,12 @@ exptl::nsv::letter_event (GtkObject *obj,
    } else {
       if (event->type == GDK_ENTER_NOTIFY) {
 	 // std::cout << "Entering a text " << obj << " " << obj << std::endl;
-	 gtk_canvas_item_set(GTK_CANVAS_ITEM(spec_obj.obj), "fill_color", "moccasin", NULL);
+	 gnome_canvas_item_set(GNOME_CANVAS_ITEM(spec_obj.obj), "fill_color", "moccasin", NULL);
       }
 
       if (event->type == GDK_LEAVE_NOTIFY) {
 	 // std::cout << " Leaving a text " << obj << " " << obj << std::endl;
-	 gtk_canvas_item_set(GTK_CANVAS_ITEM(spec_obj.obj), "fill_color", "grey85", NULL);
+	 gnome_canvas_item_set(GNOME_CANVAS_ITEM(spec_obj.obj), "fill_color", "grey85", NULL);
       }
    }
    return 1;
@@ -464,12 +504,12 @@ exptl::nsv::rect_event (GtkObject *obj,
 
       if (event->type == GDK_ENTER_NOTIFY) {
 	 // std::cout << "Entering a box " << obj << std::endl;
-	 gtk_canvas_item_set(GTK_CANVAS_ITEM(obj), "fill_color", "moccasin", NULL);
+	 gnome_canvas_item_set(GNOME_CANVAS_ITEM(obj), "fill_color", "moccasin", NULL);
       }
 
       if (event->type == GDK_LEAVE_NOTIFY) {
 	 // std::cout << " Leaving a box " << obj << std::endl;
-	 gtk_canvas_item_set(GTK_CANVAS_ITEM(obj), "fill_color", "grey85", NULL);
+	 gnome_canvas_item_set(GNOME_CANVAS_ITEM(obj), "fill_color", "grey85", NULL);
       } 
    } 
    return 1;
@@ -534,7 +574,7 @@ exptl::nsv::draw_axes(std::vector<chain_length_residue_units_t> clru,
 		      int lrn, int brn, double x_offset) {
 
    GtkCanvasItem *item;
-   GtkCanvasPoints *points = gtk_canvas_points_new(2);
+   GtkCanvasPoints *points = gnome_canvas_points_new(2);
    float font_scaler = pixels_per_letter;
 
    // ticks and text
@@ -570,8 +610,8 @@ exptl::nsv::draw_axes(std::vector<chain_length_residue_units_t> clru,
       if (i_ax_pos == 1)
 	 y_for_text = y_value - 10.0;
       
-      item = gtk_canvas_item_new(gtk_canvas_root(canvas),
-				 GTK_CANVAS_TYPE_CANVAS_LINE,
+      item = gnome_canvas_item_new(gnome_canvas_root(canvas),
+				 GNOME_TYPE_CANVAS_LINE,
 				 "width_pixels", 1,
 				 "points", points,
 				 "fill_color", "black",
@@ -591,15 +631,15 @@ exptl::nsv::draw_axes(std::vector<chain_length_residue_units_t> clru,
 	       
 	    double x = (irn-lrn+1)*font_scaler - x_offset; // x for resno label
 	    std::string lab = coot::util::int_to_string(irn);
-	    item = gtk_canvas_item_new(gtk_canvas_root(canvas),
-				       GTK_CANVAS_TYPE_CANVAS_LINE,
+	    item = gnome_canvas_item_new(gnome_canvas_root(canvas),
+				       GNOME_TYPE_CANVAS_LINE,
 				       "width_pixels", 1,
 				       "points", points,
 				       "fill_color", "black",
 				       NULL);
 	    canvas_item_vec.push_back(item);
-	    item = gtk_canvas_item_new(gtk_canvas_root(canvas),
-				       GTK_CANVAS_TYPE_CANVAS_TEXT,
+	    item = gnome_canvas_item_new(gnome_canvas_root(canvas),
+				       GNOME_TYPE_CANVAS_TEXT,
 				       "text", lab.c_str(),
 				       "x", x,
 				       "y", y_for_text,
@@ -627,7 +667,7 @@ exptl::nsv::origin_marker() {
 
    if (0) { 
       GtkCanvasItem *item;
-      GtkCanvasPoints *points = gtk_canvas_points_new(5);
+      GtkCanvasPoints *points = gnome_canvas_points_new(5);
       
       points->coords[0] = 5;
       points->coords[1] = 5;
@@ -639,8 +679,8 @@ exptl::nsv::origin_marker() {
       points->coords[7] = 5;
       points->coords[8] = 5;
       points->coords[9] = 5;
-      item = gtk_canvas_item_new(gtk_canvas_root(canvas),
-				 GTK_CANVAS_TYPE_CANVAS_LINE,
+      item = gnome_canvas_item_new(gnome_canvas_root(canvas),
+				 GNOME_TYPE_CANVAS_LINE,
 				 "width_pixels", 1,
 				 "points", points,
 				 "fill_color", "blue",
@@ -668,4 +708,4 @@ exptl::nsv::colour_by_secstr(mmdb::Residue *residue_p) const {
 }
 
 
-#endif // defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
+#endif // defined(HAVE_GNOME_CANVAS)

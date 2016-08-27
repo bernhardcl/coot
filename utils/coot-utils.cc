@@ -440,11 +440,27 @@ coot::util::string_to_float(const std::string &s) {
    } else {
       std::string mess = "Cannot convert \"";
       mess += s;
-      mess += "\" to an integer";
+      mess += "\" to a float";
       throw std::runtime_error(mess);
    }
-} 
+}
 
+// throw an exception on unable to convert
+double
+coot::util::string_to_double(const std::string &s) {
+   
+   double f;
+   std::istringstream ss(s);
+   
+   if (ss>>f) { 
+      return f;
+   } else {
+      std::string mess = "Cannot convert \"";
+      mess += s;
+      mess += "\" to a double";
+      throw std::runtime_error(mess);
+   }
+}
 
 
 std::string
@@ -785,12 +801,26 @@ bool
 coot::util::extension_is_for_scripts(const std::string &ext) {
 
    bool r = false;
-   if ((ext == ".py") ||
-       (ext == ".scm"))
+#ifdef USE_PYTHON
+   if (ext == ".py")
+       r = true;
+#endif // USE_PYTHON
+#ifdef USE_GUILE
+   if (ext == ".scm")
       r = true;
+#endif // USE_GUILE
    return r; 
 } 
 
+bool
+coot::util::extension_is_for_maps(const std::string &ext) {
+
+   bool r = false;
+   if ((ext == ".map") ||
+       (ext == ".ccp4"))
+      r = true;
+   return r;
+}
 
 short int
 coot::is_mmcif_filename(const std::string &filename) {
@@ -1314,7 +1344,6 @@ coot::util::extract_number_string(const std::string &s) {
 
    std::pair<std::string, long> r("", 0);
 
-   std::string::size_type len = s.length();
    for (std::string::size_type i=0; i<s.size(); i++) {
       if (is_number(s[i])) {
 	 r.first += s[i];

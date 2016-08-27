@@ -754,6 +754,19 @@ void toggle_torsion_general_reverse()  { /* a bool really */
       graphics_info_t::torsion_general_reverse_flag = 1;
 }
 
+void setup_residue_partial_alt_locs(short int state) {
+
+   graphics_info_t g;
+   g.in_residue_partial_alt_locs_define = state;
+   g.pick_cursor_maybe();
+   g.add_status_bar_text("Click on an atom to identify the residue for alt confs");
+
+   std::string cmd = "setup-residue-partial-alt-locs";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(state);
+   add_to_history_typed(cmd, args);
+}
+
 
 int set_show_chi_angle_bond(int imode) {
 
@@ -796,7 +809,7 @@ void set_graphics_edit_current_chi(int ichi) { /* button callback */
       graphics_info_t::in_edit_chi_mode_flag = 0; // off
    } else {
       graphics_info_t::in_edit_chi_mode_flag = 1; // on
-      g.setup_flash_bond_internal(ichi-1);
+      g.setup_flash_bond_using_moving_atom_internal(ichi-1);
    }
 
 }
@@ -968,9 +981,17 @@ void fill_partial_residues(int imol) {
       int imol_map = g.Imol_Refinement_Map();
       coot::util::missing_atom_info m_i_info =
 	 g.molecules[imol].fill_partial_residues(g.Geom_p(), imol_map);
-      graphics_draw();
 
-      if (imol_map > -1) { 
+      // We do refinement here because we can't do refinement (easily) from inside molecule_class_info_t.
+      // Not today, anyway.
+
+      if (imol_map > -1) {
+
+	 int backup_mode = backup_state(imol);
+	 if (backup_mode)
+	    g.molecules[imol].make_backup_from_outside();
+	 turn_off_backup(imol);
+
 	 int refinement_replacement_state = refinement_immediate_replacement_state();
 	 set_refinement_immediate_replacement(1);
       	 for (unsigned int i=0; i<m_i_info.residues_with_missing_atoms.size(); i++) {
@@ -980,15 +1001,19 @@ void fill_partial_residues(int imol) {
       	    std::string inscode = m_i_info.residues_with_missing_atoms[i]->GetInsCode();
       	    std::string altconf("");
 	    short int is_water = 0;
-	    // hmmm backups are being done....
       	    g.refine_residue_range(imol, chain_id, chain_id, resno, inscode, resno, inscode,
 				   altconf, is_water);
 	    accept_regularizement();
       	 }
 	 set_refinement_immediate_replacement(refinement_replacement_state);
+
+	 if (backup_mode)
+	    turn_on_backup(imol);
+
       } else {
 	 g.show_select_map_dialog();
-      } 
+      }
+      graphics_draw();
    }
 }
 

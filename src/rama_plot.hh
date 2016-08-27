@@ -29,7 +29,6 @@
 #ifdef HAVE_GOOCANVAS
 #include <goocanvas.h>
 #endif
-
 // ------------------------ Canvas stuff -----------------------------------
 #if defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
 #ifdef HAVE_GTK_CANVAS
@@ -253,13 +252,14 @@ class rama_plot {
    std::pair<int, int> molecule_numbers_; // needed for undating kleywegt plots
    std::pair<std::string, std::string> chain_ids_; // ditto.
    std::pair<mmdb::Manager *, mmdb::Manager *> mols_; // ditto.
-   int dialog_position_x;
+   int dialog_position_x; 
    int dialog_position_y;
    float current_level_prefered;
    float current_level_allowed;
    bool kleywegt_plot_uses_chain_ids;
    void hide_stats_frame();
    void counts_to_stats_frame(const rama_stats_container_t &sc);
+
    void counts_to_canvas(cairo_t *cr);
    bool resize_it;
    
@@ -294,8 +294,10 @@ class rama_plot {
 
    double drag_x, drag_y;
    gboolean dragging;
-
-   
+  
+   bool is_outlier(const coot::util::phi_psi_t &phi_psi) const;
+   bool draw_outliers_only;
+ 
 public:
 
    void draw_rect();
@@ -317,7 +319,6 @@ public:
    GtkWidget *rama_export_as_png_filechooserdialog;
    GtkWidget *rama_open_filechooserdialog;
    GtkWidget *rama_view_menu;
-
    rama_plot() {
       green_box_item = NULL;
       dynawin = NULL;
@@ -370,11 +371,11 @@ public:
    void draw_it(mmdb::Manager *mol, int SelHnd, int primary=0);
    void draw_it(int imol1, int imol2, mmdb::Manager *mol1, mmdb::Manager *mol2); // no chain ids.
    void draw_it(int imol1, int imol2,
-                mmdb::Manager *mol1, mmdb::Manager *mol2,
+		mmdb::Manager *mol1, mmdb::Manager *mol2,
                 int SelHnd1, int SelHnd2);
    void draw_it(int imol1, int imol2,
                 mmdb::Manager *mol1, mmdb::Manager *mol2,
-                const std::string &chain_id_1, const std::string &chain_id_2);
+		const std::string &chain_id_1, const std::string &chain_id_2);
    
    void draw_it(const util::phi_psi_t &phipsi);
    void draw_it(const std::vector<util::phi_psi_t> &phipsi);
@@ -464,10 +465,10 @@ public:
    void map_mouse_pos(double x, double y);
    void mouse_motion_notify(GdkEventMotion *event, double x, double y);
    void mouse_motion_notify_editphipsi(GdkEventMotion *event, double x, double y);
-   gint button_press (GtkWidget *widget, GdkEventButton *event);
+   gint button_press (GtkWidget *widget, GdkEventButton *event); 
    gint item_enter_event(GooCanvasItem *item, GdkEventCrossing *event);
    gint item_motion_event(GooCanvasItem *item, GdkEventMotion *event);
-   gint button_press_conventional (GtkWidget *widget, GdkEventButton *event);
+   gint button_press_conventional (GtkWidget *widget, GdkEventButton *event); 
    gint button_item_press (GooCanvasItem *item, GdkEventButton *event);
    gint button_item_press_conventional (GooCanvasItem *item, GdkEventButton *event);
    gint button_press_editphipsi (GooCanvasItem *item, GdkEventButton *event);
@@ -483,7 +484,7 @@ public:
    void draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1,
                                       mmdb::Manager *mol2,
                                       int SelHnd1, int SelHnd2);
-   void draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1,
+   void draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1, 
 				      mmdb::Manager *mol2,
 				      std::string chain_id1, std::string chain_id2);
 
@@ -553,6 +554,7 @@ public:
    void fill_kleywegt_comboboxes(mmdb::Manager *mol1,
                                  mmdb::Manager *mol2);
 
+void show_outliers_only(mmdb::Manager *mol, int state);
    void debug() const; 
 
    void destroy_yourself();

@@ -19,12 +19,8 @@
  */
 
 #include <string.h>
-//#if defined (__WIN32__)
-//#undef AddAtom
-//#define AddAtomA AddAtom
-//#endif
 #include "clipper/mmdb/clipper_mmdb.h" // for clipper mmdb stuff (obviously)
-                               // convert_to_atoms_internal().
+                                       // convert_to_atoms_internal().
 
 #include "compat/coot-sysdep.h"
 #include "BuildCas.h"  // contains Cartesian.h needed by graphical_skel.h
@@ -1226,7 +1222,6 @@ void
 BuildCas::check_angle_torsion(atom_selection_container_t asc) const {
 
    TreeNode *node = NULL; 
-   TreeNode *new_node; 
 
    // yep, it's the same backwards...
    // for (int i=asc.n_selected_atoms-1; i>=0; i--) { 
@@ -1236,13 +1231,13 @@ BuildCas::check_angle_torsion(atom_selection_container_t asc) const {
       if (std::string(asc.atom_selection[i]->name) == " CA " ) { 
 
 	 coot::Cartesian pos(asc.atom_selection[i]->x,
-		       asc.atom_selection[i]->y,
-		       asc.atom_selection[i]->z); 
+			     asc.atom_selection[i]->y,
+			     asc.atom_selection[i]->z); 
 
 	 std::cout << "Got a CA at " << pos << endl; 
 
-	 new_node = new TreeNode; 
-	 new_node->setup(node, pos); 
+	 TreeNode *new_node = new TreeNode; 
+	 new_node->setup(node, pos);
 
 	 node = new_node;  // setup for next round
       }
@@ -1279,7 +1274,7 @@ BuildCas::check_angle_torsion(atom_selection_container_t asc) const {
 	 break;
       }
    }
-
+   delete node;
 } 
 
 // much like the above:

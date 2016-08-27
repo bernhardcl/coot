@@ -657,7 +657,6 @@ int clear_and_update_model_molecule_from_file(int molecule_number,
       graphics_draw();
    }
    return imol;
-
 } 
 
 
@@ -671,6 +670,21 @@ void set_draw_zero_occ_markers(int status) {
    add_to_history_typed(cmd, args);
    graphics_draw();
 }
+
+/*! \brief set status of drawing cis-peptide markups
+
+  default status is 1. */
+void set_draw_cis_peptide_markups(int status) {
+
+   graphics_info_t g;
+   g.draw_cis_peptide_markups = status;
+   std::string cmd = "set-draw-cis-peptide-markups";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(status);
+   add_to_history_typed(cmd, args);
+   graphics_draw();
+}
+
 
 
 
@@ -1718,6 +1732,20 @@ void set_density_size(float f) {
    args.push_back(f);
    add_to_history_typed(cmd, args);
    
+}
+
+void set_density_size_em(float f) {
+
+   graphics_info_t g;
+   g.box_radius_em = f;
+   for (int ii=0; ii<g.n_molecules(); ii++) {
+      g.molecules[ii].update_map();
+   }
+   graphics_draw();
+   std::string cmd = "set-density-size-em";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(f);
+   add_to_history_typed(cmd, args);
 }
 
 /*! \brief set the extent of the box/radius of electron density contours */
@@ -4668,6 +4696,66 @@ void graphics_to_occupancy_representation(int imol) {
    graphics_draw();
 }
 
+/*! \brief draw molecule number imol coloured by user-defined atom colours */
+void graphics_to_user_defined_atom_colours_representation(int imol) {
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t g;
+      g.molecules[imol].user_defined_colours_representation(g.Geom_p(), false);
+      std::vector<std::string> command_strings;
+      command_strings.push_back("graphics-to-user-defined-colours-representation");
+      command_strings.push_back(graphics_info_t::int_to_string(imol));
+      add_to_history(command_strings);
+   } else {
+      std::cout << "WARNING:: no such valid molecule " << imol
+		<< " in graphics_to_occupancy_representation"
+		<< std::endl;
+   }
+   graphics_draw();
+}
+
+/*! \brief draw molecule number imol all atoms coloured by user-defined atom colours */
+void graphics_to_user_defined_atom_colours_all_atoms_representation(int imol) {
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t g;
+      g.molecules[imol].user_defined_colours_representation(g.Geom_p(), true);
+      std::vector<std::string> command_strings;
+      command_strings.push_back("graphics-to-user-defined-colours-representation");
+      command_strings.push_back(graphics_info_t::int_to_string(imol));
+      add_to_history(command_strings);
+   } else {
+      std::cout << "WARNING:: no such valid molecule " << imol
+		<< " in graphics_to_occupancy_representation"
+		<< std::endl;
+   }
+   graphics_draw();
+}
+
+
+
+/*! \brief make the carbon atoms for molecule imol be grey
+ */
+void set_use_grey_carbons_for_molecule(int imol, short int state) {
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t::molecules[imol].set_use_bespoke_carbon_atom_colour(state);
+      graphics_draw();
+   }
+
+}
+/*! \brief set the colour for the carbon atoms 
+
+can be not grey if you desire, r, g, b in the range 0 to 1.
+ */
+void set_grey_carbon_colour(int imol, float r, float g, float b) {
+
+   if (is_valid_model_molecule(imol)) {
+      coot::colour_t col(r,g,b);
+      graphics_info_t::molecules[imol].set_bespoke_carbon_atom_colour(col);
+   }
+   // no graphics draw... Hmm.
+}
 
 
 int
@@ -5083,7 +5171,19 @@ set_display_control_button_state(int imol, const std::string &button_type, int s
       }
       GtkWidget *button = lookup_widget(g.display_control_window(), button_name.c_str());
       if (button) {
-	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), state);
+
+	 // Don't make unnecessary changes (creates redraw events?)
+	 //
+	 bool is_active_now = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button));
+	 if (state && is_active_now) {
+	    // nothing
+	 } else {
+	    if ( (state == 0) && ! is_active_now) {
+	       // nothing again
+	    } else {
+	       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), state);
+	    }
+	 }
       } else {
 	 std::cout << "Opps failed to find " << button_type << " button for mol "
 		   << imol << std::endl;
@@ -5111,18 +5211,7 @@ This stops flashing/delayed animations with many molecules */
 void set_display_only_model_mol(int imol) {
 
    graphics_info_t g;
-   int n = graphics_n_molecules();
-
-   for (int i=0; i<n; i++) {
-      int state = 0;
-      if (i == imol)
-	 state = 1;
-      if (is_valid_model_molecule(i)) {
-	 g.molecules[i].set_mol_is_displayed(state);
-	 if (g.display_control_window())
-	    set_display_control_button_state(imol, "Displayed", state);
-      }
-   }
+   g.undisplay_all_model_molecules_except(imol);
    graphics_draw();
 }
 
@@ -5734,10 +5823,10 @@ SCM run_python_command(const char *python_cmd) {
 // This is a library function really.  There should be somewhere else to put it.
 // It doesn't need expression at the scripting level.
 // return a null list on problem
-SCM scm_residue(const coot::residue_spec_t &res) {
+SCM residue_spec_to_scm(const coot::residue_spec_t &res) {
    SCM r = SCM_EOL;
 
-//    std::cout <<  "scm_residue on: " << res.chain << " " << res.resno << " "
+//    std::cout <<  "residue_spec_to_scm on: " << res.chain << " " << res.resno << " "
 // 	     << res.insertion_code  << std::endl;
    r = scm_cons(scm_makfrom0str(res.ins_code.c_str()), r);
    r = scm_cons(SCM_MAKINUM(res.res_no), r);
@@ -5753,7 +5842,7 @@ SCM scm_residue(const coot::residue_spec_t &res) {
 // This is a library function really.  There should be somewhere else to put it.
 // It doesn't need expression at the scripting level.
 // return a null list on problem
-PyObject *py_residue(const coot::residue_spec_t &res) {
+PyObject *residue_spec_to_py(const coot::residue_spec_t &res) {
    PyObject *r;
    r = PyList_New(4);
 
@@ -5768,6 +5857,37 @@ PyObject *py_residue(const coot::residue_spec_t &res) {
    return r;
 }
 #endif // USE_PYTHON
+
+#ifdef USE_PYTHON
+// Garanteed to return a triple list (will return unset-spec if needed).
+// 
+PyObject *residue_spec_make_triple_py(PyObject *res_spec_py) {
+
+   coot::residue_spec_t res_spec_default;
+   PyObject *r = PyList_New(3);
+   
+   if (PyList_Check(res_spec_py)) {
+      long l = PyObject_Length(res_spec_py);
+      int offset = 0;
+      if (l == 4) {
+	 offset = 1;
+      }
+      PyObject *chain_id_py = PyList_GetItem(res_spec_py, offset);
+      PyObject *res_no_py   = PyList_GetItem(res_spec_py, offset+1);
+      PyObject *ins_code_py = PyList_GetItem(res_spec_py, offset+2);
+      PyList_SetItem(r, 0, chain_id_py);
+      PyList_SetItem(r, 1, res_no_py);
+      PyList_SetItem(r, 2, ins_code_py);
+   } else {
+      PyObject *r = PyList_New(3);
+      PyList_SetItem(r, 0, PyString_FromString(res_spec_default.chain_id.c_str()));
+      PyList_SetItem(r, 1, PyInt_FromLong(res_spec_default.res_no));
+      PyList_SetItem(r, 2, PyString_FromString(res_spec_default.ins_code.c_str()));
+   }
+   return r;
+}
+#endif // USE_PYTHON
+
 
 #ifdef USE_GUILE 
 // Return a SCM list object of (residue1 residue2 omega) 
@@ -5789,8 +5909,8 @@ SCM cis_peptides(int imol) {
 	 coot::residue_spec_t r2(v[i].chain_id_2,
 				 v[i].resno_2,
 				 v[i].ins_code_2);
-	 SCM scm_r1 = scm_residue(r1);
-	 SCM scm_r2 = scm_residue(r2);
+	 SCM scm_r1 = residue_spec_to_scm(r1);
+	 SCM scm_r2 = residue_spec_to_scm(r2);
 	 SCM scm_residue_info = SCM_EOL;
 // 	 std::cout << "DEBUG:: cis pep with omega: "
 // 		   << v[i].omega_torsion_angle
@@ -5833,8 +5953,8 @@ PyObject *cis_peptides_py(int imol) {
 				 v[i].resno_2,
 				 v[i].ins_code_2);
 	 PyObject *py_r1, *py_r2, *py_residue_info;
-	 py_r1 = py_residue(r1);
-	 py_r2 = py_residue(r2);
+	 py_r1 = residue_spec_to_py(r1);
+	 py_r2 = residue_spec_to_py(r2);
 	 py_residue_info = PyList_New(3);
 // 	 std::cout << "DEBUG:: cis pep with omega: "
 // 		   << v[i].omega_torsion_angle
@@ -6399,10 +6519,9 @@ void do_sequence_view(int imol) {
 	 sequence_view_old_style(imol);
       } else {
 	 nsv(imol);
-      } 
-   } 
-
-} 
+      }
+   }
+}
 
 
 /*  ----------------------------------------------------------------------- */
@@ -6485,6 +6604,16 @@ void change_peptide_carbonyl_by_current_button_pos(int ix, int iy) {
    g.change_peptide_carbonyl_by_current_button_pos(ix, iy);
 
 } 
+
+void
+set_b_factor_scale( double bfs ){
+        if( bfs > 0)
+                graphics_info_t::b_factor_scale = bfs;
+        else
+                graphics_info_t::b_factor_scale = 1.0;
+}
+
+
 
 /*  ----------------------------------------------------------------------- */
 /*                  cif stuff                                               */
@@ -7135,7 +7264,7 @@ void citation_notice_off() {
 
    graphics_info_t::show_citation_notice = 0;
 
-} 
+}
 
 /*  ----------------------------------------------------------------------- */
 /*                  cursor function                                         */
@@ -7500,48 +7629,6 @@ void sharpen_with_gompertz_scaling(int imol, float b_factor,
 
 
 
-/*  ----------------------------------------------------------------------- */
-/*           Map kurtosis B factor optimization                             */
-/*  ----------------------------------------------------------------------- */
-float optimal_B_kurtosis(int imol) {
-// 
-// CALCULATES THE OPTIMAL BFACTOR:
-// PERFORMS A GOLDEN SECTION SEARCH ON
-// THE KURTOSIS OF THE ENTIRE SUPPLIED MAP
-// 
-	float sharpening_limit = graphics_info_t::map_sharpening_scale_limit;	
-	float kurtosis=0.0, B_optimal=0.0;
-	float a =-1.0*sharpening_limit, b=1.0*sharpening_limit, TOL=1E-2;
-	float fc= 0.0, fd=0.0, golden_ratio = (sqrt(5.0)-1.0)*0.5;
-	float c = b-golden_ratio*(b-a);
-	float d = a+golden_ratio*(b-a);
-	if (is_valid_map_molecule(imol)) {
-           if (graphics_info_t::molecules[imol].sharpen_b_factor_kurtosis_optimised() < -999.0) {
-		while( d-c > TOL ){
-			graphics_info_t::molecules[imol].sharpen(c, false, 0);
-			map_statistics_t ms1 	= graphics_info_t::molecules[imol].map_statistics();
-			fc			= ms1.kurtosis;
-			graphics_info_t::molecules[imol].sharpen(d, false, 0);
-			map_statistics_t ms2 	= graphics_info_t::molecules[imol].map_statistics();
-			fd			= ms2.kurtosis;
-			if( fc > fd ) { // FIND MAXIMUM
-				b = d; d = c;
-				c = b - golden_ratio*( b - a );
-			} else {
-				a = c; c = d;
-				d = a + golden_ratio*( b - a );
-			}
-		}
-		B_optimal = (c+d)*0.5;
-                // save it
-                graphics_info_t::molecules[imol].set_sharpen_b_factor_kurtosis_optimised(B_optimal);
-           } else {
-              // have already a calculated one, so use that one
-              B_optimal = graphics_info_t::molecules[imol].sharpen_b_factor_kurtosis_optimised();
-           }
-        }
-	return B_optimal;
-}
 
 /*  ----------------------------------------------------------------------- */
 /*                  Views                                                   */
@@ -7841,6 +7928,7 @@ PyObject *view_description_py(int view_number) {
 }
 #endif // PYTHON
 
+#include "view.hh"
 
 /*! \brief save views to view_file_name */
 void save_views(const char *view_file_name) {

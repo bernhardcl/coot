@@ -89,19 +89,19 @@
 (defmacro using-active-atom funcs
 
   `(begin
-     (let ((active-atom (active-residue)))
-       (if (not active-atom)
-	   (begin 
-	     (add-status-bar-text "No residue found"))
+     (begin
+       (let ((active-atom (closest-atom-simple-scm)))
+	 (if (not active-atom)
+	     (begin
+	       (add-status-bar-text "No residue found"))
 
-	   (begin
 	     (let ((aa-imol      (list-ref active-atom 0))
 		   (aa-chain-id  (list-ref active-atom 1))
 		   (aa-res-no    (list-ref active-atom 2))
 		   (aa-ins-code  (list-ref active-atom 3))
 		   (aa-atom-name (list-ref active-atom 4))
 		   (aa-alt-conf  (list-ref active-atom 5)))
-	       
+
 	       ,@funcs
 	       
 	       ))))))
@@ -671,7 +671,7 @@
 ;; Return the exist status e.g. 0 or 1.
 ;; 
 (define (goosh-command cmd args data-list log-file-name screen-output-also?)
-    
+   
   (if (not (command-in-path-or-absolute? cmd))
       
       (begin 
@@ -3597,7 +3597,7 @@
 		       ))
 		 (xml (coot-get-url-as-string url)))
 
-	    (format #t ":::::::: url: ~s~%" url)
+	    (format #t "INFO:: url: ~s~%" url)
 
 	    (call-with-output-file (string-append drug-name ".xml")
 	      (lambda (port)

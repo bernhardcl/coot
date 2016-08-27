@@ -35,6 +35,14 @@
     <property name="visible">True</property>
     <property name="stock">gtk-save-as</property>
   </object>
+  <object class="GtkImage" id="image4">
+    <property name="visible">True</property>
+    <property name="stock">gtk-missing-image</property>
+  </object>
+  <object class="GtkImage" id="image5">
+    <property name="visible">True</property>
+    <property name="stock">gtk-save-as</property>
+  </object>
   <object class="GtkWindow" id="lbg_window">
     <property name="width_request">740</property>
     <property name="height_request">530</property>
@@ -273,12 +281,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToggleToolButton" id="lbg_charge_toolbutton">
+              <object class="GtkToggleToolButton" id="lbg_charge_toggle_toolbutton">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">Charge</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">generated-icon-charge-svg</property>
-                <signal name="toggled" handler="on_lbg_charge_toolbutton_toggled"/>
+                <signal name="toggled" handler="on_lbg_charge_toggle_toolbutton_toggled"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -385,6 +393,7 @@
         <child>
           <object class="GtkToolbar" id="lbg_toolbar_2">
             <property name="visible">True</property>
+            <property name="toolbar_style">both</property>
             <child>
               <object class="GtkToggleToolButton" id="c3_toggle_toolbutton">
                 <property name="visible">True</property>
@@ -512,7 +521,7 @@
           <object class="GtkHBox" id="hbox1">
             <property name="visible">True</property>
             <child>
-              <object class="GtkToolbar" id="toolbar2">
+              <object class="GtkToolbar" id="lbg_atom_toolbar">
                 <property name="visible">True</property>
                 <property name="orientation">vertical</property>
                 <child>
@@ -569,6 +578,18 @@
                     <property name="label" translatable="yes">P</property>
                     <property name="use_underline">True</property>
                     <signal name="toggled" handler="on_phos_toggle_toolbutton_toggled"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToggleToolButton" id="hydrogen_toogle_toolbutton">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">H</property>
+                    <property name="use_underline">True</property>
+                    <signal name="toggled" handler="on_hydrogen_toggle_toolbutton_toggled"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -803,15 +824,262 @@
           </packing>
         </child>
         <child>
+          <object class="GtkVBox" id="lbg_qed_properties_vbox">
+            <property name="visible">True</property>
+            <child>
+              <object class="GtkTable" id="qed_properties_table">
+                <property name="visible">True</property>
+                <property name="border_width">10</property>
+                <property name="n_rows">2</property>
+                <property name="n_columns">8</property>
+                <child>
+                  <object class="GtkLabel" id="label10">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">Mol. Weight </property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="qed_properties_0_progressbar">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Optimal Value: 306</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label11">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">cLogP </property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="right_attach">3</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="qed_properties_1_progressbar">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Optimal Value: 3</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">3</property>
+                    <property name="right_attach">4</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="qed_properties_2_progressbar">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Optimal Value: 3</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">5</property>
+                    <property name="right_attach">6</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="qed_properties_3_progressbar">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Optimal Value: 1</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">7</property>
+                    <property name="right_attach">8</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label12">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">#HBA </property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">4</property>
+                    <property name="right_attach">5</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label13">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">#Donors </property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">6</property>
+                    <property name="right_attach">7</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label14">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">PSA </property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label15">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">#RotBonds </property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="right_attach">3</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label16">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">#Arom </property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">4</property>
+                    <property name="right_attach">5</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label17">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">#Alerts </property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">6</property>
+                    <property name="right_attach">7</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="qed_properties_4_progressbar">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Optimal Value: 50</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="qed_properties_5_progressbar">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Optimal Value: 4</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">3</property>
+                    <property name="right_attach">4</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="qed_properties_6_progressbar">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Optimal Value: 2</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">5</property>
+                    <property name="right_attach">6</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="qed_properties_7_progressbar">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Optimal Value: 0</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">7</property>
+                    <property name="right_attach">8</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="padding">3</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">7</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkHBox" id="lbg_flip_rotate_hbox">
             <property name="visible">True</property>
+            <property name="border_width">4</property>
             <child>
               <object class="GtkButton" id="lbg_view_flip_around_x_button">
                 <property name="label" translatable="yes">Flip Around X</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="border_width">6</property>
                 <signal name="clicked" handler="on_lbg_view_flip_around_x_button_clicked"/>
               </object>
               <packing>
@@ -821,18 +1089,28 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="lbg_view_flip_around_y_button">
-                <property name="label" translatable="yes">Flip Around Y</property>
+              <object class="GtkLabel" id="label18">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="border_width">6</property>
-                <signal name="clicked" handler="on_lbg_view_flip_around_y_button_clicked"/>
+                <property name="label" translatable="yes">    </property>
               </object>
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
                 <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="lbg_view_flip_around_y_button">
+                <property name="label" translatable="yes">Flip Around Y</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_lbg_view_flip_around_y_button_clicked"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">2</property>
               </packing>
             </child>
             <child>
@@ -843,7 +1121,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
-                <property name="position">2</property>
+                <property name="position">3</property>
               </packing>
             </child>
             <child>
@@ -852,13 +1130,14 @@
                 <property name="can_focus">True</property>
                 <property name="invisible_char">&#x25CF;</property>
                 <property name="width_chars">6</property>
+                <property name="text" translatable="yes">10</property>
                 <property name="primary_icon_sensitive">True</property>
                 <property name="secondary_icon_sensitive">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
-                <property name="position">3</property>
+                <property name="position">4</property>
               </packing>
             </child>
             <child>
@@ -869,7 +1148,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
-                <property name="position">4</property>
+                <property name="position">5</property>
               </packing>
             </child>
             <child>
@@ -884,14 +1163,25 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
-                <property name="position">5</property>
+                <property name="position">6</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
             <property name="fill">False</property>
-            <property name="position">7</property>
+            <property name="padding">2</property>
+            <property name="position">8</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkHSeparator" id="hseparator2">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="padding">4</property>
+            <property name="position">9</property>
           </packing>
         </child>
         <child>
@@ -910,8 +1200,9 @@
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="tooltip_text" translatable="yes">Send to Coot</property>
-                <property name="border_width">14</property>
+                <property name="border_width">6</property>
                 <property name="use_stock">True</property>
+                <property name="xalign">0.52999997138977051</property>
                 <signal name="clicked" handler="on_lbg_apply_button_clicked"/>
               </object>
               <packing>
@@ -1022,7 +1313,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="border_width">14</property>
+                <property name="border_width">6</property>
                 <property name="use_stock">True</property>
                 <signal name="clicked" handler="on_lbg_close_button_clicked"/>
               </object>
@@ -1038,7 +1329,7 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">False</property>
-            <property name="position">8</property>
+            <property name="position">10</property>
           </packing>
         </child>
       </object>
@@ -1244,10 +1535,6 @@
       <action-widget response="-6">button11</action-widget>
     </action-widgets>
   </object>
-  <object class="GtkImage" id="image4">
-    <property name="visible">True</property>
-    <property name="stock">gtk-missing-image</property>
-  </object>
   <object class="GtkAboutDialog" id="lbg_aboutdialog">
     <property name="border_width">5</property>
     <property name="type_hint">normal</property>
@@ -1361,8 +1648,8 @@
     <property name="title" translatable="yes">Coot Lidia export as pdf filechooser</property>
     <property name="modal">True</property>
     <property name="type_hint">normal</property>
-    <property name="do_overwrite_confirmation">True</property>
     <property name="action">save</property>
+    <property name="do_overwrite_confirmation">True</property>
     <signal name="close" handler="on_lbg_export_as_pdf_filechooserdialog_close"/>
     <signal name="response" handler="on_lbg_export_as_pdf_filechooserdialog_response"/>
     <child internal-child="vbox">
@@ -1427,8 +1714,8 @@
     <property name="role">export lidia png file </property>
     <property name="modal">True</property>
     <property name="type_hint">normal</property>
-    <property name="do_overwrite_confirmation">True</property>
     <property name="action">save</property>
+    <property name="do_overwrite_confirmation">True</property>
     <signal name="close" handler="on_lbg_export_as_png_filechooserdialog_close"/>
     <signal name="response" handler="on_lbg_export_as_png_filechooserdialog_response"/>
     <child internal-child="vbox">
@@ -1484,6 +1771,69 @@
     <action-widgets>
       <action-widget response="-6">lbg_export_as_png_close_button</action-widget>
       <action-widget response="-5">lbg_export_as_png_response_button</action-widget>
+    </action-widgets>
+  </object>
+  <object class="GtkFileChooserDialog" id="lbg_export_as_svg_filechooserdialog">
+    <property name="border_width">5</property>
+    <property name="window_position">mouse</property>
+    <property name="type_hint">normal</property>
+    <property name="action">save</property>
+    <property name="do_overwrite_confirmation">True</property>
+    <signal name="close" handler="on_lbg_export_as_svg_filechooserdialog_close"/>
+    <signal name="response" handler="on_lbg_export_as_svg_filechooserdialog_response"/>
+    <child internal-child="vbox">
+      <object class="GtkVBox" id="dialog-vbox21">
+        <property name="visible">True</property>
+        <property name="spacing">2</property>
+        <child>
+          <placeholder/>
+        </child>
+        <child internal-child="action_area">
+          <object class="GtkHButtonBox" id="dialog-action_area21">
+            <property name="visible">True</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="lbg_export_as_svg_close_button">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="lbg_export_as_svg_response_button">
+                <property name="label">gtk-save</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="has_default">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="-6">lbg_export_as_svg_close_button</action-widget>
+      <action-widget response="-5">lbg_export_as_svg_response_button</action-widget>
     </action-widgets>
   </object>
   <object class="GtkDialog" id="lbg_get_drug_dialog">
@@ -1644,8 +1994,8 @@
     <property name="title" translatable="yes">Save As MDL Molfile...</property>
     <property name="modal">True</property>
     <property name="type_hint">normal</property>
-    <property name="do_overwrite_confirmation">True</property>
     <property name="action">save</property>
+    <property name="do_overwrite_confirmation">True</property>
     <signal name="close" handler="on_lbg_save_as_filechooserdialog_close"/>
     <signal name="response" handler="on_lbg_save_as_filechooserdialog_response"/>
     <child internal-child="vbox">
@@ -1874,75 +2224,6 @@
     </child>
     <action-widgets>
       <action-widget response="-5">lbg_smiles_dialog_ok_button</action-widget>
-    </action-widgets>
-  </object>
-  <object class="GtkImage" id="image5">
-    <property name="visible">True</property>
-    <property name="stock">gtk-save-as</property>
-  </object>
-  <object class="GtkFileChooserDialog" id="lbg_export_as_svg_filechooserdialog">
-    <property name="border_width">5</property>
-    <property name="window_position">mouse</property>
-    <property name="type_hint">normal</property>
-    <property name="has_separator">False</property>
-    <property name="do_overwrite_confirmation">True</property>
-    <property name="action">save</property>
-    <signal name="close" handler="on_lbg_export_as_svg_filechooserdialog_close"/>
-    <signal name="response" handler="on_lbg_export_as_svg_filechooserdialog_response"/>
-    <child internal-child="vbox">
-      <object class="GtkVBox" id="dialog-vbox21">
-        <property name="visible">True</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">2</property>
-        <child>
-          <placeholder/>
-        </child>
-        <child internal-child="action_area">
-          <object class="GtkHButtonBox" id="dialog-action_area21">
-            <property name="visible">True</property>
-            <property name="layout_style">end</property>
-            <child>
-              <object class="GtkButton" id="lbg_export_as_svg_close_button">
-                <property name="label">gtk-cancel</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="lbg_export_as_svg_response_button">
-                <property name="label">gtk-save</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="can_default">True</property>
-                <property name="has_default">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="pack_type">end</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-      </object>
-    </child>
-    <action-widgets>
-      <action-widget response="-6">lbg_export_as_svg_close_button</action-widget>
-      <action-widget response="-5">lbg_export_as_svg_response_button</action-widget>
     </action-widgets>
   </object>
 </interface>

@@ -25,7 +25,7 @@ dnl implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 dnl
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(coot, 0.8.3-pre)
+AC_INIT(coot, 0.8.7-pre)
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -39,7 +39,9 @@ AM_PROG_CC_STDC
 AC_HEADER_STDC
 
 AC_PROG_CXX
-# AM_PROG_LIBTOOL that's old style. Now we use LT_INIT
+# AM_PROG_LIBTOOL that's old style. Now we use LT_INIT.
+# It is not yet clear to me how AC_LANG_SOURCE should be used
+# for LT_INIT
 LT_INIT
 
 # AC_PROG_INTLTOOL, no, not today.  Mac compilation problems, no perl/ XML or something.
@@ -72,7 +74,8 @@ AC_LIB_PREPARE_MULTILIB
 
 AC_SUBST(COOT_STDTYPES)
 
-EXPORT_DYNAMIC_FLAG_SPEC=$export_dynamic_flag_spec
+
+eval EXPORT_DYNAMIC_FLAG_SPEC=$export_dynamic_flag_spec
 AC_SUBST(EXPORT_DYNAMIC_FLAG_SPEC)
 
 
@@ -91,6 +94,7 @@ AM_MINGW_WINDOWS
 dnl test for LIBPNG (Windows only - maybe shouif here rather than in macro?)
 if test "$have_windows_mingw" = yes; then
   AM_PATH_GLOB
+  AC_CONFIG_FILES(pyrogen/pyrogen.bat)
 fi
 
 AM_PATH_LIBPNG
@@ -364,6 +368,7 @@ data/Makefile
 pixmaps/Makefile
 pixmaps/icons/Makefile
 rama-data/Makefile
+man/Makefile
 pyrogen/Makefile
 pyrogen/pyrogen
 auxil/Makefile

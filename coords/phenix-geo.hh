@@ -33,9 +33,13 @@ namespace coot {
 	 weight = weight_in;
 	 residual = residual_in;
       }
+#ifndef SWIG
       friend std::ostream &operator<<(std::ostream &s, phenix_geo_bond bg);
+#endif
    };
+#ifndef SWIG
    std::ostream &operator<<(std::ostream &s, phenix_geo_bond bg);
+#endif
 
    class phenix_geo_bonds {
       atom_spec_t parse_line_for_atom_spec(const std::string &l) const;
@@ -45,7 +49,9 @@ namespace coot {
       phenix_geo_bonds() {}
       phenix_geo_bonds(const std::string &file_name);
       unsigned int size() const { return bonds.size(); }
+#ifndef SWIG
       const phenix_geo_bond &operator[](const unsigned int &idx) const { return bonds[idx]; }
+#endif
       void add_bond(const phenix_geo_bond &b) {
 	 bonds.push_back(b);
       } 

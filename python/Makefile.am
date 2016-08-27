@@ -18,20 +18,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-# pythondir = $(pkgdatadir)/python
-
-
-# how are these generated?  AFAICS, they are not.  comment out for now
-# 
-#if COOT_USE_PYTHON
-#TEXI_FILE =  coot-python-functions.texi
-
-
-#coot-python-functions.texi:
-#	python $(top_srcdir)/python/python_coot_docs.py 
-
-#endif
-
 dist_pkgpython_PYTHON = \
                         coot_utils.py        get_ebi.py      mutate.py        \
    background_demo.py   hello.py             raster3d.py                      \
@@ -48,9 +34,11 @@ dist_pkgpython_PYTHON = \
    get_recent_pdbe.py   jligand.py	     	 jligand_gui.py	              \
    redefine_functions.py user_define_restraints.py template_key_bindings.py   \
    gui_add_linked_cho.py ligand_check.py     run_mogul.py                     \
-   contact_score_isolated_ligand.py          enhanced_ligand.py		      \
+   contact_score_isolated_ligand.py          gui_contact_score_isolated_ligand.py \
+   enhanced_ligand.py	gui_ligand_sliders.py		      \
    dictionary_generators.py    \
    coot_toolbuttons.py  rcrane_loader.py \
    pdbe_validation_data.py  ligand_validation_sliders.py \
+   chemical_feature_clusters.py res_spec_utils.py \
    $(TEXI_FILE)
 

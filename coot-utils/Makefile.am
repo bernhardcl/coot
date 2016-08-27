@@ -54,7 +54,8 @@ AM_CXXFLAGS = $(COOT_GSL_FLAGS) $(COOT_WINDOWS_CFLAGS) \
 libcoot_coord_utils_la_SOURCES = coot-coord-utils.cc \
 	coot-coord-utils-nucleotides.cc coot-rama.cc coot-h-bonds.cc hole.cc read-sm-cif.cc \
 	bonded-pairs.cc helix-analysis.cc elastic.cc glyco-torsions.cc coot-least-squares.cc \
-	atom-overlaps.cc 
+	atom-overlaps.cc
+
 
 #    $(top_builddir)/mini-mol/libcoot-mini-mol.la 
 #    $(top_builddir)/utils/libcoot-utils.la 
@@ -117,9 +118,6 @@ libcoot_map_heavy_la_LDFLAGS = $(SHARED_LDFLAGS)
 
 # test-agg-clust
 check_PROGRAMS = test-h-bonds testshelxreader testcootutils test-hole test-elastic test-spherical glyco-torsions test-tt-morph
-
-# testshelxreader fails to link for some reason! coot::protein_geometry::get_h_bond_type 
-# testcootutils also.  20100812 Fixed now - added libcoot-geometry.la
 
 # test_zo_chi_table_SOURCES = test-zo-chi-table.cc
 

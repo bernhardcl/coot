@@ -379,7 +379,7 @@ STABLE_DEST_DIR=${STABLE_DEST_DIR:=${HOME}/public_html/software/binaries/stable}
 # When we fail to extract the correct tar file from the web site, what
 # shall we build instead?
 #
-fallback_coot_version=coot-0.7
+fallback_coot_version=coot-0.8
 
 # ----------------------------------------------------------------
 #   End of tinkering with parameters.
@@ -528,8 +528,9 @@ function my_exit {
    fi
 
    # now copy the log files
-   cp -r ${LOGS} ${PUBLIC_HTML_LOGS}
-   echo copy the log files from ${LOGS} to ${PUBLIC_HTML_LOGS}
+   # FIXME try to avoid here as in another place or vice versa
+   #cp -r ${LOGS} ${PUBLIC_HTML_LOGS}
+   #echo copy the log files from ${LOGS} to ${PUBLIC_HTML_LOGS}
 
    exit $exit_arg
 }
@@ -621,10 +622,10 @@ if test "$run_tests" = true ; then
    echo removing old backup-files in coot-backup
    rm coot-backup/*
    # for python build we need to set COOT_PYTHON_DIR and COOT_HOME
-   COOT_PYTHON_DIR=$install_top_dir/share/coot/python
+   COOT_PYTHON_DIR=$install_top_dir/python27/lib/site-packages/coot
    COOT_HOME=$HOME
    PYTHONPATH=$COOT_PYTHON_DIR
-   PYTHONHOME=$install_top_dir/bin
+   PYTHONHOME=$install_top_dir/python27
    export PYTHONPATH
    export PYTHONHOME
    export COOT_PYTHON_DIR
@@ -686,11 +687,11 @@ fi
 #else 
 #   PATH=$AUTOBUILD_INSTALLED-gtk2$build_type/bin:$AUTOBUILD_INSTALLED-gtk2$build_type/python2.5:$PATH
 #fi 
-PATH=$PATH:/usr/local/bin:/usr/sbin:/usr/bsd:/sbin:/usr/bin:/bin:
-PATH=$PATH:/etc:/usr/etc
+#PATH=$PATH:/usr/local/bin:/usr/sbin:/usr/bsd:/sbin:/usr/bin:/bin:
+#PATH=$PATH:/etc:/usr/etc
 #
-export PATH
-echo PATH is now: $PATH
+#export PATH
+#echo PATH is now: $PATH
 echo AUTOBUILD_BUILD is $AUTOBUILD_BUILD
 
 # This is where the sources downloaded from network go:
@@ -707,6 +708,8 @@ mkdir -p $LOGS
 
 shared_static_flag="--disable-shared"
 shared_flag="--enable-shared --disable-static"
+# not shared yet
+shared_flag=
 shared_lib_ext=dll
 systype=unknown 
 
@@ -850,8 +853,9 @@ if test $OS = OSF1 ; then
    systype=${osversion}-OSF1
 fi
 
-if test "$OS" = "MINGW32_NT-5.1" ; then
+if test "$OS" = MINGW* ; then
    systype=`uname -m`
+   architecture=`uname -m`
 fi
 
 echo systype: $systype
@@ -1269,7 +1273,7 @@ else
          if test "$OS" = Darwin ; then
             ccp4_system_type=Darwin
 	 else
-	    if test "$OS" = MINGW* ; then
+	    if test "$OS" = "MINGW*" ; then
 	       # not sure if really needed later?!
 	       ccp4_system_type=MinGW
 	    fi
@@ -1846,28 +1850,32 @@ if [ "$build_goocanvas" = "" ] ; then
         goocanvas_args="--with-goocanvas-prefix=$install_top_dir"
     else
         build_goocanvas=yes
+        goocanvas_args="--with-goocanvas-prefix=$install_top_dir"
     fi
 
     # is it compilable? (do we have the right gtk (etc) version?)
+    # this is nonsense to test before we have installed the other things. Since
+    # we are using binaries on windows, who cares. We hope that the
+    # dependencies will be there, so comment out this nonsense
     #
-    if [ "$build_goocanvas" = "yes" ] ; then
-        if pkg-config gtk+-2.0 --atleast-version 2.12 ; then
-            echo goocanvas: recent enough gtk+ version
-            if pkg-config cairo --atleast-version 1.4 ; then
-                echo goocanvas: recent enough cairo version
+    #if [ "$build_goocanvas" = "yes" ] ; then
+    #    if pkg-config gtk+-2.0 --atleast-version 2.12 ; then
+    #        echo goocanvas: recent enough gtk+ version
+    #        if pkg-config cairo --atleast-version 1.4 ; then
+    #            echo goocanvas: recent enough cairo version
           # yes, compilable
-                goocanvas_args="--with-goocanvas-prefix=$install_top_dir"
-            else
-                echo goocanvas: Cairo is too old.  Goocanvas needs cairo 1.4 or later. You have:
-                pkg-config cairo --modversion
-                build_goocanvas=no
-            fi
-        else 
-            echo goocanvas: gtk+-2.0 too old.  Goocanvas needs 2.12 or later. You have:
-            pkg-config gtk+-2.0 --modversion
-            build_goocanvas=no
-        fi
-    fi
+    #            goocanvas_args="--with-goocanvas-prefix=$install_top_dir"
+    #        else
+    #            echo goocanvas: Cairo is too old.  Goocanvas needs cairo 1.4 or later. You have:
+    #            pkg-config cairo --modversion
+    #            build_goocanvas=no
+    #        fi
+    #    else 
+    #        echo goocanvas: gtk+-2.0 too old.  Goocanvas needs 2.12 or later. You have:
+    #        pkg-config gtk+-2.0 --modversion
+    #        build_goocanvas=no
+    #    fi
+    #fi
 fi
 echo goocanvas:  goocanvas_args set to $goocanvas_args
 
@@ -2009,7 +2017,7 @@ mmdb_version=1.25.0
 mmdb_version=1.25.2
 mmdb_version=1.25.3
 mmdb_version=2.0.1
-mmdb_version=2.0.2
+mmdb_version=2.0.11
 #mmdb_server_dir=ftp://ftp.ccp4.ac.uk/opensource
 mmdb_server_dir=$extras_place
 echo ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
@@ -2066,7 +2074,7 @@ if test -n "$build_fftw" ; then
 ${WGET} $extras_place/fftw-2.1.5.tar.gz
 ${WGET} $win_extras_place/fftw-2.1.5_shared.patch
 ${WGET} $win_extras_place/fix_shared_makefiles.sh
-${WGTE} $win_extras_place/fix_libfftw.la.sh
+${WGET} $win_extras_place/fix_libfftw.la.sh
 #${WGET} $extras_place/fftw-configure-stuff.tar.gz
 (
 date
@@ -2109,6 +2117,7 @@ if test -n "$build_clipper" ; then
     #clipper_version=2.1-091215-ac
     clipper_version=2.1-100511-ac
     clipper_version=2.1
+    clipper_version=2.1.20160708
     clipper_dir_version=2.1
     #${WGET} http://www.ysbl.york.ac.uk/~cowtan/clipper/clipper-$clipper_version.tar.gz
 
@@ -2127,7 +2136,8 @@ if test -n "$build_clipper" ; then
     ${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/clipper_win32.patch
 
     # now clipper has all the bits.
-    ${WGET} $extras_place/clipper-$clipper_version.tar.gz
+    # ${WGET} $extras_place/clipper-$clipper_version.tar.gz
+    ${WGET} ftp://ftp.ccp4.ac.uk/opensource/clipper-$clipper_version.tar.gz
 
     (
     # temp hack
@@ -2146,7 +2156,7 @@ if test -n "$build_clipper" ; then
     # BL says:: FIXME
     # do we still need the patch?
     export     CPPFLAGS=-I$install_top_dir/include
-    export      LDFLAGS=-L$install_top_dir/lib
+    export      LDFLAGS="-Wl,--large-address-aware -L$install_top_dir/lib"
     echo CPPFLAGS $CPPFLAGS
     echo LDFLAGS  $LDFLAGS
 
@@ -2203,7 +2213,9 @@ if test -n "$build_freeglut" ; then
 #nate's version is not good as it requires 'manual' adjustments to compilation
 #${WGET} http://www.xmission.com/~nate/glut/glut-3.7.6-bin.zip
 # we get another version instead
-${WGET} http://files.transmissionzero.co.uk/software/development/GLUT/freeglut-MinGW-2.8.1-1.mp.zip
+#${WGET} http://files.transmissionzero.co.uk/software/development/GLUT/freeglut-MinGW-2.8.1-1.mp.zip
+# seems dead, use own
+${WGET} $win_extras_place/freeglut-MinGW-2.8.1-1.mp.zip
 
 (
 date
@@ -2440,7 +2452,7 @@ if test -n "$build_gtk" ; then
       echo  BUILDING libiconv
       echo  ======================================================
       libiconv_version=1.9.1
-      ${WGET} http://http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/libiconv-${libiconv_version}.bin.woe32.zip
+      ${WGET} http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/libiconv-${libiconv_version}.bin.woe32.zip
       cd $install_top_dir
       7z x -y ${AUTOBUILD_SOURCES}/libiconv-${libiconv_version}.bin.woe32.zip
       cd -
@@ -2511,8 +2523,9 @@ if test -n "$build_gtk" ; then
       7z x -y ${AUTOBUILD_SOURCES}/gtk+-dev_${gtk2_version}_win32.zip
       cd - 
       # install hicolor theme
+      # FIXME - update to 0.15 but uses xz then (check install for it)
       hicolor_version=0.13
-      ${WGET} http://icon-theme.freedesktop.org/releases/hicolor-icon-theme-${hicolor_version}.tar.gz
+      ${WGET} --no-check-certificate http://icon-theme.freedesktop.org/releases/hicolor-icon-theme-${hicolor_version}.tar.gz
       gzip -cd ${AUTOBUILD_SOURCES}/hicolor-icon-theme-${hicolor_version}.tar.gz | tar xf -
       cd hicolor-icon-theme-${hicolor_version}
       ./configure --prefix=$install_top_dir
@@ -2608,6 +2621,7 @@ if test -n "$build_gtkglext" ; then
      fi
 
      patch -p0 < ${AUTOBUILD_SOURCES}/gtkglext_configure.patch
+     echo BL DEBUG PATH before config gtkglext is $PATH
      ./configure --build=i386-pc-mingw32 $generic_prefix
      $MAKE
     status=$?
@@ -2706,6 +2720,7 @@ mkdir $global_py_inst_dir
 cd $global_py_inst_dir
 global_py_inst_dir=`pwd -W`
 # convert / to \ for windows file names
+# maybe even two
 global_py_inst_dir=${global_py_inst_dir//\//\\}
 cd -
 
@@ -2744,8 +2759,9 @@ if [ "$python_version_installed" == "$python_target_version" ] ; then
    copy_python=1
 else
    # new python needs to be installed, please go ahead!!! put ddl in same dir
-   echo msiexec /i python-$pver.msi TARGETDIR=$global_py_inst_dir DLLDIR=$global_py_inst_dir ALLUSERS=1 /qn
-   msiexec //i python-$pver.msi TARGETDIR=$global_py_inst_dir DLLDIR=$global_py_inst_dir ALLUSERS=1 //qn
+   echo msiexec /a python-$pver.msi TARGETDIR=$global_py_inst_dir DLLDIR=$global_py_inst_dir ALLUSERS=1 /qn
+   # msiexec //i python-$pver.msi TARGETDIR=$global_py_inst_dir DLLDIR=$global_py_inst_dir ALLUSERS=1 //qn
+   msiexec //a python-$pver.msi TARGETDIR=$global_py_inst_dir DLLDIR=$global_py_inst_dir ALLUSERS=1 //qn 
    status=$?
    if [ "$status" != 0 ] ; then
       echo problem installing python
@@ -2786,13 +2802,15 @@ fi
 echo $copy_python > $HOME/python_copied.tmp
 ) >  $HOSTLOGDIR/07-python.txt 2>&1
 
-if [ $(cat $HOME/python_copied.tmp) == 2 ] ; then
+if [ -e $HOME/python_copied.tmp ] ; then
+ if [ $(cat $HOME/python_copied.tmp) == 2 ] ; then
    echo copied python, so dont install pygobject etc.
    build_pygobject=0
    build_pycairo=0
    build_pygtk=0
+ fi
+ rm $HOME/python_copied.tmp
 fi
-rm $HOME/python_copied.tmp
 
 # to uninstall use:
 # msiexec //uninstall python-$pver.msi //qb
@@ -3192,7 +3210,7 @@ if test -n "$build_curl" ; then
    #libcurl_version=7.19.7
    # libcurl_version=7.27.0
    libcurl_version=7.32.0
-   ${WGET} http://curl.haxx.se/download/curl-$libcurl_version.tar.gz
+   ${WGET} --no-check-certificate http://curl.haxx.se/download/curl-$libcurl_version.tar.gz
 
    gzip -dc ${AUTOBUILD_SOURCES}/curl-$libcurl_version.tar.gz | tar xf -
    cd curl-$libcurl_version
@@ -3459,12 +3477,14 @@ if [ -e libtool ] ; then
   rm libtool
 fi
 
+# quick hack for large maps
+export LDFLAGS="-Wl,--large-address-aware"
+
 echo From tar file: ${AUTOBUILD_SOURCES}/$coot_version.tar.gz
 echo building in: $PWD
 echo ./configure $coot_prefix \
-    --with-mmdb-prefix=$install_top_dir \
-    --with-ssmlib-prefix=$install_top_dir \
     --with-fftw-prefix=$install_top_dir \
+    $goocanvas_args     \
     $glut_prefix        \
     COOT_BUILD_INFO_STRING="$coot_build_info_string" \
     $guile_scripting          \
@@ -3474,9 +3494,8 @@ echo ./configure $coot_prefix \
     $coot_extra_args   
 
 ./configure $coot_prefix \
-    --with-mmdb-prefix=$install_top_dir \
-    --with-ssmlib-prefix=$install_top_dir \
     --with-fftw-prefix=$install_top_dir \
+    $goocanvas_args     \
     $glut_prefix        \
     COOT_BUILD_INFO_STRING="$coot_build_info_string" \
     $guile_scripting          \

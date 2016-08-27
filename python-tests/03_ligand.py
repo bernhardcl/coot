@@ -178,8 +178,9 @@ class LigandTestFunctions(unittest.TestCase):
         """Flip residue (around eigen vectors)"""
 
         mon_file = os.path.join("coot-ccp4", "monomer-3GP.pdb")
-        self.failIf(not os.path.isfile(mon_file),
-                    "  Oops! file not found! coot-ccp4/monomer-3GP.pdb")
+	e = os.path.isfile(mon_file)
+	if self.skip_test(not e, "  Oops! file not found! coot-ccp4/monomer-3GP.pdb, skip."):
+            return
 
         imol_orig = read_pdb(mon_file)
         imol_copy = copy_molecule(imol_orig)
@@ -192,8 +193,7 @@ class LigandTestFunctions(unittest.TestCase):
         set_go_to_atom_chain_residue_atom_name("A", 1, " C8 ")
 
         active_atom = active_residue()
-        if self.skip_test(not active_atom,
-                          "No active atom found - skipping flip residue test"):
+        if self.skip_test(not active_atom, "No active atom found - skipping flip residue test"):
             return
         imol      = active_atom[0]
         chain_id  = active_atom[1]
@@ -277,7 +277,20 @@ class LigandTestFunctions(unittest.TestCase):
 
         
     def test10_0(self):
-        """Pyrogen Runs OK"""
+        """Pyrogen Runs OK?"""
+
+        # bad things may well happen if we run the wrong version of pyrogen.
+        # so force pyrogen to be the one that is installed alongside this version of coot 
+        # that we are running. We do that by looking and manipulating sys.argv[0]
+        import os, sys
+        
+        coot_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
+        prefix_dir = os.path.normpath(os.path.join(coot_dir, ".."))
+        pyrogen_exe = "pyrogen"
+        if is_windows():
+            pyrogen_exe = "pyrogen.bat"
+        pyrogen_bin = os.path.normpath(os.path.join(prefix_dir, "bin",
+                                                    pyrogen_exe))
 
         smiles = "C1CNC1"
         tlc_text = "XXX"
@@ -289,6 +302,7 @@ class LigandTestFunctions(unittest.TestCase):
             pass
         else:
             global use_mogul
+
             if use_mogul:
                 arg_list = ["--residue-type", tlc_text, smiles]
             else:
@@ -296,10 +310,13 @@ class LigandTestFunctions(unittest.TestCase):
                     arg_list = ["--residue-type", tlc_text, smiles]
                 else:
                     arg_list = ["--no-mogul", "-M", "--residue-type", tlc_text, smiles]
-            popen_status = popen_command("pyrogen", arg_list, [], log_file_name, True)
-            self.fail_unless(popen_status == 0)
+            popen_status = popen_command(pyrogen_bin, arg_list, [], log_file_name, True)
+            # self.assertTrue(popen_status == 0)
+            self.assertEqual(popen_status, 0,
+                             "WARNING:: pyrogen exited with status %i\n" %popen_status)
             pdb_file_name = tlc_text + "-pyrogen.pdb"
             cif_file_name = tlc_text + "-pyrogen.cif"
+            print "INFO:: pyrogen will try to read pdb file %s" %pdb_file_name
             imol = handle_read_draw_molecule_with_recentre(pdb_file_name, 0)
             # add test for chirality in the dictionary here
-            self.fail_unless(valid_model_molecule_qm(imol))
+            self.assertTrue(valid_model_molecule_qm(imol))

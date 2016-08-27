@@ -27,6 +27,8 @@
 #include "coot-version.hh"
 #include "get-monomer.hh"
 #include "globularize.hh"
+#include "cfc.hh"
+#include "cc-interface-user-defined-atom-colours.hh"
 %}
 
 
@@ -65,6 +67,7 @@ namespace std {
 %include "c-interface-mogul.hh"
 %include "c-interface-sequence.hh"
 %include "c-interface-refmac.h"
+%include "c-interface-generic-objects.h"
 %include "cmtz-interface.hh"
 %include "manipulation-modes.hh"
 %include "rotamer-search-modes.hh"
@@ -75,4 +78,9 @@ namespace std {
 %include "coot-version.hh"
 %include "get-monomer.hh"
 %include "globularize.hh"
+%include "cfc.hh"
+%include "cc-interface-user-defined-atom-colours.hh"
 %include "../coords/phenix-geo.hh"
+
+# ignore some functions with c++ objects
+%ignore rigid_body_fit_with_residue_range();

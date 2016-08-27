@@ -114,6 +114,7 @@ parse_command_line(int argc, char ** argv ) {
       {"code",       1, 0, 0},
       {"comp_id",    1, 0, 0},
       {"comp-id",    1, 0, 0},
+      {"em",         0, 0, 0},
       {"title",      1, 0, 0},
       {"port",       1, 0, 0},
       {"host",       1, 0, 0},
@@ -231,6 +232,7 @@ parse_command_line(int argc, char ** argv ) {
 			       << "            [--auto mtz-file-name]\n"
 			       << "            [--dictionary cif-dictionary-file-name]\n"
 			       << "            [--script script-file-name]\n"
+			       << "            [--em]\n"
 			       << "            [--title some-title]\n"
 			       << "            [--small-screen]\n"
 			       << "            [--splash-screen]\n"
@@ -276,28 +278,32 @@ parse_command_line(int argc, char ** argv ) {
 				    if (arg_str == "no-graphics") {
 				       cld.do_graphics = 0;
 				    } else {
-				       if (arg_str == "side-by-side") {
-					  cld.hardware_stereo_flag = 2;
+				       if (arg_str == "em") {
+					  cld.em_mode = true;
 				       } else {
-					  if (arg_str == "no-guano") {
-					     cld.disable_state_script_writing = 1;
+					  if (arg_str == "side-by-side") {
+					     cld.hardware_stereo_flag = 2;
 					  } else {
-					     if (arg_str == "small-screen") {
-						cld.small_screen_display = 1;
+					     if (arg_str == "no-guano") {
+						cld.disable_state_script_writing = 1;
 					     } else {
-						if (arg_str == "no-splash-screen") {
-						   cld.use_splash_screen = 0;
+						if (arg_str == "small-screen") {
+						   cld.small_screen_display = 1;
 						} else {
-						   if (arg_str == "self-test") {
-						      cld.run_internal_tests_and_exit = 1;
+						   if (arg_str == "no-splash-screen") {
+						      cld.use_splash_screen = 0;
 						   } else {
-						      if (arg_str == "update-self") {
-							 cld.update_self = 1;
-							 cld.do_graphics = 0;
+						      if (arg_str == "self-test") {
+							 cld.run_internal_tests_and_exit = 1;
 						      } else {
-							 std::cout << "WARNING! Malformed option - needs an argument: " 
-								   << long_options[option_index].name
-								   << std::endl << std::endl;
+							 if (arg_str == "update-self") {
+							    cld.update_self = 1;
+							    cld.do_graphics = 0;
+							 } else {
+							    std::cout << "WARNING! Malformed option - needs an argument: " 
+								      << long_options[option_index].name
+								      << std::endl << std::endl;
+							 }
 						      }
 						   }
 						}
@@ -340,7 +346,7 @@ parse_command_line(int argc, char ** argv ) {
 	 
       case 'c':
          if (optarg) { 
-            std::cout << "command optarg: " << optarg << std::endl;
+            // std::cout << "command optarg: " << optarg << std::endl;
 	    cld.command.push_back(optarg);
          } else { 
             std::cout << "command optarg is NULL " << std::endl;
@@ -397,7 +403,8 @@ command_line_data::handle_immediate_settings() {
 
 // add any pdb files not alread added with --pdb/coords/xyzin
 // BL:: extend to mtzs (auto) and scripts (the easier ones)
-// maybe the name should be change then...
+// and maps...
+// maybe the name of the function should be change then...
 void
 command_line_data::roberto_pdbs(int argc, char **argv) {
 
@@ -415,7 +422,11 @@ command_line_data::roberto_pdbs(int argc, char **argv) {
      if (coot::util::extension_is_for_scripts(coot::util::file_name_extension(file)))
        if (std::find(script.begin(), script.end(), file) == script.end())
          script.push_back(file);
-     
+
+     if (coot::util::extension_is_for_maps(coot::util::file_name_extension(file)))
+       if (std::find(maps.begin(), maps.end(), file) == maps.end())
+         maps.push_back(file);
+
    }
 }
 

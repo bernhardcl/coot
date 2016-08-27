@@ -4502,3 +4502,15 @@ on_export_map_filechooserdialog_response
                                         (GtkDialog       *dialog,
                                         gint             response_id,
                                         gpointer         user_data);
+
+void
+on_cfc_dialog_response                 (GtkDialog       *dialog,
+                                        gint             response_id,
+                                        gpointer         user_data);
+
+
+void
+on_dynarama_outliers_only_togglebutton_toggled
+                                        (GtkToggleButton *togglebutton,
+					 gpointer         user_data);
+

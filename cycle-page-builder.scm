@@ -918,7 +918,7 @@
 ;                #t #t)
 
           (list "binary-Linux-x86_64-debian-gnu-linux-jessie-python-gtk2"
-                "http://shelx.uni-ac.gwdg.de/~tg/coot_deb/jessie/build-logs/Linux-shelx8/"
+                "http://shelx.uni-ac.gwdg.de/~tg/coot_deb/jessie/build-logs/Linux-hilbert/"
                 "http://shelx.uni-ac.gwdg.de/~tg/coot_deb/jessie/binaries/nightlies/pre-release"
                 #t #t)
 
@@ -929,7 +929,7 @@
 ;                 #t #t)
 
 	 (list "WinCoot" 
-	       "http://www.ysbl.york.ac.uk/~lohkamp/build-logs/MINGW32_NT-5.1-sarabellum/gtk2" 
+	       "http://www.ysbl.york.ac.uk/~lohkamp/build-logs/MINGW32_NT-6.1-bernie-pc/gtk2" 
 	       "http://www.ysbl.york.ac.uk/~lohkamp/software/binaries/nightlies/pre-release"
 	       #t #t)
 

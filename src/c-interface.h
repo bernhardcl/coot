@@ -942,6 +942,18 @@ are not (or may not be) on the same scale).
 */
 int blob_under_pointer_to_screen_centre();
 
+#ifdef __cplusplus
+#ifdef USE_GUILE
+/*! \brief return scheme false or a list of molecule number and an atom spec  */
+SCM select_atom_under_pointer_scm();
+#endif
+
+#ifdef USE_PYTHON
+/*! \brief return Python false or a list of molecule number and an atom spec  */
+PyObject *select_atom_under_pointer_py();
+#endif
+#endif /* __cplusplus */
+
 /* \} */
 
 /*  --------------------------------------------------------------------- */
@@ -1500,38 +1512,6 @@ float residue_density_fit_scale_factor();
   map. Return 0 for bad imol */
 float density_at_point(int imol_map, float x, float y, float z);
 
-
-#ifdef __cplusplus
-#ifdef USE_GUILE
-float density_score_residue_scm(int imol, SCM residue_spec, int imol_map);
-#endif 
-#ifdef USE_PYTHON
-float density_score_residue_py(int imol, PyObject *residue_spec, int imol_map);
-#endif 
-#endif 
-
-/*! \brief simple density score for given residue (over-ridden by scripting function) */
-float density_score_residue(int imol, const char *chain_id, int res_no, const char *ins_code, int imol_map);
-
-
-#ifdef __cplusplus
-#ifdef USE_GUILE
-/*! \brief return sigma for the given map.  Return scheme False if not
-  a valid map molecule number. */
-SCM map_mean_scm(int imol);
-SCM map_sigma_scm(int imol);
-/*! \brief return either scheme false on non-a-map or list (mean, standard-deviation, skew, kurtosis) */
-SCM map_statistics_scm(int imol);
-#endif
-#ifdef USE_PYTHON
-/*! \brief return sigma for the given map.  Return Python False if not
-  a valid map molecule number. */
-PyObject *map_mean_py(int imol);
-PyObject *map_sigma_py(int imol);
-PyObject *map_statistics_py(int imol);
-#endif /*USE_PYTHON */
-#endif  /* c++ */
-
 /* \} */
  
 
@@ -1676,10 +1656,6 @@ void info_dialog_and_text(const char *txt);
 /*! \brief set counter for runs of refmac so that this can be used to
   construct a unique filename for new output */
 void set_refmac_counter(int imol, int refmac_count);
-/*! \brief the name for refmac 
-
- @return a stub name used in the construction of filename for refmac output */
-const char *refmac_name(int imol);
 
 #ifdef __cplusplus
 #ifdef USE_GUILE
@@ -2728,6 +2704,7 @@ void set_go_to_atom_molecule(int imol);
 void unset_go_to_atom_widget(); /* unstore the static go_to_atom_window */
 
 
+
 /* \} */
 
 
@@ -3651,6 +3628,9 @@ int read_small_molecule_cif(const char *file_name);
 
 int read_small_molecule_data_cif(const char *file_name);
 
+int read_small_molecule_data_cif_and_make_map_using_coords(const char *file_name, 
+							   int imol_coords);
+
 /* \} */
 
 /*  ----------------------------------------------------------------------- */
@@ -4222,7 +4202,10 @@ void jed_flip(int imol, const char *chain_id, int res_no, const char *ins_code, 
 /*! \name Water Fitting Functions */
 /* \{ */
 
-/*! Renumber the waters of molecule number imol with consecutive numbering */
+/*! \brief create a dialog for water fitting */
+void wrapped_create_find_waters_dialog();
+
+/*! \brief Renumber the waters of molecule number imol with consecutive numbering */
 void renumber_waters(int imol); 
 
 /*! \brief find waters */
@@ -4328,6 +4311,14 @@ int get_default_bond_thickness();
   default status is 1. */
 void set_draw_zero_occ_markers(int status);
 
+
+/*! \brief set status of drawing cis-peptide markups
+
+  default status is 1. */
+void set_draw_cis_peptide_markups(int status);
+
+
+
 /*! \brief set the hydrogen drawing state. istat = 0 is hydrogens off,
   istat = 1: show hydrogens */
 void set_draw_hydrogens(int imol, int istat);
@@ -4368,6 +4359,10 @@ void graphics_to_b_factor_representation(int imol);
 void graphics_to_b_factor_cas_representation(int imol);
 /*! \brief draw molecule number imol coloured by occupancy */
 void graphics_to_occupancy_representation(int imol);
+/*! \brief draw molecule number imol in CA+Ligands mode coloured by user-defined atom colours */
+void graphics_to_user_defined_atom_colours_representation(int imol);
+/*! \brief draw molecule number imol all atoms coloured by user-defined atom colours */
+void graphics_to_user_defined_atom_colours_all_atoms_representation(int imol);
 /*! \brief what is the bond drawing state of molecule number imol  */
 int graphics_molecule_bond_type(int imol); 
 /*! \brief scale the colours for colour by b factor representation */
@@ -4375,6 +4370,15 @@ int set_b_factor_bonds_scale_factor(int imol, float f);
 /*! \brief change the representation of the model molecule closest to
   the centre of the screen */
 void change_model_molecule_representation_mode(int up_or_down);
+
+/*! \brief make the carbon atoms for molecule imol be grey
+ */
+void set_use_grey_carbons_for_molecule(int imol, short int state);
+/*! \brief set the colour for the carbon atoms 
+
+can be not grey if you desire, r, g, b in the range 0 to 1.
+ */
+void set_grey_carbon_colour(int imol, float r, float g, float b);
 
 
 /*! \brief make a ball and stick representation of imol given atom selection
@@ -5013,6 +5017,7 @@ void set_show_alt_conf_intermediate_atoms(int i);
 int  show_alt_conf_intermediate_atoms_state();
 void zero_occupancy_residue_range(int imol, const char *chain_id, int ires1, int ires2);
 void fill_occupancy_residue_range(int imol, const char *chain_id, int ires1, int ires2);
+void set_occupancy_residue_range(int imol, const char *chain_id, int ires1, int ires2, float occ);
 void set_b_factor_residue_range(int imol, const char *chain_id, int ires1, int ires2, float bval);
 void reset_b_factor_residue_range(int imol, const char *chain_id, int ires1, int ires2);
 /*! \} */
@@ -5153,6 +5158,8 @@ void set_edit_chi_angles_reverse_fragment_state(short int istate);
 void setup_torsion_general(short int state);
 /* No need for this to be exported to scripting */
 void toggle_torsion_general_reverse();
+
+void setup_residue_partial_alt_locs(short int state);
 
 /* \} */
 
@@ -5950,138 +5957,8 @@ find words, construct a url and open it. */
 void handle_online_coot_search_request(const char *entry_text);
 /* \} */
 
-/*  ----------------------------------------------------------------------- */
-/*                  Generic Objects                                         */
-/*  ----------------------------------------------------------------------- */
-/*! \name Generic Objects */
-/* \{ */
+#include "c-interface-generic-objects.h"
 
-/*! \brief create a new generic object with name objname and return the index 
-   of the object */
-int new_generic_object_number(const char *objname);
-
-/*! \brief add line to generic object object_number */
-void to_generic_object_add_line(int object_number, 
-				const char *colour,
-				int line_width,
-				float from_x1, 
-				float from_y1, 
-				float from_z1, 
-				float to_x2, 
-				float to_y2, 
-				float to_z2);
-
-/*! \brief add a dashed line to generic object object_number 
-
-dash_density is number of dashes per Angstrom.*/
-void to_generic_object_add_dashed_line(int object_number, 
-				       const char *colour,
-				       int line_width,
-				       float dash_density,
-				       float from_x1, 
-				       float from_y1, 
-				       float from_z1, 
-				       float to_x2, 
-				       float to_y2, 
-				       float to_z2); 
-
-/*! \brief add point to generic object object_number */
-void to_generic_object_add_point(int object_number, 
-				 const char *colour,
-				 int point_width,
-				 float from_x1, 
-				 float from_y1, 
-				 float from_z1);
-
-/*! \brief add point to generic object object_number */
-void to_generic_object_add_arc(int object_number, 
-			       const char *colour,
-			       float radius,
-			       float radius_inner,
-			       float from_angle,
-			       float to_angle,
-			       float start_point_x,
-			       float start_point_y,
-			       float start_point_z,
-			       float start_dir_x,
-			       float start_dir_y,
-			       float start_dir_z,
-			       float normal_x1, 
-			       float normal_y1, 
-			       float normal_z1);
-
-
-
-/*! \brief add a display list handle generic object */
-void to_generic_object_add_display_list_handle(int object_number, int display_list_id); 
-
-/*! \brief set the display status of object number object_number, 
-
-  when they are created, by default objects are not displayed, so we
-  generally need this function.  */
-void set_display_generic_object(int object_number, short int istate);
-
-/*! \brief display (1) or undisplay (0) all generic display objects */
-void set_display_all_generic_objects(int state);
-
-
-/*! \brief is generic display object displayed?
-
-  @return 1 for yes, otherwise 0  */
-int generic_object_is_displayed_p(int object_number);
-
-/*! \brief return the index of the object with name name, if not, return -1; */
-int generic_object_index(const char *name);
-
-/*! \brief what is the name of generic object number obj_number? 
-
- @return 0 (NULL) (scheme False)  on obj_number not available */
-#ifdef __cplusplus
-#ifdef USE_GUILE
-SCM generic_object_name_scm(int obj_number);
-#endif /* USE_GUILE */
-#ifdef USE_PYTHON
-PyObject *generic_object_name_py(int obj_number);
-#endif /* USE_PYTHON */
-#endif /*  __cplusplus */
-
-/*! \brief return the number of generic display objects */
-int number_of_generic_objects();
-
-/*! \brief print to the console the name and display status of the
-  generic display objects */
-void generic_object_info(); 
-
-/*! \brief does generic display object number obj_no have things to
-  display? (predicate name)
-
-@return 0 for no things, 1 for things. */
-short int generic_object_has_objects_p(int obj_no); 
-
-/*! \brief close generic object, clear the lines/points etc, not
-  available for buttons/displaying etc */
-void close_generic_object(int object_number);
-
-/*! \brief has the generic object been closed? 
-
-   @return 1 for yes, 0 othersize
-*/
-short int is_closed_generic_object_p(int object_number);
-
-void close_all_generic_objects();
-
-/*! \brief clear out the lines and points from object_number, but keep
-  it displayable (not closed). */
-void generic_object_clear(int object_number);
-
-/*! \brief a kludgey thing, so that the generic objects gui can be
-  called from a callback.  */
-void generic_objects_gui_wrapper();
-
-void set_display_generic_objects_as_solid(int state);
-
-
-/* \} */
 
 /*  ----------------------------------------------------------------------- */
 /*                  Molprobity interface                                    */
@@ -6155,7 +6032,7 @@ void set_map_sharpening_scale_limit(float f);
 /*	Density Map Kurtosis							*/
 /* ----------------------------------------------------------------------------	*/
 float optimal_B_kurtosis(int imol);
-
+void set_b_factor_scale( double );
 
 /*  ----------------------------------------------------------------------- */
 /*           Intermediate Atom Manipulation                                 */
@@ -6291,6 +6168,12 @@ PyObject *add_dipole_for_residues_py(int imol, PyObject *residue_specs);
 int make_and_draw_patterson(const char *mtz_file_name, 
 			    const char *f_col, 
 			    const char *sigf_col);
+/*! \brief Make a patterson molecule
+
+\return a new molecule number or -1 on failure */
+int make_and_draw_patterson_using_intensities(const char *mtz_file_name, 
+					      const char *i_col, 
+					      const char *sigi_col);
 
 /*  ----------------------------------------------------------------------- */
 /*                  Laplacian                                               */
@@ -6318,6 +6201,7 @@ int laplacian (int imol);
 PyObject *get_pkgdatadir_py();
 #endif /* USE_PYTHON */
 #ifdef USE_GUILE
+// note: built-ins: (%package-data-dir) and %guile-build-info
 SCM get_pkgdatadir_scm();
 #endif
 #endif /*  __cplusplus */

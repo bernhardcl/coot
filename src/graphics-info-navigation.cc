@@ -15,7 +15,7 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc.,  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
 #ifdef USE_PYTHON
@@ -966,7 +966,47 @@ graphics_info_t::active_atom_spec_internal(int imol_only) {
 
    std::pair<int, coot::atom_spec_t> p1(imol_closest, spec);
    return std::pair<bool, std::pair<int, coot::atom_spec_t> > (was_found_flag, p1);
-} 
+}
+
+std::pair<bool, std::pair<int, coot::atom_spec_t> >
+graphics_info_t::active_atom_spec_simple() {
+   
+   int imol_closest = -1;
+   coot::atom_spec_t spec;
+   bool was_found_flag = false;
+   float dist_best = 999999999.9;
+   mmdb::Atom *at_close = 0;
+
+   coot::Cartesian rc(graphics_info_t::RotationCentre_x(),
+		      graphics_info_t::RotationCentre_y(),
+		      graphics_info_t::RotationCentre_z());
+   for (int imol=0; imol<graphics_info_t::n_molecules(); imol++) {
+      if (graphics_info_t::molecules[imol].is_displayed_p()) { 
+	 if (graphics_info_t::molecules[imol].atom_selection_is_pickable()) {
+	    bool do_ca_check_flag = false;
+	    coot::at_dist_info_t at_info =
+	       graphics_info_t::molecules[imol].closest_atom(rc, do_ca_check_flag, "", false);
+	    if (at_info.atom) {
+	       if (at_info.dist <= dist_best) {
+		  dist_best = at_info.dist;
+		  imol_closest = at_info.imol;
+		  at_close = at_info.atom;
+	       }
+	    }
+	 }
+      }
+   }
+   if (at_close) {
+      spec = coot::atom_spec_t(at_close);
+      was_found_flag = true;
+   }
+
+   std::pair<int, coot::atom_spec_t> p1(imol_closest, spec);
+   return std::pair<bool, std::pair<int, coot::atom_spec_t> > (was_found_flag, p1);
+}
+
+   
+
 
 
 // static 

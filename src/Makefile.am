@@ -18,20 +18,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-if COOT_USE_PYTHON
-
-# if coot.py is called __init.py and goes in site-packages/coot/
-#dist_pkgpython_SCRIPTS = __init__.py
-#dist_python_SCRIPTS = coot.pth
-
-#__init__.py: coot.py
-#	cp coot.py __init__.py
-
-
-dist_python_SCRIPTS = coot.py coot.pth
-
-
-endif
 
 
 ######## 20091001 ########################################################
@@ -122,6 +108,7 @@ coot_wrap_guile_pre_gtk2.cc: $(top_srcdir)/src/c-interface.h    \
                              $(top_srcdir)/src/lbg-interface.hh \
                              $(top_srcdir)/src/c-interface-ligands-swig.hh \
                              $(top_srcdir)/src/sdf-interface.hh \
+                             $(top_srcdir)/src/cfc.hh \
                              $(top_srcdir)/src/cmtz-interface.hh \
                              $(top_srcdir)/src/c-interface-mogul.hh
 	swig -o $@ -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CFLAGS) $(WITH_GUILE_CFLAGS)  $(USE_LIBCURL) -I$(top_srcdir)/src -I$(top_srcdir) -guile -c++  $(top_srcdir)/src/coot.i
@@ -141,6 +128,7 @@ coot_wrap_python_pre_gtk2.cc: $(top_srcdir)/src/c-interface.h      \
 			      $(top_srcdir)/src/lbg-interface.hh   \
                               $(top_srcdir)/src/c-interface-ligands-swig.hh \
 			      $(top_srcdir)/src/sdf-interface.hh   \
+                              $(top_srcdir)/src/cfc.hh \
                               $(top_srcdir)/src/c-interface-mogul.hh
 	swig -o $@ -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CFLAGS) $(PYTHON_CFLAGS)  $(USE_LIBCURL) -I$(top_srcdir)/src  -I$(top_srcdir) -shadow -python -c++ $(top_srcdir)/src/coot.i
 
@@ -213,12 +201,12 @@ AM_CPPFLAGS = \
 
 pkginclude_HEADERS = crunch-model.hh
 
-libexec_PROGRAMS = coot-bin dynarama-bin
-bin_PROGRAMS = density-score-by-residue-real fix-nomenclature-errors
-dist_bin_SCRIPTS = coot density-score-by-residue dynarama
+libexec_PROGRAMS = coot-bin coot-density-score-by-residue-bin dynarama-bin
+bin_PROGRAMS =  coot-fix-nomenclature-errors
+dist_bin_SCRIPTS = coot coot-density-score-by-residue
 check_PROGRAMS = test-coot-align test-cholesky
 
-fix_nomenclature_errors_SOURCES = \
+coot_fix_nomenclature_errors_SOURCES = \
 	fix-nomenclature.cc    \
 	coot-nomenclature.hh   \
 	coot-nomenclature.cc
@@ -242,6 +230,7 @@ coot_bin_SOURCES = \
 	c-interface-build-gui.cc \
 	c-interface-database.hh  \
 	c-interface-database.cc  \
+	c-interface-generic-objects.h	 \
 	c-interface-gui.cc	 \
 	c-interface-gtk2.cc	 \
 	c-interface-gtk-widgets.h \
@@ -277,6 +266,7 @@ coot_bin_SOURCES = \
 	c-interface-sequence.cc  \
 	c-interface-sequence.hh  \
 	c-interface-sfs.cc	 \
+	c-interface-sharpen.cc   \
 	c-interface-superpose.cc \
 	c-interface-validate.cc	 \
 	c-interface-view.cc	 \
@@ -291,8 +281,13 @@ coot_bin_SOURCES = \
 	cc-interface-network.hh  	\
 	cc-interface-mogul.hh    \
 	cc-interface-scripting.hh \
+	cc-interface-user-defined-atom-colours.hh \
+	cc-interface-user-defined-atom-colours.cc \
 	callbacks.c callbacks.h	 \
         canvas-fixes.hh          \
+	cfc.cc cfc.hh            \
+        cfc-widgets.hh           \
+        cfc-widgets-c-interface.h \
 	change-dir.cc		 \
 	change-dir.hh		 \
 	cmtz-interface-gui.hh	 \
@@ -384,6 +379,7 @@ coot_bin_SOURCES = \
 	ligand-check.hh          \
         map-statistics.hh        \
 	molecule-class-info.cc 	 \
+	molecule-class-info-bonds.cc    \
 	molecule-class-info-maps.cc 	\
 	molecule-class-info-maps-2.cc 	\
 	molecule-class-info-kdc.cc      \
@@ -396,6 +392,7 @@ coot_bin_SOURCES = \
 	molecule-class-info-refine.cc   \
         molecule-class-info-kk.cc       \
 	molecule-class-info-surface.cc 	\
+	molecule-class-info-patterson.cc \
 	molecule-class-info-ncs.cc 	\
 	molecule-class-info-widget-work.cc \
 	mtz-column-auto-read.hh  \
@@ -451,11 +448,16 @@ coot_bin_SOURCES = \
 	atom-selection.hh 	 \
 	ncs.hh 		         \
 	model-view.hh 		 \
+	view.hh 		 \
+	view.cc 		 \
 	new-centre.hh
 
 if COOT_USE_PYTHON
    coot_bin_SOURCES += coot_wrap_python_gtk2.cc
    EXTRA_DIST += coot_wrap_python_pre_gtk2.cc 
+endif
+if COOT_USE_PYTHON
+   dist_python_PYTHON = coot.py coot.pth
 endif
 
 
@@ -468,7 +470,7 @@ endif
 
 # graphics_crash_test_LDADD = @GTK_LIBS@ $(GTKGL_CONTEXT_LIBS) $(INTLLIBS) $(GLUT_LIBS) -lGL -lGLU
 
-fix_nomenclature_errors_LDADD = \
+coot_fix_nomenclature_errors_LDADD = \
 	$(top_builddir)/ligand/libcoot-ligand.la      		\
 	$(top_builddir)/db-main/libcoot-db-main.la      	\
 	$(top_builddir)/ideal/libcoot-ideal.la    		\
@@ -494,6 +496,8 @@ fix_nomenclature_errors_LDADD = \
 
 # coot_bin_LDFLAGS = -static -lstdc++
 coot_bin_LDFLAGS =
+# coot_bin_CXXFLAGS=-Wl,--export-dynamic -dynamiclib
+#  -Wl,-undefined -Wl,dynamic_lookup 
 
 # 20101220 Note: when libtool/ltmain.sh is fixed, OPENMP_CFLAGS will
 # not be needed here. So says Justin Lecher (see email).
@@ -571,8 +575,8 @@ test_coot_align_LDADD =	\
 # test_lbg_graph_LDADD = $(MMDB_LIBS)
 
 
-density_score_by_residue_real_SOURCES = density-score-by-residue-src.cc
-density_score_by_residue_real_LDADD  =	\
+coot_density_score_by_residue_bin_SOURCES = density-score-by-residue-src.cc
+coot_density_score_by_residue_bin_LDADD  =	\
 	$(top_builddir)/geometry/libcoot-geometry.la    	\
 	$(top_builddir)/coords/libcoot-coords.la 		\
 	$(top_builddir)/mini-mol/libcoot-mini-mol.la 		\
@@ -587,7 +591,6 @@ density_score_by_residue_real_LDADD  =	\
 	$(CLIPPER_LIBS) 	\
 	$(MMDB_LIBS)		\
 	$(GSL_LIBS)
-
 dynarama_bin_SOURCES = dynarama-main.cc rama_plot.cc rama_mousey.cc
 dynarama_bin_LDADD = \
         $(top_builddir)/coords/libcoot-coords.la                \
@@ -599,4 +602,3 @@ dynarama_bin_LDADD = \
         $(GLOB_LIBS)            \
         $(GOOCANVAS_LIBS)       \
         $(LIBGLADE_LIBS)
-

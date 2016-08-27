@@ -33,6 +33,8 @@
 // molecule-class-info.h can be parsed, is silly.
 
 // For stat, mkdir:
+#include <iomanip> // for std::setw
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -68,8 +70,6 @@
 #include <GL/glut.h> // needed (only?) for wirecube
 #include "globjects.h" // for set_bond_colour()
 #include "skeleton/graphical_skel.h"
-
-#include <iomanip> // for std::setw
 
 
 // #include "coords/mmdb.h"
@@ -463,7 +463,7 @@ molecule_class_info_t::draw_density_map_internal(short int display_lists_for_map
 	    if (xmap_is_diff_map == 1) {
 
 	       if (n_diff_map_draw_vectors > 0) { 
-	       
+
 		  glColor3dv (map_colour[1]);
 		  // we only need to do this if it wasn't done above.
 		  if (n_draw_vectors == 0)
@@ -586,6 +586,8 @@ molecule_class_info_t::draw_solid_density_surface(bool do_flat_shading) {
 	 coot::Cartesian back  = unproject(1.0);
 
 	 glEnable(GL_LIGHTING);
+	 glEnable(GL_LIGHT0); 
+	 glEnable(GL_LIGHT1); 
 	 glEnable(GL_LIGHT2); // OK, for maps
 	 glEnable (GL_BLEND);
 	 glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
@@ -715,8 +717,13 @@ molecule_class_info_t::setup_density_surface_material(bool solid_mode, float opa
       glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 100); // makes a difference.
       glDisable(GL_COLOR_MATERIAL);
 
-      GLfloat  mat_specular[]  = {0.4,  0.4,  0.4,  opacity}; // makes a difference
-      GLfloat  mat_ambient[]   = {.3*map_colour[0][0], 0.3*map_colour[0][1], 0.3*map_colour[0][2], opacity};
+      // narrowing from doubles to floats (there is no glMaterialdv).
+
+      GLfloat  mat_specular[]  = {0.4f,  0.4f,  0.4f,  opacity}; // makes a difference
+      GLfloat  mat_ambient[]   = {0.3*map_colour[0][0],
+				  0.3*map_colour[0][1],
+				  0.3*map_colour[0][2],
+				  opacity};
       GLfloat  mat_diffuse[]   = {map_colour[0][0], map_colour[0][1], map_colour[0][2], opacity};
       GLfloat  mat_shininess[] = {100}; // makes a difference
 	 
@@ -760,12 +767,37 @@ molecule_class_info_t::setup_density_surface_material(bool solid_mode, float opa
       glLightfv(GL_LIGHT2, GL_SPECULAR, specularLight);
 
       glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 128);
-      glDisable(GL_COLOR_MATERIAL);
 
+      // glDisable(GL_COLOR_MATERIAL);
+
+      // the facets shine this colour
       GLfloat  mat_specular[]  = {0.98,  0.98,  0.98,  opacity};
-      GLfloat  mat_ambient[]   = {0.260, 0.260, 0.260, opacity};
-      GLfloat  mat_diffuse[]   = {0.400, 0.400, 0.400, opacity};
-      GLfloat  mat_shininess[] = {100.0};
+      GLfloat  mat_ambient[]   = {0.960, 0.160, 0.160, opacity};
+      GLfloat  mat_diffuse[]   = {0.900, 0.100, 0.100, opacity};
+      GLfloat  mat_shininess[] = {120.0};
+
+      if (is_difference_map_p()) {
+
+	 if (is_neg) {
+	    mat_ambient[0] = 0.03*map_colour[1][0];
+	    mat_ambient[1] = 0.03*map_colour[1][1];
+	    mat_ambient[2] = 0.03*map_colour[1][2];
+	    mat_ambient[3] = opacity;
+	    mat_diffuse[0] = map_colour[1][0];
+	    mat_diffuse[1] = map_colour[1][1];
+	    mat_diffuse[2] = map_colour[1][2];
+	    mat_diffuse[3] = opacity;
+	 } else {
+	    mat_ambient[0] = 0.3*map_colour[0][0];
+	    mat_ambient[1] = 0.3*map_colour[0][1];
+	    mat_ambient[2] = 0.3*map_colour[0][2];
+	    mat_ambient[3] = opacity;
+	    mat_diffuse[0] = map_colour[0][0];
+	    mat_diffuse[1] = map_colour[0][1];
+	    mat_diffuse[2] = map_colour[0][2];
+	    mat_diffuse[3] = opacity;
+	 }
+      }
 
       glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  mat_specular);
       glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat_shininess);
@@ -1097,96 +1129,6 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
    // << imol_no << std::endl;
 }
 
-bool
-molecule_class_info_t::make_patterson(std::string mtz_file_name,
-				      std::string f_col,
-				      std::string sigf_col,
-				      float map_sampling_rate) {
-
-   bool ret_val = 0;
-   if (coot::file_exists(mtz_file_name)) {
-
-      try { 
-	 // KDC Code (examples/cpatterson.cpp)
-	 // 
-	 clipper::CCP4MTZfile mtzin;
-	 mtzin.open_read(mtz_file_name);
-	 clipper::Spacegroup spgr = mtzin.spacegroup();
-	 clipper::Cell       cell = mtzin.cell();
-	 clipper::Resolution reso = mtzin.resolution();
-	 clipper::HKL_info hkls, hklp;
-	 typedef clipper::HKL_data_base::HKL_reference_index HRI;
-
-	 clipper::HKL_data<clipper::data32::F_sigF>     fsig( hkls );
-
-	 // If use weights, use both strings, else just use the first
-	 int use_weights = 0;        // dummy value
-	 std::string weight_col = ""; // dummy value
-	 std::pair<std::string, std::string> p =
-	    make_import_datanames(f_col, sigf_col, weight_col, use_weights);
-	 // std::cout << "======= import_hkl_data using " << p.first << std::endl;
-	 // like this: "/*/*/[FWT]"
-	 mtzin.import_hkl_data(fsig, p.first);
-	 mtzin.close_read();
-      
-	 // get Patterson spacegroup
-	 clipper::Spacegroup
-	    pspgr( clipper::Spgr_descr( spgr.generator_ops().patterson_ops() ) );
-	 hklp.init( pspgr, cell, reso, true );
-      
-	 // make patterson coeffs
-	 int count = 0;
-	 clipper::HKL_data<clipper::data32::F_phi> fphi( hklp );
-	 for ( HRI ih = fphi.first(); !ih.last(); ih.next() ) {
-	    clipper::data32::F_sigF f = fsig[ih.hkl()];
-	    fphi[ih].phi() = 0.0 ;
-	    if ( !f.missing() ) {
-	       fphi[ih].f() = f.f()*f.f();
-	       count++;
-	    }
-	 }
-	 std::cout << "DEBUG:: read " << count << " reflections" << std::endl;
-	 if (count) {
-
-	    // This is a problem for Kevin
-	    // original_fphis_filled = true;
-	    // original_fphis.init(fphi.spacegroup(),fphi.cell(),fphi.hkl_sampling());
-	    // original_fphis = fphi;
-	 }
-
-	 clipper::Grid_sampling grid;
-	 grid.init( pspgr, cell, reso );
-      
-	 // make xmap
-	 clipper::Xmap<float> xmap(pspgr, cell, grid);
-	 xmap.fft_from(fphi);
-	 is_patterson = 1; // needed for contour level protection
-			   // (Pattersons are off-scale, but we should
-			   // be able to change contour).
-
-	 std::string map_name = "Patterson ";
-	 map_name += mtz_file_name;
-	 map_name += " ";
-	 map_name += f_col;
-	 new_map(xmap, map_name);
-	 update_map_in_display_control_widget();
-	 mean_and_variance<float> mv = map_density_distribution(xmap, 40, false);
-	 map_mean_  = mv.mean; 
-	 map_sigma_ = sqrt(mv.variance);
-	 map_max_   = mv.max_density;
-	 map_min_   = mv.min_density;
-	 
-	 set_initial_contour_level();
-	 update_map();
-	 ret_val = 1;
-      }
-
-      catch (const clipper::Message_base &rte) {
-	 std::cout << "WARNING:: bad read of HKL file " << mtz_file_name << std::endl;
-      }
-   }
-   return ret_val;
-}
 
 
 // return succes status, if mtz file is broken or empty, or
@@ -1662,23 +1604,33 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
 	file.open_read(filename);
 
 	em = is_em_map(file);
-	
-	if (1) { 
+
+	bool use_xmap = true; // not an nxmap
+	if (true) {
 	
 	   clipper::Grid_sampling fgs = file.grid_sampling();
-	   try {
-	      file.import_xmap(xmap);
-	   }
-	   catch (const clipper::Message_generic &exc) {
-	      std::cout << "WARNING:: failed to read " << filename
-			<< " Bad ASU (inconsistant gridding?)." << std::endl;
+	   clipper::Cell fcell = file.cell();
+	   double vol = fcell.volume();
+	   if (vol < 1.0) {
+	      std::cout << "WARNING:: non-sane unit cell volume " << vol << " - skip read"
+			<< std::endl;
 	      bad_read = true;
+	   } else {
+
+	      try {
+		 file.import_xmap(xmap);
+	      }
+	      catch (const clipper::Message_generic &exc) {
+		 std::cout << "WARNING:: failed to read " << filename
+			   << " Bad ASU (inconsistant gridding?)." << std::endl;
+		 bad_read = true;
+	      }
 	   }
 	} else {
 
 	   // Should never happen.  Not yet.
 	   // 
-	   std::cout << "=================== EM Map ====================== " << std::endl;
+	   std::cout << "=================== EM Map NXmap =================== " << std::endl;
 	   file.import_nxmap(nxmap);
 	   std::cout << "INFO:: created NX Map with grid " << nxmap.grid().format() << std::endl;
 	} 
@@ -1689,27 +1641,28 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
 
      std::pair<bool, coot::Cartesian> new_centre(false, coot::Cartesian(0,0,0)); // used only for first EM map
 
-     if (em) {
+     if (! bad_read) {
+	if (em) {
+	   // If this was the first map, recentre to the middle of the cell
+	   //
+	   if (imol_no == 0) {
+	      clipper::Cell c = file.cell();
+	      coot::Cartesian m(0.5*c.descr().a(),
+				0.5*c.descr().b(),
+				0.5*c.descr().c());
+	      new_centre.first = true;
+	      new_centre.second = m;
+	      std::cout << "INOF:: map appears to be EM map."<< std::endl;
+	   }
+	}
+	std::cout << "closing CCP4 map: " << filename << std::endl;
+	file.close_read();
 
-	// If this was the first map, recentre to the middle of the cell
-	//
-	if (imol_no == 0) {
-	   clipper::Cell c = file.cell();
-	   coot::Cartesian m(0.5*c.descr().a(),
-			     0.5*c.descr().b(),
-			     0.5*c.descr().c());
-	   new_centre.first = true;
-	   new_centre.second = m;
+	if (new_centre.first) {
+	   graphics_info_t g;
+	   g.setRotationCentre(new_centre.second);
 	}
      }
-     
-     std::cout << "closing CCP4 map: " << filename << std::endl;
-     file.close_read();
-
-     if (new_centre.first) {
-	graphics_info_t g;
-	g.setRotationCentre(new_centre.second);
-     } 
      
    } else {
      std::cout << "attempting to read CNS map: " << filename << std::endl;

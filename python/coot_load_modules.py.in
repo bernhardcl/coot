@@ -83,14 +83,16 @@ post_list = ["coot_gui.py",
             "gui_hole.py",
             "gui_prosmart.py",
             "gui_add_linked_cho.py",
+            "gui_contact_score_isolated_ligand.py",
             "jligand_gui.py",
             "get_recent_pdbe.py",
             "extensions.py",
             "shelx_extensions.py",
             "ligand_check.py",
             "enhanced_ligand.py",
+            "gui_ligand_sliders.py",
             "coot_toolbuttons.py",
-	    "pdbe_validation_data.py",
+	        "pdbe_validation_data.py",
             "contact_score_isolated_ligand.py",
             "ligand_validation_sliders.py",
 	    "rcrane_loader.py" # calls set_found_coot_gui()
@@ -135,6 +137,7 @@ if use_gui_qm:
             # we do have guile_gtk and dont want to have 
             # the extra extensions from python
             python_list.remove("extensions.py")
+	    python_list.remove("gui_contact_score_isolated_ligand.py")
     except:
         print "BL INFO:: could not import pygtk and gtk"
         pass    
@@ -183,7 +186,7 @@ for coot_python_file in python_list:
             execfile(filename)
         except:
             traceback.print_exc()
-            print "BL ERROR: couldn't load ", coot_python_file
+            print "ERROR:: couldn't load ", coot_python_file
             if coot_unittesting:
                 coot_real_exit(1)
     else:

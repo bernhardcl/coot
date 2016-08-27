@@ -977,6 +977,7 @@ graphics_info_t::adjust_refinement_residue_name(const std::string &resname) cons
 // Note: there is now a molecule-class-info version of this - perhaps
 // we should call it?  Next bug fix here: move over to the function call.
 // 
+// deep copy the passed residues
 // 
 mmdb::Manager *
 graphics_info_t::create_mmdbmanager_from_res_selection(mmdb::PResidue *SelResidues, 
@@ -1175,8 +1176,9 @@ graphics_info_t::create_mmdbmanager_from_res_vector(const std::vector<mmdb::Resi
       }
    }
 
-   std::cout << "DEBUG:: in create_mmdbmanager_from_res_vector: " << rv.size()
- 	     << " free residues and " << n_flanker << " flankers" << std::endl;
+   if (false)
+      std::cout << "DEBUG:: in create_mmdbmanager_from_res_vector: " << rv.size()
+		<< " free residues and " << n_flanker << " flankers" << std::endl;
    return std::pair <mmdb::Manager *, std::vector<mmdb::Residue *> > (new_mol, rv);
 }
 
@@ -1747,8 +1749,8 @@ graphics_info_t::execute_rigid_body_refine(short int auto_range_flag) {
 
    /* Atom picking has happened. Actually do it */
 
-   mmdb::Atom *atom1;
-   mmdb::Atom *atom2;
+   mmdb::Atom *atom1 = NULL;
+   mmdb::Atom *atom2 = NULL;
 
    int ires1;  // set according to auto_range_flag
    int ires2;
@@ -1801,9 +1803,26 @@ graphics_info_t::execute_rigid_body_refine(short int auto_range_flag) {
       return; 
    }
    
-   std::string chain(chain_id_1);
    std::string altconf = atom1->altLoc;
+   bool select_altconf = true; // only when refining a single ligand/residue or both atom
+                               // have the same alt conf that is non-blank.
 
+   if (atom1 && atom2) { 
+      if (ires1 != ires2) {
+	 std::string alt_conf_1 = atom1->altLoc;
+	 std::string alt_conf_2 = atom2->altLoc;
+	 if (alt_conf_1 != alt_conf_2) {
+	    select_altconf = false;
+	 } else {
+	    if (alt_conf_1.empty())
+	       select_altconf = false;
+	 }
+      }
+   }
+   
+
+   std::string chain(chain_id_1);
+   
 //    std::cout << "-----------------------------------------------------" << std::endl;
 //    std::cout << "-----------------------------------------------------" << std::endl;
 //    std::cout << " Rigid Body Refinement "
@@ -1850,13 +1869,13 @@ graphics_info_t::execute_rigid_body_refine(short int auto_range_flag) {
 			range_mol[ir].addresidue(mol[ifrag][ires], 1);
 		     }
 		  }
-		  catch (std::runtime_error rte) {
+		  catch (const std::runtime_error &rte) {
 		     std::cout << "ERROR:: execute_rigid_body_refine() " << rte.what() << std::endl;
 		  } 
 		  
 
 		  for (unsigned int iat=0; iat<mol[ifrag][ires].atoms.size(); iat++) {
-		     if (mol[ifrag][ires][iat].altLoc == altconf) {
+		     if ((mol[ifrag][ires][iat].altLoc == altconf) || !select_altconf) {
 // 			std::cout << "From ref res delete atom "
 // 				  << mol[ifrag][ires][iat] << std::endl;
 			from_ref_delete_atom_indices.push_back(iat);
@@ -3264,11 +3283,11 @@ graphics_info_t::drag_intermediate_atom(const coot::atom_spec_t &atom_spec, cons
 	    }
 	 }
       }
+      Bond_lines_container bonds(*moving_atoms_asc, geom_p, 0, 1, 0);
+      regularize_object_bonds_box.clear_up();
+      regularize_object_bonds_box = bonds.make_graphical_bonds();
+      graphics_draw();
    }
-   Bond_lines_container bonds(*moving_atoms_asc, geom_p, 0, 1, 0);
-   regularize_object_bonds_box.clear_up();
-   regularize_object_bonds_box = bonds.make_graphical_bonds();
-   graphics_draw();
 }
 
 
@@ -3960,28 +3979,34 @@ graphics_info_t::delete_residue_range(int imol,
 				      const coot::residue_spec_t &res1,
 				      const coot::residue_spec_t &res2) {
 
-   molecules[imol].delete_zone(res1, res2);
-   if (delete_item_widget) {
-      GtkWidget *checkbutton = lookup_widget(graphics_info_t::delete_item_widget,
-					     "delete_item_keep_active_checkbutton");
-      if (GTK_TOGGLE_BUTTON(checkbutton)->active) {
-	 // don't destroy it.
-      } else {
-	 gint upositionx, upositiony;
-	 gdk_window_get_root_origin (delete_item_widget->window, &upositionx, &upositiony);
-	 delete_item_widget_x_position = upositionx;
-	 delete_item_widget_y_position = upositiony;
-	 gtk_widget_destroy(delete_item_widget);
-	 delete_item_widget = 0;
-	 normal_cursor();
+   if (is_valid_model_molecule(imol)) {
+      molecules[imol].delete_zone(res1, res2);
+      if (delete_item_widget) {
+	 GtkWidget *checkbutton = lookup_widget(graphics_info_t::delete_item_widget,
+						"delete_item_keep_active_checkbutton");
+	 if (GTK_TOGGLE_BUTTON(checkbutton)->active) {
+	    // don't destroy it.
+	 } else {
+	    gint upositionx, upositiony;
+	    gdk_window_get_root_origin (delete_item_widget->window, &upositionx, &upositiony);
+	    delete_item_widget_x_position = upositionx;
+	    delete_item_widget_y_position = upositiony;
+	    gtk_widget_destroy(delete_item_widget);
+	    delete_item_widget = 0;
+	    normal_cursor();
+	 }
       }
-   }
 
-   if ((imol >=0) && (imol < n_molecules())) {
-      graphics_info_t::molecules[imol].delete_zone(res1, res2);
-      if (graphics_info_t::go_to_atom_window) {
+      if (graphics_info_t::go_to_atom_window)
 	 update_go_to_atom_window_on_changed_mol(imol);
-      }
+
+      // faster is passing a blank asc, but to do that needs to check that
+      // updating other geometry graphs will work (not crash) with residues/mol
+      // unset.
+      //
+      // atom_selection_container_t asc = molecules[imol].atom_sel;
+      atom_selection_container_t asc;
+      update_geometry_graphs(asc, imol);
    }
    graphics_draw();
 }

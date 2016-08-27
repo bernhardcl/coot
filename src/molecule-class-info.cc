@@ -186,6 +186,8 @@ molecule_class_info_t::handle_read_draw_molecule(int imol_no_in,
 
       set_have_unit_cell_flag_maybe();
 
+      add_molecular_symmetry_matrices(); // process REMARK 350 BIOMT[123]
+
       if (molecule_is_all_c_alphas()) {
 	 ca_representation();
       } else {
@@ -698,7 +700,11 @@ molecule_class_info_t::get_bond_colour_by_mol_no(int i, bool against_a_dark_back
 	 
 	 switch (i) {
 	 case CARBON_BOND:
-	    rgb[0] = 0.7; rgb[1] =  0.7; rgb[2] =  0.0;
+	    if (use_bespoke_grey_colour_for_carbon_atoms) {
+	       rgb = bespoke_carbon_atoms_colour;
+	    } else {
+	       rgb[0] = 0.7; rgb[1] =  0.7; rgb[2] =  0.0;
+	    }
 	    break;
 	 case YELLOW_BOND: 
 	    rgb[0] = 0.6; rgb[1] =  0.9; rgb[2] =  0.3;
@@ -784,8 +790,13 @@ molecule_class_info_t::get_bond_colour_by_mol_no(int i, bool against_a_dark_back
       rgb.rotate(float(1.0 - 21.0/360.0));
 
       if (graphics_info_t::rotate_colour_map_on_read_pdb_c_only_flag) {
-	 if (i == CARBON_BOND)
-	    rgb.rotate(rotation_size);
+	 if (i == CARBON_BOND) {
+	    if (use_bespoke_grey_colour_for_carbon_atoms) {
+	       rgb = bespoke_carbon_atoms_colour;
+	    } else {
+	       rgb.rotate(rotation_size);
+	    }
+	 }
       } else {
 	 rgb.rotate(rotation_size);
       }
@@ -817,8 +828,14 @@ molecule_class_info_t::set_bond_colour_by_mol_no(int i, bool against_a_dark_back
       }
       if (against_a_dark_background) { 
 	 switch (i) {
-	 case CARBON_BOND: 
-	    rgb[0] = 0.7; rgb[1] =  0.7; rgb[2] =  0.0;
+	 case CARBON_BOND:
+	    if (use_bespoke_grey_colour_for_carbon_atoms) {
+	       rgb[0] = bespoke_carbon_atoms_colour[0];
+	       rgb[1] = bespoke_carbon_atoms_colour[1];
+	       rgb[2] = bespoke_carbon_atoms_colour[2];
+	    } else {
+	       rgb[0] = 0.7; rgb[1] =  0.7; rgb[2] =  0.0;
+	    }
 	    break;
 	 case YELLOW_BOND: 
 	    rgb[0] = 0.6; rgb[1] =  0.9; rgb[2] =  0.3;
@@ -902,11 +919,20 @@ molecule_class_info_t::set_bond_colour_by_mol_no(int i, bool against_a_dark_back
       rgb = rotate_rgb(rgb, float(1.0 - 21.0/360.0));
 
       if (graphics_info_t::rotate_colour_map_on_read_pdb_c_only_flag) {
-	 if (i == CARBON_BOND) { 
-	    std::vector<float> rgb_new = rotate_rgb(rgb, rotation_size);
-	    bond_colour_internal = rgb_new;
+	 if (i == CARBON_BOND) {
+
+	    if (use_bespoke_grey_colour_for_carbon_atoms) {
+	       bond_colour_internal[0] = bespoke_carbon_atoms_colour[0];
+	       bond_colour_internal[1] = bespoke_carbon_atoms_colour[1];
+	       bond_colour_internal[2] = bespoke_carbon_atoms_colour[2];
+	    } else {
+	       std::vector<float> rgb_new = rotate_rgb(rgb, rotation_size);
+	       bond_colour_internal = rgb_new;
+	    }
 	    if (graphics_info_t::use_graphics_interface_flag)
-	       glColor3f(rgb_new[0],rgb_new[1], rgb_new[2]);
+	       glColor3f(bond_colour_internal[0],
+			 bond_colour_internal[1],
+			 bond_colour_internal[2]);
 	 } else {
 	    bond_colour_internal = rgb;
 	    if (graphics_info_t::use_graphics_interface_flag)
@@ -924,22 +950,49 @@ molecule_class_info_t::set_bond_colour_by_mol_no(int i, bool against_a_dark_back
 }
 
 
-// aka rainbow - or maybe b factor, occupancy
+// aka rainbow - or maybe b factor, occupancy or user defined colour index
+// 
 void
-molecule_class_info_t::set_bond_colour_by_colour_wheel_position(int i, int bond_type) {
+molecule_class_info_t::set_bond_colour_by_colour_wheel_position(int i, int bonds_box_type) {
 
-   float max_colour = 30;
    std::vector<float> rgb(3);
-   rgb[0] = 0.2; rgb[1] =  0.2; rgb[2] =  0.8; // blue
+   rgb[0] = 0.2f; rgb[1] =  0.2f; rgb[2] =  0.8f; // blue
    
-   // 30 is the size of rainbow colours, 0 -> 1.0 is the range of rainbow colours
+   bool done = false;
+   int offset = 0; // blue starts at 0
    
-   float rotation_size = 1.0 - float(i) * 0.7/max_colour;
-   rgb = rotate_rgb(rgb, rotation_size);
+   if (bonds_box_type == coot::COLOUR_BY_USER_DEFINED_COLOURS_BONDS) {
+      if (i == 0) {
+	 rgb[0] = 0.8f; rgb[1] =  0.8f; rgb[2] =  0.8f; // white
+	 done = true;
+      }
+      if (i == 1) {
+	 rgb[0] = 0.3f; rgb[1] =  0.3f; rgb[2] =  0.3f; // dark-grey
+	 done = true;
+      }
+      offset=2; // blue starts at 2.
+   }
+   if (! done) {
+      float max_colour = 30;
+   
+      // 30 is the size of rainbow colours, 0 -> 1.0 is the range of rainbow colours
+   
+      float rotation_size = 1.0 - float(i-offset) * 0.7/max_colour;
+      rgb = rotate_rgb(rgb, rotation_size);
+   }
+
+   // rotation_size size has useful colours between
+   // 1.0 (or higher?) and 0.0.
+   // Below 0.0, to -0.65 (more than -0.68) (dependant on starting rgb
+   // values I guess) there is amusing colour continuation of the colour
+   // wheel (red through purple to blue and further).
+   //
+   if (false)
+      std::cout << "set_bond_colour_by_colour_wheel_position "  << i << " " << " "
+		<< rgb[0] << " " << rgb[1] << " " << rgb[2] << " " << std::endl;
    bond_colour_internal = rgb;
    glColor3f(rgb[0], rgb[1], rgb[2]);
 }
-
 
 
 // We find a box (symm: 2 trans: 0 0 0), but we don't find any atoms
@@ -1885,7 +1938,8 @@ int molecule_class_info_t::remove_atom_label(char *chain_id, int iresno, char *a
  
 void
 molecule_class_info_t::draw_molecule(short int do_zero_occ_spots,
-				     bool against_a_dark_background) {
+				     bool against_a_dark_background,
+				     bool show_cis_peptide_markups) {
 
    if (has_model()) { 
       if (draw_it == 1) {
@@ -1902,7 +1956,8 @@ molecule_class_info_t::draw_molecule(short int do_zero_occ_spots,
 		  }
 	       }
 	    }
-	    cis_peptide_markups();
+	    if (show_cis_peptide_markups)
+	       cis_peptide_markups();
 	 }
       }
    }
@@ -2080,10 +2135,15 @@ molecule_class_info_t::display_bonds(const graphical_bonds_container &bonds_box,
 
       if (bonds_box_type != coot::COLOUR_BY_RAINBOW_BONDS) {
 	 // if test suggested by Ezra Peisach.
-	 if (bonds_box.bonds_[i].num_lines > 0)
-	    set_bond_colour_by_mol_no(i, against_a_dark_background); // outside inner loop
+	 if (bonds_box.bonds_[i].num_lines > 0) {
+	    if (bonds_box_type == coot::COLOUR_BY_USER_DEFINED_COLOURS_BONDS) {
+	       set_bond_colour_by_colour_wheel_position(i, bonds_box_type);
+	    } else {
+	       set_bond_colour_by_mol_no(i, against_a_dark_background); // outside inner loop
+	    }
+	 }
       } else {
-	 set_bond_colour_by_colour_wheel_position(i, coot::COLOUR_BY_RAINBOW);
+	 set_bond_colour_by_colour_wheel_position(i, bonds_box_type);
       }
       int linesdrawn = 0;
 
@@ -2362,10 +2422,15 @@ molecule_class_info_t::display_symmetry_bonds() {
 			 << isn << " created_flag: " 
 			 << gbc.symmetry_has_been_created << " "
 			 << "\n" ;
+	    
+	    // std::cout << "display_symmetry_bonds() here 5A " << gbc.symmetry_has_been_created
+	    // << std::endl;
 
-	    if (gbc.symmetry_has_been_created == 1) {
+            if (gbc.symmetry_has_been_created == 1) {
 
-	       if (0) 
+	       // std::cout << "display_symmetry_bonds() here 6 " << std::endl;
+	       
+	       if (true) 
 		  std::cout << "num_colours: " << gbc.num_colours
 			    << std::endl;
 	       
@@ -2737,8 +2802,9 @@ molecule_class_info_t::add_additional_representation(int representation_type,
       int display_list_handle_index = make_ball_and_stick(info.mmdb_string(),
 							  bonds_width, sphere_size, do_spheres,
 							  glci, geom);
+      int n_display_list_tags = display_list_tags.size();
       if ((display_list_handle_index >= 0) &&
-	  (display_list_handle_index < display_list_tags.size())) {
+	  (display_list_handle_index < n_display_list_tags)) {
 	 add_reps[n_rep].add_display_list_handle(display_list_handle_index);
       } 
    }
@@ -2762,7 +2828,8 @@ molecule_class_info_t::adjust_additional_representation(int represenation_number
 void
 molecule_class_info_t::clear_additional_representation(int representation_number) {
 
-   if (add_reps.size() > representation_number) {
+   int n_add_reps = add_reps.size();
+   if (n_add_reps > representation_number) {
       if (representation_number >= 0) {
 	 add_reps[representation_number].clear(); 
       } 
@@ -2773,7 +2840,8 @@ void
 molecule_class_info_t::set_show_additional_representation(int representation_number,
 							  bool on_off_flag) {
 
-   if (add_reps.size() > representation_number) {
+   int n_add_reps = add_reps.size();
+   if (n_add_reps > representation_number) {
       if (representation_number >= 0) {
 	 add_reps[representation_number].show_it = on_off_flag;
 	 if (add_reps[representation_number].representation_type == coot::BALL_AND_STICK ||
@@ -2789,7 +2857,7 @@ molecule_class_info_t::set_show_additional_representation(int representation_num
 void
 molecule_class_info_t::set_show_all_additional_representations(bool on_off_flag) {
    int n_reps = add_reps.size();
-   for (unsigned int i=0; i<n_reps; i++)
+   for (int i=0; i<n_reps; i++)
       set_show_additional_representation(i, on_off_flag);
 }
 
@@ -2798,7 +2866,7 @@ molecule_class_info_t::all_additional_representations_off_except(int rep_no,
 								 bool ball_and_sticks_off_too_flag) {
 
    int n_reps = add_reps.size();
-   for (unsigned int i=0; i<n_reps; i++)
+   for (int i=0; i<n_reps; i++)
       if (i != rep_no)
 	 if (ball_and_sticks_off_too_flag ||
 	     add_reps[i].representation_type != coot::BALL_AND_STICK)
@@ -2913,8 +2981,10 @@ molecule_class_info_t::label_symmetry_atom(int i) {
  
    // same test as has_model():
    if (has_model()) {
+
+      unsigned int i_unsigned(i);
       
-      if (i < labelled_symm_atom_index_list.size()) { 
+      if (i_unsigned < labelled_symm_atom_index_list.size()) { 
 
 	 int iatom_index = labelled_symm_atom_index_list[i];
 
@@ -3212,6 +3282,14 @@ molecule_class_info_t::make_bonds_type_checked() {
       b_factor_representation();
    if (bonds_box_type == coot::CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR)
       b_factor_representation_as_cas();
+   if (bonds_box_type == coot::COLOUR_BY_USER_DEFINED_COLOURS_BONDS)
+      user_defined_colours_representation(g.Geom_p(), true); // hack, because we need to remeber somehow
+                                                             // if this was called with all-atom or CA-only.
+                                                             // See c-interface.cc
+                                                             // graphics_to_user_defined_atom_colours_representation()
+                                                             // Perhaps we need two functions
+                                                             // user_defined_colours_representation_all()
+                                                             // user_defined_colours_representation_Calpha() [+ ligands]
    
    // bleugh. But if we don't do this here, where *do* we do it?
    // Should the glci be passed to make_bonds_type_checked()?  Urgh.
@@ -3333,8 +3411,8 @@ molecule_class_info_t::update_additional_representations(const gl_context_info_t
 					  add_reps[i].sphere_radius, 
 					  add_reps[i].draw_atom_spheres_flag, 
 					  gl_info, geom);
-
-	 if ((handle >= 0) && (handle < display_list_tags.size()))
+	 int n_display_list_tags = display_list_tags.size();
+	 if ((handle >= 0) && (handle < n_display_list_tags))
 	    add_reps[i].update_self_display_list_entity(handle);
 	 display_list_tags[handle].display_it = add_reps[i].show_it;
       }
@@ -6392,14 +6470,12 @@ molecule_class_info_t::make_backup() { // changes history details
       char *env_var = getenv("COOT_BACKUP_DIR");
       if (env_var) { 
 	 struct stat buf;
-#ifdef WINDOWS_MINGW
-         // we better debackslash the directory
+
+         // we better debackslash the directory (for windows)
 	 std::string tmp_dir = env_var;
          tmp_dir = coot::util::intelligent_debackslash(tmp_dir);
 	 int err = stat(tmp_dir.c_str(), &buf);
-#else
-	 int err = stat(env_var, &buf);
-#endif // MINGW
+	 
 	 if (!err) {
 	    if (! S_ISDIR(buf.st_mode)) {
 	       env_var = NULL;
@@ -6425,11 +6501,11 @@ molecule_class_info_t::make_backup() { // changes history details
 	    mmdb::byte gz = mmdb::io::GZM_NONE;
 #else
 	    mmdb::byte gz;
-        if (g.backup_compress_files_flag) {
-	   gz = mmdb::io::GZM_ENFORCE;
-        } else {
-	   gz = mmdb::io::GZM_NONE;
-        }
+	    if (g.backup_compress_files_flag) {
+	       gz = mmdb::io::GZM_ENFORCE;
+	    } else {
+	       gz = mmdb::io::GZM_NONE;
+	    }
 #endif
 	    // Writing out a modified binary mmdb like this results in the
 	    // file being unreadable (crash in mmdb read).
@@ -6454,7 +6530,8 @@ molecule_class_info_t::make_backup() { // changes history details
 	       max_history_index++;
 	    history_index++;
 	 } else {
-	    std::cout << "BACKUP:: directory "<< backup_dir << " failure" << std::endl;
+	    std::cout << "WARNING:: backup directory "<< backup_dir
+		      << " failure to exist or create" << std::endl;
 	 } 
       } else {
 	 std::cout << "BACKUP:: Ooops - no atoms to backup for this empty molecule"
@@ -7039,12 +7116,6 @@ molecule_class_info_t::store_refmac_phase_params(const std::string &phi,
   refmac_hlb_col = hlb; 
   refmac_hlc_col = hlc; 
   refmac_hld_col = hld; 
-}
-
-void
-molecule_class_info_t::store_refmac_file_mtz_filename(const std::string &mtz_filename) { 
-
-   refmac_file_mtz_filename = mtz_filename; 
 }
 
 
@@ -7773,7 +7844,9 @@ molecule_class_info_t::jed_flip(coot::residue_spec_t &spec,
 	    } else { 
 	       std::vector<std::vector<std::string> > ring_atoms_sets = p.second.get_ligand_ring_list();
 	       std::vector<coot::dict_torsion_restraint_t> interesting_torsions;
-	       for (unsigned int it=0; it<all_torsions.size(); it++) { 
+	       for (unsigned int it=0; it<all_torsions.size(); it++) {
+
+		  bool is_ring_torsion_flag = all_torsions[it].is_ring_torsion(ring_atoms_sets);
 		  if (! all_torsions[it].is_ring_torsion(ring_atoms_sets)) {
 		     if (all_torsions[it].atom_id_2_4c() == atom_name)
 			interesting_torsions.push_back(all_torsions[it]);
@@ -7815,7 +7888,7 @@ molecule_class_info_t::jed_flip(coot::residue_spec_t &spec,
 }
 
 
-// return a non-null string on a problem
+// return a non-empty string on a problem
 // 
 std::string
 molecule_class_info_t::jed_flip_internal(coot::atom_tree_t &tree,
@@ -8055,7 +8128,7 @@ molecule_class_info_t::transform_by(mmdb::mat44 mat) {
 					 mat[2][0], mat[2][1], mat[2][2]);
       clipper::Coord_orth cco(mat[0][3], mat[1][3], mat[2][3]);
       clipper::RTop_orth rtop(clipper_mat, cco);
-      std::cout << "INFO:: coordinates transformed by orthonal matrix: \n"
+      std::cout << "INFO:: coordinates transformed by orthogonal matrix: \n"
 		<< rtop.format() << std::endl;
       clipper::Rotation rtn( clipper_mat );
       clipper::Polar_ccp4 polar = rtn.polar_ccp4();
@@ -8087,7 +8160,7 @@ void
 molecule_class_info_t::transform_by(const clipper::RTop_orth &rtop) {
 
    make_backup();
-   std::cout << "INFO:: coordinates transformed by orthonal matrix: \n"
+   std::cout << "INFO:: coordinates transformed by orthogonal matrix: \n"
 	     << rtop.format() << std::endl;
    if (have_unit_cell) {
 

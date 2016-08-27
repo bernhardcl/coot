@@ -16,7 +16,7 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc.,  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
 #ifdef USE_PYTHON
@@ -228,6 +228,10 @@ graphics_info_t::do_mutation(const std::string &residue_type, short int do_stub_
 	 // This is the wrong function, isn't it?
 	 update_go_to_atom_window_on_changed_mol(mutate_residue_imol);
 
+	 update_geometry_graphs(molecules[mutate_auto_fit_residue_imol].atom_sel,
+				mutate_auto_fit_residue_imol);
+	 
+
 	 run_post_manipulation_hook(mutate_auto_fit_residue_imol, MUTATED);
 	    
       } else { 
@@ -240,6 +244,8 @@ graphics_info_t::do_mutation(const std::string &residue_type, short int do_stub_
       molecules[mutate_residue_imol].mutate(mutate_residue_atom_index, residue_type,
 					    do_stub_flag); 
       update_go_to_atom_window_on_changed_mol(mutate_residue_imol);
+      update_geometry_graphs(molecules[mutate_auto_fit_residue_imol].atom_sel,
+			     mutate_auto_fit_residue_imol);
       run_post_manipulation_hook(mutate_auto_fit_residue_imol, MUTATED);
 
    }

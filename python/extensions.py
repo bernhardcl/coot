@@ -918,7 +918,23 @@ if (have_coot_python):
        try:
          r1 = int(text1)
          r2 = int(text2)
-         copy_residue_range_from_ncs_master_to_others(imol, chain_id, r1, r2)
+         if (chain_id == ncs_master_chain_id(imol)):
+           # hunkey dorey
+           copy_residue_range_from_ncs_master_to_others(imol, chain_id, r1, r2)
+         else:
+           # different given master to current master
+           # ask what to do.
+           txt = "Current master chain is %s, but you asked to copy from %s.\n" \
+                 %(ncs_master_chain_id(imol), chain_id)
+           txt += "Apply this master change?\n\n"
+           txt += "N.B. if no, then nothing is copied."
+           r = yes_no_dialog(txt, "Change Master")
+           if r:
+             ncs_control_change_ncs_master_to_chain_id(imol, chain_id)
+             copy_residue_range_from_ncs_master_to_others(imol, chain_id, r1, r2)
+             ## could change master back?!
+           else:
+             info_dialog("Master chain was not changed and copy not applied.")
        except:
          print "BL WARNING:: no valid number input"
 
@@ -938,7 +954,24 @@ if (have_coot_python):
      def copy_ncs_chain_func(imol, chain_id):
        ncs_chains = ncs_chain_ids(imol)
        if (ncs_chains):
-         copy_from_ncs_master_to_others(imol, chain_id)
+         # maybe this could be a function to avoid repetition.
+         if (chain_id == ncs_master_chain_id(imol)):
+           # hunkey dorey
+           copy_from_ncs_master_to_others(imol, chain_id)
+         else:
+           # different given master to current master
+           # ask what to do.
+           txt = "Current master chain is %s, but you asked to copy from %s.\n" \
+                 %(ncs_master_chain_id(imol), chain_id)
+           txt += "Apply this master change?\n\n"
+           txt += "N.B. if no, then nothing is copied."
+           r = yes_no_dialog(txt, "Change Master")
+           if r:
+             ncs_control_change_ncs_master_to_chain_id(imol, chain_id)
+             copy_from_ncs_master_to_others(imol, chain_id)
+             ## could change master back?!
+           else:
+             info_dialog("Master chain was not changed and copy not applied.")
        else:
          s = "You need to define NCS operators for molecule " + str(imol)
          info_dialog(s)
@@ -986,7 +1019,12 @@ if (have_coot_python):
        "NCS Ghosts by Residue Range...",
        lambda func: molecule_chooser_gui("Make local NCS ghosts for molecule:",
                                          lambda imol: ncs_ghost_res_range_func(imol)))
-         
+
+     add_simple_coot_menu_menuitem(
+       submenu_ncs,
+       "Update NCS Ghosts using Local Match",
+       lambda func: update_ncs_ghosts_by_local_sphere())
+
 
      add_simple_coot_menu_menuitem(
        submenu_ncs,
@@ -1111,7 +1149,14 @@ if (have_coot_python):
                        valid_model_molecule_qm, "Logfile name: ", "",
                        lambda imol, text: read_refmac_log(imol, text)))
                        
-
+     add_simple_coot_menu_menuitem(
+       submenu_refine,
+       "Occupancy refinement input for REFMAC...",
+       lambda func: generic_chooser_and_file_selector("Extra restraints file",
+                       valid_model_molecule_qm, "Restraints file name: ",
+                       "refmac_extra_params.txt",
+                       lambda imol, text: restraints_for_occupancy_refinement(imol, text)))
+       
 
      # An example with a submenu:
      #
@@ -1208,6 +1253,12 @@ if (have_coot_python):
        submenu_pdbe, "PDBe recent structures...",
        lambda func: pdbe_latest_releases_gui())
 
+     # we do test for refmac at startup not runtime (for simplicity)
+     if command_in_path_qm("refmac5"):
+       mess = " Get it "
+     else:
+       mess = "\n  WARNING::refmac5 not in the path - SF calculation will fail  \n\n"
+       
      add_simple_coot_menu_menuitem(
        submenu_pdbe, "Get from PDBe...",
        lambda func: generic_single_entry("Get PDBe accession code",
@@ -1316,6 +1367,7 @@ if (have_coot_python):
        bns_handle = make_ball_and_stick(imol, text, 0.18, 0.3, 1)
        print "handle: ", bns_handle
 
+
      global default_ball_and_stick_selection    # maybe should be at the top of the file
      add_simple_coot_menu_menuitem(
        submenu_representation,
@@ -1324,20 +1376,6 @@ if (have_coot_python):
                                               "Atom Selection:",
                                               default_ball_and_stick_selection,
                                               lambda imol, text: make_ball_n_stick_func(imol, text)))
-
-     def add_balls_to_simple_sticks(mode):
-       for imol in model_molecule_list():
-         set_draw_stick_mode_atoms(imol, mode)
-
-     add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Add Balls to Simple Sticks",
-       lambda func: add_balls_to_simple_sticks(1))
-
-     add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Simple Sticks (No Balls)",
-       lambda func: add_balls_to_simple_sticks(0))
 
      add_simple_coot_menu_menuitem(
        submenu_representation,

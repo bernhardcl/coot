@@ -114,7 +114,16 @@ namespace lig_build {
 	 double new_x = x_cen + (x - x_cen) * cos_theta - (y - y_cen) * sin_theta;
 	 double new_y = y_cen + (x - x_cen) * sin_theta + (y - y_cen) * cos_theta;
 	 return pos_t(new_x, new_y);
-      } 
+      }
+      
+      pos_t rotate_about(const pos_t &cen, double angle) {
+	 double theta = angle * DEG_TO_RAD;
+	 double sin_theta = sin(theta);
+	 double cos_theta = cos(theta);
+	 double new_x = cen.x + (x - cen.x) * cos_theta - (y - cen.y) * sin_theta;
+	 double new_y = cen.y + (x - cen.x) * sin_theta + (y - cen.y) * cos_theta;
+	 return pos_t(new_x, new_y);
+      }
       
       pos_t operator*(float sc) {
 	 return pos_t(x*sc, y*sc);
@@ -124,7 +133,11 @@ namespace lig_build {
       } 
       double lengthsq() const {
 	 return (x*x + y*y);
-      } 
+      }
+      double theta() const {
+	 // down the canvas is positve Y, so we need to correct for that
+	 return atan2(-y,x);
+      }
       static double length(const pos_t &p1, const pos_t &p2) {
 	 double a = (p2.x - p1.x);
 	 double b = (p2.y - p1.y);
@@ -212,10 +225,11 @@ namespace lig_build {
 	 offsets.push_back(offset_text_t(atom_id_in));
 	 if (formal_charge != 0) { 
 	    offset_text_t superscript("");
-	    if (formal_charge == -1) superscript=offset_text_t("-");
-	    if (formal_charge == -2) superscript=offset_text_t("-2");
+	    // if (formal_charge == -1) superscript=offset_text_t("-"); // try U+2012 or U+2013
+	    if (formal_charge == -1) superscript=offset_text_t("−");
+	    if (formal_charge == -2) superscript=offset_text_t("2-");
 	    if (formal_charge == +1) superscript=offset_text_t("+");
-	    if (formal_charge == +2) superscript=offset_text_t("+2");
+	    if (formal_charge == +2) superscript=offset_text_t("2+");
 	    superscript.superscript = true;
 	    superscript.tweak = pos_t(8,0);
 	    offsets.push_back(superscript);
@@ -400,14 +414,14 @@ namespace lig_build {
 	 is_closed_ = 0;
 	 bond_type = BOND_UNDEFINED;
       }
-      bond_t(int first, int second, bond_type_t bt) {
+      bond_t(unsigned int first, unsigned int second, bond_type_t bt) {
 	 atom_1 = first;
 	 atom_2 = second;
 	 bond_type = bt;
 	 have_centre_pos_ = false;
 	 is_closed_ = 0;
       }
-      bond_t(int first, int second, pos_t centre_pos_in, bond_type_t bt) {
+      bond_t(unsigned int first, unsigned int second, pos_t centre_pos_in, bond_type_t bt) {
 	 atom_1 = first;
 	 atom_2 = second;
 	 bond_type = bt;
@@ -454,17 +468,17 @@ namespace lig_build {
       bool matches_indices(const bond_t &test_bond) const {
 	 if (get_atom_1_index() == test_bond.get_atom_1_index()) {
 	    if (get_atom_2_index() == test_bond.get_atom_2_index()) {
-	       return 1;
+	       return true;
 	    } else {
-	       return 0;
+	       return false;
 	    }
 	 } else {
-	    return 0;
+	    return false;
 	 } 
       }
 
-      int get_other_index(const int &atom_index) const {
-	 int idx = get_atom_1_index();
+      unsigned int get_other_index(const unsigned int &atom_index) const {
+	 unsigned int idx = get_atom_1_index();
 	 if (idx == atom_index)
 	    idx = get_atom_2_index();
 	 return idx;
@@ -516,29 +530,29 @@ namespace lig_build {
 	 }
 	 return std::pair<bool, int> (is_new, new_atom_index);
       }
-      bool member(const int &ind, const std::vector<int> &no_pass_atoms) const {
-	 bool found = 0;
+      bool member(const unsigned int &ind, const std::vector<unsigned int> &no_pass_atoms) const {
+	 bool found = false;
 	 for (unsigned int i=0; i<no_pass_atoms.size(); i++) { 
 	    if (no_pass_atoms[i] == ind) {
-	       found = 1;
+	       found = true;
 	       break;
 	    }
 	 }
 	 return found;
       } 
 
-      std::pair<bool, std::vector<int> >
-      find_bonded_atoms_with_no_pass(int start_atom_index,
-				     int atom_index_other,
-				     int this_atom_index,
-				     const std::vector<int> &no_pass_atoms,
-				     int depth) const {
+      std::pair<bool, std::vector<unsigned int> >
+      find_bonded_atoms_with_no_pass(unsigned int start_atom_index,
+				     unsigned int atom_index_other,
+				     unsigned int this_atom_index,
+				     const std::vector<unsigned int> &no_pass_atoms,
+				     unsigned int depth) const {
 	 
-	 std::vector<int> atoms_bonded_to_atom_index_start;
-	 std::vector<int> local_no_pass_atoms = no_pass_atoms;
+	 std::vector<unsigned int> atoms_bonded_to_atom_index_start;
+	 std::vector<unsigned int> local_no_pass_atoms = no_pass_atoms;
 	 if (depth == 0) {
-	    std::vector<int> empty;
-	    return std::pair<bool, std::vector<int> > (0, empty);
+	    std::vector<unsigned int> empty;
+	    return std::pair<bool, std::vector<unsigned int> > (0, empty);
 	 } else {
 
 	    // get a list of all the atoms that are bonded to this atom not
@@ -546,7 +560,7 @@ namespace lig_build {
       
 	    for (unsigned int i=0; i<bonds.size(); i++) { 
 	       if (bonds[i].get_atom_1_index() == this_atom_index) {
-		  int idx = bonds[i].get_atom_2_index();
+		  unsigned int idx = bonds[i].get_atom_2_index();
 		  if (idx == start_atom_index)
 		     if (depth < (MAX_SEARCH_DEPTH-1)) {
 			if (member(atom_index_other, local_no_pass_atoms)) {
@@ -562,7 +576,7 @@ namespace lig_build {
 			   if (! ifound)
 			      local_no_pass_atoms.push_back(this_atom_index);
 			   // debug_pass_atoms(start_atom_index, this_atom_index, depth, local_no_pass_atoms);
-			   return std::pair<bool, std::vector<int> > (1, local_no_pass_atoms);
+			   return std::pair<bool, std::vector<unsigned int> > (1, local_no_pass_atoms);
 			}
 		     }
 		  if (! member(idx, local_no_pass_atoms)) {
@@ -577,27 +591,27 @@ namespace lig_build {
 		     }
 		     if (! found_this_atom_in_no_pass_atoms)
 			local_no_pass_atoms.push_back(this_atom_index);
-		  } 
+		  }
 	       }
 	       if (bonds[i].get_atom_2_index() == this_atom_index) {
-		  int idx = bonds[i].get_atom_1_index();
+		  unsigned int idx = bonds[i].get_atom_1_index();
 		  if (idx == start_atom_index)
 		     if (depth < (MAX_SEARCH_DEPTH-1)) {
 			if (member(atom_index_other, local_no_pass_atoms)) { 
 			   local_no_pass_atoms.push_back(this_atom_index);
 			   // if this_atom_index was not alread in
 			   // local_no_pass_atoms, then add it.
-			   bool ifound = 0; 
+			   bool ifound = false; 
 			   for (unsigned int ilnp=0; ilnp<local_no_pass_atoms.size(); ilnp++) {
 			      if (local_no_pass_atoms[ilnp] == this_atom_index) {
-				 ifound = 1;
+				 ifound = true;
 				 break;
 			      }
 			   }
 			   if (! ifound)
 			      local_no_pass_atoms.push_back(this_atom_index);
 			   // debug_pass_atoms(start_atom_index, this_atom_index, depth, local_no_pass_atoms);
-			   return std::pair<bool, std::vector<int> > (1, local_no_pass_atoms);
+			   return std::pair<bool, std::vector<unsigned int> > (1, local_no_pass_atoms);
 			}
 		     }
 		  if (! member(idx, local_no_pass_atoms)) {
@@ -626,7 +640,7 @@ namespace lig_build {
 	    }
 	 
 	    for (unsigned int iat=0; iat<atoms_bonded_to_atom_index_start.size(); iat++) { 
-	       std::pair<bool, std::vector<int> > r =
+	       std::pair<bool, std::vector<unsigned int> > r =
 		  find_bonded_atoms_with_no_pass(start_atom_index,
 						 atom_index_other,
 						 atoms_bonded_to_atom_index_start[iat],
@@ -646,8 +660,8 @@ namespace lig_build {
 	       std::cout << local_no_pass_atoms[i] << " ";
 	    std::cout << ")\n";
 	 }
-	 std::vector<int> empty;
-	 return std::pair<bool, std::vector<int> > (0, empty);
+	 std::vector<unsigned int> empty;
+	 return std::pair<bool, std::vector<unsigned int> > (0, empty);
       }
 
       // can throw an exception (no bonds)
@@ -660,7 +674,7 @@ namespace lig_build {
    public:
       molecule_t() {
 	 have_cached_bond_ring_centres_flag = false;
-      } 
+      }
       std::vector<Ta> atoms;
       std::vector<Tb> bonds;
       
@@ -706,12 +720,12 @@ namespace lig_build {
 	 bonds.clear();
       }
 
-      std::pair<bool, std::vector<int> >
-      found_self_through_bonds(int atom_index_start,
-			       int atom_index_other) const {
-	 std::vector<int> empty_no_pass_atoms;
+      std::pair<bool, std::vector<unsigned int> >
+      found_self_through_bonds(unsigned int atom_index_start,
+			       unsigned int atom_index_other) const {
+	 std::vector<unsigned int> empty_no_pass_atoms;
 	 empty_no_pass_atoms.push_back(atom_index_start);
-	 std::pair<bool, std::vector<int> > r =
+	 std::pair<bool, std::vector<unsigned int> > r =
 	    find_bonded_atoms_with_no_pass(atom_index_start, atom_index_start,
 					   atom_index_other, empty_no_pass_atoms,
 					   MAX_SEARCH_DEPTH);
@@ -743,7 +757,7 @@ namespace lig_build {
       // We dont want a copy of the bond, we want a reference to the
       // bond (so that it can be manipulated).
       // 
-      std::vector<unsigned int> bond_indices_with_atom_index(int test_atom_index) const {
+      std::vector<unsigned int> bond_indices_with_atom_index(unsigned int test_atom_index) const {
 	 std::vector<unsigned int> rv;
 	 if (!atoms[test_atom_index].is_closed()) { 
 	    for (unsigned int i=0; i<bonds.size(); i++) {
@@ -761,8 +775,8 @@ namespace lig_build {
       }
 
       // we have 2 indices, what is the bond that has these 2 atom indices?
-      int get_bond_index(int atom_index_in_1, int atom_index_in_2) const {
-	 int bi = UNASSIGNED_INDEX;
+      unsigned int get_bond_index(unsigned int atom_index_in_1, unsigned int atom_index_in_2) const {
+	 unsigned int bi = UNASSIGNED_INDEX;
 	 if (atom_index_in_1 != atom_index_in_2) { 
 	    for (unsigned int i=0; i<bonds.size(); i++) { 
 	       if ((bonds[i].get_atom_1_index() == atom_index_in_1) ||
@@ -778,8 +792,9 @@ namespace lig_build {
 	 return bi;
       }
 
-      void debug_pass_atoms(int atom_index_start, int this_atom_index, int depth,
-			    const std::vector<int> &local_no_pass_atoms) const {
+      void debug_pass_atoms(unsigned int atom_index_start, unsigned int this_atom_index,
+			    unsigned int depth,
+			    const std::vector<unsigned int> &local_no_pass_atoms) const {
 
 	 std::cout << "    found atom index " << atom_index_start << " from this atom: "
 		   << this_atom_index
@@ -791,23 +806,23 @@ namespace lig_build {
       }
 
 
-      int get_number_of_atoms_including_hydrogens() const {
+      unsigned int get_number_of_atoms_including_hydrogens() const {
 	 return atoms.size();
       }
 
-      void assign_ring_centres() {
+      void assign_ring_centres(bool force=false) {
 	 bool debug = false;
 	 for (unsigned int ib=0; ib<bonds.size(); ib++) {
-	    if (! bonds[ib].have_centre_pos()) { 
-	       int atom_index = bonds[ib].get_atom_1_index();
-	       int atom_index_other = bonds[ib].get_atom_2_index();
+	    if (! bonds[ib].have_centre_pos() || force) {
+	       unsigned int atom_index = bonds[ib].get_atom_1_index();
+	       unsigned int atom_index_other = bonds[ib].get_atom_2_index();
 	       if (debug) 
 		  std::cout << "=============== checking ring for atom index "
 			    << atom_index << " ===============" << std::endl;
 	       // path must pass through atom_index_other
-	       std::pair<bool, std::vector<int> > found =
+	       std::pair<bool, std::vector<unsigned int> > found =
 		  found_self_through_bonds(atom_index, atom_index_other);
-	       if (debug) { 
+	       if (debug) {
 		  std::cout << "-- constructor of widgeted_bond_t atom " << atom_index
 			    << " other bond index (not tested) " << bonds[ib].get_atom_2_index()
 			    << ", found status "
@@ -838,7 +853,7 @@ namespace lig_build {
 	       }
 	    }
 	 }
-      } 
+      }
 
       // 
       std::vector<pos_t> get_ring_centres() {
@@ -991,7 +1006,7 @@ namespace lig_build {
       void delete_hydrogens() {
 	 for (unsigned int iat=0; iat<atoms.size(); iat++) { 
 	    if (atoms[iat].element == "H") {
-	       std::vector<int> bds = bonds_having_atom_with_atom_index(iat);
+	       std::vector<unsigned int> bds = bonds_having_atom_with_atom_index(iat);
 	       atoms[iat].close();
 	       for (unsigned int i=0; i<bds.size(); i++)
 		  bonds[bds[i]].close();
@@ -999,9 +1014,9 @@ namespace lig_build {
 	 }
       }
 
-      std::vector<int> bonds_having_atom_with_atom_index(unsigned int test_atom_index) const {
+      std::vector<unsigned int> bonds_having_atom_with_atom_index(unsigned int test_atom_index) const {
 
-	 std::vector<int> v;
+	 std::vector<unsigned int> v;
 	 std::vector<unsigned int> vb =  bond_indices_with_atom_index(test_atom_index);
 	 
 	 for (unsigned int iv=0; iv<vb.size(); iv++) {
@@ -1014,9 +1029,9 @@ namespace lig_build {
 
       // return a vector of the atom indices of unconnected atoms
       //
-      std::vector<int> get_unconnected_atoms() const {
+      std::vector<unsigned int> get_unconnected_atoms() const {
 
-	 std::vector<int> v;
+	 std::vector<unsigned int> v;
 	 for (unsigned int iat=0; iat<atoms.size(); iat++) {
 	    if (! atoms[iat].is_closed()) { 
 	       bool in_a_bond = 0;
@@ -1090,8 +1105,8 @@ namespace lig_build {
 	    // So the bonds were the same, now the strays...
 
 	    if (mol_other.n_stray_atoms() == n_stray_atoms()) {
-	       std::vector<int> i_stray_atoms = stray_atoms();
-	       std::vector<int> j_stray_atoms = mol_other.stray_atoms();
+	       std::vector<unsigned int> i_stray_atoms = stray_atoms();
+	       std::vector<unsigned int> j_stray_atoms = mol_other.stray_atoms();
 	       int n_stray_hits = 0;
 	       for (unsigned int i=0; i<i_stray_atoms.size(); i++) {
 		  for (unsigned int j=0; j<j_stray_atoms.size(); j++) {
@@ -1120,8 +1135,8 @@ namespace lig_build {
 	 return n;
       } 
 
-      std::vector<int> stray_atoms() const {
-	 std::vector<int> strays;
+      std::vector<unsigned int> stray_atoms() const {
+	 std::vector<unsigned int> strays;
 	 bool found[atoms.size()];
 	 for (unsigned int i=0; i<atoms.size(); i++)
 	    found[i] = 0;
@@ -1181,7 +1196,8 @@ namespace lig_build {
 	 return std::pair<bool, double> (set_status, dist_closest);
       }
 
-      pos_t get_sum_delta_neighbours(int atom_index, const std::vector<int> &bond_indices) const {
+      pos_t get_sum_delta_neighbours(unsigned int atom_index,
+				     const std::vector<unsigned int> &bond_indices) const {
 	 pos_t sum_delta(0,0);
 	 for (unsigned int ibond=0; ibond<bond_indices.size(); ibond++) {
 	    int idx_other = bonds[bond_indices[ibond]].get_other_index(atom_index);
@@ -1190,13 +1206,30 @@ namespace lig_build {
 	 }
 	 return sum_delta;
       }
-      
 
-      //
+      pos_t get_sum_delta_neighbours(const atom_t &atom) const {
+	 pos_t sum_delta(0,0);
+	 for (unsigned int ibond=0; ibond<bonds.size(); ibond++) {
+	    int idx_1 = bonds[ibond].get_atom_1_index();
+	    int idx_2 = bonds[ibond].get_atom_2_index();
+	    if (atoms[idx_1] == atom) {
+	       // std::cout << "found atom idx1 " << atom << " in atoms: " << idx_1 << std::endl;
+	       sum_delta += atoms[idx_2].atom_position - atom.atom_position;
+	    }
+	    if (atoms[idx_2] == atom) {
+	       // std::cout << "found atom idx2 " << atom << " in atoms: " << idx_1 << std::endl;
+	       sum_delta += atoms[idx_1].atom_position - atom.atom_position;
+	    }
+	 }
+	 return sum_delta;
+      }
+
+      // using bonds and charge
+      // 
       atom_id_info_t
-      make_atom_id_by_using_bonds(int atom_index,
+      make_atom_id_by_using_bonds(unsigned int atom_index,
 				  const std::string &ele,
-				  const std::vector<int> &bond_indices,
+				  const std::vector<unsigned int> &bond_indices,
 				  bool simple_gl_render) const {
 
 	 // The offset tweaks depend on the way the text is positioned on the canvas.
@@ -1212,6 +1245,12 @@ namespace lig_build {
 	 //
 	 int sum_neigb_bond_order = 0;
 
+	 // 20160701: This was commented out.  I wonder why.  I have
+	 //           now uncommented it.
+	 //           It was commented out because when we have charge the
+	 //           sum_neigb_bond_order gets confusing, e.g. N+H4 for
+	 //           sum_neigb_bond_order == 1 and
+	 //           N+H3 for sum_neigb_bond_order == 2.
 	 // sum_neigb_bond_order += charge;
 	 
 	 for (unsigned int ib=0; ib<bond_indices.size(); ib++) {
@@ -1227,71 +1266,123 @@ namespace lig_build {
 	       sum_neigb_bond_order += 3;
 	 }
 
-	 if (0) 
-	    std::cout << "debug::       in make_atom_id_by_using_bonds() "
-		      << ele << " sum_neigb_bond_order: "
-		      << sum_neigb_bond_order << " " << std::endl;
-
 	 if (ele == "N") {
-	    int fc = atoms[atom_index].charge; // formal charge
-	    if (sum_neigb_bond_order == 5)
-	       atom_id = "N+2";
-	    if (sum_neigb_bond_order == 4)
-	       atom_id = "N+";
-	    if (sum_neigb_bond_order == 3)
-	       atom_id = "N";
-	    if (sum_neigb_bond_order == 2)
-	       atom_id = "NH";
-	    if (sum_neigb_bond_order == 1)
-	       atom_id = "NH2";
-	    if (sum_neigb_bond_order == 0)
-	       atom_id = "NH3";
+
+	    if (charge == -2) { // weird
+	       atom_id = "N-2";
+	    }
+
+	    if (charge == -1) { // weird
+	       atom_id = "N-";
+	    }
+	    
+	    if (charge == 0) {
+	       if (sum_neigb_bond_order == 0)
+		  atom_id = "NH3";
+	       if (sum_neigb_bond_order == 1)
+		  atom_id = "NH2";
+	       if (sum_neigb_bond_order == 2)
+		  atom_id = "NH";
+	       if (sum_neigb_bond_order == 3)
+		  atom_id = "N";
+	       if (sum_neigb_bond_order == 4)
+		  atom_id = "N";
+	    }
+	    if (charge == +1) { // very typical
+	       if (sum_neigb_bond_order == 0)
+		  atom_id = "N+H4"; // ammonium
+	       if (sum_neigb_bond_order == 1)
+		  atom_id = "N+H3"; // lys
+	       if (sum_neigb_bond_order == 2)
+		  atom_id = "N+H2";
+	       if (sum_neigb_bond_order == 3)
+		  atom_id = "N+H";
+	       if (sum_neigb_bond_order == 4)
+		  atom_id = "N+";
+	       if (sum_neigb_bond_order == 5)
+		  atom_id = "N+"; // weird
+	    }
+	    if (charge == +2) { // all weird
+	       if (sum_neigb_bond_order == 0)
+		  atom_id = "N+2H4";
+	       if (sum_neigb_bond_order == 1)
+		  atom_id = "N+2H3";
+	       if (sum_neigb_bond_order == 2)
+		  atom_id = "N+2H2";
+	       if (sum_neigb_bond_order == 3)
+		  atom_id = "N+2H";
+	       if (sum_neigb_bond_order == 4)
+		  atom_id = "N+2";
+	    }
 	 }
 							   
 	 if (ele == "O") {
 
-	    if (sum_neigb_bond_order == 3)
-	       atom_id = "O";
-	    if (sum_neigb_bond_order == 2)
-	       atom_id = "O";
-	    if (sum_neigb_bond_order == 1) {
-	       if (charge == -1)
-		  atom_id = "O";
-	       else
-		  atom_id = "OH";
-	    }
-	    if (sum_neigb_bond_order == 0) {
-	       if (charge == -1)
-		  atom_id = "OH";
-	       else
-		  atom_id = "OH2";
+	    if (charge == 2) {
+	       if (sum_neigb_bond_order == 1)
+		  atom_id = "O+2H3";
+	       if (sum_neigb_bond_order == 2)
+		  atom_id = "O+2H2";
 	    }
 
-	    return atom_id_info_t(atom_id, charge);
+	    if (charge == 1) {
+	       if (sum_neigb_bond_order == 1)
+		  atom_id = "O+H2";
+	       if (sum_neigb_bond_order == 2)
+		  atom_id = "O+H";
+	    }
+	    
+	    if (charge == 0) {
+	       if (sum_neigb_bond_order == 0)
+		  atom_id = "OH2";
+	       if (sum_neigb_bond_order == 1)
+		  atom_id = "OH";
+	       if (sum_neigb_bond_order == 2)
+		  atom_id = "O";
+	       if (sum_neigb_bond_order == 3)
+		  atom_id = "O"; // doesn't make sense
+	    }
+
+	    if (charge == -1) {
+	       atom_id = "O-";
+	    }
+
+	    if (charge == -2) {
+	       atom_id = "O-2";
+	    }
 	 }
 
 	 if (ele == "S") {
-	    if (sum_neigb_bond_order == 1) {
-	       atom_id = "SH";
-	    }
-	    if (sum_neigb_bond_order == 0) {
+
+	    // 20160701 need charge-specific atom_ids here?
+	    
+	    if (sum_neigb_bond_order == 0)
 	       atom_id = "SH2";
-	    }
+	    if (sum_neigb_bond_order == 1)
+	       atom_id = "SH";
+	    if (sum_neigb_bond_order == 2)
+	       atom_id = "S";
+	    if (sum_neigb_bond_order == 3)
+	       atom_id = "S";
 	 }
 
 	 if (ele == "C") {
 	    if (sum_neigb_bond_order == 0) {
 	       atom_id = "CH4";
 	    }
-	    if (sum_neigb_bond_order == 5) {
-	       atom_id = "C+"; // Hmm... carbon can go either way
+	    if (charge == 1) {
+	       if (sum_neigb_bond_order == 5) {
+		  atom_id = "C="; // Hmm... carbon can go either way
+	       }
 	    }
 	 }
 
-	 if (atom_id != "NH" && atom_id != "OH") {
+	 // ----------------- OK, atom_id is set, how do we type set that?
+
+	 if (atom_id != "NH" && atom_id != "OH" && atom_id != "SH") {
 
 	    if (atom_id == "NH2") {
-	       // Could be "NH2" or "H2N", let's investigate
+	       // Might be typeset as "NH2" or "H2N", let's investigate
 
 	       if (bond_indices.size() != 1) {
 		  // strange case - I don't know what else to do..
@@ -1313,24 +1404,260 @@ namespace lig_build {
 		     offset_text_t ot2("2");
 		     offset_text_t otN("N");
 		     ot2.subscript = true;
-		     otH.tweak = pos_t(-14, 0);
-		     ot2.tweak = pos_t(-5, 0);
+		     otH.tweak = pos_t(-16, 0);
+		     ot2.tweak = pos_t(-7, 0);
 		     otN.tweak = pos_t(0, 0);
 		     id.add(otH);
 		     id.add(ot2);
 		     id.add(otN);
 		     return id;
-		  } 
-	       } 
+		  }
+	       }
 
-	    } else { 
-	       atom_id_info_t simple(atom_id);
-	       return simple;
-	    } 
-	    
+	    } else {
+
+	       // not NH2...
+	       // 
+	       // still in the [not NH, OH, SH] block.
+	       // 
+	       // There's lot's more that could go here.
+
+	       if (atom_id == "N+") {
+		  // nitro
+
+		  atom_id_info_t atom_id_info("N", 1);
+		  // offset_text_t n("N");
+		  // atom_id_info.add(n);
+		  // offset_text_t pl("+");
+		  // pl.superscript = true;
+		  // pl.tweak = pos_t(6, 0);
+		  // atom_id_info.add(pl);
+		  return atom_id_info;
+
+	       } else {
+
+		  if (atom_id == "N+H") {
+
+		     pos_t sum_delta = get_sum_delta_neighbours(atom_index, bond_indices);
+		     if (bond_indices.size() == 1) {
+			if (sum_delta.x < 0) {
+			   atom_id_info_t id("N", 1);
+			   offset_text_t h("H");
+			   h.tweak = pos_t(14, 0);
+			   id.add(h);
+			   return id;
+			} else {
+			   atom_id_info_t id;
+			   offset_text_t h("H");
+			   offset_text_t n("N");
+			   offset_text_t plus("+");
+			   h.tweak = pos_t(-10, 0);
+			   plus.tweak = pos_t(8, 0);
+			   plus.superscript = true;
+			   id.add(h);
+			   id.add(n);
+			   id.add(plus);
+			   return id;
+			}
+		     } else {
+			if (bond_indices.size() == 2) {
+
+			   if (fabs(sum_delta.y) > fabs(sum_delta.x)) {
+
+			      if (sum_delta.y > 0) {
+		  
+				 //    \   /
+				 //      N+
+				 //      H
+				 //
+
+				 atom_id_info_t id("N", 1);
+				 offset_text_t h("H", offset_text_t::DOWN);
+				 id.add(h);
+				 return id;
+				 
+			      } else {
+
+				 //      H
+				 //      N+
+				 //    /   \           .[not-multi-line comment]
+				 //
+				 atom_id_info_t id("N", 1);
+				 offset_text_t h("H", offset_text_t::UP);
+				 id.add(h);
+				 return id;
+
+			      }
+			   } else {
+			      // normal sideways
+
+			      if (sum_delta.x < 0) {
+				 atom_id_info_t id("N", 1);
+				 offset_text_t h("H");
+				 h.tweak = pos_t(14, 0);
+				 id.add(h);
+				 return id;
+			      } else {
+				 atom_id_info_t id;
+				 offset_text_t h("H");
+				 offset_text_t n("N");
+				 offset_text_t plus("+");
+				 h.tweak = pos_t(-10, 0);
+				 plus.tweak = pos_t(8, 0);
+				 plus.superscript = true;
+				 id.add(h);
+				 id.add(n);
+				 id.add(plus);
+				 return id;
+			      }
+			   }
+			   
+			} else {
+			   // what is the madness?
+			   return atom_id_info_t("NH+");
+			} 
+		     } 
+		  } else {
+		     
+		     if (atom_id == "N+H2") {
+
+			pos_t sum_delta = get_sum_delta_neighbours(atom_index, bond_indices);
+
+			if (bond_indices.size() == 2) {
+
+			   if (fabs(sum_delta.y) > fabs(sum_delta.x)) {
+
+			      if (sum_delta.y > 0) {
+
+				 //      H2
+				 //      N+
+				 //    /   \           .[not multi-line comment]
+				 //
+				 atom_id_info_t id("N", 1);
+				 offset_text_t h("H", offset_text_t::DOWN); // weird
+				 offset_text_t t("2", offset_text_t::DOWN);
+				 t.subscript = true;
+				 t.tweak = pos_t(10,-4);
+				 id.add(h);
+				 id.add(t);
+				 return id;
+
+			      } else {
+		  
+				 //    \   /
+				 //      N+
+				 //      H2
+				 //
+				 atom_id_info_t id("N", 1);
+				 offset_text_t h("H", offset_text_t::UP);
+				 offset_text_t t("2", offset_text_t::UP);
+				 t.subscript = true;
+				 t.tweak = pos_t(9,-2);
+				 id.add(h);
+				 id.add(t);
+				 return id;
+
+			      }
+			   } else {
+			      // normal sideways of N+H2
+
+			      if (sum_delta.x < 0) {
+				 atom_id_info_t id("N", 1);
+				 offset_text_t h("H");
+				 offset_text_t t("2");
+				 h.tweak = pos_t(16, 0);
+				 t.tweak = pos_t(24, 0);
+				 t.subscript = true;
+				 id.add(h);
+				 id.add(t);
+				 return id;
+			      } else {
+				 atom_id_info_t id;
+				 offset_text_t h("H");
+				 offset_text_t t("2");
+				 offset_text_t n("N");
+				 offset_text_t plus("+");
+				 h.tweak = pos_t(-16, 0);
+				 t.tweak = pos_t(-7, 0);
+				 t.subscript = true;
+				 plus.tweak = pos_t(8, 0);
+				 plus.superscript = true;
+				 id.add(h);
+				 id.add(n);
+				 id.add(t);
+				 id.add(plus);
+				 return id;
+			      }
+			   }
+			   
+			} else {
+
+			   // sum bond_indices is 1 (well, not 2)
+
+			   if (sum_delta.x < 0) {
+			      // bond from the left
+			      atom_id_info_t id("N", 1);
+			      offset_text_t h("H");
+			      h.tweak = pos_t(15, 0);
+			      offset_text_t two("2");
+			      two.subscript = true;
+			      two.tweak = pos_t(24, 0);
+			      id.add(h);
+			      id.add(two);
+			      return id;
+			   } else {
+			      // bond from the right
+			      atom_id_info_t id("N", 1);
+			      offset_text_t h("H");
+			      offset_text_t two("2");
+			      h.tweak = pos_t(-14, 0);
+			      two.tweak = pos_t(-6, 0);
+			      two.subscript = true;
+			      id.add(h);
+			      id.add(two);
+			      return id;
+			   }
+			}
+
+		     } else {
+
+			if (atom_id == "O-") {
+			   return atom_id_info_t("0", -1);
+
+			} else {
+			   if (atom_id == "O-2") {
+			      return atom_id_info_t("0", -2);
+
+			   } else {
+
+			      if (atom_id == "OH2") {
+			
+				 return atom_id_info_t("OH", "2");
+
+			      } else {
+				 
+				 if (atom_id == "N-2") {
+				    return atom_id_info_t("N", -2);
+
+				 } else {
+				    if (atom_id == "N-") {
+				       return atom_id_info_t("N", -1);
+			   
+				    } else {
+				       atom_id_info_t simple(atom_id);
+				       return simple;
+				    }
+				 }
+			      }
+			   }
+			}
+		     }
+		  }
+	       }
+	    }
 	 } else {
 
-	    // NH or OH
+	    // NH or OH or SH
 	    
 	    pos_t sum_delta = get_sum_delta_neighbours(atom_index, bond_indices);
 	    atom_id_info_t atom_id_info;
@@ -1343,8 +1670,10 @@ namespace lig_build {
 		  std::string txt = "HO";
 		  if (ele == "N")
 		     txt = "HN";
+		  if (ele == "S")
+		     txt = "HS";
 		  offset_text_t ot(txt);
-		  ot.tweak = pos_t(-8, 0);
+		  ot.tweak = pos_t(-10, 0);
 		  atom_id_info.add(ot);
 	       } else {
 		  // simple
@@ -1359,6 +1688,9 @@ namespace lig_build {
 	    }
 
 	    if (bond_indices.size() == 2) {
+
+	       // Does this happen for S?
+
 	       // Add a tweak factor (1.3) to prefer horizontal orientation.
 	       if (fabs(sum_delta.y) > fabs(sum_delta.x) * 1.3) { 
 		  
@@ -1367,7 +1699,7 @@ namespace lig_build {
 		  //      H
 		  //
 		  if (sum_delta.y > 0) {
-		     offset_text_t n("N");
+		     offset_text_t n(ele);
 		     offset_text_t h("H", offset_text_t::DOWN);
 		     atom_id_info.add(n);
 		     atom_id_info.add(h);
@@ -1378,7 +1710,7 @@ namespace lig_build {
 		  //      N
 		  //    /   \  .
 		  //
-		     offset_text_t n("N");
+		     offset_text_t n(ele);
 		     offset_text_t h("H", offset_text_t::UP);
 		     atom_id_info.add(n);
 		     atom_id_info.add(h);
@@ -1389,12 +1721,12 @@ namespace lig_build {
 		  if (sum_delta.x > 0.0) {
 		     // H pokes to the left
 		     atom_id_info = atom_id_info_t();
-		     offset_text_t n("HN");
-		     n.tweak = pos_t(-7,0);
+		     offset_text_t n(std::string("H") + ele);
+		     n.tweak = pos_t(-10,0);
 		     atom_id_info.add(n);
 		  } else {
 		     atom_id_info = atom_id_info_t();
-		     offset_text_t n("NH");
+		     offset_text_t n(ele + "H");
 		     n.tweak = pos_t(0,0);
 		     atom_id_info.add(n);
 		  } 
@@ -1416,7 +1748,7 @@ namespace lig_build {
 	 }
       } // end of make_atom_id_by_using_bonds()
 
-      bool delete_bond_between(int idx_1, int idx_2) {
+      bool delete_bond_between(unsigned int idx_1, unsigned int idx_2) {
 	 bool status = false;
 
 	 for (unsigned int ibond=0; ibond<bonds.size(); ibond++) { 

@@ -185,6 +185,7 @@ int graphics_info_t::lsq_mov_imol = -1;
 lsq_dialog_values_t graphics_info_t::lsq_dialog_values;
 
 
+float graphics_info_t::b_factor_scale            =  1.0;
 
 // side by side stereo?
 short int graphics_info_t::in_side_by_side_stereo_mode = 0;
@@ -409,6 +410,7 @@ short int graphics_info_t::print_initial_chi_squareds_flag = 0;
 short int graphics_info_t::show_symmetry = 0; 
 
 float    graphics_info_t::box_radius = 12.6;
+float    graphics_info_t::box_radius_em = 100;
 
 
 int      graphics_info_t::debug_atom_picking = 0;
@@ -540,7 +542,7 @@ coot::refinement_results_t graphics_info_t::saved_dragged_refinement_results(0, 
 float graphics_info_t::idle_function_rotate_angle = 1.0; // degrees
 bool  graphics_info_t::refinement_move_atoms_with_zero_occupancy_flag = 1; // yes
 
-float graphics_info_t::map_sampling_rate = 1.5;
+float graphics_info_t::map_sampling_rate = 1.8;
 
 // Initialise the static atom_sel.
 //
@@ -693,6 +695,11 @@ int graphics_info_t::torsion_general_atom_index_2_mol_no = -1;
 int graphics_info_t::torsion_general_atom_index_3_mol_no = -1;
 int graphics_info_t::torsion_general_atom_index_4_mol_no = -1;
 short int graphics_info_t::in_edit_torsion_general_flag = 0;
+short int graphics_info_t::in_residue_partial_alt_locs_define = 0;
+int graphics_info_t::imol_residue_partial_alt_locs = 0;
+coot::residue_spec_t graphics_info_t::residue_partial_alt_locs_spec;
+double graphics_info_t::residue_partial_alt_locs_rotate_fragment_angle = 40; // degrees
+
 std::vector<coot::atom_spec_t> graphics_info_t::torsion_general_atom_specs;
 bool graphics_info_t::torsion_general_reverse_flag = 0;
 Tree graphics_info_t::torsion_general_tree; 
@@ -1100,7 +1107,9 @@ coot::restraints_container_t graphics_info_t::last_restraints;
 #endif // HAVE_GSL
 // 
 // 
-short int graphics_info_t::draw_zero_occ_spots_flag = 1; // on by default
+bool graphics_info_t::draw_zero_occ_spots_flag = true; // on by default
+
+bool graphics_info_t::draw_cis_peptide_markups = true; // on by default
 
 int   graphics_info_t::check_waters_molecule = -1; // unset initially.
 float graphics_info_t::check_waters_b_factor_limit  = 80.0;
@@ -1317,6 +1326,8 @@ std::map<std::string, std::pair<std::string, std::string> > graphics_info_t::use
 std::vector<std::pair<clipper::Coord_orth, std::string> > graphics_info_t::user_defined_interesting_positions;
 unsigned int graphics_info_t::user_defined_interesting_positions_idx = 0;
 
+// Chemical Feature Clusters, cfc
+GtkWidget *graphics_info_t::cfc_dialog = NULL;
 
 // GTK2 code
 // 
@@ -1715,8 +1726,8 @@ setup_lighting(short int do_lighting_flag) {
       // GL_LIGHT2 is for cut-glass mode
       // 
       GLfloat  light_0_position[] = { 1.0,  1.0, 1.0, 0.0};
-      GLfloat  light_1_position[] = { 1.0, -1.0, 1.0, 0.0};
-      GLfloat  light_2_position[] = {-1.0, -1.0, 1.0, 0.0};
+      GLfloat  light_1_position[] = {-1.0,  0.0, 1.0, 0.0};
+      GLfloat  light_2_position[] = { 0.0, 0.0, 0.0, 0.0};
 
       glClearColor(0.0, 0.0, 0.0, 0.0);
       glShadeModel(GL_SMOOTH);
@@ -2122,6 +2133,20 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
       }
 
 
+      if (false) { 
+	 glPushMatrix();
+	 glLoadIdentity();
+	 GLfloat  light_0_position[] = { -1.0,  1.0, 1.0, 0.0};
+	 GLfloat  light_1_position[] = {  1.0,  0.2, 1.0, 0.0};
+	 GLfloat  light_2_position[] = {  1.0,  1.0, 1.0, 0.0};
+
+	 glLightfv(GL_LIGHT0,   GL_POSITION, light_0_position);
+	 glLightfv(GL_LIGHT1,   GL_POSITION, light_1_position);
+	 glLightfv(GL_LIGHT2,   GL_POSITION, light_2_position);
+	 glPopMatrix();
+      }
+
+      glMatrixMode(GL_MODELVIEW);
       // do we need to turn on the lighting?
       int n_display_list_objects = 0;
 
@@ -2129,7 +2154,8 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
 
 	 // Molecule stuff
 	 //
-	 graphics_info_t::molecules[ii].draw_molecule(graphics_info_t::draw_zero_occ_spots_flag, is_bb);
+	 graphics_info_t::molecules[ii].draw_molecule(graphics_info_t::draw_zero_occ_spots_flag,
+						      is_bb, graphics_info_t::draw_cis_peptide_markups);
 
 	 //
 	 graphics_info_t::molecules[ii].draw_dipoles();
@@ -3226,7 +3252,7 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
    case GDK_KP_1:
       if (graphics_info_t::moving_atoms_move_chis_flag) { 
          graphics_info_t g;
-         g.setup_flash_bond_internal(0);
+         g.setup_flash_bond_using_moving_atom_internal(0);
 	 graphics_info_t::edit_chi_current_chi = 1;
 	 graphics_info_t::in_edit_chi_mode_flag = 1; // on
       }
@@ -3236,7 +3262,7 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
    case GDK_KP_2:
       if (graphics_info_t::moving_atoms_move_chis_flag) { 
          graphics_info_t g;
-         g.setup_flash_bond_internal(1);
+         g.setup_flash_bond_using_moving_atom_internal(1);
 	 graphics_info_t::edit_chi_current_chi = 2;
 	 graphics_info_t::in_edit_chi_mode_flag = 1; // on
       }
@@ -3246,7 +3272,7 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
    case GDK_KP_3:
       if (graphics_info_t::moving_atoms_move_chis_flag) { 
          graphics_info_t g;
-         g.setup_flash_bond_internal(2);
+         g.setup_flash_bond_using_moving_atom_internal(2);
 	 graphics_info_t::edit_chi_current_chi = 3;
 	 graphics_info_t::in_edit_chi_mode_flag = 1; // on
       } else { 
@@ -3258,7 +3284,7 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
    case GDK_KP_4:
       if (graphics_info_t::moving_atoms_move_chis_flag) { 
          graphics_info_t g;
-         g.setup_flash_bond_internal(3);
+         g.setup_flash_bond_using_moving_atom_internal(3);
 	 graphics_info_t::edit_chi_current_chi = 4;
 	 graphics_info_t::in_edit_chi_mode_flag = 1; // on
       }
@@ -3268,7 +3294,7 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
    case GDK_KP_5:
       if (graphics_info_t::moving_atoms_move_chis_flag) { 
          graphics_info_t g;
-         g.setup_flash_bond_internal(4);
+         g.setup_flash_bond_using_moving_atom_internal(4);
 	 graphics_info_t::edit_chi_current_chi = 5;
 	 graphics_info_t::in_edit_chi_mode_flag = 1; // on
       }
@@ -3278,7 +3304,7 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
    case GDK_KP_6:
       if (graphics_info_t::moving_atoms_move_chis_flag) { 
          graphics_info_t g;
-         g.setup_flash_bond_internal(5);
+         g.setup_flash_bond_using_moving_atom_internal(5);
 	 graphics_info_t::edit_chi_current_chi = 6;
 	 graphics_info_t::in_edit_chi_mode_flag = 1; // on
       }

@@ -117,17 +117,14 @@ std::string menu_item_label(GtkWidget *menu_item);
 void set_rotation_centre(const clipper::Coord_orth &pos);
 
 #ifdef USE_GUILE
-// Bernie, no need to pythonize this, it's just to test the return
-// values on pressing "next residue" and "previous residue" (you can
-// if you wish of course).
 //
 // Pass the current values, return new values
-SCM goto_next_atom_maybe(const char *chain_id, int resno, const char *ins_code, const char *atom_name);
-SCM goto_prev_atom_maybe(const char *chain_id, int resno, const char *ins_code, const char *atom_name);
+SCM goto_next_atom_maybe_scm(const char *chain_id, int resno, const char *ins_code, const char *atom_name);
+SCM goto_prev_atom_maybe_scm(const char *chain_id, int resno, const char *ins_code, const char *atom_name);
 #endif 
 
 #ifdef USE_PYTHON
-// but I 'want' to! Needed for python unittest!
+
 PyObject *goto_next_atom_maybe_py(const char *chain_id, int resno, const char *ins_code, const char *atom_name);
 PyObject *goto_prev_atom_maybe_py(const char *chain_id, int resno, const char *ins_code, const char *atom_name);
 #endif
@@ -272,6 +269,12 @@ execute_refmac_real(std::string pdb_in_filename,
 		    std::string phib_string,
 		    std::string fom_string,
 		    std::string ccp4i_project_dir);
+
+/*! \brief the name for refmac 
+
+ @return a stub name used in the construction of filename for refmac output */
+std::string refmac_name(int imol);
+
 //! \}
 
 
@@ -440,7 +443,7 @@ int pyrun_simple_string(const char *python_command);
 // This is a library function really.  There should be somewhere else to put it.
 // It doesn't need expression at the scripting level.
 // return a null list on problem
-SCM scm_residue(const coot::residue_spec_t &res);
+SCM residue_spec_to_scm(const coot::residue_spec_t &res);
 #endif
 
 #ifdef USE_PYTHON
@@ -449,8 +452,12 @@ SCM scm_residue(const coot::residue_spec_t &res);
 // This is a library function really.  There should be somewhere else to put it.
 // It doesn't need expression at the scripting level.
 // return a null list on problem
-PyObject *py_residue(const coot::residue_spec_t &res);
+PyObject *residue_spec_to_py(const coot::residue_spec_t &res);
 #endif
+
+#ifdef USE_PYTHON
+PyObject *residue_spec_make_triple_py(PyObject *residue_spec_py);
+#endif // USE_PYTHON
 
 #ifdef USE_GUILE
 coot::residue_spec_t residue_spec_from_scm(SCM residue_in);
@@ -464,6 +471,13 @@ coot::residue_spec_t residue_spec_from_py(PyObject *residue_in);
 // test the returned spec for unset_p().
 // 
 coot::residue_spec_t get_residue_by_type(int imol, const std::string &residue_type);
+
+std::vector<coot::residue_spec_t> get_residue_specs_in_mol(int imol, const std::string &residue_type);
+
+#ifdef USE_PYTHON
+// Always returns a list
+PyObject *get_residue_specs_in_mol_py(int imol, const std::string &residue_type);
+#endif 
 
 #ifdef USE_GUILE
 // return a residue spec or scheme false
@@ -542,6 +556,16 @@ int clear_and_update_molecule(int molecule_number, SCM molecule_expression);
 //! 
 SCM active_residue();
 
+//! \brief return the specs of the closest displayed atom
+//!
+//! Return a list of (list imol chain-id resno ins-code atom-name
+//! alt-conf (list x y z)) for atom that is closest to the screen
+//! centre in the given molecule (unlike active-residue, potential CA 
+//! substition is not performed).  If there is no atom, or if imol is 
+//! not a valid model molecule, return scheme false.
+//! 
+SCM closest_atom_simple_scm();
+
 //! \brief return the specs of the closest atom in imolth molecule
 //!
 //! Return a list of (list imol chain-id resno ins-code atom-name
@@ -551,6 +575,7 @@ SCM active_residue();
 //! atom, or if imol is not a valid model molecule, return scheme false.
 //! 
 SCM closest_atom(int imol);
+
 
 //! \brief return residues near residue
 //! 
@@ -601,7 +626,19 @@ PyObject *atom_info_string_py(int imol, const char *chain_id, int resno,
 PyObject *residue_info_py(int imol, const char* chain_id, int resno, const char *ins_code);
 PyObject *residue_name_py(int imol, const char* chain_id, int resno, const char *ins_code);
 
+// the expanded form of this is in c-interface.h
+PyObject *residue_centre_from_spec_py(int imol, 
+				      PyObject *spec_py);
+
 PyObject *chain_fragments_py(int imol, short int screen_output_also);
+
+#ifdef USE_PYTHON
+void set_b_factor_residues_py(int imol, PyObject *residue_specs_b_value_tuple_list_py);
+#endif
+
+#ifdef USE_GUILE
+void set_b_factor_residues_scm(int imol, SCM residue_specs_b_value_tuple_list_scm);
+#endif
 
 //! \}
 
@@ -627,13 +664,23 @@ int add_molecule_py(PyObject *molecule_expression, const char *name);
 //
 PyObject *active_residue_py();
 
+//! \brief return the spec of the closest displayed atom
+//!
+//! Return a list of [imol, chain-id, resno, ins-code, atom-name,
+//! alt-conf, [x, y, z]] for atom that is closest to the screen
+//! centre in the given molecule (unlike active-residue, potential CA 
+//! substition is not performed).  If there is no atom, or if imol is 
+//! not a valid model molecule, return False.
+//! 
+PyObject *closest_atom_simple_py();
+
 //! \brief return closest atom in imolth molecule
 // 
 //! Return a list of [imol, chain-id, resno, ins-code, atom-name,
 //! alt-conf, [x, y, z]] for atom that is closest to the screen
 //! centre in the given molecule (unlike active-residue, no account is
 //! taken of the displayed state of the molecule).  If there is no
-//! atom, or if imol is not a valid model molecule, return #f.
+//! atom, or if imol is not a valid model molecule, return False.
 // 
 PyObject *closest_atom_py(int imol);
 
@@ -674,14 +721,10 @@ std::string atom_info_as_text_for_statusbar(int atom_index, int imol,
 //!
 void regularize_residues(int imol, const std::vector<coot::residue_spec_t> &residues);
 
-
-
-//! \brief refine a zone, allowing the specification of insertion
-//!  codes for the residues too.
-//! 
 //! presumes that imol_Refinement_Map has been set
-#ifdef USE_GUILE
 std::string mtz_file_name(int imol);
+
+#ifdef USE_GUILE
 
 //! \brief
 //! Refine the given residue range
@@ -1319,6 +1362,36 @@ PyObject *qq_plot_map_and_model_py(int imol,
 			      unsigned short int atom_mask_mode,
 			      int imol_map);
 #endif
+
+#ifdef __cplusplus
+#ifdef USE_GUILE
+float density_score_residue_scm(int imol, SCM residue_spec, int imol_map);
+#endif 
+#ifdef USE_PYTHON
+float density_score_residue_py(int imol, PyObject *residue_spec, int imol_map);
+#endif 
+#endif 
+
+/*! \brief simple density score for given residue (over-ridden by scripting function) */
+float density_score_residue(int imol, const char *chain_id, int res_no, const char *ins_code, int imol_map);
+
+
+#ifdef USE_GUILE
+/*! \brief return sigma for the given map.  Return scheme False if not
+  a valid map molecule number. */
+SCM map_mean_scm(int imol);
+SCM map_sigma_scm(int imol);
+/*! \brief return either scheme false on non-a-map or list (mean, standard-deviation, skew, kurtosis) */
+SCM map_statistics_scm(int imol);
+#endif
+#ifdef USE_PYTHON
+/*! \brief return sigma for the given map.  Return Python False if not
+  a valid map molecule number. */
+PyObject *map_mean_py(int imol);
+PyObject *map_sigma_py(int imol);
+PyObject *map_statistics_py(int imol);
+#endif /*USE_PYTHON */
+
 
 //! \}
 
