@@ -193,6 +193,7 @@ class rama_plot {
    GtkWidget *dynarama_cancel_button;
    GtkWidget *dynarama_label;
    GtkWidget *scrolled_window;
+   GtkWidget *outliers_only_tooglebutton;
    GtkWidget *rama_stats_frame;
    GtkWidget *rama_stats_label1;
    GtkWidget *rama_stats_label2;
@@ -201,6 +202,7 @@ class rama_plot {
    GtkWidget *rama_open_menuitem;
    GtkWidget *rama_radiomenuitem;
    GtkWidget *kleywegt_radiomenuitem;
+   GtkWidget *outliers_only_menuitem;
    GtkWidget *kleywegt_chain_combobox1;
    GtkWidget *kleywegt_chain_combobox2;
    GtkWidget *dialog; // the container for the canvas
@@ -554,8 +556,9 @@ public:
    void fill_kleywegt_comboboxes(mmdb::Manager *mol1,
                                  mmdb::Manager *mol2);
 
-void show_outliers_only(mmdb::Manager *mol, int state);
-   void debug() const; 
+   void show_outliers_only(mmdb::Manager *mol, int state);
+   void show_outliers_only(int state);
+   void debug() const;
 
    void destroy_yourself();
 
