@@ -2,6 +2,7 @@
  * 
  * Copyright 2002, 2003, 2004, 2005, 2006 by The University of York
  * Copyright 2008, 2009, 2010  by The University of Oxford
+ * Copyright 2013, 2014, 2015, 2016 by Medical Research Council
  * Author: Paul Emsley
  * 
  * This program is free software; you can redistribute it and/or modify
@@ -646,8 +647,7 @@ coot::restraints_container_t::minimize(restraint_usage_Flags usage_flags,
       }
    } 
    
-   setup_gsl_vector_variables();  //initial positions 
-
+   setup_gsl_vector_variables();  //initial positions
 
    setup_multimin_func(); // provide functions for f, df, fdf
 
@@ -2061,7 +2061,7 @@ coot::restraints_container_t::bonded_residues_by_linear(int SelResHnd,
 	       // link_type = find_link_type(SelResidue[i], SelResidue[i+1], geom);
 	       std::pair<std::string, bool> link_info =
 		  find_link_type_complicado(SelResidue[i], SelResidue[i+1], geom);
-	       if (false) 
+	       if (false)
 		  std::cout << "DEBUG:: ---------- in bonded_residues_by_linear() link_info is :"
 			    << link_info.first << " " << link_info.second << ":" << std::endl;
 	       
@@ -2125,7 +2125,7 @@ coot::restraints_container_t::bonded_residues_from_res_vec(const coot::protein_g
 	       if (link_type != "") {
 
 		  // too verbose?
-		  if (debug) 
+		  if (debug)
 		     std::cout << "   INFO:: find_link_type_complicado(): "
 			       << coot::residue_spec_t(res_f) << " " << coot::residue_spec_t(res_s)
 			       << " link_type -> :" << link_type << ":" << std::endl;
@@ -2356,7 +2356,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(const coot::bon
 // Note that if residue-2 is not moving then it will not have angle restraints.  If
 // it doesn't have angle resraints then the is_1_4_related test will fail.
 // e.g (if n-1 is fixed residue): C(n-1)-N(n)-Ca(n)-C(n) or C(n-1)-N(n)-Ca(n)-CB(n)
-// will not be seen as 1-4 related.
+// will not be seen as 1-4 related. So that's where strange_exception comes in.
 //
 int 
 coot::restraints_container_t::make_non_bonded_contact_restraints(const coot::bonded_pair_container_t &bpc,
@@ -2385,6 +2385,8 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(const coot::bon
 	 std::cout << "------- " << iat << " " << atom_spec_t(atom[iat]) << std::endl;
    }
 
+   // THinking of setting this to true? is the (link) angle in the dictionary? Is one of the
+   // residues non-moving? (see above notes).
    if (false)
       ai.write_angles_map("angles-map.tab");
    
@@ -2484,17 +2486,17 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(const coot::bon
 	       std::string res_name_1 = at_1->GetResName();
 	       std::string res_name_2 = at_2->GetResName();
 	    
-	       if (res_name_1 == "PRO") {
+	       if (res_name_1 == "PRO" || res_name_1 == "HYP") {
 		  int res_no_pro   = res_no_1;
 		  int res_no_other = res_no_2;
 		  if (res_no_pro == (res_no_other + 1)) {
 		     std::string atom_name = at_1->name;
 		     if (atom_name == " CD ") {  // PDBv3 FIXME
 			add_it = false;
-		     } 
+		     }
 		  }
 	       }
-	       if (res_name_2 == "PRO") {
+	       if (res_name_2 == "PRO" || res_name_2 == "HYP") {
 		  int res_no_pro   = res_no_2;
 		  int res_no_other = res_no_1;
 		  if (res_no_pro == (res_no_other + 1)) {
@@ -2530,9 +2532,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(const coot::bon
 		  in_same_ring_flag = is_in_same_ring(at_2->residue,
 						      residue_ring_map_cache,
 						      atom_name_1, atom_name_2, geom);
-		  
 	       }
-
 	       
 	       // this doesn't check 1-4 over a moving->non-moving peptide link (see comment above function)
 	       // because the non-moving atom doesn't have angle restraints.
