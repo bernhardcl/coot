@@ -66,7 +66,7 @@ COOT_EXTRA_LIBS = \
 	$(top_builddir)/geometry/libcoot-geometry.la    	\
 	$(top_builddir)/coords/libcoot-coords.la      		\
 	$(top_builddir)/coot-surface/libcoot-surface.la  	\
-	$(top_builddir)/surface/libccp4mg-surface.la  		\
+	$(top_builddir)/surface/libcoot-electrostatics.la 	\
 	$(top_builddir)/ccp4mg-utils/libccp4mg-utils.la 	\
 	$(top_builddir)/coot-utils/libcoot-map-heavy.la  	\
 	$(top_builddir)/coot-utils/libcoot-map-utils.la  	\
@@ -91,7 +91,7 @@ EXTRA_DIST = \
 	junk.cc coot-gtk2.defs coot-dox.cfg post-gtk2-glade.sh \
         post-process-coot-wrap-guile.sh \
         post-process-coot-wrap-python.sh \
-	coot_wrap_guile_pre_gtk2.cc dynarama.glade 
+	coot_wrap_guile_pre.cc 
 
 
 subpkgdatadir = $(pkgdatadir)
@@ -101,7 +101,7 @@ subpkgdata_DATA = dynarama.glade
 # use -DHAVE_MMDBSSM or use (expanded from) $(MMDBSSM) works.
 # SWIG_FLAGS is either blank or defines COOT_USE_GTK2_INTERFACE usage
 #
-coot_wrap_guile_pre_gtk2.cc: $(top_srcdir)/src/c-interface.h    \
+coot_wrap_guile_pre.cc:      $(top_srcdir)/src/c-interface.h    \
                              $(top_srcdir)/src/cc-interface.hh  \
                              $(top_srcdir)/src/cc-interface-ncs.hh  \
                              $(top_srcdir)/src/coot.i           \
@@ -116,12 +116,12 @@ coot_wrap_guile_pre_gtk2.cc: $(top_srcdir)/src/c-interface.h    \
 # For GOOPS support: -proxy -Linkage module (or passive), however, doing that makes SWIG_init() go away.
 # -proxy  exports the GOOPS wrapper definitions into module.scm
 
-coot_wrap_guile_gtk2.cc: coot_wrap_guile_pre_gtk2.cc
+coot_wrap_guile.cc: coot_wrap_guile_pre.cc
 	$(MAKE_COOT_WRAP_GUILE) gtk2 $^ $@
 
 # python
 
-coot_wrap_python_pre_gtk2.cc: $(top_srcdir)/src/c-interface.h      \
+coot_wrap_python_pre.cc: $(top_srcdir)/src/c-interface.h      \
 			      $(top_srcdir)/src/cc-interface.hh    \
 	                      $(top_srcdir)/src/coot.i             \
                               $(top_srcdir)/src/cc-interface-ncs.hh  \
@@ -132,7 +132,7 @@ coot_wrap_python_pre_gtk2.cc: $(top_srcdir)/src/c-interface.h      \
                               $(top_srcdir)/src/c-interface-mogul.hh
 	swig -o $@ -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CFLAGS) $(PYTHON_CFLAGS)  $(USE_LIBCURL) -I$(top_srcdir)/src  -I$(top_srcdir) -shadow -python -c++ $(top_srcdir)/src/coot.i
 
-coot_wrap_python_gtk2.cc: coot_wrap_python_pre_gtk2.cc
+coot_wrap_python.cc: coot_wrap_python_pre.cc
 	$(MAKE_COOT_WRAP_PYTHON_XXX) gtk2 $^ $@
 
 #libcoot_wrap.so: coot_wrap.o
@@ -278,7 +278,7 @@ coot_bin_SOURCES = \
 	c-interface-test.cc      \
 	cc-interface.hh		 \
 	cc-interface-ncs.hh      \
-	cc-interface-network.hh  	\
+	cc-interface-network.hh  \
 	cc-interface-mogul.hh    \
 	cc-interface-scripting.hh \
 	cc-interface-user-defined-atom-colours.hh \
@@ -318,7 +318,7 @@ coot_bin_SOURCES = \
 	coot-setup-python.cc     \
 	coot-setup-python.hh     \
 	coot-version.hh          \
-	coot_wrap_guile_gtk2.cc  \
+	coot_wrap_guile.cc  \
         dots-representation.hh   \
 	drag-and-drop.hh         \
 	drag-and-drop.cc         \
@@ -453,8 +453,8 @@ coot_bin_SOURCES = \
 	new-centre.hh
 
 if COOT_USE_PYTHON
-   coot_bin_SOURCES += coot_wrap_python_gtk2.cc
-   EXTRA_DIST += coot_wrap_python_pre_gtk2.cc 
+   coot_bin_SOURCES += coot_wrap_python.cc
+   EXTRA_DIST += coot_wrap_python_pre.cc 
 endif
 if COOT_USE_PYTHON
    dist_python_PYTHON = coot.py coot.pth
@@ -496,6 +496,7 @@ coot_fix_nomenclature_errors_LDADD = \
 
 # coot_bin_LDFLAGS = -static -lstdc++
 coot_bin_LDFLAGS =
+
 # coot_bin_CXXFLAGS=-Wl,--export-dynamic -dynamiclib
 #  -Wl,-undefined -Wl,dynamic_lookup 
 
@@ -602,3 +603,6 @@ dynarama_bin_LDADD = \
         $(GLOB_LIBS)            \
         $(GOOCANVAS_LIBS)       \
         $(LIBGLADE_LIBS)
+
+# subpkgdatadir = $(pkgdatadir)
+# subpkgdata_DATA = cfc.glade

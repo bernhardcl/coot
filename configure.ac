@@ -243,7 +243,7 @@ if test "$GOOCANVAS_CFLAGS" != "" ; then
    GOOCANVAS_CFLAGS="-DHAVE_GOOCANVAS $GOOCANVAS_CFLAGS"
 fi
 
-AC_ARG_WITH(enhanced-ligand-tools, [ --with-enhanced-ligand-tools with optional complicated/experimental ligand-related dependencies ],
+AC_ARG_WITH(enhanced-ligand-tools, [  --with-enhanced-ligand-tools with optional complicated/experimental ligand-related dependencies ],
  coot_enhanced_ligand_additions="true",
  coot_enhanced_ligand_additions="false")
 
@@ -252,6 +252,11 @@ if test x$coot_enhanced_ligand_additions = xtrue ; then
 else 	
    ENHANCED_LIGAND_TOOLS_CFLAGS=""
 fi
+
+AC_ARG_WITH(lidia-only, [  --with-lidia-only build lidia only (not coot) ],
+ lidia_only="yes",
+ lidia_only=="no")
+AM_CONDITIONAL([COND_LIDIA_ONLY], [test "$lidia_only" = yes])
 
 AM_CONDITIONAL(MAKE_ENHANCED_LIGAND_TOOLS, test x$coot_enhanced_ligand_additions = xtrue)
 AC_SUBST(ENHANCED_LIGAND_TOOLS_CFLAGS)
