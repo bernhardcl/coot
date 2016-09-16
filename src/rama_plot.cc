@@ -1,7 +1,7 @@
 /* src/main.cc
  * 
  * Copyright 2002, 2003, 2004, 2005, 2006, 2007 by The University of York
- * Copyright 2005 by Bernhard Lohkamp
+ * Copyright 2005, 2015, 2016 by Bernhard Lohkamp
  * Copyright 2009 by The University of Oxford
  * 
  * This program is free software; you can redistribute it and/or modify
@@ -136,6 +136,10 @@ coot::rama_plot::resize_rama_canvas_internal(GtkWidget *widget,
                      / sqrt(oldh*oldh*1. + oldw*oldw*1.));
 
       zoom *= zoom_factor;
+      if (zoom < 0.8) {
+         zoom = 0.8;
+         g_print("BL INFO:: already smallest size to fit the window, wont make canvas smaller.\n");
+      }
       goo_canvas_set_scale(GOO_CANVAS(canvas), zoom);
 
       // save the size for the next round
@@ -144,7 +148,7 @@ coot::rama_plot::resize_rama_canvas_internal(GtkWidget *widget,
 
    } else {
       // maybe need to save new window size.
-      g_print("BL DEBUG:: dont resize since off\n");
+      // I dont think so
    }
 
 }
@@ -272,7 +276,7 @@ coot::rama_plot::create_dynarama_window() {
 }
 
 
-// DEBUG:: FIXME
+// DEBUG:: function for debugging
 void my_getsize(GtkWidget *widget, GtkAllocation *allocation, gpointer *data) {
     printf("BL DEBUG:: size alloc %s width = %d, height = %d\n",
            data, allocation->width, allocation->height);
@@ -301,10 +305,10 @@ coot::rama_plot::init_internal(const std::string &mol_name,
    init_status = create_dynarama_window();
 
    if (init_status) {
-   if (hide_buttons == 1) {
+      if (hide_buttons == 1) {
          gtk_widget_hide(dynarama_ok_button);
          gtk_widget_hide(dynarama_cancel_button);
-   }
+      }
 
       if (! is_kleywegt_plot_flag_local){
          gtk_widget_hide(kleywegt_chain_box);
@@ -314,20 +318,20 @@ coot::rama_plot::init_internal(const std::string &mol_name,
          gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(kleywegt_radiomenuitem),
                                         TRUE);
       }
-   
+
 
       if (is_stand_alone()) {
          gtk_widget_show(rama_open_menuitem);
       } else {
          gtk_widget_hide(rama_open_menuitem);
       }
-//      // set the title of of widget
+      //      // set the title of of widget
       if (dynarama_label)
          gtk_label_set_text(GTK_LABEL(dynarama_label), mol_name.c_str());
 
-   int ysize = 500;
-   if (! is_kleywegt_plot_flag_local) // extra space needed
-      ysize = 535;
+      int ysize = 500;
+      if (! is_kleywegt_plot_flag_local) // extra space needed
+         ysize = 535;
 
       GtkAllocation alloc = { 0, 0, 400, ysize };
       gtk_widget_size_allocate(dynawin, &alloc);
@@ -341,15 +345,11 @@ coot::rama_plot::init_internal(const std::string &mol_name,
       g_signal_connect(dynawin, "configure-event",
                        G_CALLBACK(rama_resize), this);
 
-//      gchar *txt ="win";
-//      g_signal_connect(dynawin, "size-allocate",
-//                       G_CALLBACK(my_getsize), (gpointer *)txt);
-   
       allow_seqnum_offset_flag = 0;
-   
+
       canvas = goo_canvas_new();
       root = goo_canvas_get_root_item (GOO_CANVAS(canvas));
-   
+
       gtk_widget_set_size_request(canvas, 400, 400);
       gtk_container_add(GTK_CONTAINER(scrolled_window),
                         canvas);
@@ -361,41 +361,36 @@ coot::rama_plot::init_internal(const std::string &mol_name,
                    "has-tooltip", TRUE,
                    NULL);
 
-      txt ="canvas";
-      g_signal_connect(canvas, "size-allocate",
-                       G_CALLBACK(my_getsize), (gpointer *)txt);
-
-
       gtk_widget_add_events(GTK_WIDGET(canvas),
-			 GDK_EXPOSURE_MASK      |
-			 GDK_BUTTON_PRESS_MASK  |
-			 GDK_BUTTON_RELEASE_MASK|
-			 GDK_POINTER_MOTION_MASK|
-			 GDK_KEY_RELEASE_MASK   |
-			 GDK_POINTER_MOTION_HINT_MASK);
+                            GDK_EXPOSURE_MASK      |
+                            GDK_BUTTON_PRESS_MASK  |
+                            GDK_BUTTON_RELEASE_MASK|
+                            GDK_POINTER_MOTION_MASK|
+                            GDK_KEY_RELEASE_MASK   |
+                            GDK_POINTER_MOTION_HINT_MASK);
 
 
-   if (dialog_position_x > -1)
+      if (dialog_position_x > -1)
          gtk_widget_set_uposition(dynawin, dialog_position_x, dialog_position_y);
 
       gtk_widget_show (canvas);
 
-   // Normally we have a plot from a molecule (and we communicate back
-   // to graphics_info_t that we now have one), but occassionally we
-   // want to edit the phipsi angle.
-   // 
-   if (! phipsi_edit_flag && ! backbone_edit_flag)
-      // a c-interface function
-      set_dynarama_is_displayed(GTK_WIDGET(canvas), imol); 
+      // Normally we have a plot from a molecule (and we communicate back
+      // to graphics_info_t that we now have one), but occassionally we
+      // want to edit the phipsi angle.
+      //
+      if (! phipsi_edit_flag && ! backbone_edit_flag)
+         // a c-interface function
+         set_dynarama_is_displayed(GTK_WIDGET(canvas), imol);
 
-   setup_internal(level_prefered, level_allowed); 
-   step = step_in;
-   kleywegt_plot_uses_chain_ids = 0;
+      setup_internal(level_prefered, level_allowed);
+      step = step_in;
+      kleywegt_plot_uses_chain_ids = 0;
 
-   draw_outliers_only = false;
+      draw_outliers_only = false;
 
-   green_box = coot::util::phi_psi_t(-999, -999, "", "", 0, "", ""); // set unsensible phi phi initially.
-   setup_canvas(); 
+      green_box = coot::util::phi_psi_t(-999, -999, "", "", 0, "", ""); // set unsensible phi phi initially.
+      setup_canvas();
 
       // Draw the basics here, why not?
       basic_white_underlay();
@@ -403,12 +398,12 @@ coot::rama_plot::init_internal(const std::string &mol_name,
           level_prefered != current_level_prefered) {
          current_level_allowed = level_allowed;
          current_level_prefered = level_prefered;
-   
-}
+
+      }
 
       if (!current_bg) {
          setup_background();
-	 }
+      }
       draw_axes();
       draw_zero_lines();
       black_border();
@@ -422,15 +417,15 @@ coot::rama_plot::init_internal(const std::string &mol_name,
                                            NULL);
 
       // Hope everything is there before we resize?!
-//      g_signal_connect_after(dynawin, "size-allocate",
+      //      g_signal_connect_after(dynawin, "size-allocate",
 
       g_signal_connect_after(dynawin, "configure-event",
                              G_CALLBACK(rama_resize), this);
 
-      } else { 
+   } else {
       // FIXME throw runtime error here as not to continue?
       std::cout<<"BL WARNING:: no dynawin, bailing out." <<std::endl;
-      }
+   }
 }
 
 
@@ -946,12 +941,10 @@ coot::rama_plot::clear_canvas_items() {
 
    if (arrow_grp) {
       gint iarrow = goo_canvas_item_find_child(root, arrow_grp);
-      // g_print("BL DEBUG:: have group id for arrow %i\n", iarrow);
       goo_canvas_item_remove_child(root, iarrow);
    }
    if (residues_grp) {
       gint ires = goo_canvas_item_find_child(root, residues_grp);
-      // g_print("BL DEBUG:: have group id for res %i\n", ires);
       goo_canvas_item_remove_child(root, ires);
    }
 
@@ -994,21 +987,24 @@ coot::rama_plot::basic_white_underlay() {
 gint
 coot::rama_plot::key_release_event(GtkWidget *widget, GdkEventKey *event) {
 
-   switch (event->keyval) {
+   // Not needed any more glade is taking care of this...
+   // Keep in case we want to bind other keys at some point.
+
+//   switch (event->keyval) {
       
-   case GDK_plus:
-   case GDK_equal:  // unshifted plus, usually.
+//   case GDK_plus:
+//   case GDK_equal:  // unshifted plus, usually.
 
-      zoom_in();
-      break;
+//      zoom_in();
+//      break;
 
-   case GDK_minus:
-      zoom_out();
-      break; 
-   }
+//   case GDK_minus:
+//      zoom_out();
+//      break;
+//   }
 
-   /* prevent the default handler from being run */
-   gtk_signal_emit_stop_by_name(GTK_OBJECT(canvas),"key_release_event");
+//   /* prevent the default handler from being run */
+//   gtk_signal_emit_stop_by_name(GTK_OBJECT(canvas),"key_release_event");
 
    return 0; 
 }
@@ -1086,8 +1082,8 @@ coot::rama_plot::draw_phi_psi_point(const coot::util::phi_psi_t &phi_psi,
 
 int 
 coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_psi,
-					     bool as_white_flag,
-					     int box_size) {
+                                             bool as_white_flag,
+                                             int box_size) {
 
    if (false)
       std::cout << "draw_phi_psi_point_internal() called with draw_outliers_only "
@@ -1475,8 +1471,6 @@ coot::rama_plot::button_item_release (GooCanvasItem *item, GdkEventButton *event
       float psi = -1.*event->y_root;
       chain_id = (gchar*)g_object_get_data(G_OBJECT(item), "chain");
       res_no = (gint)g_object_get_data(G_OBJECT(item), "res_no");
-      g_print("BL DEBUG:: now add phi (%f), psi (%f) restrains to residue %i in chain %s\n",
-              phi, psi, res_no, chain_id);
       dragging = FALSE;
 	 } 
 
@@ -1562,7 +1556,7 @@ coot::rama_plot::button_item_press_conventional (GooCanvasItem *item, GdkEventBu
                       "width", width,
                       "height", height,
                       NULL);
-}
+      }
 
 
       // save the color
@@ -1591,7 +1585,7 @@ coot::rama_plot::button_item_press_conventional (GooCanvasItem *item, GdkEventBu
 
    return 1;
 
-      } 
+}
 
 gint
 coot::rama_plot::button_press_conventional (GtkWidget *widget, GdkEventButton *event) {
@@ -1960,7 +1954,7 @@ coot::rama_plot::set_seqnum_offset(int imol1, int imol2,
       }
    }
 
-   std::cout << "DEBUG:: seqnum_offset is: " << seqnum_offset << std::endl;
+   //std::cout << "DEBUG:: seqnum_offset is: " << seqnum_offset << std::endl;
    
    if (seqnum_offset == mmdb::MinInt4) {
       std::cout << "WARNING:: Ooops! Failed to set the Chain Residue numbering different\n"
@@ -2282,7 +2276,7 @@ coot::rama_plot::find_phi_psi_differences_internal(const std::string &chain_id1,
       
    // sort diff_sq
 
-   std::cout << " debug:: -- generated " << diff_sq.size() << " rama differences " << std::endl;
+//   std::cout << " debug:: -- generated " << diff_sq.size() << " rama differences " << std::endl;
    std::sort(diff_sq.begin(), diff_sq.end(), compare_phi_psi_diffs);
 
 }
@@ -2328,7 +2322,6 @@ coot::rama_plot::draw_phi_psi_differences() {
       int n_vsize = diff_sq.size();
 
       // std::cout << "debug:: draw_phi_psi_differences() " << n_vsize << " " << n_diffs << std::endl;
-      std::cout << "debug:: draw_phi_psi_differences() " << n_vsize << " " << n_diffs << std::endl;
 
       for (int j=0; j<n_diffs && j<n_vsize; j++) {
 
@@ -2530,7 +2523,6 @@ coot::rama_plot::draw_axes() {
    GooCanvasItem *axis_grp;
 
    axis_grp = goo_canvas_group_new(root, NULL);
-   //  line_style		GdkLineStyle
    item = goo_canvas_text_new(axis_grp,
                               "Phi",
                               -10.0,
@@ -2698,6 +2690,7 @@ coot::rama_plot::zoom_out() {
    // make sure it doesnt get smaller than the window
    if (zoom-0.2 < 0.8) {
       zoom = 0.8;
+      g_print("BL INFO:: already smallest size to fit the window, wont make it smaller\n");
    } else {
    zoom -= 0.2;
    }
