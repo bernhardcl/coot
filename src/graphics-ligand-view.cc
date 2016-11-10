@@ -35,6 +35,10 @@
 
 #include "geometry/residue-and-atom-specs.hh"
 
+graphics_ligand_molecule::~graphics_ligand_molecule() {}
+ 
+// template<class Tgraphics_ligand_atom, class Tgraphics_ligand_bond> lig_build::molecule_t<graphics_ligand_atom, graphics_ligand_bond>::~molecule_t() {}
+template<class graphics_ligand_atom, class graphics_ligand_bond> lig_build::molecule_t<graphics_ligand_atom, graphics_ligand_bond>::~molecule_t() {}
 
 void 
 graphics_ligand_molecule::generate_display_list(bool dark_background_flag) {
@@ -367,6 +371,10 @@ graphics_ligand_molecule::setup_from(int imol_in, mmdb::Residue *residue_p,
 	 } else {
 	    const coot::dictionary_residue_restraints_t &restraints = p.second;
 	    RDKit::RWMol rdkm = coot::rdkit_mol(residue_p, restraints, alt_conf);
+
+	    // std::cout << "--------------------- graphics-ligand-view setup_from() 1 " << std::endl;
+	    // coot::debug_rdkit_molecule(&rdkm);
+
 	    unsigned int n_atoms = rdkm.getNumAtoms();
 	    if (n_atoms > 1) {
 	       // return a kekulize mol

@@ -25,7 +25,7 @@ dnl implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 dnl
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(coot, 0.8.7-pre)
+AC_INIT(coot, 0.8.7)
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -35,7 +35,6 @@ AC_CONFIG_MACRO_DIR(macros)
 
 AC_ISC_POSIX
 AC_PROG_CC
-AM_PROG_CC_STDC
 AC_HEADER_STDC
 
 AC_PROG_CXX

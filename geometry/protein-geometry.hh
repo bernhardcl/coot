@@ -24,8 +24,6 @@
 #ifndef PROTEIN_GEOMETRY_HH
 #define PROTEIN_GEOMETRY_HH
 
-#define MONOMER_DIR_STR "COOT_CCP4SRS_DIR"
-
 #ifndef HAVE_VECTOR
 #define HAVE_VECTOR
 #include <vector>
@@ -422,6 +420,7 @@ namespace coot {
       std::string atom_id_2_4c() const { return atom_id_mmdb_expand(local_atom_id_2);}
       std::string atom_id_3_4c() const { return atom_id_mmdb_expand(local_atom_id_3);}
       std::string atom_id_c_4c() const { return atom_id_mmdb_expand(local_atom_id_centre);}
+      std::string get_atom_id_centre() const { return local_atom_id_centre; }
       void set_atom_1_atom_id(const std::string &id) { local_atom_id_1 = id; }
       void set_atom_2_atom_id(const std::string &id) { local_atom_id_2 = id; }
       void set_atom_3_atom_id(const std::string &id) { local_atom_id_3 = id; }
@@ -773,8 +772,15 @@ namespace coot {
       // for hydrogens
       bool is_connected_to_donor(const std::string &H_at_name_4c,
 				 const energy_lib_t &energy_lib) const;
+
+      friend std::ostream& operator<<(std::ostream &s, const dictionary_residue_restraints_t &rest);
+
+#ifdef HAVE_CCP4SRS
+      bool fill_using_ccp4srs(ccp4srs::Manager *srs_manager, const std::string &monomer_type);
+#endif // HAVE_CCP4SRS
       
    };
+   std::ostream& operator<<(std::ostream &s, const dictionary_residue_restraints_t &rest);
 
    class dictionary_match_info_t {
    public:
@@ -2222,7 +2228,7 @@ namespace coot {
 							    unsigned int n_top=10) const;
 
 #endif // HAVE_CCP4SRS      
-	 
+
    };
 
 } // namespace coot
