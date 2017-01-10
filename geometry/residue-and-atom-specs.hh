@@ -138,6 +138,9 @@ namespace coot {
 	 }
 	 return r;
       }
+      bool operator !=(const atom_spec_t &matcher) const {
+	 return ! operator==(matcher);
+      }
 #endif 
 
 #ifndef SWIG
@@ -172,12 +175,15 @@ namespace coot {
 	 }
 	 return false;
       }
-#endif // SWIG      
+#endif // SWIG
       
-#ifndef SWIG      
+#ifndef SWIG
       friend std::ostream& operator<< (std::ostream& s, const atom_spec_t &spec);
-#endif // SWIG      
+#endif // SWIG
    };
+#ifndef SWIG
+      std::ostream& operator<< (std::ostream& s, const atom_spec_t &spec);
+#endif // SWIG
    
    bool compare_atom_specs_user_float(const atom_spec_t &a1,
 				      const atom_spec_t &a2);
@@ -257,6 +263,9 @@ namespace coot {
 	    u = false;
 	 return u;
       }
+      bool empty() const {
+	 return unset_p();
+      }
       residue_spec_t next() const {
 	 residue_spec_t r = *this;
 	 if (res_no != mmdb::MinInt4)
@@ -280,7 +289,7 @@ namespace coot {
 	 }
 	 return 0;
       }
-#endif // SWIG      
+#endif // SWIG
       
 #ifndef SWIG
       bool operator<(const residue_spec_t &matcher) const{
@@ -308,7 +317,7 @@ namespace coot {
 	 } 
 	 return 0;
       }
-#endif // SWIG      
+#endif // SWIG
 
       std::string format() const {
 	 std::ostringstream s;
@@ -326,10 +335,13 @@ namespace coot {
       int select_atoms(mmdb::Manager *mol, int selhnd,
 		       mmdb::SELECTION_KEY selection_key);
 
-#ifndef SWIG      
+#ifndef SWIG
       friend std::ostream& operator<< (std::ostream& s, const residue_spec_t &spec);
-#endif // SWIG      
+#endif // SWIG
    };
+#ifndef SWIG
+   std::ostream& operator<< (std::ostream& s, const residue_spec_t &spec);
+#endif // SWIG
 
 }
 

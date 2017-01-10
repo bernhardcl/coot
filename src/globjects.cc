@@ -776,6 +776,7 @@ short int graphics_info_t::guile_gui_loaded_flag = FALSE;
 short int graphics_info_t::python_gui_loaded_flag = FALSE;
 
 //
+bool  graphics_info_t::find_ligand_do_real_space_refine_ = true; // default on
 int   graphics_info_t::find_ligand_map_mol_ = -1;
 int   graphics_info_t::find_ligand_protein_mol_ = -1;
 bool  graphics_info_t::find_ligand_here_cluster_flag = 0;
@@ -794,6 +795,7 @@ float graphics_info_t::find_waters_sigma_cut_off = 1.8;
 float graphics_info_t::ligand_acceptable_fit_fraction = 0.75;
 float graphics_info_t::ligand_cluster_sigma_level = 1.0; // sigma
 int   graphics_info_t::ligand_wiggly_ligand_n_samples = 50;
+int   graphics_info_t::ligand_wiggly_ligand_count = 0; // dummy
 int   graphics_info_t::ligand_verbose_reporting_flag = 0; 
 // std::vector<short int> *graphics_info_t::find_ligand_wiggly_ligands_; bye!
 short int graphics_info_t::ligand_expert_flag = 0;
@@ -1728,7 +1730,7 @@ setup_lighting(short int do_lighting_flag) {
       // 
       GLfloat  light_0_position[] = { 1.0,  1.0, 1.0, 0.0};
       GLfloat  light_1_position[] = {-1.0,  0.0, 1.0, 0.0};
-      GLfloat  light_2_position[] = { 0.0, 0.0, 0.0, 0.0};
+      GLfloat  light_2_position[] = { 0.0,  0.0, 0.0, 0.0};
 
       glClearColor(0.0, 0.0, 0.0, 0.0);
       glShadeModel(GL_SMOOTH);
@@ -2134,16 +2136,16 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
       }
 
 
-      if (false) { 
+      if (true) {
 	 glPushMatrix();
 	 glLoadIdentity();
-	 GLfloat  light_0_position[] = { -1.0,  1.0, 1.0, 0.0};
-	 GLfloat  light_1_position[] = {  1.0,  0.2, 1.0, 0.0};
-	 GLfloat  light_2_position[] = {  1.0,  1.0, 1.0, 0.0};
+	 GLfloat  light_0_position[] = {  1.0,  1.0, 1.0, 0.0};
+	 GLfloat  light_1_position[] = {  0.6, -0.7, 1.0, 0.0};
+	 GLfloat  light_2_position[] = {  0.7, -0.7, 1.0, 0.0};
 
-	 glLightfv(GL_LIGHT0,   GL_POSITION, light_0_position);
-	 glLightfv(GL_LIGHT1,   GL_POSITION, light_1_position);
-	 glLightfv(GL_LIGHT2,   GL_POSITION, light_2_position);
+	 glLightfv(GL_LIGHT0, GL_POSITION, light_0_position);
+	 glLightfv(GL_LIGHT1, GL_POSITION, light_1_position);
+	 glLightfv(GL_LIGHT2, GL_POSITION, light_2_position);
 	 glPopMatrix();
       }
 
@@ -2306,7 +2308,7 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
       }
 
 
-      // 
+      //
       draw_crosshairs_maybe();
 
       // 
@@ -3777,12 +3779,13 @@ gint key_release_event(GtkWidget *widget, GdkEventKey *event)
       break;
       
    case GDK_c:
-   case GDK_C:
       if (graphics_info_t::control_is_pressed) {
 	 g.copy_active_atom_molecule();
       } else {
-	 g.draw_crosshairs_flag = 1 - g.draw_crosshairs_flag; 
-	 g.crosshairs_text();
+	 if (! graphics_info_t::shift_is_pressed) {
+	    g.draw_crosshairs_flag = 1 - g.draw_crosshairs_flag;
+	    g.crosshairs_text();
+	 }
       }
       g.graphics_draw();
       break;

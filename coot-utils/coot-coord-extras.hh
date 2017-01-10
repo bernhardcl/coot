@@ -548,7 +548,8 @@ namespace coot {
       // (delete all atoms with the given name)
       void delete_atom(mmdb::Residue *res, const std::string &atom_name) const;
       std::string atom_id_mmdb_expand(const std::string &atom_id,
-				      const std::string &res_name) const; 
+				      const std::string &res_name,
+				      int imol) const; 
 
       // If the link is a BETA1-6 or an ALPHA1-6 then the linked
       // residue (and the O6 of the residue to which we are adding)
@@ -641,7 +642,7 @@ namespace coot {
    public:
       glyco_tree_t(mmdb::Residue *residue_p, mmdb::Manager *mol, protein_geometry *geom_p_in);
       void print(const tree<linked_residue_t> &glyco_tree) const;
-
+      std::vector<mmdb::Residue *> residues(const tree<linked_residue_t> &glyco_tree) const;
    }; 
 }
 

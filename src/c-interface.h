@@ -2732,6 +2732,15 @@ PyObject *test_function_py(PyObject *i, PyObject *j);
 /*                    glyco tools test  */
 void glyco_tree_test();
 
+#ifdef __cplusplus
+#ifdef USE_GUILE
+SCM glyco_tree_scm(int imol, SCM active_residue_scm);
+#endif
+#ifdef USE_PYTHON
+PyObject *glyco_tree_py(int imol, PyObject *active_residue_py);
+#endif /* PYTHON */
+#endif
+
 
 
 /*  ----------------------------------------------------------------------- */
@@ -2846,6 +2855,10 @@ PyObject *symmetry_operators_to_xHM_py(PyObject *symmetry_operators);
 /*  ----------------------------------------------------------------------- */
 /* section Merge Molecules */
 
+/*! \brief merge molecules
+
+the first argument is a list of molecule numbers and the second is the target 
+   molecule into which the others should be merged  */
 #ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
 #ifdef USE_GUILE
 SCM merge_molecules(SCM add_molecules, int imol);
@@ -2864,7 +2877,7 @@ PyObject *merge_molecules_py(PyObject *add_molecules, int imol);
 /*! \name  Align and Mutate */
 /* \{ */
 
-/*! \brief aligand and mutate the given chain to the given sequence  */
+/*! \brief align and mutate the given chain to the given sequence  */
 void align_and_mutate(int imol, const char *chain_id, const char *fasta_maybe, short int renumber_residues_flag);
 /*! \brief set the penalty for affine gap and space when aligning, defaults -3.0 and -0.4 */
 void set_alignment_gap_and_space_penalty(float wgap, float wspace);
@@ -3345,6 +3358,16 @@ void set_extra_restraints_prosmart_sigma_limits(int imol, double limit_high, dou
 
 void generate_local_self_restraints(int imol, const char *chain_id, float local_dist_max);
 
+#ifdef __cplusplus
+#ifdef USE_GUILE
+void generate_local_self_restraints_by_residues_scm(int imol, SCM residue_specs, float local_dist_max);
+#endif // USE_GUILE
+#ifdef USE_PYTHON
+void generate_local_self_restraints_by_residues_py(int imol, PyObject *residue_specs, float local_dist_max);
+#endif // USE_PYTHON
+#endif // __cplusplus
+
+
 /*! \brief proSMART interpolated restraints for model morphing  */
 void write_interpolated_extra_restraints(int imol_1, int imol_2, int n_steps, char *file_name_stub);
 
@@ -3602,6 +3625,17 @@ int handle_cif_dictionary(const char *filename);
 
 return the number of bonds read (> 0 can be treated as success) */
 int read_cif_dictionary(const char *filename);
+
+/* \brief return the number of bonds read (> 0 can be treated as success).
+ Apply to the given molecule.
+
+ imol_enc can be the model molecule number or
+ -1 for all
+ -2 for auto
+ -3 for unset
+ */
+int handle_cif_dictionary_for_molecule(const char *filename, int imol_enc);
+
 int write_connectivity(const char* monomer_name, const char *filename);
 /*! \brief open the cif dictionary file selector dialog */
 void open_cif_dictionary_file_selector_dialog(); 
@@ -3733,6 +3767,7 @@ SCM set_torsion_scm(int imol, const char *chain_id, int res_no, const char *inse
 		    const char *atom_name_3,
 		    const char *atom_name_4, double tors);
 
+/*! \brief create a multi-residue torsion dialog (user manipulation of torsions) */
 void multi_residue_torsion_scm(int imol, SCM residues_specs_scm);
 
 
@@ -3751,6 +3786,7 @@ PyObject *set_torsion_py(int imol, const char *chain_id, int res_no, const char 
 		         const char *atom_name_3,
 		         const char *atom_name_4, double tors);
 
+/*! \brief create a multi-residue torsion dialog (user manipulation of torsions) */
 void multi_residue_torsion_py(int imol, PyObject *residues_specs_py);
 
 #endif  /* USE_PYTHON */
@@ -4048,6 +4084,8 @@ void set_ligand_verbose_reporting(int i); /* 0 off (default), 1 on */
 void set_find_ligand_n_top_ligands(int n); /* fit the top n ligands,
 					      not all of them, default
 					      10. */
+
+void set_find_ligand_do_real_space_refinement(short int state);
 
 /*! \brief allow multiple ligand solutions per cluster. 
 
@@ -5965,7 +6003,7 @@ find words, construct a url and open it. */
 void handle_online_coot_search_request(const char *entry_text);
 /* \} */
 
-#include "c-interface-generic-objects.h"
+// #include "c-interface-generic-objects.h"
 
 
 /*  ----------------------------------------------------------------------- */

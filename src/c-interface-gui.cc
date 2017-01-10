@@ -72,6 +72,7 @@
 #include "graphics-info.h"
 #include "interface.h"
 #include "c-interface.h"
+#include "c-interface-generic-objects.h"
 #include "c-interface-gtk-widgets.h"
 #include "c-interface-preferences.h"
 #include "cc-interface.hh"
@@ -126,19 +127,120 @@ void open_coords_dialog() {
 }
 
 
+#include "c-interface-widgets.hh"
+
 void
 open_cif_dictionary_file_selector_dialog() {
    
-   if (graphics_info_t::use_graphics_interface_flag) { 
-      GtkWidget *fileselection;
-      fileselection = coot_cif_dictionary_chooser();
+   if (graphics_info_t::use_graphics_interface_flag) {
+
+      GtkWidget *fileselection = coot_cif_dictionary_chooser(); // a chooser or a fileselection
       add_ccp4i_project_optionmenu(fileselection, COOT_CIF_DICTIONARY_FILE_SELECTION);
       add_filename_filter_button(fileselection, COOT_CIF_DICTIONARY_FILE_SELECTION);
       add_sort_button_fileselection(fileselection); 
       set_directory_for_fileselection(fileselection);
       set_file_selection_dialog_size(fileselection);
+
+      if (graphics_info_t::gtk2_file_chooser_selector_flag == coot::CHOOSER_STYLE) {
+
+	 GtkWidget *aa_hbutton_box = gtk_dialog_get_action_area(GTK_DIALOG(fileselection));
+	 if (GTK_IS_HBUTTON_BOX(aa_hbutton_box))
+	    add_cif_dictionary_selector_molecule_selector(fileselection, aa_hbutton_box);
+
+      } else {
+
+	 // classic (I'm in the club, Moet Chandon in my cup...)
+
+	 GtkWidget *aa_hbox = GTK_FILE_SELECTION(fileselection)->action_area;
+	 if (aa_hbox)
+	    add_cif_dictionary_selector_molecule_selector(fileselection, aa_hbox);
+      }
       gtk_widget_show(fileselection);
    }
+}
+
+void
+add_cif_dictionary_selector_molecule_selector(GtkWidget *fileselection, // maybe it's a chooser
+					      GtkWidget *aa_hbox) {
+
+   // if we came from a chooser, aa_hbox is an hbutton_box
+   // if we came from a selector, aa_hbox is an hbox.
+
+   GtkWidget *frame = gtk_frame_new("Select Mol");
+   GtkWidget *optionmenu = gtk_option_menu_new();
+   g_object_set_data_full(G_OBJECT(fileselection),
+			  "cif_dictionary_file_selector_molecule_select_option_menu",
+			  gtk_widget_ref(optionmenu),
+			  (GDestroyNotify) gtk_widget_unref);
+
+   GtkSignalFunc callback_func =
+      GTK_SIGNAL_FUNC(cif_dictionary_molecule_menu_item_select);
+
+   graphics_info_t g;
+   int imol = first_coords_imol();
+   fill_option_menu_with_coordinates_options_for_dictionary(optionmenu);
+
+   gtk_box_pack_start(GTK_BOX(aa_hbox), frame, FALSE, TRUE, 0);
+   gtk_container_add(GTK_CONTAINER(frame),optionmenu);
+   gtk_widget_show(optionmenu);
+   gtk_widget_show(frame);
+}
+
+void
+fill_option_menu_with_coordinates_options_for_dictionary(GtkWidget *option_menu) {
+
+   // Auto is at the top, followed by All, then numbers
+
+   GtkWidget *menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(option_menu));
+   if (GTK_IS_MENU(menu))
+      gtk_widget_destroy(menu);
+   menu = gtk_menu_new();
+
+   GtkSignalFunc signal_func = GTK_SIGNAL_FUNC(cif_dictionary_molecule_menu_item_select);
+
+   if (graphics_n_molecules() > 0) {
+      GtkWidget *menuitem = gtk_menu_item_new_with_label ("Auto");
+      gtk_signal_connect (GTK_OBJECT (menuitem), "activate",
+			  signal_func,
+			  GINT_TO_POINTER(coot::protein_geometry::IMOL_ENC_AUTO));
+      g_object_set_data(G_OBJECT(menuitem),
+			"select_molecule_number",
+			GINT_TO_POINTER(coot::protein_geometry::IMOL_ENC_AUTO));
+      gtk_menu_append(GTK_MENU(menu), menuitem);
+      gtk_widget_show(menuitem);
+      menuitem = gtk_menu_item_new_with_label ("All");
+      gtk_signal_connect (GTK_OBJECT (menuitem), "activate",
+			  signal_func,
+			  GINT_TO_POINTER(coot::protein_geometry::IMOL_ENC_ANY));
+      g_object_set_data(G_OBJECT(menuitem),
+			"select_molecule_number",
+			GINT_TO_POINTER(coot::protein_geometry::IMOL_ENC_ANY));
+      gtk_menu_append(GTK_MENU(menu), menuitem);
+      gtk_widget_show(menuitem);
+      for (int imol=0; imol<graphics_n_molecules(); imol++) {
+	 if (is_valid_model_molecule(imol)) {
+	    std::string ss = coot::util::int_to_string(imol);
+	    GtkWidget *menuitem = gtk_menu_item_new_with_label (ss.c_str());
+	    gtk_signal_connect(GTK_OBJECT (menuitem), "activate",
+			       signal_func,
+			       GINT_TO_POINTER(imol));
+	    g_object_set_data(G_OBJECT(menuitem),
+			      "select_molecule_number",
+			      GINT_TO_POINTER(imol));
+	    gtk_menu_append(GTK_MENU(menu), menuitem);
+	    gtk_widget_show(menuitem);
+	 }
+      }
+      gtk_menu_set_active(GTK_MENU(menu), 0);
+   }
+   gtk_option_menu_set_menu(GTK_OPTION_MENU(option_menu), menu);
+}
+
+void cif_dictionary_molecule_menu_item_select(GtkWidget *item, GtkPositionType pos) {
+
+   // pos is the value stored in with GINT_TO_POINTER() in the signal connect.
+   //
+   // std::cout << "select menu item " << item << " pos " << pos << std::endl;
 }
 
 
@@ -166,7 +268,7 @@ void fill_remarks_browswer_chooser(GtkWidget *w) {
       graphics_info_t::imol_remarks_browswer = imol;
       g.fill_option_menu_with_coordinates_options(option_menu, callback_func, imol);
    } 
-} 
+}
 
 
 void remarks_browswer_molecule_item_select(GtkWidget *item, GtkPositionType pos) {
@@ -532,11 +634,9 @@ void add_coot_references_button(GtkWidget *widget) {
   hbox = GTK_DIALOG(widget)->action_area;
   button = gtk_button_new_with_label("References");
   gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
-#if (GTK_MAJOR_VERSION > 1)
   gtk_button_box_set_child_secondary(GTK_BUTTON_BOX(hbox), button, TRUE);
   gtk_box_reorder_child(GTK_BOX(hbox), button, 2);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(wrapped_create_coot_references_dialog), NULL);
-#endif // GTK_MAJOR_VERSION
   gtk_widget_show(button);
   
 }
@@ -1569,11 +1669,8 @@ GtkWidget *add_sort_button_fileselection(GtkWidget *fileselection) {
    GtkWidget *button = 0;
    bool doit = 1;
 
-#if (GTK_MAJOR_VERSION > 1)
-   if (graphics_info_t::gtk2_file_chooser_selector_flag == 1) {
+   if (graphics_info_t::gtk2_file_chooser_selector_flag == 1)
       doit = 0;
-   }
-#endif
    
    if (doit) {
       GtkWidget *aa = GTK_FILE_SELECTION(fileselection)->action_area;
@@ -1602,7 +1699,7 @@ GtkWidget *add_sort_button_fileselection(GtkWidget *fileselection) {
       gtk_widget_show(button);
 
    } else {
-	// we have the chooser and dont need a sort button
+	// we have the chooser and don't need a sort button
    }
    return button;
 }
@@ -2007,7 +2104,7 @@ GtkWidget *coot_cif_dictionary_chooser() {
    if (graphics_info_t::gtk2_file_chooser_selector_flag == coot::OLD_STYLE) {
       w = create_cif_dictionary_fileselection();
    } else {
-      w = create_cif_dictionary_filechooserdialog1(); 
+      w = create_cif_dictionary_filechooserdialog1();
    }
 
    return w;
@@ -3737,28 +3834,31 @@ void add_ccp4i_project_optionmenu(GtkWidget *fileselection, int file_selection_t
    }
 
    if (add_shortcut) {
-//       std::cout << "in add_ccp4i_project_optionmenu widget is fileselection "
-// 		<< GTK_IS_FILE_CHOOSER(fileselection) << std::endl;
-      add_ccp4i_project_shortcut(fileselection);
+
+      if (GTK_IS_FILE_CHOOSER(fileselection))
+	 add_ccp4i_project_shortcut(fileselection);
 
    } else {
 
-      GtkWidget *aa = GTK_FILE_SELECTION(fileselection)->action_area;
+      if (GTK_IS_FILE_SELECTION(fileselection)) {
 
-      GtkWidget *optionmenu = gtk_option_menu_new();
-      gtk_widget_ref(optionmenu);
-      gtk_widget_show(optionmenu);
-      gtk_object_set_data(GTK_OBJECT(fileselection), "ccp4i_project_optionmenu", optionmenu);
-      gtk_object_set_user_data(GTK_OBJECT(optionmenu), GINT_TO_POINTER(file_selection_type));
-      GtkSignalFunc project_signal_func =
-	 GTK_SIGNAL_FUNC(option_menu_refmac_ccp4i_project_signal_func);
-      add_ccp4i_projects_to_optionmenu(optionmenu, file_selection_type, project_signal_func);
+	 GtkWidget *aa = GTK_FILE_SELECTION(fileselection)->action_area;
 
-      // Let's put the optionmenu in a frame with a label
-      GtkWidget *frame = gtk_frame_new("CCP4i Project Directory");
-      gtk_container_add(GTK_CONTAINER(aa), frame);
-      gtk_widget_show(frame);
-      gtk_container_add(GTK_CONTAINER(frame),optionmenu);
+	 GtkWidget *optionmenu = gtk_option_menu_new();
+	 gtk_widget_ref(optionmenu);
+	 gtk_widget_show(optionmenu);
+	 gtk_object_set_data(GTK_OBJECT(fileselection), "ccp4i_project_optionmenu", optionmenu);
+	 gtk_object_set_user_data(GTK_OBJECT(optionmenu), GINT_TO_POINTER(file_selection_type));
+	 GtkSignalFunc project_signal_func =
+	    GTK_SIGNAL_FUNC(option_menu_refmac_ccp4i_project_signal_func);
+	 add_ccp4i_projects_to_optionmenu(optionmenu, file_selection_type, project_signal_func);
+
+	 // Let's put the optionmenu in a frame with a label
+	 GtkWidget *frame = gtk_frame_new("CCP4i Project Directory");
+	 gtk_container_add(GTK_CONTAINER(aa), frame);
+	 gtk_widget_show(frame);
+	 gtk_container_add(GTK_CONTAINER(frame),optionmenu);
+      }
    }
 }
 
@@ -5346,6 +5446,8 @@ void clear_restraints_editor_by_dialog(GtkWidget *dialog) { /* close button pres
 
 void show_restraints_editor(const char *monomer_type) {
 
+   int imol = 0; // maybe this should be passed? Pretty esoteric though.
+
    if (graphics_info_t::use_graphics_interface_flag) {
 
       if (! monomer_type) {
@@ -5355,7 +5457,7 @@ void show_restraints_editor(const char *monomer_type) {
 	 coot::protein_geometry *pg = g.Geom_p();
 
 	 std::pair<bool, coot::dictionary_residue_restraints_t> p =
-	    pg->get_monomer_restraints(monomer_type);
+	    pg->get_monomer_restraints(monomer_type, imol);
    
 	 if (p.first) { 
 	    coot::dictionary_residue_restraints_t restraints = p.second;

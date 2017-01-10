@@ -782,7 +782,8 @@ private:
       alert_group = NULL; // group for alert annotations
       show_alerts_user_control = false; // no pattern matching available
       geom_p = NULL; // no (const) geometry passed/set
-      display_atom_names = false;
+      display_atom_names   = false;
+      display_atom_numbers = false;
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS   
       show_alerts_user_control = false;
       bond_pick_pending = false;
@@ -824,7 +825,8 @@ private:
 						 mmdb::math::GraphMatch &match, int n_match, 
 						 ccp4srs::Monomer *monomer_p) const;
 #endif   
-   void display_search_results(const std::vector<coot::match_results_t> &v) const;
+   // not const because try_dynamic_add() can be called (to make images):
+   void display_search_results(const std::vector<coot::match_results_t> &v);
    void rotate_latest_bond(int x, int y);
    void rotate_or_extend_latest_bond(int x, int y);
    bool extend_latest_bond_maybe(); // use hilight_data
@@ -918,7 +920,10 @@ private:
    void show_mol_ring_centres(); // not const because mol.get_ring_centres() caches
    void show_unlimited_atoms(const std::vector<widgeted_atom_ring_centre_info_t> &ua);
    void show_ring_centres(std::vector<std::vector<std::string> > ring_atoms_list,
-			      const widgeted_molecule_t &mol);
+			  const widgeted_molecule_t &mol);
+   // this can cache ring centres in mol if they are not there already
+   void show_ring_centres(widgeted_molecule_t &mol);
+   
 
    std::string grid_intensity_to_colour(int val) const;
    std::string sixteen_to_hex_let(int v) const;
@@ -974,16 +979,17 @@ private:
    double bottom_of_flev_items();
 
    // geometry
-   const coot::protein_geometry *geom_p;
+   // (not const so that we can call try_dynamic_add())
+   coot::protein_geometry *geom_p;
 
 public:
-   lbg_info_t(GtkWidget *canvas_in, const coot::protein_geometry *geom_p_in) {
+   lbg_info_t(GtkWidget *canvas_in, coot::protein_geometry *geom_p_in) {
       canvas = canvas_in;
       init_internal();
       geom_p = geom_p_in;
    }
    lbg_info_t() { init_internal(); }
-   lbg_info_t(int imol_in, const coot::protein_geometry *geom_p_in) {
+   lbg_info_t(int imol_in, coot::protein_geometry *geom_p_in) {
       init_internal();
       geom_p = geom_p_in;
       imol = imol_in;
@@ -1041,6 +1047,8 @@ public:
    GtkWidget *lbg_view_rotate_entry;
    GtkWidget *lbg_qed_properties_vbox; // hide if not enhanced-ligand
    GtkWidget *lbg_qed_properties_progressbars[8];
+   GtkWidget *lbg_srs_search_results_scrolledwindow;
+   GtkWidget *lbg_srs_search_results_vbox;
 //    GtkWidget *lbg_nitrogen_toggle_toolbutton;
 //    GtkWidget *lbg_carbon_toggle_toolbutton;
 //    GtkWidget *lbg_oxygen_toggle_toolbutton;
@@ -1065,6 +1073,7 @@ public:
    // when we have multiple molecule, these things should go together
    widgeted_molecule_t mol;
    bool display_atom_names;
+   bool display_atom_numbers; // e.g. N:11, C:12
    
    int canvas_addition_mode;
    void lbg_toggle_button_my_toggle(GtkToggleToolButton *tb);
@@ -1094,18 +1103,23 @@ public:
    std::string get_stroke_colour(int i, int n) const;
    void drag_canvas(int mouse_x, int mouse_y);
    void write_pdf(const std::string &file_name) const;
+   void write_ps(const std::string &file_name) const;
    void write_png(const std::string &file_name);
    void write_svg(const std::string &file_name) const;
    void set_mouse_pos_at_click(int xpos, int ypos) {
       mouse_at_click = lig_build::pos_t(double(xpos), double(ypos));
    }
-   void render_from_molecule(const widgeted_molecule_t &mol_in);
+   void render(); // uses internal data member mol
    void update_descriptor_attributes(); // this is not in render_from_molecule() because it can/might be slow.
    void delete_hydrogens();
    void undo();
-#ifdef HAVE_CCP4SRS   
-   void search() const;
-#endif   
+#ifdef HAVE_CCP4SRS
+   // not const because try_dynamic_add() can be called.
+   void search();
+#endif
+
+   // update the internal class variable widgeted_molecule_t mol from mol_in
+   void import_from_widgeted_molecule(const widgeted_molecule_t &mol_in);
    void import_molecule_from_file(const std::string &file_name); // mol or cif
    void import_molecule_from_cif_file(const std::string &file_name); // cif
    // 20111021 try to read file_name as a MDL mol or a mol2 file.
@@ -1135,10 +1149,12 @@ public:
    static void on_sbase_search_result_button_clicked(GtkButton *button, gpointer user_data);
    static gboolean watch_for_mdl_from_coot(gpointer user_data);
    time_t coot_mdl_ready_time;
+   std::pair<lig_build::pos_t, lig_build::pos_t> flev_residues_extents() const; // for canvas sizing
    void read_draw_residues(const std::string &file_name);
    void draw_all_flev_annotations(); // which calls draw_all_residue_attribs();
    void draw_all_flev_residue_attribs();
    void draw_all_flev_ligand_annotations();
+   
    
    std::vector<residue_circle_t> read_residues(const std::string &file_name) const;
    // if you don't have add_rep_handles, pass an empty vector.
@@ -1218,6 +1234,7 @@ public:
       mdl_file_name = file_name;
    }
 
+   void clear_and_redraw();
    void clear_and_redraw(const lig_build::pos_t &delta);
 
    // drag and drop callbacks
@@ -1266,13 +1283,27 @@ public:
    void set_sbase_import_function(void (*f) (std::string)) {
       sbase_import_func_ptr = f;
    }
+   // Let's have a wrapper around that so that lbg-search doesn't need to ask if sbase_import_func_ptr
+   // is valid or not.
+   void import_srs_monomer(const std::string &comp_id);
 
    void import_prodrg_output(const std::string &prodrg_mdl_file_name, const std::string &comp_id) {
       if (prodrg_import_func_ptr) {
 	 prodrg_import_func_ptr(prodrg_mdl_file_name, comp_id);
       } else {
-	 std::cout << "WARNING:: No prodrg_import_func_ptr set" << std::endl;
-      } 
+
+	 // all we do is write the file.
+	 // update the status bar.
+	 //
+	 std::string status_string = "  Wrote file " + prodrg_mdl_file_name;
+	 guint statusbar_context_id = gtk_statusbar_get_context_id(GTK_STATUSBAR(lbg_statusbar),
+								   status_string.c_str());
+	 gtk_statusbar_push(GTK_STATUSBAR(lbg_statusbar),
+			    statusbar_context_id,
+			    status_string.c_str());
+      
+	 
+      }
    }
 
    // handle the net transfer of drug (to mdl file)
@@ -1287,6 +1318,11 @@ public:
 
    void new_lbg_window();
    void clean_up_2d_representation(); // using rdkit
+
+#ifdef HAVE_CCP4SRS
+   // not const because we can call geom_p->try_dynamic_add()
+   GtkWidget *get_image_widget_for_comp_id(const std::string &comp_id, int imol, ccp4srs::Manager *srs_manager);
+#endif // HAVE_CCP4SRS
 
    void pe_test_function();
 
@@ -1353,8 +1389,11 @@ public:
 
    void set_display_atom_names(bool state) {
       display_atom_names = state;
-      render_from_molecule(mol);
    }
+   void set_display_atom_numbers(bool state) {
+      display_atom_numbers = state;
+   }
+   
    
 };
 
@@ -1369,7 +1408,7 @@ lbg_info_t *lbg(lig_build::molfile_molecule_t mm,
 		const std::string &view_name, // annotate the decoration
 		const std::string &molecule_file_name,
 		int imol, // molecule number of the molecule of the
-		const coot::protein_geometry *geom_p_in,
+		coot::protein_geometry *geom_p_in,
 			  // layed-out residue
 		bool use_graphics_interface_flag,
 		bool stand_alone_flag_in,

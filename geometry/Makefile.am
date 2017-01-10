@@ -23,7 +23,8 @@ lib_LTLIBRARIES=libcoot-geometry.la
 EXTRA_DIST = notes Makefile.simple
 
 pkginclude_HEADERS =  protein-geometry.hh read-sbase.hh lbg-graph.hh srs-interface.hh \
-   dict-mismatches.hh hb-types.hh main-chain.hh residue-and-atom-specs.hh
+   dict-utils.hh dict-mismatches.hh energy-lib.hh match-results.hh hb-types.hh main-chain.hh \
+   residue-and-atom-specs.hh chem_mods.hh
 
 pkgincludedir = $(includedir)/coot/geometry
 
@@ -37,8 +38,8 @@ AM_CXXFLAGS = \
 
 
 libcoot_geometry_la_SOURCES = protein-geometry.cc protein-geometry-mmdb.cc \
-    read-sbase.cc energy-lib.cc 	 \
-    chem_mods.cc \
+    read-sbase.cc energy-lib.cc   \
+    chem_mods.cc srs-interface.cc protein-donor-acceptors.cc protein-donor-acceptors.hh \
     lbg-graph.cc  dreiding.cc dict-utils.cc cif-parse.cc main-chain.cc residue-and-atom-specs.cc
 
 libcoot_geometry_la_LIBADD = \

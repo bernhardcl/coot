@@ -1058,7 +1058,7 @@ molecule_class_info_t::update_symmetry() {
 	    bool do_intermolecular_symmetry_bonds = false; // for now
 
 	    symmetry_bonds_box = 
-	       bonds.addSymmetry_vector_symms(atom_sel,
+	       bonds.addSymmetry_vector_symms(atom_sel, imol_no,
 					      point,
 					      graphics_info_t::symmetry_search_radius,
 					      symm_trans_boxes,
@@ -2489,7 +2489,7 @@ molecule_class_info_t::add_dipole(const std::vector<coot::residue_spec_t> &res_s
 	 try {
 	    std::string res_type = residue_p->GetResName();
 	    std::pair<short int, coot::dictionary_residue_restraints_t> rp = 
-	       geom.get_monomer_restraints(res_type);
+	       geom.get_monomer_restraints(res_type, imol_no);
 	    if (rp.first) {
 	       std::pair<coot::dictionary_residue_restraints_t, mmdb::Residue *> p(rp.second, residue_p);
 	       pairs.push_back(p);
@@ -3124,6 +3124,10 @@ check_static_vecs_extents() {
 void
 molecule_class_info_t::makebonds(float min_dist, float max_dist, const coot::protein_geometry *geom_p) {
 
+   std::cout << "------------ this makebonds() " << max_dist << " " << max_dist << std::endl;
+
+   debug_atom_selection_container(atom_sel);
+
    Bond_lines_container bonds(atom_sel, min_dist, max_dist);
    bonds_box.clear_up();
    bonds_box = bonds.make_graphical_bonds();
@@ -3156,7 +3160,7 @@ molecule_class_info_t::makebonds(const coot::protein_geometry *geom_p) {
    if (single_model_view_current_model_number != 0)
       model_number = single_model_view_current_model_number;
    
-   Bond_lines_container bonds(atom_sel, geom_p, do_disulphide_flag, draw_hydrogens_flag,
+   Bond_lines_container bonds(atom_sel, imol_no, geom_p, do_disulphide_flag, draw_hydrogens_flag,
 			      model_number);
    bonds_box.clear_up();
    bonds_box = bonds.make_graphical_bonds();
@@ -3186,7 +3190,7 @@ void
 molecule_class_info_t::make_ca_plus_ligands_bonds(coot::protein_geometry *geom_p) { 
 
    Bond_lines_container bonds(geom_p);
-   bonds.do_Ca_plus_ligands_bonds(atom_sel, geom_p, 2.4, 4.7, draw_hydrogens_flag);
+   bonds.do_Ca_plus_ligands_bonds(atom_sel, imol_no, geom_p, 2.4, 4.7, draw_hydrogens_flag);
    bonds_box = bonds.make_graphical_bonds_no_thinning();
    bonds_box_type = coot::CA_BONDS_PLUS_LIGANDS;
    
@@ -3197,7 +3201,7 @@ void
 molecule_class_info_t::make_ca_plus_ligands_and_sidechains_bonds(coot::protein_geometry *geom_p) { 
 
    Bond_lines_container bonds(geom_p);
-   bonds.do_Ca_plus_ligands_and_sidechains_bonds(atom_sel, geom_p, 2.4, 4.7,
+   bonds.do_Ca_plus_ligands_and_sidechains_bonds(atom_sel, imol_no, geom_p, 2.4, 4.7,
                                                  0.01, 1.9, draw_hydrogens_flag);
    bonds_box = bonds.make_graphical_bonds_no_thinning();
    bonds_box_type = coot::CA_BONDS_PLUS_LIGANDS_AND_SIDECHAINS;
@@ -3209,7 +3213,7 @@ void
 molecule_class_info_t::make_colour_by_chain_bonds(short int change_c_only_flag) {
    // 
    Bond_lines_container bonds(graphics_info_t::Geom_p());
-   bonds.do_colour_by_chain_bonds(atom_sel, draw_hydrogens_flag, change_c_only_flag);
+   bonds.do_colour_by_chain_bonds(atom_sel, imol_no, draw_hydrogens_flag, change_c_only_flag);
    bonds_box = bonds.make_graphical_bonds_no_thinning(); // make_graphical_bonds() is pretty stupid
                                                          // when it comes to thining.
    bonds_box_type = coot::COLOUR_BY_CHAIN_BONDS;
@@ -3646,8 +3650,8 @@ molecule_class_info_t::update_extra_restraints_representation_parallel_planes() 
 	
 	 std::string res_type_1 = r_1->GetResName();
 	 std::string res_type_2 = r_2->GetResName();
-	 std::pair<bool, coot::dictionary_residue_restraints_t> dri_1 = geom.get_monomer_restraints(res_type_1);
-	 std::pair<bool, coot::dictionary_residue_restraints_t> dri_2 = geom.get_monomer_restraints(res_type_2);
+	 std::pair<bool, coot::dictionary_residue_restraints_t> dri_1 = geom.get_monomer_restraints(res_type_1, imol_no);
+	 std::pair<bool, coot::dictionary_residue_restraints_t> dri_2 = geom.get_monomer_restraints(res_type_2, imol_no);
 	 
 	 std::vector<clipper::Coord_orth> p_1_positions;
 	 std::vector<clipper::Coord_orth> p_2_positions;
@@ -7524,10 +7528,12 @@ molecule_class_info_t::add_multiple_dummies(const std::vector<coot::scored_skel_
 
    if (has_model()) {
       mmdb::Model *model_p = atom_sel.mol->GetModel(1);
-      int n_chains = atom_sel.mol->GetNumberOfChains(1);
-      if (n_chains > 0) {
-	 mmdb::Chain *chain_p = model_p->GetChain(0);
-	 add_multiple_dummies(chain_p, pos_position);
+      if (model_p) {
+	 int n_chains = atom_sel.mol->GetNumberOfChains(1);
+	 if (n_chains > 0) {
+	    mmdb::Chain *chain_p = model_p->GetChain(0);
+	    add_multiple_dummies(chain_p, pos_position);
+	 }
       }
    }
 }
@@ -7565,23 +7571,23 @@ molecule_class_info_t::add_multiple_dummies(mmdb::Chain *chain_p,
       res_p->seqNum = i + 1;
       res_p->SetResName("DUM");
 
-      // std::cout << atom_p << " added to molecule" << std::endl;
+      std::cout << atom_p << " added to molecule" << std::endl;
    }
 
-   // std::cout << "DEBUG:: add_multiple_dummies finishing.. "
-   // << pos_position.size() << std::endl;
-   // if (pos_position.size() > 0) {
+
+   std::cout << "DEBUG:: add_multiple_dummies finishing.. "
+	     << pos_position.size() << std::endl;
    
    // Actually, we want to run this code when there are no new guide
    // points too.  This sets atom_sel.SelectionHandle properly, which
    // is needed in close_yourself, where a DeleteSelection() is done
    // to give back the memory.
-      atom_sel.mol->PDBCleanup(mmdb::PDBCLEAN_SERIAL|mmdb::PDBCLEAN_INDEX);
-      atom_sel.mol->FinishStructEdit();
-      atom_sel = make_asc(atom_sel.mol);
-      have_unsaved_changes_flag = 1; 
-      makebonds(0.0, 0.0, geom_p);
-      // }
+   
+   atom_sel.mol->PDBCleanup(mmdb::PDBCLEAN_SERIAL|mmdb::PDBCLEAN_INDEX);
+   atom_sel.mol->FinishStructEdit();
+   atom_sel = make_asc(atom_sel.mol);
+   have_unsaved_changes_flag = 1; 
+   makebonds(0.0, 0.0, geom_p);
 } 
 
 void
@@ -7832,7 +7838,7 @@ molecule_class_info_t::jed_flip(coot::residue_spec_t &spec,
 	 std::string monomer_type = residue->GetResName();
 
 	 std::pair<bool, coot::dictionary_residue_restraints_t> p =
-	    geom->get_monomer_restraints(monomer_type);
+	    geom->get_monomer_restraints(monomer_type, imol_no);
    
 	 if (! p.first) {
 	    std::cout << "WARNING residue type " << monomer_type << " not found in dictionary" << std::endl;
@@ -7866,7 +7872,7 @@ molecule_class_info_t::jed_flip(coot::residue_spec_t &spec,
 		  residue_asc.atom_selection = residue_atoms;
 		  residue_asc.mol = 0;
 	       
-		  coot::contact_info contact = coot::getcontacts(residue_asc, monomer_type, geom);
+		  coot::contact_info contact = coot::getcontacts(residue_asc, monomer_type, imol_no, geom);
 		  std::vector<std::vector<int> > contact_indices =
 		     contact.get_contact_indices_with_reverse_contacts();
 
