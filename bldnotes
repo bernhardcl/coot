@@ -700,6 +700,14 @@ low importance
 
 **** dynarama ****
 
+   o contour lines thinner (?) and black
+
+   o play with colours?!
+
+   o shades between the favoured-allowed-disallowed
+
+   o make phi range option 0->360 (default?!)
+
    o add setting for chains when using a selection in kleywegt
 
    o selector for multiple models
@@ -708,7 +716,7 @@ low importance
 
    o add function for user to show selection of res only
 
-   o fix green box position.
+   o fix green box position (done?)
 
    o compare rama by mol choose A and A and show appropirately in selector
 	(see first topic)?! 
