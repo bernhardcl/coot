@@ -2732,6 +2732,15 @@ PyObject *test_function_py(PyObject *i, PyObject *j);
 /*                    glyco tools test  */
 void glyco_tree_test();
 
+#ifdef __cplusplus
+#ifdef USE_GUILE
+SCM glyco_tree_scm(int imol, SCM active_residue_scm);
+#endif
+#ifdef USE_PYTHON
+PyObject *glyco_tree_py(int imol, PyObject *active_residue_py);
+#endif /* PYTHON */
+#endif
+
 
 
 /*  ----------------------------------------------------------------------- */
@@ -3758,6 +3767,7 @@ SCM set_torsion_scm(int imol, const char *chain_id, int res_no, const char *inse
 		    const char *atom_name_3,
 		    const char *atom_name_4, double tors);
 
+/*! \brief create a multi-residue torsion dialog (user manipulation of torsions) */
 void multi_residue_torsion_scm(int imol, SCM residues_specs_scm);
 
 
@@ -3776,6 +3786,7 @@ PyObject *set_torsion_py(int imol, const char *chain_id, int res_no, const char 
 		         const char *atom_name_3,
 		         const char *atom_name_4, double tors);
 
+/*! \brief create a multi-residue torsion dialog (user manipulation of torsions) */
 void multi_residue_torsion_py(int imol, PyObject *residues_specs_py);
 
 #endif  /* USE_PYTHON */
@@ -5992,7 +6003,7 @@ find words, construct a url and open it. */
 void handle_online_coot_search_request(const char *entry_text);
 /* \} */
 
-#include "c-interface-generic-objects.h"
+// #include "c-interface-generic-objects.h"
 
 
 /*  ----------------------------------------------------------------------- */
