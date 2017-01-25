@@ -56,6 +56,9 @@ if (have_coot_python):
        add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
                                      lambda func: water_coordination_gui())
 
+       add_simple_coot_menu_menuitem(menu, "List Ramachandran outliers...",
+                                     lambda func: rama_outlier_gui())
+
 
      # --------------------------------------------------
      #           user_define_restraints plugin
