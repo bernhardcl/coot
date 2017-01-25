@@ -648,6 +648,9 @@ class graphics_info_t {
 			   const std::string &molname);
    int create_empty_molecule(const std::string &molname);
 
+   // for multi-threading
+   static void update_maps_for_mols(const std::vector<int> &mol_idxs);
+
    // symm_atom_pick (public) uses this (private) function:
 
    void 
@@ -1620,7 +1623,9 @@ public:
    static float RotationCentre_x() { return rotation_centre_x; }
    static float RotationCentre_y() { return rotation_centre_y; }
    static float RotationCentre_z() { return rotation_centre_z; }
-   
+
+   // possibly for multi-threading, public access.
+   void update_maps();
 
    // pointer: aka rotation centre:
    // 
@@ -2580,14 +2585,6 @@ public:
 
    // we allow terminal fitting without rigid body refinement
    static short int terminal_residue_do_rigid_body_refine; 
-
-   // Rotate position round direction, direction is not necessarily a
-   // unit vector
-   // 
-   clipper::Coord_orth rotate_round_vector(const clipper::Coord_orth &direction,
-					   const clipper::Coord_orth &position,
-					   const clipper::Coord_orth &origin_shift,
-					   double angle) const; 
 
    // public (from globjects);
    // 
