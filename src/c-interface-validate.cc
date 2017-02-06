@@ -1393,7 +1393,8 @@ void do_ramachandran_plot(int imol) {
 		       graphics_info_t::rama_level_prefered,
 		       graphics_info_t::rama_level_allowed,
 		       graphics_info_t::rama_plot_background_block_size,
-		       is_kleywegt_plot_flag);
+             is_kleywegt_plot_flag,
+             graphics_info_t::rama_psi_axis_mode);
 	    rama->draw_it(graphics_info_t::molecules[imol].atom_sel.mol); 
 	 }
       }
@@ -1443,7 +1444,8 @@ ramachandran_plot_differences(int imol1, int imol2) {
 				   graphics_info_t::rama_level_prefered,
 				   graphics_info_t::rama_level_allowed,
 				   graphics_info_t::rama_plot_background_block_size,
-				   is_kleywegt_plot_flag);
+               is_kleywegt_plot_flag,
+               graphics_info_t::rama_psi_axis_mode);
 			rama->draw_it(imol1, imol2,
 				      graphics_info_t::molecules[imol1].atom_sel.mol,
 				      graphics_info_t::molecules[imol2].atom_sel.mol);
@@ -1490,7 +1492,8 @@ void ramachandran_plot_differences_by_chain(int imol1, int imol2,
 		       graphics_info_t::rama_level_prefered,
 		       graphics_info_t::rama_level_allowed,
 		       graphics_info_t::rama_plot_background_block_size,
-		       is_kleywegt_plot_flag);
+             is_kleywegt_plot_flag,
+             graphics_info_t::rama_psi_axis_mode);
 	    if (graphics_info_t::molecules[imol1].is_from_shelx_ins() ||
 		graphics_info_t::molecules[imol2].is_from_shelx_ins())
 	       rama->allow_seqnum_offset();
@@ -1666,6 +1669,22 @@ void toggle_dynarama_outliers(GtkWidget *window, int state) {
       }
    }
 #endif // HAVE_GTK_CANVAS   
+}
+
+void set_ramachandran_psi_axis_mode(int mode) {
+
+   graphics_info_t g;
+   if (mode == 1)
+      g.rama_psi_axis_mode = coot::rama_plot::PSI_MINUS_120;
+   else
+      g.rama_psi_axis_mode = coot::rama_plot::PSI_CLASSIC;
+}
+
+int
+ramachandran_psi_axis_mode() {
+
+   graphics_info_t g;
+   return g.rama_psi_axis_mode;
 }
 
 // ----------------------------------------------------------------------------------
