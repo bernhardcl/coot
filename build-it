@@ -588,6 +588,7 @@ function post_install_slim {
 	bin/coot-compare-dictionaries      \
 	bin/coot-dictionary-bond-distributions \
 	bin/coot-make-shelx-restraints \
+	bin/lidia \
         bin/curl \
 	$keep_lib_archs"
 
@@ -1100,7 +1101,9 @@ case $dist_name in
        libxmu-dev
        libxt-dev
        libc6-dev
+       libncurses5-dev
        libglu1-mesa-dev 
+       libjpeg-dev
        mesa-common-dev
        libgtk2.0-dev
        libgnomecanvas2-dev'
@@ -1334,14 +1337,14 @@ echo "Testing version of make"
 MAKE=make
 if make --version ; then
    # let's try to set some args
-   if [ -e /proc/meminfo ] ; then 
+   if [ -e /proc/meminfo ] ; then
       memory_kb=$(awk '/MemTotal:/ {print $2} ' /proc/meminfo)
-      if [ "$memory_kb" -gt 2000512 ] ; then 
+      if [ "$memory_kb" -gt 2000512 ] ; then
          if [ -e /proc/cpuinfo ] ; then
             if np=$(grep processor /proc/cpuinfo | wc -l) ; then
-               # limit to 4 processors, not much speed up after that.
-               if [ "$np" -gt 4 ] ; then 
-                  np=4
+               # limit to 8 processors
+               if [ "$np" -gt 8 ] ; then
+                  np=8
                fi
                echo using $np processors in compilation
                MAKE="make -j$np"
@@ -2200,6 +2203,8 @@ fi
 #   test for gnomecanvas
 # ##############################################################
 
+# on new Scientific Linux (7.3) we need to test for libgnomecanvas, not libgnomecanvas-2.0
+#
 # test for gnomecanvas here
 if pkg-config --modversion libgnomecanvas-2.0 ; then
    :
@@ -2287,7 +2292,7 @@ else
 fi
 
 
-# clipper depends on mmdb, so if mmdb was built, the so must clipper.
+# clipper depends on mmdb, so if mmdb was built, the so must clipper be.
 # likewise for fftw.
 #
 build_clipper=1
@@ -2302,7 +2307,7 @@ if [ -z "$build_mmdb" ] ; then
           if [ -e $install_top_dir/include/clipper/contrib/sfscale.h ] ; then
              echo $install_top_dir/include/clipper/contrib/sfscale.h exist
 	     build_clipper=
-          else 
+          else
             echo $install_top_dir/include/clipper/contrib/sfscale.h not exist, building clipper
   	     build_clipper=1
           fi
@@ -2310,7 +2315,7 @@ if [ -z "$build_mmdb" ] ; then
           echo $install_top_dir/include/clipper/ccp4/ccp4_mtz_io.h not exist, building clipper
        fi
     fi
-else 
+else
    echo mmdb needs to be built, so clipper needs building.
 fi
 
@@ -2512,6 +2517,7 @@ if test -n "$build_clipper" ; then
     # is not available yet from his site.
     clipper_hack_version=2.1-110915-fixup-2
     clipper_hack_version=2.1-140110-fixup
+    clipper_hack_version=2.1-20170202.tar.gz
     # ${WGET} $extras_place/clipper-$clipper_hack_version.tar.gz
 
     # now clipper has all the bits.
@@ -2822,7 +2828,7 @@ if test -n "$build_python" ; then
    # This is a problem with old(?) wgets.  In future, we should remove this.
    if ${WGET} --no-check-certificate http://www.python.org/ftp/python/$pver/Python-$pver.tgz ; then 
      echo got Python-$pver.tgz
-   else 
+   else
      echo problem getting Python-$pver.tgz
    fi
    (
@@ -3345,7 +3351,8 @@ guile_lib_version=0.1.6
 guile_lib_version=0.2.1
 # guile-lib has moved
 # ${WGET} http://download.gna.org/guile-lib/guile-lib-$guile_lib_version.tar.gz
-${WGET} http://download.savannah.gnu.org/releases/guile-lib/guile-lib-$guile_lib_version.tar.gz
+# ${WGET} http://download.savannah.gnu.org/releases/guile-lib/guile-lib-$guile_lib_version.tar.gz
+${WGET} $extras_place/guile-lib-$guile_lib_version.tar.gz
 
 ( 
 date
@@ -3520,7 +3527,8 @@ else
               ${WGET} https://github.com/libgd/libgd/releases/download/gd-2.1.1/libgd-2.1.1.tar.gz -O ${AUTOBUILD_SOURCES}/libgd-2.1.1.tar.gz
 	      gzip -dc ${AUTOBUILD_SOURCES}/libgd-2.1.1.tar.gz | tar xf -
    	      cd libgd-2.1.1
-	      bash ./configure --prefix=$install_top_dir
+              # don't use /bin/sh as shell to run libtool (on Ubuntu it's a problem)
+	      bash ./configure --prefix=$install_top_dir SHELL=/bin/bash
 	      if $MAKE ; then
 	         make install
 	      fi

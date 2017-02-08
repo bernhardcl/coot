@@ -1155,8 +1155,8 @@ molecule_class_info_t::draw_parallel_plane_restraints_representation() {
 	       for (unsigned int istep=0; istep<n_steps; istep++) {
 		  double angle_1 = step_frac * 2.0 * M_PI * istep;
 		  double angle_2 = step_frac * 2.0 * M_PI * (istep + 1);
-		  pt_1 = coot::util::rotate_round_vector(r.normal, first_pt, r.ring_centre, angle_1);
-		  pt_2 = coot::util::rotate_round_vector(r.normal, first_pt, r.ring_centre, angle_2);
+		  pt_1 = coot::util::rotate_around_vector(r.normal, first_pt, r.ring_centre, angle_1);
+		  pt_2 = coot::util::rotate_around_vector(r.normal, first_pt, r.ring_centre, angle_2);
 		  glVertex3f(pt_1.x(), pt_1.y(), pt_1.z());
 		  glVertex3f(pt_2.x(), pt_2.y(), pt_2.z());
 	       }
@@ -1166,8 +1166,8 @@ molecule_class_info_t::draw_parallel_plane_restraints_representation() {
 	       for (unsigned int istep=0; istep<n_steps; istep++) {
 		  double angle_1 = step_frac * 2.0 * M_PI * istep;
 		  double angle_2 = step_frac * 2.0 * M_PI * (istep + 1);
-		  pt_1 = coot::util::rotate_round_vector(r.normal, first_pt_pp, r.plane_projection_point, angle_1);
-		  pt_2 = coot::util::rotate_round_vector(r.normal, first_pt_pp, r.plane_projection_point, angle_2);
+		  pt_1 = coot::util::rotate_around_vector(r.normal, first_pt_pp, r.plane_projection_point, angle_1);
+		  pt_2 = coot::util::rotate_around_vector(r.normal, first_pt_pp, r.plane_projection_point, angle_2);
 		  glVertex3f(pt_1.x(), pt_1.y(), pt_1.z());
 		  glVertex3f(pt_2.x(), pt_2.y(), pt_2.z());
 	       }
@@ -3124,9 +3124,9 @@ check_static_vecs_extents() {
 void
 molecule_class_info_t::makebonds(float min_dist, float max_dist, const coot::protein_geometry *geom_p) {
 
-   std::cout << "------------ this makebonds() " << max_dist << " " << max_dist << std::endl;
-
-   debug_atom_selection_container(atom_sel);
+   // std::cout << "------------ this makebonds() " << max_dist << " " << max_dist << std::endl;
+   //
+   // debug_atom_selection_container(atom_sel);
 
    Bond_lines_container bonds(atom_sel, min_dist, max_dist);
    bonds_box.clear_up();

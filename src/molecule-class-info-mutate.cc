@@ -55,6 +55,7 @@
 // #include "coot-coord-utils.hh"
 
 #include "coot-utils/coot-map-utils.hh"
+#include "rotamer-search-modes.hh"
 
 #include "molecule-class-info.h"
 #include <mmdb2/mmdb_math_align.h>
@@ -1249,7 +1250,7 @@ molecule_class_info_t::spin_search(clipper::Xmap<float> &xmap,
 					    residue_atoms[iat]->y,
 					    residue_atoms[iat]->z);
 			
-		     clipper::Coord_orth co = coot::util::rotate_round_vector(dir, pt, orig, angle);
+		     clipper::Coord_orth co = coot::util::rotate_around_vector(dir, pt, orig, angle);
 		     residue_atoms[iat]->x = co.x();
 		     residue_atoms[iat]->y = co.y();
 		     residue_atoms[iat]->z = co.z();
@@ -1400,11 +1401,13 @@ molecule_class_info_t::apply_sequence(int imol_map, mmdb::Manager *poly_ala_mol,
       for (int ichain=0; ichain<nchains; ichain++) {
 	 poly_ala_chain_p = poly_ala_model_p->GetChain(ichain);
 	 int nres = poly_ala_chain_p->GetNumberOfResidues();
-	 mmdb::PResidue poly_ala_residue_p;
+	 mmdb::Residue *poly_ala_residue_p = 0;
 	 for (int ires=0; ires<nres; ires++) {
 	    istat = 1;
 	    poly_ala_residue_p = poly_ala_chain_p->GetResidue(ires);
- 	    auto_fit_best_rotamer(poly_ala_residue_p->GetSeqNum(), "",
+	    int rotamer_mode = ROTAMERSEARCHLOWRES;
+	    auto_fit_best_rotamer(rotamer_mode,
+				  poly_ala_residue_p->GetSeqNum(), "",
  				  poly_ala_residue_p->GetInsCode(),
  				  poly_ala_residue_p->GetChainID(),
  				  imol_map,

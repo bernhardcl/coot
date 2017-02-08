@@ -352,9 +352,10 @@ coot::rama_plot::init_internal(const std::string &mol_name,
    if (dynarama_label)
       gtk_label_set_text(GTK_LABEL(dynarama_label), mol_name.c_str());
 
-   int ysize = 500;
+   int ysize = 560; // 20170202 was 500: without this the viewport is too short
+                    // for the rama canvas (how has this happened?)
    if (! is_kleywegt_plot_flag_local) // extra space needed
-      ysize = 535;
+      ysize += 35;
 
    GtkAllocation alloc = { 0, 0, 400, ysize };
    gtk_widget_size_allocate(dynawin, &alloc);
