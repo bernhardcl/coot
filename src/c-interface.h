@@ -3151,13 +3151,22 @@ void clear_moving_atoms_object(); /* just get rid of just the bonds (redraw done
 
  */
 SCM refine_residues_scm(int imol, SCM r); /* presumes the alt_conf is "". */
-SCM refine_residues_with_alt_conf_scm(int imol, SCM r, const char *alt_conf); /* to be renamed later. */
+SCM refine_residues_with_alt_conf_scm(int imol, SCM r, const char *alt_conf);
+SCM refine_residues_with_modes_with_alt_conf_scm(int imol, SCM residues_spec_list_scm,
+						 const char *alt_conf,
+						 SCM mode_1,
+						 SCM mode_2,
+						 SCM mode_3);
 SCM regularize_residues_scm(int imol, SCM r); /* presumes the alt_conf is "". */
 SCM regularize_residues_with_alt_conf_scm(int imol, SCM r, const char *alt_conf); 
 #endif
 #ifdef USE_PYTHON
 PyObject *refine_residues_py(int imol, PyObject *r);  /* presumes the alt_conf is "". */
-PyObject *refine_residues_with_alt_conf_py(int imol, PyObject *r, const char *alt_conf);  /* to be renamed later. */
+PyObject *refine_residues_with_modes_with_alt_conf_py(int imol, PyObject *r, const char *alt_conf,
+						      PyObject *mode_1,
+						      PyObject *mode_2,
+						      PyObject *mode_3);
+PyObject *refine_residues_with_alt_conf_py(int imol, PyObject *r, const char *alt_conf);
 PyObject *regularize_residues_py(int imol, PyObject *r);  /* presumes the alt_conf is "". */
 PyObject *regularize_residues_with_alt_conf_py(int imol, PyObject *r, const char *alt_conf);
 #endif /* PYTHON */
@@ -4826,8 +4835,8 @@ void close_molecule(int imol);
 /*  ----------------------------------------------------------------------- */
 /*                  rotamers                                                */
 /*  ----------------------------------------------------------------------- */
-/* section Rotatmer Functions */
-/*! \name Rotatmer Functions */
+/* section Rotamer Functions */
+/*! \name Rotamer Functions */
 /* \{ */
 
 /* functions defined in c-interface-build */
@@ -6067,6 +6076,9 @@ void set_do_probe_dots_post_refine(short int state);
 /*! \brief show the state of shall we run molprobity after a
   refinement has happened? */
 short int do_probe_dots_post_refine_state();
+
+/* state is 1 for on and 0 for off */
+void set_do_coot_probe_dots_during_refine(short int state);
 
 /*! \brief make an attempt to convert pdb hydrogen name to the name
   used in Coot (and the refmac dictionary, perhaps). */
