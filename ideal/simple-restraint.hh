@@ -39,6 +39,8 @@
 
 #include "model-bond-deltas.hh"
 
+#include "compat/coot-sysdep.h"
+
 // refinement_results_t is outside of the GSL test because it is
 // needed to make the accept_reject_dialog, and that can be compiled
 // without the GSL.
@@ -210,7 +212,7 @@ namespace coot {
 				TORSIONS = 4,
 				NON_BONDED = 16,
 				CHIRAL_VOLUMES = 32,
-				PLANES = 8,
+                                //PLANES = 8,
 				RAMA = 64,
 				BONDS_ANGLES_AND_TORSIONS = 7,
 				BONDS_ANGLES_TORSIONS_AND_PLANES = 15,
