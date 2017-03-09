@@ -901,10 +901,11 @@
        (build-list
 	(list 
 	 
-	 (list "binary-Linux-x86_64-centos-5-python-gtk2"
-	       "http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/build-logs/Linux-pcterm37.lmb.internal/" 
-	       "http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/binaries/pre-releases"
-	       #t #t)
+         ; Gone (it was an old thing)
+	 ; (list "binary-Linux-x86_64-centos-5-python-gtk2"
+	       ;"http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/build-logs/Linux-pcterm37.lmb.internal/" 
+	       ;"http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/binaries/pre-releases"
+	       ;#t #t)
 
 	 (list "binary-Linux-x86_64-rhel-6-python-gtk2"
 	       (string-append "http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/build-logs/Linux-" this-host "/")
@@ -949,7 +950,7 @@
 ;                 #t #t)
 
 	 (list "WinCoot" 
-	       "http://www.ysbl.york.ac.uk/~lohkamp/build-logs/MINGW32_NT-6.1-bernie-pc/gtk2" 
+	       "http://www.ysbl.york.ac.uk/~lohkamp/build-logs/MINGW32_NT-6.-bernie-pc/gtk2" 
 	       "http://www.ysbl.york.ac.uk/~lohkamp/software/binaries/nightlies/pre-release"
 	       #t #t)
 

@@ -39,9 +39,6 @@
 #undef small
 #undef near
 #undef far
-#ifdef PLANE
-#undef PLANE
-#endif
 // for nomenclature errors
 #ifdef IGNORE
 #undef IGNORE
