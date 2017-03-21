@@ -689,7 +689,8 @@ coot::rama_plot::make_background(const clipper::Ramachandran rama_type, GooCanva
                                        step+0.0,
                                        step+0.0,
                                        "fill-color", colour.c_str(),
-                                       "line-width", 0,
+                                       "stroke-color", colour.c_str(),
+                                       "line-width", 0.5,
                                        NULL);
          } else {
             if ( rama_type.allowed(x,y) ) {
@@ -709,7 +710,7 @@ coot::rama_plot::make_background(const clipper::Ramachandran rama_type, GooCanva
                                           step+0.0,
                                           "fill-color", colour.c_str(),
                                           "stroke-color", colour.c_str(),
-                                          "line-width",1.0,
+                                          "line-width",0.5,
 					 NULL);
             }
 
