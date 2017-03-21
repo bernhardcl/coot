@@ -1,0 +1,689 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;
+      charset=windows-1252">
+    <title>WinCoot FAQ</title>
+    <meta content="Bernhard Lohkamp" name="author">
+    <meta content="Coot, WinCoot for Windows systems, molecular
+      graphics, FAQ" name="description">
+    <link rel="icon" type="image/png" href="coot-favicon.png">
+  </head>
+  <body>
+    <h1><a class="mozTocH1" name="mozTocId631798"></a>WinCoot FAQs and
+      problems page</h1>
+    For the usual Coot problems and bugs have a look at Paul's FAQ <a
+      href="http://www.biop.ox.ac.uk/coot/doc/coot-faq.html">page</a>.
+    Often RTFM helps too, therefore the Coot documentation, tutorial
+    etc. is provided for your comfort. Nevertheless, WinCoot might crash
+    on you unexpectedly (like a lot of other Windows programs...).
+    Please let me know if there is any further bugs rather than the
+    following and please don't tell me about these ones again.<br>
+    <ul id="mozToc">
+      <!--mozToc h2 1 h3 2 h4 3 h5 4 h6 5 h6 6-->
+      <li><a href="#mozTocId444230">(Win)Coot reference, citation and
+          further information </a></li>
+      <li><a href="#mozTocId876747">Installation and Windows problems</a>
+        <ul>
+          <li><a href="#mozTocId169986">Which Windows version does
+              WinCoot run on?</a></li>
+          <li><a href="#mozTocId856986">WinCoot on Vista</a></li>
+          <li><a href="#mozTocId150935">WinCoot on Windows 7 (and later)
+            </a>
+            <ul>
+              <li><a href="#mozTocId324286">Problem resizing/maximizing
+                  window.</a></li>
+              <li><a href="#mozTocId910462">Downloading of pdbs does not
+                  work/Python errors</a></li>
+              <li><a href="#mozTocId689913">Installer hangs</a></li>
+              <li><a href="#mozTocId514994">Display not responsive in
+                  full screen mode</a></li>
+              <li><a href="#mozTocId514994">WinCoot hangs opening and/or
+                  saving files </a></li>
+              <li><a href="#mozTocId358284">WinCoot "automatically"
+                  loads pdb files repeatedly</a></li>
+              <li><a href="#mozTocId514994">WinCoot has problems with
+                  virtual desktops (e.g. Dexpot, VirtuaWin) </a></li>
+              <li><a href="#mozTocId209103">Bizarre connectivity of
+                  coordinate files </a></li>
+            </ul>
+          </li>
+          <li><a href="#mozTocId661847">WinCoot installer warnings</a></li>
+          <li><a href="#mozTocId531754">I only get a grey display window</a></li>
+          <li><a href="#mozTocId286925">Does stereo work with WinCoot? </a>
+            <ul>
+              <li><a href="#mozTocId790933">WinCoot with NVIDIA 3D
+                  Vision/120Hz LCDs?</a></li>
+              <li><a href="#mozTocId906434">WinCoot with NVIDIA and Win
+                  10?</a></li>
+            </ul>
+          </li>
+          <li><a href="#mozTocId966927">Text missing in some widgets
+              when using Scheme/Guile scripting</a></li>
+        </ul>
+      </li>
+      <li><a href="#mozTocId296675">Using WinCoot </a>
+        <ul>
+          <li><a href="#mozTocId515894">What about WinCoot and CCP4?</a></li>
+          <li><a href="#mozTocId56914">What are these 'Generic objects'?</a></li>
+          <li><a href="#mozTocId860510">How do I get molprobity (probe
+              and reduce) working in WinCoot?</a></li>
+          <li><a href="#mozTocId721941">How do I get raster3d and/or
+              povray working with WinCoot?</a></li>
+          <li><a href="#mozTocId135010">How do I handle different
+              projects?</a></li>
+          <li><a href="#mozTocId957959">How does Python scripting work?
+            </a></li>
+          <li><a href="#mozTocId107913">How do I use extra parameters in
+              the Refmac interface? </a></li>
+        </ul>
+      </li>
+      <li><a href="#mozTocId371021">Other WinCoot information </a></li>
+      <li><a href="#mozTocId200822">Old FAQs (deprecated, pre-0.3, etc.)</a>
+        <ul>
+          <li><a href="#mozTocId738739">GTK/GDK/Pango warnings </a></li>
+          <li><a href="#mozTocId303383">Crash on reading mtz files</a></li>
+          <li><a href="#mozTocId286925">Hardware-Stereo</a></li>
+          <li><a href="#mozTocId656020">Others </a></li>
+        </ul>
+      </li>
+    </ul>
+    <br>
+    <h2><a class="mozTocH2" name="mozTocId444230"></a><a name="citation"></a>(Win)Coot
+reference,
+citation
+and
+further
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      information<br>
+    </h2>
+    <p>The official reference for WinCoot is published now:</p>
+    <p>You can use this BibTeX database entry (which can be imported
+      into EndNote or directly <button
+        onclick="document.location='citation.php'"> download</button> to
+      your citation manager)... format as you please:</p>
+    <pre>@Article{emsley10:coot,<br> author = {Emsley P, Lohkamp B, Scott W, Cowtan K},<br> title = {Features and Development of Coot},<br> journal = {Acta Crystallographica Section D - Biological Crystallography},<br> year = 2010,<br> volume = 66,<br> pages = 486-501<br>}<br></pre>
+    <p>The Coot paper is published in the <a href="http://journals.iucr.org/d/issues/2010/04/00/issconts.html">proceedings
+of
+the
+2009
+CCP4
+
+
+
+
+
+
+
+
+
+
+
+        Study Weekend</a>.<br>
+    </p>
+    <p>You can view and download the paper from here:</p>
+    <p>&nbsp;&nbsp;&nbsp; <a href="http://journals.iucr.org/d/issues/2010/04/00/ba5144/index.html">http://journals.iucr.org/d/issues/2010/04/00/ba5144/index.html</a>
+    </p>
+    <br>
+    Additional&nbsp; information on Coot especially WinCoot can be found
+    in the <a href="http://www.ccp4.ac.uk/newsletters.php">CCP4
+      Newsletter</a> (Number 42, Summer 2005). Feel free to cite it as
+    well as the 'official' Coot reference in case WinCoot was useful for
+    you. <br>
+    Lohkamp, B., Emsley, P. &amp; Cowtan, K. (2005) Coot News. CCP4
+    Newsletter, 42, Contribution 7.<br>
+    <h2><a class="mozTocH2" name="mozTocId876747"></a><a name="Known_bugs"></a>Installation and Windows problems</h2>
+    <h3><a class="mozTocH3" name="mozTocId169986"></a>Which Windows
+      version does WinCoot run on?</h3>
+    WinCoot has been successfully tested on Windows 8(.1), Windows 7,
+    Windows Vista, Windows XP, Win2000, and WinNT . There may be some
+    specific problems...<br>
+    <h3><a class="mozTocH3" name="mozTocId856986"></a>WinCoot on Vista</h3>
+    WinCoot in general works on Vista.&nbsp;As of 0.5-pre-1 (1339)
+    WinCoot should work properly with Desktop Compositing (Vista Theme)
+    as you can see <a href="images/wincoot-vista.png">here</a>.<br>
+    However, if you have problems with compositing, here are some
+    solutions to overcome this problem:<br>
+    <ol>
+      <li>disable the desktop compositing&nbsp;of coot-real.exe (e.g. in
+        C:\WinCoot\bin) or runwincoot.bat (e.g. in C:\WinCoot).
+        [Right-Click
+        coot-real(.exe)-&gt;Properties-&gt;Compatibility-&gt;Disable
+        desktop composition]</li>
+      <li>set the theme to Windows Classic. [Control
+        Panel-&gt;Appearance and
+        Personalization-&gt;Pernsonalization/Change Theme-&gt;Windows
+        Classic]</li>
+      <li>in your graphics card Control Panel switch off any threading
+        option.&nbsp;</li>
+    </ol>
+    WARNING:: There may be other problems on Vista.<br>
+    <h3><a class="mozTocH3" name="mozTocId150935"></a>WinCoot on Windows
+      7 (and later)<br>
+    </h3>
+    Initial reports suggest that WinCoot works fine on Windows 7 and 8.
+    If you have problems please report to me (incl. details such as
+    graphics card, processor, etc) and try the suggestions for Vista.
+    More news once I tested more myself.<br>
+    <h4><a class="mozTocH4" name="mozTocId324286"></a>Problem
+      resizing/maximizing or updating the WinCoot window.</h4>
+    WinCoot may not update the graphics window upon resize/maximize (something like <a href="./images/wincoot_resizewindow_problem.png">this</a>) or in general not update (like <a href="images/wincoot_screen_update_problem.png">this</a>). The
+    reason is most likely a graphics card driver issue. It usually can
+    be fixed by installing an updated and appropriate graphics card driver from the
+    manufacturer. E.g. if you have a "proper"/dedicated graphics card (i.e.
+    NVIDIA, ATI etc; not a build-in Intel) it is recommended to install
+    the drivers from the manufacturer rather than the ones supplied by
+    Windows.<br>
+    <h4><a class="mozTocH4" name="mozTocId910462"></a>Downloading of
+      pdbs does not work/Python errors</h4>
+    This is related to Windows picking up the wrong version of Python.
+    Either download a new installer (after WinCoot 0.8.1) or do the
+    following:<br>
+    Copy (or move) the file python27.dll from:<br>
+    <br>
+    C:\<span style="font-style: italic;"></span><span style="font-style:
+      italic;">YourWinCootDirectory</span>\bin<br>
+    <br>
+    to<br>
+    <br>
+    C:\<span style="font-style: italic;">YourWinCootDirectory</span>\libexec<br>
+    <h4><a class="mozTocH4" name="mozTocId689913"></a>Installer
+      hangs</h4>
+    In the end of the installation the Installer may become unresponsive
+    (only seen on Windows 8 and above so far). It appears that (usually)
+    WinCoot is installed correctly though and there is no reason for
+    concern. Just kill the Installer. Working on a fix is in progress.<br><br><h4><a class="mozTocH4" name="mozTocId514994"></a>Display
+      is not responsive in full screen mode</h4>
+    This may be caused by the auto-hide function of the Windows Taskbar.
+    If you disable the auto-hide Taskbar WinCoot should work fine.
+    [Thanks to Jack Sadowsky]. On other occasions it was actually the
+    other way around (enabling the auto-hide function) which works.<br>
+    Another possible fix (untested) may be to use WinCoot's full screen
+    mode (feedback appreciated...):<br>
+    <ul>
+      <li>right mouse click on main toolbar (besides the <i>Go To
+          Ligand</i> icon)</li>
+      <li>"Manage Buttons"</li>
+      <li>Select "Full Screen" under Display</li>
+      <li>(De)Activate full screen mode using the new button</li>
+    </ul>
+    <h4><a class="mozTocH4" name="mozTocId514994"></a>WinCoot hangs
+      opening and/or saving files <br>
+    </h4>
+    This may be caused by the modern file chooser. So, either revert to
+    the classic one (<i>Edit-&gt;Preferences...-&gt;General/File
+      Selection tab</i>; top pane change to <i>Classic File Selector</i>)
+    or avoid using the GUI for file selections by using e.g. drag'n'drop
+    to open files and Quick Save (Ctrl s) for saving files.<br><h4><a class="mozTocH4" name="mozTocId358284"></a>WinCoot "automatically" loads pdb files repeatedly<br></h4><p>This is most likely cause by other software interfering with WinCoot. The best known (to me) is the English-Chinese dictionary software called "youdao". So, either close the offending program or in the case of "youdao" just close the function of automatic translation when select or mouse move. In this way you can even use WinCoot and "youdao" together.<br></p>
+    <h4><a class="mozTocH4" name="mozTocId514994"></a>Problems with virtual desktops (e.g. Dexpot, VirtuaWin)<br>
+    </h4>
+    Nothing which can be done from WinCoot side (*). However, you can
+    fix this by showing WinCoot on all Desktops. <a href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=R16628&amp;1=CCP4BB&amp;9=A&amp;J=on&amp;d=No+Match%3BMatch%3BMatches&amp;z=4">Here</a>
+    a thread about this topic on the bb.<br>
+    (*) For the more interested. It appears that gtkglext does not work
+    well with newer versions of GTK which causes this to be problematic
+    recently now.<br>
+    <h4><a class="mozTocH3" name="mozTocId209103"></a>Bizarre
+      connectivity of coordinate files<br>
+    </h4>
+    I guess you see something like <a href="http://www.ysbl.york.ac.uk/%7Eemsley/coot/ugly.png">this</a>.
+    This should not happen any more (from 0.3.3.1), however there is
+    rare cases on Windows 7 where it occurs again (this is progress for
+    you!). So if it does please let me know about your system and try
+    the following:<br>
+    <br>
+    It may be that you have a 'non-english speaking' computer and
+    changing some settings on your computer may fix this.<br>
+    Go to <span style="font-style: italic;">Start</span> -&gt; <span style="font-style: italic;">Settings</span> -&gt; <span style="font-style: italic;">Control Panel</span> -&gt;&nbsp; <span style="font-style: italic;">Regional and Language Options</span>.
+    Then <span style="font-style: italic;">Customise</span> your
+    settings and change your <span style="font-style: italic;">Decimal
+      symbol</span> to "." (dot) [was a "," comma I guess]. In turn you
+    might want to change you <span style="font-style: italic;">Digit
+      grouping symbol</span> from "." (dot) to "," (comma) to avoid
+    possible confusions. This is the procedure for 'British' Windows XP,
+    but should be similar on other Windows systems and/or languages.<br>
+    <br>
+    In a more permanent fix (without messing with your usual setting)
+    you can try the following:<br>
+    <ul>
+      <li>download the language setting <a href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/extras/language.zip">files</a>.</li>
+      <li>unzip the files in <i>yourWinCootDirectory</i></li>
+      <li>Edit your runwincoot.bat file the following way:</li>
+      <ul>
+        <li>place the following after set COOT_PREFIX=C:\WinCoot</li>
+      </ul>
+    </ul>
+    <blockquote>
+      <blockquote>
+        <blockquote>
+          <pre>control intl.cpl,, /f:"%COOT_PREFIX%\lang_on.xml"</pre>
+        </blockquote>
+      </blockquote>
+    </blockquote>
+    <ul>
+      <ul>
+        <li>place the following at the end of the file:</li>
+      </ul>
+    </ul>
+    <blockquote>
+      <blockquote>
+        <blockquote>
+          <pre>PAUSE</pre>
+          <pre>control intl.cpl,, /f:"%COOT_PREFIX%\lang_off.xml"<br></pre>
+        </blockquote>
+      </blockquote>
+    </blockquote>
+    <ul>
+      <li>N.B. the lang_xxx.xml files are for Swedish Swedish (sv-SV)
+        and you have to change them to your regional setting (for codes
+        see <a href="http://msdn.microsoft.com/en-us/library/dd318693%28v=vs.85%29.aspx">this</a>
+        MS site).<br>
+      </li>
+    </ul>
+    <h3><a class="mozTocH3" name="mozTocId661847"></a>WinCoot installer
+      warnings</h3>
+    You may get a Windows warning that the installation of WinCoot could
+    not be completed for some reason. In most cases this is caused by an
+    incomplete download of the installer. Please make sure that the
+    WinCoot installer is downloaded completely. If not, try again. A
+    brief check about the size can help (something above 70Mb
+    currently). The correct way is to varify the download via the <a href="http://www.openoffice.org/dev_docs/using_md5sums.html">md5sum</a>
+    (<a href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/binaries/stable/">stable</a>,
+    <a href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/binaries/nightlies/pre-release/">development</a>).<br>
+    <h3><a class="mozTocH3" name="mozTocId531754"></a>I only get a grey
+      display window</h3>
+    Turning down your graphics card acceleration should solve this. To
+    do so go to <span style="font-style: italic;">Start-&gt;Settings-&gt;Control
+
+
+
+
+
+
+
+
+
+
+
+      Panel-&gt;Display-&gt;Settings-&gt;Advanced-&gt;Troubleshoot</span>.
+    Then move the slider to towards <span style="font-style: italic;">None</span>
+    (usually one bar above <span style="font-style: italic;">None</span>
+    is still acceptable). This is most likely due to graphics
+    card/drivers. Currently I don't know how to fix it otherwise.<br>
+    <h3><a class="mozTocH3" name="mozTocId286925"></a>Does stereo work
+      with WinCoot?<br>
+    </h3>
+    Yes, it works fine. All of it, hardware, side-by-side, Zalman, 120Hz
+    LCD, ... IF you have the right hardware!!<br>
+    <h4><a class="mozTocH4" name="mozTocId790933"></a>WinCoot with
+      NVIDIA 3D Vision/120Hz LCDs?</h4>
+    This works if you have the high end <a href="http://www.nvidia.com/object/quadro_pro_graphics_boards.html">Quadro</a>
+    graphics cards which enable OpenGL. To set the graphics card up,
+    please follow the instructions e.g. given by the PyMOL community.
+    You find general information <a href="http://www.pymolwiki.org/index.php/Stereo_3D_Display_Options">here</a>
+    and here are specific instruction for <a href="http://sourceforge.net/mailarchive/message.php?msg_id=896B75251BA19745A529B1B867893FA50EB5CF%40planet.delsci.local">Vista</a>
+    and <a href="http://sourceforge.net/mailarchive/message.php?msg_id=896B75251BA19745A529B1B867893FA50EB5D0%40planet.delsci.local">XP</a>.<br><h4><a class="mozTocH4" name="mozTocId906434"></a>WinCoot with
+      NVIDIA and Win 10?</h4>If you run into problems with stereo on Windows 10 (using an NVIDA card), you can try the following (thanks to Jose Brito):<br><ul><li>Open NVIDIA Control Panel --&gt; Manage 3D settings.</li><li>Go to Program Settings tab.</li><li>Add the file you launch the program from by clicking on Add
+    button.</li><li>In the setting window, change the 'Power Management Mode' to
+    'Prefer Maximum Performance'. Also below settings as well:</li><ul><li>Vertical sync - off</li><li>Threaded optimization - off</li><li>Triple buffering - off</li><li>Stereo enable on</li></ul><li>Run the program and check.<br></li></ul>
+    <h3><a class="mozTocH3" name="mozTocId966927"></a>Text missing in
+      some widgets when using Scheme/Guile scripting</h3>
+    Currently Scheme/Guile is not available, so no problem there...
+    <!--This is a known issue and will hopefully be fixed shortly. If you
+want/need the text use Python...-->
+    <ul>
+    </ul>
+    <h2><a class="mozTocH2" name="mozTocId296675"></a><a name="FAQ"></a>Using
+
+
+
+
+
+
+
+
+
+
+
+      WinCoot<br>
+    </h2>
+    <h3><a class="mozTocH3" name="mozTocId515894"></a>What about WinCoot
+      and CCP4?</h3>
+    Coot is part of the CCP4 Windows package (6.0.x) now. This is CCP4's
+    version and currently doesn't seem to be fully functional. It is not
+    done by me, hence I might not be able to answer questions with
+    regards to the 'official' CCP4 Coot release.<br>
+    I don't know when updates for the CCP4 packages will be made
+    available and for my support (whatever it's worth it) I recommend to
+    use my releases!<br>
+    <h3><a class="mozTocH3" name="mozTocId56914"></a>What are these
+      'Generic objects'?</h3>
+    These are (dot) objects generated by the programs <span style="font-style: italic;">probe</span> and <span style="font-style: italic;">reduce</span> from the <a href="http://kinemage.biochem.duke.edu">Richardson Lab</a>. The
+    generic objects will show you intra-molecular interactions. You will
+    need to install these programs to use this function in (Win)Coot.
+    You can download them from <a href="http://kinemage.biochem.duke.edu/software">here</a>. Ideally
+    put the executables (probe.exe and reduceV2.13.2.win.exe) somewhere
+    in you <span style="font-style: italic;">PATH&nbsp; </span>([or]
+    e.g. in C:\\<span style="font-style: italic;"></span><span style="font-style: italic;">YourWinCootDirectory</span>\\<span style="font-style: italic;"></span>bin) and off you go. More
+    detailed instructions below.<br>
+    <br>
+    <h3><a class="mozTocH3" name="mozTocId860510"></a>How do I get
+      molprobity (probe and reduce) working in WinCoot?</h3>
+    Depending on your WinCoot version follow the following steps:<br>
+    <br>
+    WinCoot 0.5.1(-pre-1) and later:<br>
+    <ol>
+      <li>download <a href="http://kinemage.biochem.duke.edu/php/downlode.php?filename=/downloads/software/probe/probe.2.12.071128.win.exe.zip">probe</a>.
+        (or look <a href="http://kinemage.biochem.duke.edu/downloads/software/probe/">here</a>;
+        2.12.x)</li>
+      <li>download <a href="http://kinemage.biochem.duke.edu/php/downlode.php?filename=/downloads/software/reduce31/reduce.3.13.080428.win32.zip">reduce</a>.
+        (or look <a href="http://kinemage.biochem.duke.edu/downloads/software/reduce31/">here</a>;
+        3.13.x)</li>
+      <li>for probe:</li>
+      <ul>
+        <li>unzip probe*.exe.zip</li>
+        <li>rename/copy probe*.exe to probe.exe</li>
+        <li>copy/move probe.exe into <span style="font-style: italic;">YourWinCootDirectory</span>\bin
+(or
+somewhere
+else
+in
+your
+
+
+
+
+
+
+
+
+
+
+
+          <span style="font-style: italic;">PATH&nbsp;</span>; for an
+          alternative see 5) </li>
+      </ul>
+      <li>for reduce: <br>
+      </li>
+      <ul>
+        <li>extract reduce*.zip</li>
+        <li>rename/copy reduce*.exe to reduce.exe</li>
+        <li>copy/move reduce.exe into <span style="font-style: italic;">YourWinCootDirectory</span>\bin
+(or
+somewhere
+else
+in
+your
+
+
+
+
+
+
+
+
+
+
+
+          <span style="font-style: italic;">PATH&nbsp;</span>; for an
+          alternative see 5)</li>
+        <li>Optionally: copy/move reduce_wwPDB_het_dict.txt to the same
+          directory where you moved reduce.exe to</li>
+      </ul>
+    </ol>
+    <p style="color: rgb(51, 51, 51);"><br>
+    </p>
+    <ol style="color: rgb(51, 51, 51);" start="5">
+      <li>OPTIONAL ALTERNATIVE: if the executables are NOT in <span style="font-style: italic;">PATH</span> (e.g. <span style="font-style: italic;">YourWinCootDirectory</span>\bin):
+        edit either <span style="font-style: italic;">group_settings.py</span>
+        (found in <span style="font-style: italic;">YourWinCootDirectory</span>\share\coot\python)
+so
+that
+probe_command
+and
+reduce_command
+
+
+
+
+
+
+
+
+
+
+
+        describe the location of your files (e.g. probe_command =
+        "C:\\Mydirectory\\probe.exe") OR add the following lines to e.g.
+        <span style="font-style: italic;">YourWinCootDirectory</span>\.coot.py:</li>
+      <ol>
+      </ol>
+      <ul>
+        <li>probe_command = "C:\\Mydirectory\\probe.exe"</li>
+        <li>reduce_command = "C:\\Mydirectory\\reduce.exe"</li>
+      </ul>
+      <ol>
+      </ol>
+    </ol>
+    <br>
+    WinCoot 0.5:<br>
+    <ol>
+      <li>as for WinCoot 0.5.1 BUT observe that the 'Molprobity Probe
+        Clash Gaps' GUI is not working properly!</li>
+    </ol>
+    <br>
+    Older version that 0.5:<br>
+    <ol>
+    </ol>
+    <ol>
+      <li>download <a href="http://kinemage.biochem.duke.edu/downloads/software/probe/probe.2.11.050121.win.exe">probe</a>.
+        (or look <a href="http://kinemage.biochem.duke.edu/downloads/software/probe/">here</a>
+        BUT DO NOT INSTALL PROBE NEWER THAN 2.11 - for now)</li>
+      <li>download <a href="http://kinemage.biochem.duke.edu/downloads/software/reduce/reduce.2.13.991005.win.exe.zip">reduce</a>.
+        (or look <a href="http://kinemage.biochem.duke.edu/downloads/software/reduce/">here</a>)</li>
+      <li>run probe*.exe and extract into <span style="font-style:
+          italic;">YourWinCootDirectory</span>\bin (or somewhere else in
+        your <span style="font-style: italic;">PATH&nbsp;</span>; for
+        an alternative see 5) </li>
+      <li>extract the content of reduce*.exe.zip and move the files from
+        <span style="font-style: italic;">reduce4win</span> into <span style="font-style: italic;">YourWinCootDirectory</span>\bin
+        (or somewhere else in your <span style="font-style: italic;">PATH&nbsp;</span>;
+        for an alternative see 5) </li>
+      <li>if the executables are not in <span style="font-style:
+          italic;">PATH&nbsp;</span>: edit group_settings.py (found in <span style="font-style: italic;">YourWinCootDirectory</span>\share\coot\python)
+so
+that
+probe_command
+and
+reduce_command
+
+
+
+
+
+
+
+
+
+
+
+        describe the location of your files (e.g. probe_command =
+        "C:\Mydirectory\probe.exe") </li>
+    </ol>
+    <div style="margin-left: 40px;"> [N.B. if you have a different
+      reduce version to "reduceV2.13.2.win" or changed the name you have
+      either to change reduce_command_name = "reduceV2.13.2.win" in <span style="font-style: italic;">YourWinCootDirectory</span>\share\coot\python\generic_objects.py
+to
+your
+correct
+name
+or
+
+
+
+
+
+
+
+
+
+
+
+      put a line in your <span style="font-style: italic;">YourWinCootDirectory</span>\.coot.py
+which
+reads
+something
+like
+
+
+
+
+
+
+
+
+
+
+
+      reduce_command_name = "my_reduce_filename". OBS: no .exe in the
+      end for the filenames!!!!] </div>
+    <span style="font-weight: bold;"><br>
+    </span>Done! <br>
+    <br>
+    <h3><a class="mozTocH3" name="mozTocId721941"></a>How do I get
+      raster3d and/or povray working with WinCoot?</h3>
+    Just download and install the appropriate program (<a href="http://skuld.bmsc.washington.edu/raster3d/raster3d.html">raster3d</a>,
+    <a href="http://www.povray.org">povray</a>) and WinCoot should find
+    them. However it might be better (faster) to put them somewhere in
+    your <span style="font-style: italic;">PATH</span>.<br>
+    <br>
+    <h3><a class="mozTocH3" name="mozTocId135010"></a>How do I handle
+      different projects?</h3>
+    When working on different projects you might like to go back to
+    these different ones when running WinCoot, i.e. reading in a
+    0-coot-state.py file for each project. Since the coot state file is
+    always loaded from the directory which WinCoot is started from you
+    have to change this. You can do this by having different WinCoot
+    shortcuts running in different directories or by starting WinCoot
+    (runwincoot.bat) from the Command Prompt in the appropriate
+    directory. Alternatively make a copy the 0-coot-state.py files and
+    read it in as a python script file. Some additional informations can
+    be found on the <a href="wincoot-download.html">installation page</a><span style="text-decoration: underline;"></span>.<span style="font-weight: bold;"></span><br>
+    <span style="font-weight: bold;"></span><span style="font-weight:
+      bold;"></span>
+    <h3><a class="mozTocH3" name="mozTocId957959"></a>How does Python
+      scripting work?<br>
+    </h3>
+    Python scripting is different to (default) guile scripting which is
+    mainly described in Paul's instructions (although it's mentioned
+    somewhere, fairly hidden). You have to change the commands in the
+    following way:<br>
+    <pre style="margin-left: 40px;">GUILE scripting: (guile-command argument1 argument2)<br><br>PYTHON scripting: python_command(argument1,argument2)<br></pre>
+    Some more information on Scheme/Guile and Python scripting can be
+    found on the <a href="http://strucbio.biologie.uni-konstanz.de/ccp4wiki/index.php/COOT">Coot
+
+
+
+
+
+
+
+
+
+
+
+      WIKI page</a>.<br>
+    <h3><a class="mozTocH3" name="mozTocId107913"></a>How do I use extra
+      parameters in the Refmac interface?<br>
+    </h3>
+    If you have CCP4 installed on your computer you should be able to
+    run REFMAC5 on your build structure from WinCoot. Be aware that
+    there is some slight changes to the handling and filenames for extra
+    refmac parameters in comparison to 'normal' Coot. First the file
+    which give refmac extra parameters is called <span style="font-style: italic;">refmac-extra-params.txt</span> for
+    easy text editing (see an example <a href="refmac-extra-params.txt">here</a>).
+
+
+
+
+
+
+
+
+
+
+
+    It is a simple text file which can include all your refmac extra
+    parameters in a new line (for an example see here). WinCoot will
+    search for the file in the directory from where WinCoot is started
+    from. Refmac extra parameters can be given in 3 different locations
+    (the highest priority first), in your <span style="font-style:
+      italic;">.coot.py</span> file, in the <span style="font-style:
+      italic;">refmac.py</span> and in the <span style="font-style:
+      italic;">refmac-extra-params.txt</span> file (in
+    $COOT_PYTHON_DIR). The first 2 require 2 lines in the code like:<br>
+    <div style="margin-left: 40px;">
+      <pre>global refmac_extra_params</pre>
+      <pre>refmac_extra_params = ['NCYC 3', 'WEIGHT 0.3']</pre>
+    </div>
+    <span style="font-weight: bold;"></span><br>
+    <h2><a class="mozTocH2" name="mozTocId371021"></a><a name="Hints_for_running"></a>Other WinCoot information<br>
+    </h2>
+    <h2><a class="mozTocH2" name="mozTocId200822"></a>Old FAQs
+      (deprecated, pre-0.3, etc.)</h2>
+    <h3><a class="mozTocH3" name="mozTocId738739"></a>GTK/GDK/Pango
+      warnings<br>
+    </h3>
+    You may see some GTK, GDK and/or Pango warnings in the Command
+    Prompt Windows (some will be there on start-up, but otherwise I
+    haven't seen it for a while). Please ignore these warnings as long
+    as WinCoot doesn't crash. If it does, please let me know.<br>
+    <h3><a class="mozTocH3" name="mozTocId303383"></a>Crash on reading
+      mtz files</h3>
+    On some computers WinCoot crashes when opening mtz files. However,
+    this should be fixed now, I hope!<br>
+    If it happens too often and is too painful then the easiest way to
+    avoid it is to read in map files. Otherwise try reading in the mtz
+    file again (and again...). Sometimes using a script or state file
+    seems to help as well.<br>
+    <h3><a class="mozTocH3" name="mozTocId286925"></a>Hardware-Stereo</h3>
+    There has been several reports that stereo is fairly unstable.
+    However this should be fixed now and no extra version needs to be
+    downloaded.<br>
+    <h3><a class="mozTocH3" name="mozTocId656020"></a>Others<br>
+    </h3>
+    <ul>
+      <li>On some computers there seem to be a conflict of WinCoot with
+        CCP4i due to the SYMINFO variable (only beta2). This should not
+        occur any more since we use a .bat file to run WinCoot now...</li>
+    </ul>
+    <br>
+    <hr style="width: 100%; height: 2px;">
+    <div style="text-align: left;">
+      <address>Last modified 1/10/2015<br>
+        <script language="javascript">
+<!--
+var ppclink = "lohkamp at ysbl.york.ac.uk";
+var ppcname = "lohkamp";
+var ppchost = "ysbl.york.ac.uk";
+document.write("<a href=" + "mail" + "to:" + ppcname + "&#64;" + ppchost + ">" + ppclink + "</a>")
+//-->
+</script></address>
+    </div>
+  
+
+</body></html>

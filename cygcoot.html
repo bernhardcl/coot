@@ -1,0 +1,208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>Coot for Windows</title>
+  <meta content="Bernhard Lohkamp" name="author">
+  <meta
+ content="Coot, CygCoot, WinCoot for Window systems, molecular graphics"
+ name="description">
+</head>
+<body>
+<h2>How to install CygCoot?</h2>
+First install cygwin. Here's what to do and get:
+<br>
+<ul>
+  <li>get cygwin via setup.exe from mirror site (see <a
+ href="http://www.cygwin.com">http://www.cygwin.com</a>) which
+uses an easy usable gui installer </li>
+  <li>from normal mirror (s.a.) you can/have to get (besides the basic
+defaults): </li>
+  <ul>
+    <li>guile and guile-devel </li>
+    <li>python (I think comes
+with default) </li>
+    <li>opengl (IMPORTANT: get opengl-1.1.0-6
+(needed for gl headers!!) newer versions won't work!)</li>
+    <li>wget </li>
+    <li>X11 </li>
+    <li>binutils, gcc, g++, make, tcsh, vi
+etc. </li>
+    <li>libpng12-devel (needed for
+imlib) </li>
+    <li>Xfree86-lib-compat </li>
+    <li>Windowsmaker or similar (recommended but not necessary)</li>
+  </ul>
+</ul>
+<ul>
+  <li>from the (cyg)gnome master mirror you get all the gnome/gtk
+goodies
+(http://cygnome.sourceforge.net/install) </li>
+  <li>add http://cygnome.sourceforge.net/install in the setup.exe gui
+to
+your download sites and download:</li>
+  <ul>
+    <li>GNOME-libs: glib (1.2.10), gnome-libs, gtk+, imlib, gdk-pixbuf
+(I usually get some more, just in case)</li>
+    <li>GNOME-libs-devel:
+gtk+-devel, gtkglarea, imlib-devel, glib-devel (plus as above) </li>
+    <li>N.B.
+this saves time and hassle installing these things 'by hand' </li>
+    <li>N.B. all gnome things
+get installed in /opt/gnome - important for compiling issues!!! </li>
+  </ul>
+</ul>
+<ul>
+  <li>That should be everything for cygwin! This is all done with the
+gui so no
+intervention required so far!</li>
+  <li>You can start your cygwin console now.<br>
+  </li>
+  <li>You should add /opt/gnome/bin to your PATH now (if not done
+automatically), e.g. insert in your .bash_profile:</li>
+</ul>
+<div style="margin-left: 40px;"># Set PATH so it includes gnome stuff
+bin if it exists<br>
+if [ -d /opt/gnome/bin ] ; then<br>
+&nbsp; PATH="/opt/gnome/bin:${PATH}"<br>
+fi <br>
+</div>
+<ul>
+  <li>Now we are ready to do the coot etc. installation. I recommend to
+use the available <a href="build-it.txt">build-it</a> script. Since it
+is (or should) be hassle free and you could spare Paul and me questions
+concerning the installation.</li>
+  <li>type <br>
+  </li>
+</ul>
+<div style="margin-left: 80px;">sh ./build-it.txt <br>
+</div>
+<div style="margin-left: 40px;"><br>
+and go for a coffee (or grow some crystals) since it will take a while.<br>
+</div>
+<ul>
+  <li>That should be hopefully you done with the installation.</li>
+  <li>To start CygCoot you need to run the cygwin Xserver. This is done
+by typing <span style="font-style: italic;">xinit</span> in your
+console. I recommend to use WindowsMaker or similar which you get by
+typing <span style="font-style: italic;">xinit wmaker</span> (or put
+wmaker in your .xinitrc).</li>
+  <li>now tell Coot where to find everything by typing: <span
+ style="font-style: italic;">source ~/coot/setup/coot.sh</span>&nbsp;&nbsp;
+(or put that line in your .login).</li>
+  <li>ready to fire!! Type <span style="font-style: italic;">coot</span>
+and off you go!<br>
+  </li>
+</ul>
+<h2>Which coot version do I get?</h2>
+Currently I can provide (a tarball for) <a href="coot-0.0.18.tar.gz">Coot
+v.0.0.18</a> for CygCoot! The same version is provided for WinCoot. I
+don't think I
+can keep up with Paul's speed in releasing new versions, so be patient.
+Hopefully soon you won't have to rely on my tarballs any more and can
+update your coot directly from Paul's <a
+ href="http://www.ysbl.york.ac.uk/%7Eemsley/coot/">website</a>. The
+CygCoot <a href="build-it.txt">autobuilder</a> script might become
+universal at
+some point too (working with Paul on it). Currently I have forced the
+installation of
+certain libraries (gsl, freeglut) which have be installed 'by hand'
+although generally I stick to the libraries provided by cygwin
+for as much as possible.
+<h2>Any known problems?<br>
+</h2>
+I installed CygCoot sucessfully on Win NT, Win 2000 and XP (aand
+previously even Win 98). It should compile through and run without
+problems. In case you want to use Win98, cygwin might run out of
+processes
+(fork) and the computer has to be rebooted before installation can
+continue (about 5-10 times for complete installation). I think this is
+a
+windows problem that it can't manage the processes.
+<br>
+CygCoot should run fine, although it might crash occasionally
+(it shouldn't though). In case it does report bugs to Paul/me/the coot
+mailing list.<br>
+Currently there is problems with the scripting, <a
+ href="#How_does_the_scripting_work">see below</a>.<br>
+For the usual FAQs see Paul's <a
+ href="http://www.ysbl.york.ac.uk/%7Eemsley/coot/">page</a>.<br>
+<h2>How fast/slow can I expect it to be?</h2>
+CygCoot can be slow, especially on older, slower machines.
+Processor speed seems to be everything as it runs via cygwin
+emulation!!!! This is fixed in WinCoot. Here is some
+Windows Coot benchmarks:<br>
+<br>
+<table style="width: 50%; text-align: left;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;">OS<br>
+      </td>
+      <td style="vertical-align: top;">Computer<br>
+      </td>
+      <td style="vertical-align: top;">FPS<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">CygCoot<br>
+      </td>
+      <td style="vertical-align: top;">Win 2000<br>
+      </td>
+      <td style="vertical-align: top;">1 GHz, 256 MB RAM<br>
+      </td>
+      <td style="vertical-align: top;">~1.5<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;">XP<br>
+      </td>
+      <td style="vertical-align: top;">3 GHz, 1 GB RAM<br>
+      </td>
+      <td style="vertical-align: top;">~3.5<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">WinCoot<br>
+      </td>
+      <td style="vertical-align: top;">Win 2000<br>
+      </td>
+      <td style="vertical-align: top;">1 GHz, 256 MB RAM</td>
+      <td style="vertical-align: top;">~7.5<br>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;">XP<br>
+      </td>
+      <td style="vertical-align: top;">2 GHz, 512MB RAM<br>
+      </td>
+      <td style="vertical-align: top;">~75.0<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+N.B. This some 'standard' setting I use for testing and can be
+'speeded' up by customising your setting! Furthermore I can't use the
+full openGL acceleration on my computer for WinCoot (Win 2000). So
+expect it to be
+much faster... (as can be seen already...)<br>
+<h2><a name="How_does_the_scripting_work"></a>How does the scripting
+work?</h2>
+It seems that only python scripting is working (and compiling) under
+Windows. Currently there is some general problems with the python
+scripting function I believe. This should be sorted soon (Paul?). It is
+fixed in WinCoot now.<br>
+<hr style="width: 100%; height: 2px;">
+<div style="text-align: left;">
+<address>Last modified 23/10/2004<br>
+Bernhard.Lohkamp at mbb.ki.se<br>
+</address>
+</div>
+</body>
+</html>
