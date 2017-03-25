@@ -1,0 +1,53 @@
+--- libguile/guile-snarf-docs.in.orig	2012-11-02 16:44:46 +0100
++++ libguile/guile-snarf-docs.in	2012-11-02 16:44:55 +0100
+@@ -23,4 +23,4 @@
+ ## Let the user override the preprocessor autoconf found.
+ test -n "${CPP+set}" || CPP="@CPP@"
+ 
+-${CPP} -DSCM_MAGIC_SNARF_DOCS "$@"
++${CPP} -P -DSCM_MAGIC_SNARF_DOCS "$@"
+--- libguile/stime.c.orig	2012-11-02 16:45:03 +0100
++++ libguile/stime.c	2012-11-02 16:45:16 +0100
+@@ -81,12 +81,12 @@
+ #include <crt_externs.h>  /* for Darwin _NSGetEnviron */
+ #endif
+ 
+-#ifndef tzname /* For SGI.  */
+-extern char *tzname[]; /* RS6000 and others reject char **tzname.  */
+-#endif
+ #if defined (__MINGW32__)
+ # define tzname _tzname
+ #endif
++#ifndef tzname /* For SGI.  */
++extern char *tzname[]; /* RS6000 and others reject char **tzname.  */
++#endif
+ 
+ #if ! HAVE_DECL_STRPTIME
+ extern char *strptime ();
+--- srfi/srfi-4.c.orig	2012-11-02 16:46:29 +0100
++++ srfi/srfi-4.c	2012-11-02 16:46:41 +0100
+@@ -24,9 +24,10 @@
+ 
+ #include "srfi/srfi-4.h"
+ 
+-void
++/*void
+ scm_init_srfi_4 (void)
+ {
+ }
++*/
+ 
+ /* End of srfi-4.c.  */
+--- srfi/srfi-60.c.orig	2012-11-02 16:46:01 +0100
++++ srfi/srfi-60.c	2012-11-02 16:46:20 +0100
+@@ -18,9 +18,9 @@
+  */
+ 
+ #include <libguile.h>
+-#include "libguile/private-gc.h"  /* for SCM_MIN */
+ #include "srfi-60.h"
+ 
++#define SCM_MIN(A, B) ((A) < (B) ? (A) : (B))
+ 
+ SCM_DEFINE (scm_srfi60_log2_binary_factors, "log2-binary-factors", 1, 0, 0,
+             (SCM n),

@@ -1,0 +1,25 @@
+--- clipper/core/clipper_sysdep.h.orig	Wed Nov 26 08:21:54 2008
++++ clipper/core/clipper_sysdep.h	Wed Nov 26 08:22:32 2008
+@@ -100,7 +100,7 @@
+ 
+ #ifndef CLIPPER_DISABLE_THREADS
+ 
+-#ifdef _MSC_VER
++#if defined (__WIN32__)
+ 
+ #include <windows.h>
+ #define CLIPPER_MUTEX_INIT(MUTEX) InitializeCriticalSection(MUTEX)
+--- clipper/minimol/minimol_io.cpp.orig	Wed Nov 26 10:46:10 2008
++++ clipper/minimol/minimol_io.cpp	Wed Nov 26 10:54:44 2008
+@@ -39,6 +39,11 @@
+ //L  Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ //L  MA 02111-1307 USA
+ 
++#if defined (__WIN32__)
++#undef AddAtom
++#define AddAtomA AddAtom
++#endif
++
+ #include "minimol_io.h"
+ 
+ #include <fstream>
