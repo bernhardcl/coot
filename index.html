@@ -6,7 +6,7 @@
 <script>
 $.get('https://api.github.com/repos/bernhardcl/coot/releases/latest', function (data) {
   $('#assets').attr('href', data.assets_url);
-  $('#name').text(data.name);
+  $('#Name').text(data.name);
 });
 </script>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
@@ -18,10 +18,6 @@ $.get('https://api.github.com/repos/bernhardcl/coot/releases/latest', function (
 </head>
 <body>
 <script type="text/javascript">
-    $(document).ready(function () {
-        GetLatestReleaseInfo();
-    });
-
     function GetLatestReleaseInfo() {
         $.getJSON("https://api.github.com/repos/bernhardcl/coot/releases/latest").done(function (release) {
             var asset = release.assets[0];
@@ -46,6 +42,10 @@ $.get('https://api.github.com/repos/bernhardcl/coot/releases/latest', function (
             $(".release-info").text(releaseInfo);
             $(".release-info").fadeIn("slow");
         });
+    $(document).ready(function () {
+        GetLatestReleaseInfo();
+    });
+
     }
 </script>
 <table style="text-align: left; width: 624px; height: 428px;" border="0"
@@ -76,7 +76,7 @@ Coot...</small></small> </td>
       <h1>This site may be down and/or not updated any more soon. It will appear again elsewhere.</h1>
       <h3>For questions please contact Bernhard (dot) Lohkamp (at) ki (dot) se</h3>
       <h5><big><big><blink><big><big><span
- style="font-weight: bold; color: rgb(255, 0, 0);"><a href="wincoot-download.html">WinCoot-<input id="name" type="text"></span></big></big></a></blink></big></big></h5>
+ style="font-weight: bold; color: rgb(255, 0, 0);"><a href="wincoot-download.html">WinCoot-<%= Name %></span></big></big></a></blink></big></big></h5>
 <a id="assets">latest asset thingy download</span></big></big></a></blink></big></big></h5>
       </td>
     </tr>
