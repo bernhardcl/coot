@@ -2,13 +2,6 @@
 <html>
 <head>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script>
-$.get('https://api.github.com/repos/bernhardcl/coot/releases/latest', function (data) {
-  $('#assets').attr('href', data.assets_url);
-  $('#Name').text(data.name);
-});
-</script>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
   <title>Coot for Windows</title>
   <meta content="Bernhard Lohkamp" name="author">
@@ -17,6 +10,13 @@ $.get('https://api.github.com/repos/bernhardcl/coot/releases/latest', function (
  name="description">
 </head>
 <body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script>
+$.get('https://api.github.com/repos/bernhardcl/coot/releases/latest', function (data) {
+  $('#assets').attr('href', data.assets_url);
+  $('#Name').text(data.name);
+});
+</script>
 <script type="text/javascript">
     function GetLatestReleaseInfo() {
         $.getJSON("https://api.github.com/repos/bernhardcl/coot/releases/latest").done(function (release) {
@@ -42,11 +42,10 @@ $.get('https://api.github.com/repos/bernhardcl/coot/releases/latest', function (
             $(".release-info").text(releaseInfo);
             $(".release-info").fadeIn("slow");
         });
+    }
     $(document).ready(function () {
         GetLatestReleaseInfo();
     });
-
-    }
 </script>
 <table style="text-align: left; width: 624px; height: 428px;" border="0"
  cellpadding="2" cellspacing="2">
