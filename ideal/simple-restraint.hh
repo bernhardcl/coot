@@ -238,6 +238,7 @@ namespace coot {
 				BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_PARALLEL_PLANES = 191,
 				BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_RAMA_AND_PARALLEL_PLANES = 255,
 
+				GEMAN_MCCLURE_DISTANCE_RESTRAINTS = 512,
 				BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_GEMAN_MCCLURE_DISTANCES = 63+512,
 				// TYPICAL_RESTRAINTS               = 1+2+  8+16+32+128+256+512,
 				// typical restraints add trans-peptide restraints
@@ -253,6 +254,7 @@ namespace coot {
           NON_BONDED_MASK = 16,
 	  CHIRAL_VOLUME_MASK = 32,
 	  RAMA_PLOT_MASK = 64,
+	  START_POS_RESTRAINT_MASK = 128,
 	  PARALLEL_PLANES_MASK = 256,
 	  GEMAN_MCCLURE_DISTANCE_MASK = 512,
 	  TRANS_PEPTIDE_MASK = 1024
@@ -798,7 +800,7 @@ namespace coot {
    // replace this function, to test if things go faster with
    // alternative implementations?
    // 
-   inline double f_inv_fsqrt(double v) {
+   inline double f_inv_fsqrt(const double &v) {
       //
       return 1.0/sqrt(v);
    } 
@@ -1957,8 +1959,10 @@ namespace coot {
       std::pair<unsigned int, unsigned int> restraints_limits_torsions;
       std::pair<unsigned int, unsigned int> restraints_limits_chirals;
       std::pair<unsigned int, unsigned int> restraints_limits_planes;
+      std::pair<unsigned int, unsigned int> restraints_limits_parallel_planes;
       std::pair<unsigned int, unsigned int> restraints_limits_non_bonded_contacts;
       std::pair<unsigned int, unsigned int> restraints_limits_geman_mclure;
+      std::pair<unsigned int, unsigned int> restraints_limits_start_pos;
 
 #ifdef HAVE_CXX_THREAD
       // thread pool!

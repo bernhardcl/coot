@@ -596,9 +596,17 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
       // std::cout << "DEBUG:: start of ref have: " << n_cis << " cis peptides"
       // << std::endl;
       bool continue_flag = true;
-      int step_count = 0; 
+      unsigned int step_count = 0; 
       print_initial_chi_squareds_flag = 1; // unset by drag_refine_idle_function
-      while ((step_count < 10000) && continue_flag) {
+      unsigned int step_count_lim = 5000;
+      if (restraints.size() > 10000)
+	 step_count_lim = 3000000/restraints.size();
+      std::cout << "debug:: here with restraints.size() " << restraints.size()
+		<< " and step_count_lim " << step_count_lim << std::endl;
+      while ((step_count < step_count_lim) && continue_flag) {
+
+	 std::cout << ".... step_count: " << step_count
+		   << " step_count_lim " << step_count_lim << std::endl;
 
 	 int retval = drag_refine_idle_function(NULL);
 	 step_count += dragged_refinement_steps_per_frame;
@@ -615,7 +623,7 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
       // if we reach here with continue_flag == 1, then we
       // were refining (regularizing more like) and ran out
       // of steps before convergence.  We still want to give
-      // the use a dialog though.
+      // the user a dialog though.
       //
       if (continue_flag) {
 	 rr = graphics_info_t::saved_dragged_refinement_results;
@@ -783,8 +791,7 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	       }
 
 #ifdef HAVE_CXX_THREAD
-	       restraints.thread_pool(&static_thread_pool,
-				      coot::get_max_number_of_threads());
+	       restraints.thread_pool(&static_thread_pool, coot::get_max_number_of_threads());
 #endif // HAVE_CXX_THREAD
 
 	       if (false)
@@ -806,6 +813,9 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 							     do_rama_restraints,
 							     pseudo_bonds_type);
 	       
+	       if (do_numerical_gradients)
+		  restraints.set_do_numerical_gradients();
+
 	       std::string dummy_chain = ""; // not used
 		   
 	       rr = update_refinement_atoms(n_restraints, restraints, rr, local_moving_atoms_asc,
