@@ -197,11 +197,20 @@ std::string
 coot::util::remove_trailing_slash(const std::string &s) {
 
    std::string scratch = s;
+   // BL says:: this may be general but dont want to fiddle with it in case
+   // it breaks something. On Windows the null termination doesnt seem to work
+   // this way
+#ifdef WINDOWS_MINGW
+   if (scratch.substr(scratch.length()-1) == "/")
+      scratch.erase(scratch.end()-1);
+   if (scratch.substr(scratch.length()-1) == "\\")
+      scratch.erase(scratch.end()-1);
+#else
    if (scratch.substr(scratch.length()-1) == "/")
       scratch.replace(scratch.end()-1, scratch.end(), '/', '\0');
    if (scratch.substr(scratch.length()-1) == "\\")
-      scratch.replace(scratch.end()-1, scratch.end(), '\\', '\0');   
-
+      scratch.replace(scratch.end()-1, scratch.end(), '\\', '\0');
+#endif
    return scratch;
 }
 
