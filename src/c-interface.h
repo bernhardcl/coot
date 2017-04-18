@@ -2827,6 +2827,10 @@ void set_all_maps_displayed(int on_or_off);
   for other values of on_or_off turn on all models. */
 void set_all_models_displayed_and_active(int on_or_off);
 
+/*\brief display only the active mol and the refinement map */
+void display_only_active();
+
+
 #ifdef __cplusplus
 #ifdef USE_GUILE
 /*! \brief return the spacegroup as a string, return scheme false if unable to do so. */
@@ -3005,6 +3009,8 @@ void set_found_coot_python_gui();
 (no return value because get-url-str does not return one).
  */
 void get_coords_for_accession_code(const char *code);
+
+int get_monomer_for_molecule_by_index(int dict_idx, int imol_enc);
 
 
 /*  Don't let this be seen by standard c, since I am using a std::string */
@@ -3569,6 +3575,22 @@ double add_atom_geometry_distance_py(int imol_1, PyObject *atom_spec_1, int imol
 /* \} */
 
 
+/*  ----------------------------------------------------------------------- */
+/*                  pointer position                                        */
+/*  ----------------------------------------------------------------------- */
+/* section Pointer Position Function */
+/*! \name Pointer Position Function */
+/* \{ */
+/*! \brief return the [x,y] position of the pointer in fractional coordinates.
+
+the origin is top-left.
+may return false if pointer is not available */
+#ifdef __cplusplus
+#ifdef USE_PYTHON
+PyObject *get_pointer_position_frac_py();
+#endif // USE_PYTHON
+#endif	/* c++ */
+/* \} */
 
 /*  ----------------------------------------------------------------------- */
 /*                  pointer distances                                      */
@@ -3768,6 +3790,8 @@ void gln_asn_b_factor_outliers_py(int imol);
 PyObject *map_peaks_py(int imol_map, float n_sigma);
 PyObject *map_peaks_near_point_py(int imol_map, float n_sigma, float x, float y, float z, float radius);
 PyObject *map_peaks_near_point_from_list_py(int imol_map, PyObject *peak_list, float x, float y, float z, float radius);
+PyObject *map_peaks_around_molecule_py(int imol_map, float sigma, int negative_also_flag, int imol_coords);
+
 /* BL says:: this probably shouldnt be here but cluster with KK code */
 PyObject *screen_vectors_py();
 #endif /*  USE_PYTHON */
@@ -4748,6 +4772,9 @@ void delete_residue_sidechain(int imol, const char *chain_id, int resno, const c
 
    @return number of hydrogens deleted. */
 int delete_hydrogens(int imol);
+
+void post_delete_item_dialog();
+
 
 /* toggle callbacks */
 void set_delete_atom_mode();
@@ -6081,6 +6108,9 @@ void set_do_probe_dots_post_refine(short int state);
 /*! \brief show the state of shall we run molprobity after a
   refinement has happened? */
 short int do_probe_dots_post_refine_state();
+
+/* state is 1 for on and 0 for off */
+void set_do_coot_probe_dots_during_refine(short int state);
 
 /*! \brief make an attempt to convert pdb hydrogen name to the name
   used in Coot (and the refmac dictionary, perhaps). */

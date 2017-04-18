@@ -393,7 +393,8 @@ graphics_info_t::add_cif_dictionary(std::string cif_dictionary_filename,
 	 molecules[i].make_bonds_type_checked();
       }
    }
-   return rmit.n_atoms;
+   // return rmit.n_atoms;
+   return rmit.monomer_idx;
 }
 
 
@@ -1328,9 +1329,12 @@ graphics_info_t::accept_moving_atoms() {
    in_edit_chi_mode_view_rotate_mode = 0;
 
    if (do_probe_dots_post_refine_flag) {
-      do_interactive_probe();
+      if (do_coot_probe_dots_during_refine_flag) {
+	 // do_interactive_coot_probe();
+      } else {
+	 do_interactive_probe(); // old molprobity way
+      }
    }
-
 
    int mode = MOVINGATOMS;
    run_post_manipulation_hook(imol_moving_atoms, mode);
@@ -1476,8 +1480,9 @@ graphics_info_t::clear_up_moving_atoms() {
    moving_atoms_asc->n_selected_atoms = 0;
 
 #ifdef HAVE_GSL
-   last_restraints = coot::restraints_container_t(); // last_restraints.size() = 0;
-#endif // HAVE_GSL   
+   // last_restraints = coot::restraints_container_t(); // last_restraints.size() = 0;
+   last_restraints.clear();
+#endif // HAVE_GSL
 }
 
 
@@ -1555,6 +1560,9 @@ graphics_info_t::drag_refine_refine_intermediate_atoms() {
    bool do_markup = true;
    g.regularize_object_bonds_box = bonds.make_graphical_bonds(g.ramachandrans_container,
 							      do_markup);
+
+   if (g.do_coot_probe_dots_during_refine_flag)
+      g.do_interactive_coot_probe();
 
    char *env = getenv("COOT_DEBUG_REFINEMENT");
    if (env)
@@ -1694,6 +1702,9 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
       Bond_lines_container bonds(*moving_atoms_asc, do_disulphide_flag, draw_hydrogens_flag);
       regularize_object_bonds_box.clear_up();
       regularize_object_bonds_box = bonds.make_graphical_bonds();
+
+      // if (do_coot_probe_dots_during_refine_flag)
+      // do_interactive_coot_probe();
    }
 }
 
@@ -2940,34 +2951,43 @@ graphics_info_t::update_maps() {
       // unsigned int n_threads = 4;
       unsigned int n_threads = coot::get_max_number_of_threads();
       // std::cout << "got n_threads: " << n_threads << std::endl;
-      std::vector<std::thread> threads;
-      std::vector<int> molecules_with_maps;
-      for (int ii=0; ii<n_molecules(); ii++) {
-	 if (molecules[ii].has_xmap()) {
-	    molecules_with_maps.push_back(ii);
+
+      if (n_threads == 0) {
+	 for (int ii=0; ii<n_molecules(); ii++) {
+	    if (molecules[ii].has_xmap()) {
+	       molecules[ii].update_map(); // to take account
+	       // of new rotation centre.
+	    }
 	 }
+      } else {
+	 std::vector<std::thread> threads;
+	 std::vector<int> molecules_with_maps;
+	 for (int ii=0; ii<n_molecules(); ii++) {
+	    if (molecules[ii].has_xmap()) {
+	       molecules_with_maps.push_back(ii);
+	    }
+	 }
+
+	 // we must make sure that the threads don't update the same map
+	 //
+
+	 std::vector<std::vector<int> > maps_vec_vec(n_threads);
+	 unsigned int thread_idx = 0;
+	 // put the maps in maps_vec_vec
+	 for (unsigned int ii=0; ii<molecules_with_maps.size(); ii++) {
+	    maps_vec_vec[thread_idx].push_back(molecules_with_maps[ii]);
+	    thread_idx++;
+	    if (thread_idx == n_threads) thread_idx = 0;
+	 }
+
+
+	 for (unsigned int i_thread=0; i_thread<n_threads; i_thread++) {
+	    const std::vector<int> &mv = maps_vec_vec[i_thread];
+	    threads.push_back(std::thread(update_maps_for_mols, mv));
+	 }
+	 for (unsigned int i_thread=0; i_thread<n_threads; i_thread++)
+	    threads.at(i_thread).join();
       }
-
-      // we must make sure that the threads don't update the same map
-      //
-
-      std::vector<std::vector<int> > maps_vec_vec(n_threads);
-      unsigned int thread_idx = 0;
-      // put the maps in maps_vec_vec
-      for (unsigned int ii=0; ii<molecules_with_maps.size(); ii++) {
-	 maps_vec_vec[thread_idx].push_back(molecules_with_maps[ii]);
-	 thread_idx++;
-	 if (thread_idx == n_threads) thread_idx = 0;
-      }
-
-
-      for (unsigned int i_thread=0; i_thread<n_threads; i_thread++) {
-	 const std::vector<int> &mv = maps_vec_vec[i_thread];
-	 threads.push_back(std::thread(update_maps_for_mols, mv));
-      }
-      for (unsigned int i_thread=0; i_thread<n_threads; i_thread++)
-	 threads.at(i_thread).join();
-
 #endif // HAVE_CXX_THREAD
 
    } // active map drag test

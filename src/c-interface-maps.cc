@@ -2109,3 +2109,43 @@ PyObject *qq_plot_map_and_model_py(int imol,
 
 #endif // USE_PYTHON
 
+#ifdef USE_PYTHON
+//! \brief return two lists: a list of vertices and a list of indices for connection
+PyObject *map_contours(int imol, float contour_level) {
+
+   PyObject *r = Py_False;
+
+   if (is_valid_map_molecule(imol)) {
+      graphics_info_t g;
+      coot::Cartesian centre = g.RotationCentre();
+      float radius = graphics_info_t::box_radius;
+      std::vector<std::pair<clipper::Coord_orth, clipper::Coord_orth> > contours =
+	 graphics_info_t::molecules[imol].get_contours(contour_level, radius, centre);
+
+      std::cout << "got -------------------- " << contours.size() << " lines " << std::endl;
+      r = PyList_New(contours.size());
+
+      for (unsigned int i=0; i<contours.size(); i++) {
+	 PyObject *point_pair_py = PyList_New(2);
+	 PyObject *p1 = PyList_New(3);
+	 PyObject *p2 = PyList_New(3);
+	 PyList_SetItem(p1, 0, PyFloat_FromDouble(contours[i].first.x()));
+	 PyList_SetItem(p1, 1, PyFloat_FromDouble(contours[i].first.y()));
+	 PyList_SetItem(p1, 2, PyFloat_FromDouble(contours[i].first.z()));
+	 PyList_SetItem(p2, 0, PyFloat_FromDouble(contours[i].second.x()));
+	 PyList_SetItem(p2, 1, PyFloat_FromDouble(contours[i].second.y()));
+	 PyList_SetItem(p2, 2, PyFloat_FromDouble(contours[i].second.z()));
+
+	 PyList_SetItem(point_pair_py, 0, p1);
+	 PyList_SetItem(point_pair_py, 1, p2);
+
+	 PyList_SetItem(r, i, point_pair_py);
+      }
+   }
+   if (PyBool_Check(r))
+      Py_XINCREF(r);
+   return r;
+}
+// \}
+#endif // USE_PYTHON
+

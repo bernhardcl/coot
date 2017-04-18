@@ -749,6 +749,9 @@ PyObject *refine_zone_with_full_residue_spec_py(int imol, const char *chain_id,
 					   const char *altconf);
 #endif // USE_PYTHON
 
+void set_cryo_em_refinement(bool mode);
+bool get_cryo_em_refinement();
+
 //! \}
 
 
@@ -1241,6 +1244,21 @@ PyObject *link_info_py(int imol);
 //! \brief handle the string that get when a file or URL is dropped.
 int handle_drag_and_drop_string(const std::string &uri);
 // \}
+
+
+/* ------------------------------------------------------------------------- */
+/*                      Map Contours                                         */
+/* ------------------------------------------------------------------------- */
+
+#ifdef USE_PYTHON
+/*! \name Map Contouring */
+// \{
+//! \brief return two lists: a list of vertices and a list of indices for connection
+PyObject *map_contours(int imol, float contour_level);
+// \}
+#endif // USE_PYTHON
+
+
 
 /* ------------------------------------------------------------------------- */
 /*                      correlation maps                                     */

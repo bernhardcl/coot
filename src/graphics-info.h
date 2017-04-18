@@ -47,6 +47,10 @@
 #include <gdk/gdkgldrawable.h>
 #include <gtk/gtkgl.h>
 
+#ifdef HAVE_CXX_THREAD
+#include <utils/ctpl_stl.h>
+#endif // HAVE_CXX_THREAD
+
 #ifdef WII_INTERFACE_WIIUSE
 #include "wiiuse.h"
 #endif // WII_INTERFACE_WIIUSE
@@ -422,6 +426,16 @@ namespace coot {
     Cartesian screen_x;
     Cartesian screen_y;
     Cartesian screen_z;
+  };
+
+  class saved_strand_info_t {
+  public:
+    coot::residue_spec_t start;
+    coot::residue_spec_t end;
+    int strand_idx;
+    saved_strand_info_t(const coot::residue_spec_t &s, const coot::residue_spec_t &e, int idx) {
+      start = s; end = e; strand_idx = idx;
+    }
   };
 
 
@@ -1721,7 +1735,8 @@ public:
 #endif    
 #ifdef USE_PYTHON
    PyObject *refinement_results_to_py(coot::refinement_results_t &rr);
-#endif    
+#endif
+   static bool cryo_EM_refinement_flag;
 
    // ligand interactions (pulsing cylindrical bonds, or whatever)
    static long time_holder_for_ligand_interactions; 
@@ -1771,6 +1786,7 @@ public:
    static int         go_to_ligand_n_atoms_limit; // ligands must have at least this
 						  // number of atoms for the "go to ligand"
                                                   // button and function to see it.
+   static std::vector<std::string> go_to_ligand_non_interesting_comp_ids;
 
    void set_go_to_atom_chain_residue_atom_name(const gchar *t1, 
 					       int it2, const gchar *t3);
@@ -3327,6 +3343,13 @@ public:
 							 mmdb::PAtom *atom_selection1, 
 							 mmdb::PAtom *atom_selection2, 
 							 int n_selected_atoms_1, int n_selected_atoms_2) const;
+
+   void map_secondary_structure_headers(ssm::Align *SSMAlign,
+					atom_selection_container_t asc_ref,
+					atom_selection_container_t asc_mov,
+					mmdb::PAtom *atom_selection1,
+					mmdb::PAtom *atom_selection2,
+					int n_selected_atoms_1, int n_selected_atoms_2) const;
    // 
    void print_horizontal_ssm_sequence_alignment(std::pair<std::string, std::string> aligned_sequences) const;
 
@@ -3647,9 +3670,23 @@ public:
      generic_objects_p->push_back(o);
      int r = generic_objects_p->size() -1;
      return r;
-   } 
-   static GtkWidget *generic_objects_dialog; 
+   }
+   static GtkWidget *generic_objects_dialog;
 
+   static int generic_object_index(const std::string &n) {
+     int index = -1;
+     int nobjs = generic_objects_p->size();
+     for (int iobj=0; iobj<nobjs; iobj++) {
+       if ((*generic_objects_p)[iobj].name == n) {
+	 if (!(*generic_objects_p)[iobj].is_closed_flag) {
+	   index = iobj;
+	   break;
+	 }
+       }
+     }
+     return index;
+   }
+ 
 
    // ---- active atom:
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec();
@@ -3675,9 +3712,12 @@ public:
    // probe dots on intermediate atoms (we need to have hydrogens)
    static short int do_probe_dots_on_rotamers_and_chis_flag;
    static short int do_probe_dots_post_refine_flag;
+   static bool do_coot_probe_dots_during_refine_flag;
    void do_probe_dots_on_rotamers_and_chis();
    void do_probe_dots_post_refine();
-   void do_interactive_probe() const;
+   void do_interactive_probe() const; // molprobity probe
+   // not const because it manipulates generic graphics objects
+   void do_interactive_coot_probe(); // coot probe
 
    // can be private?
    void setup_for_probe_dots_on_chis_molprobity(int imol);
@@ -3948,6 +3988,13 @@ string   static std::string sessionid;
    void undisplay_all_model_molecules_except(int imol);
    void undisplay_all_model_molecules_except(const std::vector<int> &keep_these);
    static GtkWidget *cfc_dialog;
+
+   static bool cif_dictionary_file_selector_create_molecule_flag;
+
+#ifdef HAVE_CXX_THREAD
+   static ctpl::thread_pool static_thread_pool;
+#endif
+
 };
 
 
