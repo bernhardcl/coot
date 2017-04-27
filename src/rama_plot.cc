@@ -106,6 +106,7 @@ coot::rama_plot::init(const std::string &type, short int psi_axis) {
          psi_axis_mode = psi_axis; // or should this be in init_internal?!
          init_internal("Ramachandran Plot (Phi/Psi Edit Mode)", 0.02, 0.002, 1);
          hide_stats_frame();
+         gtk_widget_hide(selection_hbox);
          gtk_widget_set_sensitive(rama_view_menu, FALSE);
          plot_type = PHI_EDIT;
       }
@@ -121,6 +122,7 @@ coot::rama_plot::init(const std::string &type, short int psi_axis) {
          psi_axis_mode = psi_axis; // or should this be in init_internal?!
          init_internal("Ramachandran Plot (Backbone Edit Mode)", 0.02, 0.002, 1, hide_buttons);
          hide_stats_frame();
+         gtk_widget_hide(selection_hbox);
          gtk_widget_set_sensitive(rama_view_menu, FALSE);
          plot_type = BACKBONE_EDIT;
       }
@@ -253,6 +255,13 @@ coot::rama_plot::create_dynarama_window() {
                dynarama_cancel_button = GTK_WIDGET(gtk_builder_get_object(builder, "dynarama2_cancel_button"));
                dynarama_label = GTK_WIDGET(gtk_builder_get_object(builder,"dynarama_label"));
                scrolled_window = GTK_WIDGET(gtk_builder_get_object(builder,"dynarama_scrolledwindow"));
+               selection_hbox = GTK_WIDGET(gtk_builder_get_object(builder,"dynarama_selection_hbox"));
+               selection_checkbutton = GTK_WIDGET(gtk_builder_get_object(builder,
+                                                                         "dynarama_selection_checkbutton"));
+               selection_entry = GTK_WIDGET(gtk_builder_get_object(builder,
+                                                                   "dynarama_selection_entry"));
+               selection_apply_button = GTK_WIDGET(gtk_builder_get_object(builder,
+                                                                          "dynarama_selection_apply_button"));
                outliers_only_tooglebutton = GTK_WIDGET(gtk_builder_get_object(builder,
                                                                              "dynarama2_outliers_only_togglebutton"));
                zoom_resize_togglebutton = GTK_WIDGET(gtk_builder_get_object(builder,
@@ -445,6 +454,21 @@ coot::rama_plot::init_internal(const std::string &mol_name,
    g_signal_connect_after(dynawin, "configure-event",
                           G_CALLBACK(rama_resize), this);
 
+   gtk_widget_set_can_focus(canvas, TRUE);
+
+   // It seems that we cannot remove the general accelerators from the entry
+   // so they would interfere with the input. Therefore (as long as there is
+   // only +, -, we disable them as accellerators and use them as key press
+   // events. In case we use other accellerators we need to revise this.
+   GSList *accel_grp_ls;
+   GtkAccelGroup *accel_gr;
+   accel_grp_ls = gtk_accel_groups_from_object(G_OBJECT(dynawin));
+   while (accel_grp_ls) {
+      accel_gr = GTK_ACCEL_GROUP(accel_grp_ls->data);
+      gtk_window_remove_accel_group(GTK_WINDOW(dynawin), accel_gr);
+      accel_grp_ls = accel_grp_ls->next;
+   }
+
 }
 
 void
@@ -567,7 +591,7 @@ coot::rama_plot::setup_canvas() {
                       G_CALLBACK(rama_key_release_event), NULL);
 
    /* set focus to canvas - we need this to get key presses. */
-   GTK_WIDGET_SET_FLAGS(canvas, GTK_CAN_FOCUS);
+   gtk_widget_set_can_focus(canvas, TRUE);
    gtk_widget_grab_focus(GTK_WIDGET(canvas));
 }
 
@@ -608,6 +632,7 @@ coot::rama_plot::draw_it(mmdb::Manager *mol, int SelHnd, int primary) {
       coot::rama_stats_container_t counts = draw_phi_psi_points();
       counts_to_stats_frame(counts);
       saved_counts = counts;
+      mols_ = std::pair<mmdb::Manager *, mmdb::Manager *> (mol, mol);
       //resize_it = TRUE;  // only when done start resizing.
    }
 }
@@ -1105,23 +1130,23 @@ coot::rama_plot::key_release_event(GtkWidget *widget, GdkEventKey *event) {
    // Not needed any more glade is taking care of this...
    // Keep in case we want to bind other keys at some point.
 
-//   switch (event->keyval) {
-      
-//   case GDK_plus:
-//   case GDK_equal:  // unshifted plus, usually.
+   switch (event->keyval) {
 
-//      zoom_in();
-//      break;
+   case GDK_plus:
+   case GDK_equal:  // unshifted plus, usually.
 
-//   case GDK_minus:
-//      zoom_out();
-//      break;
-//   }
+      zoom_in();
+      break;
 
-//   /* prevent the default handler from being run */
-//   gtk_signal_emit_stop_by_name(GTK_OBJECT(canvas),"key_release_event");
+   case GDK_minus:
+      zoom_out();
+      break;
+   }
 
-   return 0; 
+   /* prevent the default handler from being run */
+   gtk_signal_emit_stop_by_name(GTK_OBJECT(canvas),"key_release_event");
+
+   return 0;
 }
 
 
@@ -1745,13 +1770,12 @@ coot::rama_plot::button_item_press_conventional (GooCanvasItem *item, GdkEventBu
 gint
 coot::rama_plot::button_press_conventional (GtkWidget *widget, GdkEventButton *event) {
 
-      if (event->button == 3) {
-	 zoom += 0.2;
-      goo_canvas_set_scale(GOO_CANVAS(canvas), zoom);
-      }
+   // right should zoom in
+   if (event->button == 3) {
+      zoom_in();
+   }
    if (event->button == 2) {
-      zoom -= 0.2;
-      goo_canvas_set_scale(GOO_CANVAS(canvas), zoom);
+      zoom_out();
    }
    return 1; // Handled this, right?
 }
@@ -2013,6 +2037,7 @@ coot::rama_plot::draw_it(int imol1, int imol2,
    draw_2_phi_psi_sets_on_canvas(mol1, mol2);
    if (is_kleywegt_plot()) {
       hide_stats_frame();
+      gtk_widget_hide(selection_hbox);
       fill_kleywegt_comboboxes(mol1, mol2);
    }
 }
@@ -2027,6 +2052,7 @@ coot::rama_plot::draw_it(int imol1, int imol2,
    draw_2_phi_psi_sets_on_canvas(mol1, mol2, SelHnd1, SelHnd2);
    if (is_kleywegt_plot()) {
       hide_stats_frame();
+      gtk_widget_hide(selection_hbox);
       fill_kleywegt_comboboxes(mol1, mol2);
    }
 }
@@ -2049,6 +2075,7 @@ coot::rama_plot::draw_it(int imol1, int imol2,
    draw_2_phi_psi_sets_on_canvas(mol1, mol2, chain_id_1, chain_id_2);
    if (is_kleywegt_plot()) {
       hide_stats_frame();
+      gtk_widget_hide(selection_hbox);
       fill_kleywegt_comboboxes(mol1, mol2);
    }
 }
@@ -3174,7 +3201,13 @@ coot::rama_plot::plot_type_changed() {
          set_kleywegt_plot_state(0);
          kleywegt_plot_uses_chain_ids = 0;
          gtk_widget_show(rama_stats_frame);
+         gtk_widget_show_all(selection_hbox);
+         // show selections (fill maybe FIXME - and set tick?)
+         // gtk_widget_show(selection_checkbutton);
          draw_it(mols().first);
+         if (GTK_TOGGLE_BUTTON(selection_checkbutton)->active) {
+            apply_selection_from_widget();
+         }
       }
       else
          std::cout<< "BL INFO:: no molecule found, please read one in."<<std::endl;
@@ -3182,6 +3215,11 @@ coot::rama_plot::plot_type_changed() {
       // kleywegt plot
       gtk_widget_show(kleywegt_chain_box);
       gtk_widget_hide(rama_stats_frame);
+      gtk_widget_show(selection_hbox);
+      // hide the selection stuff
+      gtk_widget_hide(selection_checkbutton);
+      gtk_widget_hide(selection_entry);
+      gtk_widget_hide(selection_apply_button);
       // either do a default kleywegt plot, or
       // dont do anything until things are selected and applied
       // better to do the latter. BUT what to do in the reverse direction?
@@ -3404,6 +3442,56 @@ coot::rama_plot::show_outliers_only(int state) {
       gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(outliers_only_menuitem), state);
    }
 
+}
+
+
+void
+coot::rama_plot::show_selection_widget(int state) {
+
+   if (state) {
+      // the widget may not be visible any more, so show again
+      // instead of checking if they are shown we just show again.
+      // shouldnt harm.
+      gtk_widget_show(selection_entry);
+      gtk_widget_show(selection_apply_button);
+      gtk_widget_set_sensitive(selection_entry, TRUE);
+      gtk_widget_set_sensitive(selection_apply_button, TRUE);
+   } else {
+      gtk_widget_set_sensitive(selection_entry, FALSE);
+      gtk_widget_set_sensitive(selection_apply_button, FALSE);
+      // Shouldnt we show all now again?!
+      mmdb::Manager *mol = mols().first;
+      if (mol) {
+         draw_it(mol);
+      }
+   }
+}
+
+void
+coot::rama_plot::apply_selection_from_widget() {
+
+   const gchar *selection_txt;
+   int selHnd, nRes;
+   mmdb::PResidue *SelResidue;
+   mmdb::Manager *current_mol;
+
+   selection_txt = gtk_entry_get_text(GTK_ENTRY(selection_entry));
+
+   current_mol = mols().first;
+   if (current_mol) {
+      selHnd = current_mol->NewSelection();
+      current_mol->Select(selHnd,
+                          mmdb::STYPE_RESIDUE,
+                          selection_txt,
+                          mmdb::SKEY_NEW);
+      current_mol->GetSelIndex(selHnd, SelResidue, nRes);
+      draw_it(current_mol, selHnd, 1);
+   } else {
+      g_print("BL WARNING:: no mols, so cannot make a (new) plot\n");
+   }
+
+   // finally move focus back to canvas
+   gtk_widget_grab_focus(canvas);
 }
 
 
