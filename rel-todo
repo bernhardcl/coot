@@ -1,7 +1,27 @@
 
    For Release 0.8.9
 
+   o API access to write a cif file (if input file is cif... or pdb
+
+   o delete_all_extra_restraints() should updates the extra restraints display
+
+   o need a delete restraints menu item
+
+   o update the display of the restraints even if the molecule is not displayed
+
    o --splash-screen arb-image.png - does that work?
+
+   o parse Sameer's xml
+
+   o get rid of this: 
+     INFO:: setup minimol from mol: no spacegroup
+
+* Done.
+
+   o get rid of this:
+.... step_count: 880 step_count_lim 5000
+
+* Done, was fixed in refinement
 
    o fetch Bernie branch. consider new rama
 

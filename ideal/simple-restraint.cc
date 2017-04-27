@@ -36,6 +36,7 @@
 #include <fstream>
 #include <algorithm> // for sort
 #include <stdexcept>
+#include <iomanip>
 
 #ifdef HAVE_CXX_THREAD
 #include <thread>
@@ -453,6 +454,7 @@ coot::restraints_container_t::init_from_residue_vec(const std::vector<std::pair<
 						    mmdb::Manager *mol,
 						    const std::vector<atom_spec_t> &fixed_atom_specs) {
 
+
    init_shared_pre(mol);
    residues_vec = residues;
 
@@ -461,7 +463,8 @@ coot::restraints_container_t::init_from_residue_vec(const std::vector<std::pair<
    // 20090620: or do we?
 
    // debug:
-   if (false) { 
+   bool debug = false;
+   if (debug) { 
       for (unsigned int ir=0; ir<residues_vec.size(); ir++) {
 	 mmdb::PAtom *res_atom_selection = NULL;
 	 int n_res_atoms;
@@ -483,7 +486,6 @@ coot::restraints_container_t::init_from_residue_vec(const std::vector<std::pair<
 	 }
       }
    }
-   
 
    // what about adding the flanking residues?  How does the atom
    // indexing of that work when (say) adding a bond?
@@ -509,7 +511,7 @@ coot::restraints_container_t::init_from_residue_vec(const std::vector<std::pair<
    // fixed.
    //
    // 20151128 only include the residues once (test that they are not there first)
-   // 
+   //
    int n_bonded_flankers_in_total = 0; // debug/info counter
    for (unsigned int i=0; i<bpc.size(); i++) {
       if (bpc[i].is_fixed_first) {
@@ -542,7 +544,7 @@ coot::restraints_container_t::init_from_residue_vec(const std::vector<std::pair<
 	 all_residues.push_back(non_bonded_neighbour_residues[ires]);
    }
 
-   if (0) { 
+   if (0) {
       std::cout << "   DEBUG:: There are " << residues.size() << " passed residues and "
 		<< all_residues.size() << " residues total (including flankers)"
 		<< " with " << non_bonded_neighbour_residues.size()
@@ -600,6 +602,20 @@ coot::restraints_container_t::init_from_residue_vec(const std::vector<std::pair<
    }
    
    add_fixed_atoms_from_flanking_residues(bpc);
+
+   if (debug) {
+      std::cout << "DEBUG:: Selecting residues gives " << n_atoms << " atoms " << std::endl;
+      for (int iat=0; iat<n_atoms; iat++) {
+	 bool fixed_flag = false;
+	 if (std::find(fixed_atom_indices.begin(),
+		       fixed_atom_indices.end(), iat) != fixed_atom_indices.end())
+	    fixed_flag = true;
+	 std::cout << "   " << std::setw(3) << iat << " " << atom[iat]->name << " "
+		   << atom[iat]->GetSeqNum() << " " << atom[iat]->GetChainID() << " "
+		   << atom[iat]->GetResName() << " fixed: " << fixed_flag << std::endl;
+      }
+   }
+   
    
 }
 
@@ -1643,7 +1659,6 @@ coot::restraints_container_t::make_restraints(int imol,
 	 bpc = make_flanking_atoms_restraints(geom,
 					      do_rama_plot_restraints,
 					      do_trans_peptide_restraints);
-      bpc.size();
       int iret_prev = restraints_vec.size();
 
       if (sec_struct_pseudo_bonds == coot::HELIX_PSEUDO_BONDS) {
@@ -2747,7 +2762,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const
 // e.g (if n-1 is fixed residue): C(n-1)-N(n)-Ca(n)-C(n) or C(n-1)-N(n)-Ca(n)-CB(n)
 // will not be seen as 1-4 related. So that's where strange_exception comes in.
 //
-int 
+int
 coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const coot::bonded_pair_container_t &bpc,
 								 const coot::restraints_container_t::reduced_angle_info_container_t &ai,
 								 const coot::protein_geometry &geom) {
@@ -2774,7 +2789,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const
 	 std::cout << "------- " << iat << " " << atom_spec_t(atom[iat]) << std::endl;
    }
 
-   // THinking of setting this to true? is the (link) angle in the dictionary? Is one of the
+   // Thinking of setting this to true? is the (link) angle in the dictionary? Is one of the
    // residues non-moving? (see above notes).
    if (false)
       ai.write_angles_map("angles-map.tab");
@@ -2798,7 +2813,8 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const
       std::string res_type = at->GetResName();
       std::map<mmdb::Residue *, std::pair<bool, dictionary_residue_restraints_t> >::const_iterator it;
       it = restraints_map.find(at->residue);
-      if (it == restraints_map.end()) { 
+      if (it == restraints_map.end()) {
+	 // have_restraints_for() is faster?
 	 std::pair<bool, dictionary_residue_restraints_t> p = geom.get_monomer_restraints(res_type, imol);
 	 // p.first is false if this is not a filled dictionary
 	 restraints_map[at->residue] = p;
@@ -3021,7 +3037,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const
 	          clipper::Coord_orth pt1(atom[i]->x, atom[i]->y, atom[i]->z);
 	          clipper::Coord_orth pt2(at_2->x,    at_2->y,    at_2->z);
 	          double d = sqrt((pt1-pt2).lengthsq());
-		     
+
 	          std::cout << "adding non-bonded contact restraint index " 
 			    << i << " to index " << filtered_non_bonded_atom_indices[i][j]
 			    << " "
@@ -3636,7 +3652,7 @@ coot::restraints_container_t::construct_non_bonded_contact_list_by_res_vec(const
    //  8 -> 2.9 s
    // 11 -> 3.1 s
    //
-   const double dist_crit = 11.0; // good number?  Needs checking. 
+   const double dist_crit = 11.0;
    
    filtered_non_bonded_atom_indices.resize(bonded_atom_indices.size());
 
@@ -3649,11 +3665,11 @@ coot::restraints_container_t::construct_non_bonded_contact_list_by_res_vec(const
 		   << bpc[i].is_fixed_first << " " 
 		   << bpc[i].is_fixed_second << " " 
 		   << std::endl;
-      
+
       std::cout << "--------------- debug:: bonded_atom_indices size "
 		<< bonded_atom_indices.size() << std::endl;
       std::cout << "--------------- debug:: n_atoms " << n_atoms << std::endl;
-      
+
       std::cout << "Bonded atom indices:" << std::endl;
       for (unsigned int i=0; i<bonded_atom_indices.size(); i++) {
 	 std::cout << "  " << i << " " << atom_spec_t(atom[i]) << " " << bonded_atom_indices[i].size()
@@ -3688,7 +3704,6 @@ coot::restraints_container_t::construct_non_bonded_contact_list_by_res_vec(const
 		  matched_oxt = true;
 	       }
 	    }
-	    
 
 	    if (false)
 	       std::cout << "moving->moving: here with atoms "
@@ -3837,11 +3852,11 @@ coot::restraints_container_t::construct_non_bonded_contact_list_by_res_vec(const
 
 #ifdef HAVE_CXX_THREAD
    end = std::chrono::system_clock::now();
- 
+
    std::chrono::duration<double> elapsed_seconds = end-start;
    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
- 
-   std::cout << "finished computation at " << std::ctime(&end_time)
+
+   std::cout << "INFO:: nbc computation " // std::ctime(&end_time)
 	     << "elapsed time: " << elapsed_seconds.count() << "s\n";
 #endif // HAVE_CXX_THREAD
 
