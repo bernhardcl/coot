@@ -418,5 +418,5 @@ fi
 #chmod 755 /z/build-logs/MINGW32_NT-6.1-sarabellum/*
 #chmod 744 /z/build-logs/MINGW32_NT-6.1-sarabellum/*/*
 ) 2>&1 > $HOME/20-wincoot-autobuild-all.txt
-cp ${HOME}/20-wincoot-autobuild-all.txt ${PUBLIC_HTML_LOGS}
+cp ${HOME}/20-wincoot-autobuild-all.txt ${PUBLIC_HTML_LOGS}/
 
