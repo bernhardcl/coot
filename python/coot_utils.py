@@ -2667,8 +2667,6 @@ def prodrg_ify(imol, chain_id, res_no, ins_code):
     
                 
 # ---------- annotations ---------------------
-#
-# these should probably be in coot_gui.py
 
 def add_annotation_here(text):
     global annotations
