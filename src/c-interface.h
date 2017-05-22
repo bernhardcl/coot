@@ -3393,6 +3393,15 @@ void delete_all_extra_restraints(int imol);
 /*! \brief clear out all the extra/user-defined restraints for this residue in molecule number imol  */
 void delete_extra_restraints_for_residue(int imol, const char *chain_id, int res_no, const char *ins_code);
 
+#ifdef __cplusplus
+#ifdef USE_GUILE
+void delete_extra_restraints_for_residue_spec_scm(int imol, SCM residue_spec_in);
+#endif // USE_GUILE
+#ifdef USE_PYTHON
+void delete_extra_restraints_for_residue_spec_py(int imol, PyObject *residue_spec_in_py);
+#endif // USE_PYTHON
+#endif // __cplusplus
+
 void delete_extra_restraints_worse_than(int imol, float n_sigma);
 
 /*! read in prosmart (typically) extra restraints */
@@ -5829,7 +5838,7 @@ int new_molecule_by_residue_specs_py(int imol, PyObject *residue_spec_list_py);
 /*! \brief create a new molecule that consists of only the atoms 
   of the specified list of residues
 @return the new molecule number, -1 means an error. */
-int new_molecule_by_residue_specs_scm(int imol, SCM *residue_spec_list_scm);
+int new_molecule_by_residue_specs_scm(int imol, SCM residue_spec_list_scm);
 #endif /* USE_GUILE */
 #endif /* __cplusplus */
 
@@ -6514,12 +6523,13 @@ int add_linked_residue(int imol, const char *chain_id, int resno, const char *in
 		       const char *new_residue_comp_id, const char *link_type, int n_trials);
 #ifdef __cplusplus
 #ifdef USE_GUILE
+// mode is either 1: add  2: add and fit  3: add, fit and refine
 SCM add_linked_residue_scm(int imol, const char *chain_id, int resno, const char *ins_code, 
-			   const char *new_residue_comp_id, const char *link_type);
+			   const char *new_residue_comp_id, const char *link_type, int mode);
 #endif 
 #ifdef USE_PYTHON
 PyObject *add_linked_residue_py(int imol, const char *chain_id, int resno, const char *ins_code, 
-				const char *new_residue_comp_id, const char *link_type);
+				const char *new_residue_comp_id, const char *link_type, int mode);
 #endif 
 #endif 		       
 void set_add_linked_residue_do_fit_and_refine(int state);

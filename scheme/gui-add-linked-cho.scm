@@ -18,6 +18,9 @@
 (define (add-pyranose-pseudo-ring-plane-restraints comp-id)
 
   (define (filter-out plane-name-sub-string plane-restraints)
+    (format #t "DEBUG:: in filter-out: remove ~s from ~s~%"
+	    plane-name-sub-string plane-restraints)
+    ;; (filter (lambda (s) (string-match? plane-name-sub-string ...?)
     plane-restraints)
 
   (let ((restraints (monomer-restraints comp-id)))
@@ -40,7 +43,7 @@
 				     (list "pseudo-ring-2" (list " C2 " " C3 " " C5 " " O5 ") 0.01)
 				     (list "pseudo-ring-3" (list " C3 " " C4 " " O5 " " C1 ") 0.01)
 				     )
-				    (filter-out "pseudo-ring-3" plane-restraints)))))
+				    (filter-out "pseudo-ring-" plane-restraints)))))
 		       (cons new-plane-restraints (f (cdr restraints)))))
 		    (else 
 		     (cons (car restraints)
@@ -49,17 +52,20 @@
 	    (set-monomer-restraints comp-id new-restraints))))))
 
 
-(define (add-synthetic-carbohydrate-planes)
-  (add-pyranose-pseudo-ring-plane-restraints "NAG")
-  (add-pyranose-pseudo-ring-plane-restraints "BMA")
-  (add-pyranose-pseudo-ring-plane-restraints "MAN")
-  (add-pyranose-pseudo-ring-plane-restraints "GAL")
-  (add-pyranose-pseudo-ring-plane-restraints "GLC"))
+(define (add-synthetic-pyranose-planes)
+  (for-each (lambda(comp-id)
+	      (add-pyranose-pseudo-ring-plane-restraints comp-id))
+	    (list "NAG" "BMA" "MAN" "GAL" "GLC" "FUC" "XYP")))
 
+(define (use-monomodal-pyranose-ring-torsions)
+  (for-each (lambda(tlc)
+	      (use-unimodal-ring-torsion-restraints tlc))
+	    (list "NAG" "BMA" "MAN" "GAL" "GLC" "FUC" "XYP")))
 
 
 (define (multi-add-linked-residue imol res-spec residues-to-add)
 
+  (format #t "---------------- multi-add-linked-residue ~s ~s ~%~!" imol res-spec)
   (set-go-to-atom-molecule imol)
   (set-matrix 8)
 
@@ -92,11 +98,13 @@
 							    (res-spec->chain-id current-res-spec)
 							    (res-spec->res-no   current-res-spec)
 							    (res-spec->ins-code current-res-spec)
-							    new-res
-							    new-link)))
+							    new-res new-link 2))) ;; add and fit mode
 
 		      ;; residues-near-residue takes a 3-part spec and makes 3-part specs.
 		      (let* ((ls (residues-near-residue imol current-res-spec 1.9)))
+
+			(add-cho-restraints-for-residue imol new-res-spec)
+
 			(with-auto-accept
 			 (refine-residues imol (cons current-res-spec ls))))
 		      
@@ -165,8 +173,6 @@
       (if (list? res-centre)
 	  (apply set-rotation-centre res-centre))))
 	  
-  
-  
   (define func-test
     (let ((count 10))
       (lambda (parent res-pair)
@@ -189,9 +195,9 @@
 		    (residue-spec->chain-id spec)
 		    (residue-spec->res-no   spec)
 		    (residue-spec->ins-code spec)))
-		    
 
   (define (func parent res-pair)
+
     (if (not (list? parent))
         (begin
           (format #t "WARNING:: Oops not a proper res-spec ~s with residues-to-add: ~s~%"
@@ -216,14 +222,21 @@
 ;		      new-res-type
 ;		      new-link)
 
-	      (let ((new-res-spec (add-linked-residue imol 
-						      (res-spec->chain-id parent)
-						      (res-spec->res-no   parent)
-						      (res-spec->ins-code parent)
-						      new-res-type
-						      new-link)))
+	      (let* ((tree-residues (glyco-tree-residues imol parent))
+		     (imol-save (new-molecule-by-residue-specs imol tree-residues))
+		     (new-res-spec (add-linked-residue imol
+						       (res-spec->chain-id parent)
+						       (res-spec->res-no   parent)
+						       (res-spec->ins-code parent)
+						       new-res-type
+						       new-link 2))) ;; add and link mode
+
+		(set-mol-displayed imol-save 0)
+		(set-mol-active    imol-save 0)
 		(let* ((ls (residues-near-residue imol parent 1.9))
 		       (local-ls (cons parent ls)))
+		  (add-cho-restraints-for-residue imol new-res-spec)
+		  (rotate-y-scene 100 0.5)
 		  (with-auto-accept (refine-residues imol local-ls))
 		  (if (list? new-res-spec)
 		      (begin
@@ -232,41 +245,90 @@
 			      (begin
 				preped-new-res-spec)
 			      (begin
+				;; ------------ bad fit -----------------
+				;; delete residue and restore others
 				(format #t "------------ That was not well-fitting. Deleting ~s: ~%"
 					preped-new-res-spec)
+				(delete-extra-restraints-for-residue-spec imol preped-new-res-spec)
 				(delete-residue-by-spec preped-new-res-spec)
-				(with-auto-accept (refine-residues imol local-ls))
+				;; restore glyco-tree residues from imol-save
+				(replace-fragment imol imol-save "//")
+				;; (with-auto-accept (refine-residues imol local-ls))
 				#f))))
-		      #f))))))) ;; oops, something bad...
+		      #f))))))
+    ) ;; oops, something bad...
 
   (define (process-tree parent tree proc-func)
-    (cond 
+    (cond
      ((null? tree) '())
      ((list? (car tree))
       (let ((part-1 (process-tree parent (car tree) proc-func))
 	    (part-2 (process-tree parent (cdr tree) proc-func)))
 	(cons part-1 part-2)))
-     (else 
+     (else
       (let ((new-res (proc-func parent (car tree))))
 	(cons new-res
 	      (process-tree new-res (cdr tree) proc-func))))))
 
-  ;; main line of add-linked-residue
-  ;; 
-  (add-synthetic-carbohydrate-planes)
+  ;; main line of add-linked-residue-tree
+  ;;
+  (add-synthetic-pyranose-planes)
+  (use-monomodal-pyranose-ring-torsions)
+  (set-refine-with-torsion-restraints 1)
+  (set-matrix 8)
   (set-residue-selection-flash-frames-number 1)
   (set-go-to-atom-molecule imol)
   (let* ((previous-m (default-new-atoms-b-factor))
-	(m (median-temperature-factor imol))
-	(new-m (* m 1.55)))
+	 (m (median-temperature-factor imol))
+	 (new-m (* m 1.55)))
+
+    (set-default-temperature-factor-for-new-atoms previous-m)
 
     (if (number? m)
 	(set-default-temperature-factor-for-new-atoms new-m))
 
-    (process-tree parent tree func)
-    (set-default-temperature-factor-for-new-atoms previous-m)))
+    (let ((start-pos-view (add-view-here "Glyo Tree Start Pos")))
+      (process-tree parent tree func)
+      (go-to-view-number start-pos-view 0)
+      ;; add a test here that the tree here (centre of screen) matches a known tree.
+      ;; 
+      ;; and that each is 4C1 (or 1C4 for FUC?) (XYP?)
+      )))
 
-  
+
+(define (add-linked-residue-with-extra-restraints-to-active-residue new-res-type link-type)
+  (set-matrix 8)
+  (set-refine-with-torsion-restraints 1)
+  (set-add-linked-residue-do-fit-and-refine 0)
+  (using-active-atom
+   (let ((new-res-spec (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code new-res-type link-type 2)))
+     (add-cho-restraints-for-residue aa-imol new-res-spec)
+     ;; refine that
+     (with-auto-accept
+      (let ((residues (cons aa-res-spec (residues-near-residue aa-imol aa-res-spec 1.9))))
+	(refine-residues aa-imol residues))))))
+
+(define (delete-all-cho)
+   (let ((delete-cho-list '()))
+      (using-active-atom
+         (if (valid-model-molecule? aa-imol)
+            (with-no-backups aa-imol
+               (begin
+                  (for-each (lambda (chain-id)
+                     (for-each (lambda (res-serial)
+                        (let ((res-no (seqnum-from-serial-number aa-imol chain-id res-serial)))
+                           (let ((rn (residue-name aa-imol chain-id res-no "")))
+                              (if (string? rn)
+                                 (if (or (string=? rn "NAG") (string=? "MAN" rn) (string=? "BMA" rn)
+                                         (string=? "FUC" rn) (string=? "XYP" rn) (string=? "SIA" rn) (string=? "GLC" rn))
+                                    (let* ((residue-spec (list chain-id res-no "")))
+                                       (set! delete-cho-list (cons (list chain-id res-no "") delete-cho-list))))))))
+                                (range (chain-n-residues chain-id aa-imol))))
+                             (chain-ids aa-imol))
+                  (for-each (lambda(cho-res-spec)
+                      (delete-residue aa-imol (residue-spec->chain-id cho-res-spec) (residue-spec->res-no cho-res-spec) ""))
+                      delete-cho-list)))))))
+
 
 (define (add-module-carbohydrate) 
 
@@ -275,38 +337,28 @@
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add a ASN-NAG NAG"
-	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "NAG" "NAG-ASN"))))
+	 (lambda ()
+	   (add-linked-residue-with-extra-restraints-to-active-residue "NAG" "NAG-ASN")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add a BETA1-4 NAG"
-	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "NAG" "BETA1-4"))))
+	 (lambda ()
+	   (add-linked-residue-with-extra-restraints-to-active-residue "NAG" "BETA1-4")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add a BETA1-4 BMA"
 	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "BMA" "BETA1-4"))))
+	    (add-linked-residue-with-extra-restraints-to-active-residue "BMA" "BETA1-4")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an ALPHA1-2 MAN"
 	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "MAN" "ALPHA1-2"))))
+	    (add-linked-residue-with-extra-restraints-to-active-residue "MAN" "ALPHA1-2")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an ALPHA1-3 MAN"
 	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "MAN" "ALPHA1-3"))))
+	   (add-linked-residue-with-extra-restraints-to-active-residue "MAN" "ALPHA1-3")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an ALPHA2-3 MAN"
@@ -315,52 +367,41 @@
 	   ;; we should do this only if we are sitting on an SIA.
 	   ;; Attaching a SIA to a MAN (i.e. reverse order) would be a
 	   ;; good test too...
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "MAN" "ALPHA2-3"))))
+	   (add-linked-residue-with-extra-restraints-to-active-residue "MAN" "ALPHA2-3")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an ALPHA2-3 GAL"
-	 (lambda () 
-	   (set-matrix 8)
+	 (lambda ()
 	   ;; we should do this only if we are sitting on an SIA.
 	   ;; Attaching a SIA to a MAN (i.e. reverse order) would be a
 	   ;; good test too...
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "GAL" "ALPHA2-3"))))
+	   (add-linked-residue-with-extra-restraints-to-active-residue "GAL" "ALPHA2-3")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an ALPHA1-6 MAN"
-	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "MAN" "ALPHA1-6"))))
+	 (lambda ()
+	   (add-linked-residue-with-extra-restraints-to-active-residue "MAN" "ALPHA1-6")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an ALPHA1-3 FUC"
-	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "FUC" "ALPHA1-3"))))
+	 (lambda ()
+	    (add-linked-residue-with-extra-restraints-to-active-residue "FUC" "ALPHA1-3" )))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an ALPHA1-6 FUC"
-	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "FUC" "ALPHA1-6"))))
+	 (lambda ()
+	   (add-linked-residue-with-extra-restraints-to-active-residue "FUC" "ALPHA1-6")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an XYP-BMA XYP"
-	 (lambda () 
-	   (set-matrix 8)
-	   (using-active-atom
-	    (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code "XYP" "XYP-BMA"))))
+	 (lambda ()
+	   (add-linked-residue-with-extra-restraints-to-active-residue "XYP" "XYP-BMA")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "N-link add NAG, NAG, BMA"
 	 (lambda ()
 	   (using-active-atom
-	    (multi-add-linked-residue 
+	    (multi-add-linked-residue
 	     aa-imol
 	     (list aa-chain-id aa-res-no aa-ins-code)
 	     (list 
@@ -369,15 +410,17 @@
 	      (cons "BMA" "BETA1-4")
 	      )))))
 
-	(add-simple-coot-menu-menuitem
-	 menu "Auto Fit & Refine on Link Addition"
-	 (lambda ()
-	   (set-add-linked-residue-do-fit-and-refine 1)))
+;  the mode in the function call now takes take of this
+;
+;	(add-simple-coot-menu-menuitem
+;	 menu "Auto Fit & Refine on Link Addition"
+;	 (lambda ()
+;	   (set-add-linked-residue-do-fit-and-refine 1)))
 
-	(add-simple-coot-menu-menuitem
-	 menu "Auto Fit & Refinement Off for Link Addition"
-	 (lambda ()
-	   (set-add-linked-residue-do-fit-and-refine 0)))
+;	(add-simple-coot-menu-menuitem
+;	 menu "Auto Fit & Refinement Off for Link Addition"
+;	 (lambda ()
+;	   (set-add-linked-residue-do-fit-and-refine 0)))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add Oligomannose"
@@ -400,6 +443,11 @@
 				     paucimannose-tree))))
 
 	(add-simple-coot-menu-menuitem
+	 menu "Delete All Carbohydrate"
+	 (lambda()
+	   (delete-all-cho)))
+
+	(add-simple-coot-menu-menuitem
 	 menu "Torsion Fit this residue"
 	 (lambda ()
 	   (using-active-atom
@@ -417,7 +465,11 @@
 	(add-simple-coot-menu-menuitem
 	 menu "Add synthetic pyranose plane restraints"
 	 (lambda () 
-	   (add-synthetic-carbohydrate-planes)))
+	   (add-synthetic-pyranose-planes)))
+
+	(add-simple-coot-menu-menuitem
+	 menu "Use Unimodal ring torsion restraints"
+	 (lambda () 
+	   (use-unimodal-pyranose-ring-torsions)))
 
 	)))
-
