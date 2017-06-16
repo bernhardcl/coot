@@ -845,6 +845,29 @@ delete_residue_with_full_spec(int imol,
 }
 
 
+#ifdef USE_GUILE
+/*! \brief delete residues in the residue spec list */
+void delete_residues_scm(int imol, SCM residue_specs_scm) {
+   if (is_valid_model_molecule(imol)) {
+      std::vector<coot::residue_spec_t> specs = scm_to_residue_specs(residue_specs_scm);
+      graphics_info_t::molecules[imol].delete_residues(specs);
+   }
+}
+#endif
+
+#ifdef USE_PYTHON
+/*! \brief delete residues in the residue spec list */
+void delete_residues_py(int imol, PyObject *residue_specs_py) {
+   if (is_valid_model_molecule(imol)) {
+      std::vector<coot::residue_spec_t> specs = py_to_residue_specs(residue_specs_py);
+      graphics_info_t::molecules[imol].delete_residues(specs);
+   }
+}
+#endif
+
+
+
+
 /*! \brief delete all hydrogens in molecule */
 int delete_hydrogens(int imol) {
 
@@ -5145,13 +5168,13 @@ int add_linked_residue(int imol, const char *chain_id, int resno, const char *in
 SCM add_linked_residue_scm(int imol, const char *chain_id, int resno, const char *ins_code, 
 			   const char *new_residue_comp_id, const char *link_type, int mode) {
 
-   int n_trials = 6000;
+   int n_trials = 5000;
    SCM r = SCM_BOOL_F;
    // bool do_fit_and_refine = graphics_info_t::linked_residue_fit_and_refine_state;
 
    if (is_valid_model_molecule(imol)) {
       graphics_info_t g;
-      
+
       if (g.Geom_p()->have_dictionary_for_residue_type_no_dynamic_add(new_residue_comp_id)) {
       } else {
 	 std::cout << "INFO:: dictionary does not already have " << new_residue_comp_id

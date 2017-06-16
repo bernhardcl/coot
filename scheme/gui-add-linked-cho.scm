@@ -137,6 +137,17 @@
 			      (("ALPHA1-3" . "MAN"))
 			      (("XYP-BMA"  . "XYP"))))))
 
+(define complex-tree '(("NAG-ASN" . "NAG")
+		       (("BETA1-6" . "FUL"))
+		       (("BETA1-4" . "NAG")
+			(("BETA1-4" . "BMA")
+			 (("ALPHA1-6" . "MAN")
+			  (("BETA1-2" . "NAG")))))))
+;			   (("BETA1-4" . "GAL"))))
+;			 (("ALPHA1-3" . "MAN")
+;			  (("BETA1-2"  . "NAG")
+;			   (("BETA1-4" . "GAL"))))))))
+
 
 ;(define oligomannose-tree '(("NAG-ASN" . "NAG")
 ;			    (("BETA1-4" . "NAG")
@@ -276,7 +287,7 @@
   ;; main line of add-linked-residue-tree
   ;;
   (add-synthetic-pyranose-planes)
-  (use-monomodal-pyranose-ring-torsions)
+  (use-unimodal-pyranose-ring-torsions)
   (set-refine-with-torsion-restraints 1)
   (set-matrix 8)
   (set-residue-selection-flash-frames-number 1)
@@ -305,11 +316,13 @@
   (set-add-linked-residue-do-fit-and-refine 0)
   (using-active-atom
    (let ((new-res-spec (add-linked-residue aa-imol aa-chain-id aa-res-no aa-ins-code new-res-type link-type 2)))
-     (add-cho-restraints-for-residue aa-imol new-res-spec)
-     ;; refine that
-     (with-auto-accept
-      (let ((residues (cons aa-res-spec (residues-near-residue aa-imol aa-res-spec 1.9))))
-	(refine-residues aa-imol residues))))))
+     (if (list? new-res-spec)
+	 (begin
+	   (add-cho-restraints-for-residue aa-imol new-res-spec)
+	   ;; refine that
+	   (with-auto-accept
+	    (let ((residues (cons aa-res-spec (residues-near-residue aa-imol aa-res-spec 1.9))))
+	      (refine-residues aa-imol residues))))))))
 
 (define (delete-all-cho)
    (let ((delete-cho-list '()))
@@ -322,15 +335,19 @@
                         (let ((res-no (seqnum-from-serial-number aa-imol chain-id res-serial)))
                            (let ((rn (residue-name aa-imol chain-id res-no "")))
                               (if (string? rn)
-                                 (if (or (string=? rn "NAG") (string=? "MAN" rn) (string=? "BMA" rn)
-                                         (string=? "FUC" rn) (string=? "XYP" rn) (string=? "SIA" rn) (string=? "GLC" rn))
+                                 (if (or (string=? "NAG" rn) (string=? "MAN" rn) (string=? "BMA" rn) (string=? "FUL" rn)
+                                         (string=? "FUC" rn) (string=? "XYP" rn) (string=? "SIA" rn) (string=? "GAL" rn))
                                     (let* ((residue-spec (list chain-id res-no "")))
                                        (set! delete-cho-list (cons (list chain-id res-no "") delete-cho-list))))))))
                                 (range (chain-n-residues chain-id aa-imol))))
                              (chain-ids aa-imol))
-                  (for-each (lambda(cho-res-spec)
-                      (delete-residue aa-imol (residue-spec->chain-id cho-res-spec) (residue-spec->res-no cho-res-spec) ""))
-                      delete-cho-list)))))))
+
+		  ;; now we have delete-residues, we don't need to delete them one by one
+                  ;;(for-each (lambda(cho-res-spec)
+		  ;; (delete-residue aa-imol (residue-spec->chain-id cho-res-spec) (residue-spec->res-no cho-res-spec) ""))
+		  ;;   delete-cho-list)))))))
+		  ;;
+		  (delete-residues aa-imol delete-cho-list)))))))
 
 
 (define (add-module-carbohydrate) 
@@ -386,6 +403,16 @@
 	   (add-linked-residue-with-extra-restraints-to-active-residue "MAN" "ALPHA1-6")))
 
 	(add-simple-coot-menu-menuitem
+	 menu "Add a BETA1-2 NAG"
+	 (lambda ()
+	   (add-linked-residue-with-extra-restraints-to-active-residue "NAG" "BETA1-2")))
+
+	(add-simple-coot-menu-menuitem
+	 menu "Add a BETA1-4 GAL"
+	 (lambda ()
+	   (add-linked-residue-with-extra-restraints-to-active-residue "GAL" "BETA1-4")))
+
+	(add-simple-coot-menu-menuitem
 	 menu "Add an ALPHA1-3 FUC"
 	 (lambda ()
 	    (add-linked-residue-with-extra-restraints-to-active-residue "FUC" "ALPHA1-3" )))
@@ -394,6 +421,11 @@
 	 menu "Add an ALPHA1-6 FUC"
 	 (lambda ()
 	   (add-linked-residue-with-extra-restraints-to-active-residue "FUC" "ALPHA1-6")))
+
+	(add-simple-coot-menu-menuitem
+	 menu "Add an BETA1-6 FUL"
+	 (lambda ()
+	   (add-linked-residue-with-extra-restraints-to-active-residue "FUL" "BETA1-6")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Add an XYP-BMA XYP"
@@ -446,6 +478,15 @@
 				     paucimannose-tree))))
 
 	(add-simple-coot-menu-menuitem
+	 menu "Add Complex Tree"
+	 (lambda ()
+	   (using-active-atom
+	    (make-backup aa-imol)
+	    (add-linked-residue-tree aa-imol
+				     (list aa-chain-id aa-res-no aa-ins-code)
+				     complex-tree))))
+
+	(add-simple-coot-menu-menuitem
 	 menu "Delete All Carbohydrate"
 	 (lambda()
 	   (delete-all-cho)))
@@ -472,7 +513,7 @@
 
 	(add-simple-coot-menu-menuitem
 	 menu "Use Unimodal ring torsion restraints"
-	 (lambda () 
+	 (lambda ()
 	   (use-unimodal-pyranose-ring-torsions)))
 
 	)))
