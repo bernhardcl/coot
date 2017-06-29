@@ -94,7 +94,7 @@ def import_from_3d_generator_from_mdl_using_acedrg(mdl_file_name, comp_id):
                            ["-m", mdl_file_name, "-r", comp_id, "-o", stub],
                            [], "acedrg.log", False, local_env=acedrg_env())
     if status:
-        info_dialog("Bad exit status for Acedrg\n - see pyrogen.log")
+        info_dialog("Bad exit status for Acedrg\n - see acedrg.log")
     else:
         handle_read_draw_molecule_and_move_molecule_here(pdb_out_file_name)
         read_cif_dictionary(cif_out_file_name)

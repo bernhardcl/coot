@@ -256,7 +256,7 @@ class UsingActiveAtom:
             if self.res_spec:
                 return [imol, chain_id, res_no, ins_code, atom_name, alt_conf, res_spec]
             else:
-            return [imol, chain_id, res_no, ins_code, atom_name, alt_conf]
+                return [imol, chain_id, res_no, ins_code, atom_name, alt_conf]
     def __exit__(self, type, value, traceback):
         if (self.no_residue):
             # internal calling of exit, ignore errors
