@@ -227,12 +227,10 @@ class UsingActiveAtom:
     
     > with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code, aa_atom_name, aa_alt_conf]:
           refine_zone(aa_imol, aa_chain_id, aa_res_no-2, aa_res_no+2, aa_ins_code)
-
     alternative usage to get res_spec as well
 
     > with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code, aa_atom_name, aa_alt_conf, aa_res_spec]:
           refine_zone(aa_imol, aa_chain_id, aa_res_no-2, aa_res_no+2, aa_ins_code)
-
     """
     
     def __init__(self, with_res_spec=False):
@@ -258,7 +256,7 @@ class UsingActiveAtom:
             if self.res_spec:
                 return [imol, chain_id, res_no, ins_code, atom_name, alt_conf, res_spec]
             else:
-                return [imol, chain_id, res_no, ins_code, atom_name, alt_conf]
+            return [imol, chain_id, res_no, ins_code, atom_name, alt_conf]
     def __exit__(self, type, value, traceback):
         if (self.no_residue):
             # internal calling of exit, ignore errors
@@ -2760,10 +2758,6 @@ def remove_annotation_at_click(rad=1.5):
         handle = text_index_near_position(*(coords + [rad]))
         if handle > -1:
             remove_text(handle)
-        else:
-            txt = "BL WARNING:: no annotation found near here (%s A radius)\n" %rad
-            txt += "Not removing anything!"
-            info_dialog(txt)
     user_defined_click(1, remove_here)
 
 # ---------- updating ---------------------
@@ -3879,9 +3873,7 @@ def merge_solvent_chains(imol):
             change_chain_id(imol, chain_id, master_chain, 1,
                             new_start, new_end)
             last_prev_water = new_end
-
-          
-    
+            
 
 # helper to comvert functions to strings
 def cmd2str(*args):
@@ -4213,7 +4205,6 @@ def rename_alt_confs_active_residue():
         inscode  = active_atom[3]
 
         rename_alt_confs(imol, chain_id, resno, inscode)
-
 # Moved from gui_add_linked_cho.py to make a global function.
 def delete_residue_by_spec(imol, spec):
     delete_residue(imol,

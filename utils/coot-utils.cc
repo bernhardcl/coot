@@ -196,21 +196,17 @@ coot::util::intelligent_debackslash(const std::string &s) {
 std::string
 coot::util::remove_trailing_slash(const std::string &s) {
 
+   // BL says:: On Windows the null termination doesnt seem to work
+   //    by subsituting null.
+   // That was ugly anyway, let's erase the last character.
    std::string scratch = s;
-   // BL says:: this may be general but dont want to fiddle with it in case
-   // it breaks something. On Windows the null termination doesnt seem to work
-   // this way
-#ifdef WINDOWS_MINGW
-   if (scratch.substr(scratch.length()-1) == "/")
-      scratch.erase(scratch.end()-1);
-   if (scratch.substr(scratch.length()-1) == "\\")
-      scratch.erase(scratch.end()-1);
-#else
-   if (scratch.substr(scratch.length()-1) == "/")
-      scratch.replace(scratch.end()-1, scratch.end(), '/', '\0');
-   if (scratch.substr(scratch.length()-1) == "\\")
-      scratch.replace(scratch.end()-1, scratch.end(), '\\', '\0');
-#endif
+
+   if (s.length() > 0) {
+      if (s.back() == '/')
+         scratch.erase(scratch.end()-1);
+      if (s.back() == '\\')
+         scratch.erase(scratch.end()-1);
+   }
    return scratch;
 }
 
@@ -813,7 +809,7 @@ coot::util::extension_is_for_scripts(const std::string &ext) {
    bool r = false;
 #ifdef USE_PYTHON
    if (ext == ".py")
-       r = true;
+      r = true;
 #endif // USE_PYTHON
 #ifdef USE_GUILE
    if (ext == ".scm")
