@@ -387,6 +387,9 @@
 		  (list "Add a BETA1-4 GAL"
 			(lambda ()
 			  (add-linked-residue-with-extra-restraints-to-active-residue "GAL" "BETA1-4")))
+		  (list "Add an ALPHA1-2 FUC"
+			(lambda ()
+			  (add-linked-residue-with-extra-restraints-to-active-residue "FUC" "ALPHA1-2" )))
 		  (list "Add an ALPHA1-3 FUC"
 			(lambda ()
 			  (add-linked-residue-with-extra-restraints-to-active-residue "FUC" "ALPHA1-3" )))
@@ -532,12 +535,13 @@
 		    (if (= level-number 3)
 			(if (string=? residue-type "BMA")
 			    (set! active-button-label-list (list "Add an ALPHA1-3 MAN"
-								 "Add an ALPHA1-6 MAN"))))
+								 "Add an ALPHA1-6 MAN"
+								 "Add an XYP-BMA XYP"))))
+
 		    (if (= level-number 4)
 			(if (string=? residue-type "MAN")
 			    (set! active-button-label-list (list "Add an ALPHA1-3 MAN"
-								 "Add an ALPHA1-6 MAN"
-								 "Add an XYP-BMA XYP"))))
+								 "Add an ALPHA1-6 MAN"))))
 		    ))
 
 	      ;; complex
@@ -672,7 +676,7 @@
 				     oligomannose-tree))))
 
 	(add-simple-coot-menu-menuitem
-	 menu "Add Paucimannose"
+	 menu "Add Paucimannose/Hybrid"
 	 (lambda ()
 	   (using-active-atom
 	    (make-backup aa-imol)
