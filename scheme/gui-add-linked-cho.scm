@@ -130,7 +130,9 @@
 				(("ALPHA1-2" . "MAN"))))))))
 
 (define paucimannose-tree '(("NAG-ASN" . "NAG")
-			    (("ALPHA1-3" . "FUC"))
+			    (("ALPHA1-3" . "FUC")
+			     (("BETA1-4"  . "GAL")
+			      ("ALPHA1-2" . "FUC")))
 			    (("BETA1-4" . "NAG")
 			     (("BETA1-4" . "BMA")
 			      (("ALPHA1-6" . "MAN"))
@@ -304,6 +306,7 @@
     (let ((start-pos-view (add-view-here "Glyo Tree Start Pos")))
       (process-tree parent tree func)
       (go-to-view-number start-pos-view 0)
+      (with-auto-accept (using-active-atom (refine-residues aa-imol (glyco-tree-residues aa-imol aa-res-spec))))
       ;; add a test here that the tree here (centre of screen) matches a known tree.
       ;; 
       ;; and that each is 4C1 (or 1C4 for FUC?) (XYP?)
@@ -334,8 +337,10 @@
 				   (let ((res-no (seqnum-from-serial-number aa-imol chain-id res-serial)))
 				     (let ((rn (residue-name aa-imol chain-id res-no "")))
 				       (if (string? rn)
+					   ;; a better test is to find all the hetgroups and look at the _chem_comp group or type
 					   (if (or (string=? "NAG" rn) (string=? "MAN" rn) (string=? "BMA" rn) (string=? "FUL" rn)
-						   (string=? "FUC" rn) (string=? "XYP" rn) (string=? "SIA" rn) (string=? "GAL" rn))
+						   (string=? "FUC" rn) (string=? "XYP" rn) (string=? "SIA" rn) (string=? "GAL" rn)
+						   (string=? "A2G" rn))
 					       (let* ((residue-spec (list chain-id res-no "")))
 						 (set! delete-cho-list (cons (list chain-id res-no "") delete-cho-list))))))))
 				 (range (chain-n-residues chain-id aa-imol))))
@@ -437,7 +442,13 @@
 	(gtk-box-set-homogeneous hbox-1 #t)
 	(gtk-box-set-homogeneous hbox-2 #t)
 	(gtk-box-reorder-child vbox hbox-1 0)
-	(gtk-box-reorder-child vbox hbox-2 1))
+	(gtk-box-reorder-child vbox hbox-2 1)
+
+	(for-each (lambda (butt)
+		    (gtk-signal-connect butt "toggled"
+					(lambda ()
+					  (gui-add-linked-cho-dialog-vbox-set-rotation-centre-hook vbox))))
+		  (list butt-1 butt-2 butt-3 butt-4)))
 
       ;; global var post-set-rotation-centre-hook
       (set! post-set-rotation-centre-hook
@@ -532,11 +543,19 @@
 			(if (string=? residue-type "NAG")
 			    (set! active-button-label-list (list "Add a BETA1-4 BMA"))))
 
+		    (if (= level-number 2)
+			(if (string=? residue-type "FUC")
+			    (set! active-button-label-list (list "Add a BETA1-4 GAL"))))
+
 		    (if (= level-number 3)
 			(if (string=? residue-type "BMA")
 			    (set! active-button-label-list (list "Add an ALPHA1-3 MAN"
 								 "Add an ALPHA1-6 MAN"
 								 "Add an XYP-BMA XYP"))))
+
+		    (if (= level-number 3)
+			(if (string=? residue-type "GAL")
+			    (set! active-button-label-list (list "Add an ALPHA1-2 FUC"))))
 
 		    (if (= level-number 4)
 			(if (string=? residue-type "MAN")
@@ -588,7 +607,6 @@
     (let ((tree-type 'oligomannose))
       (let ((children (gtk-container-children vbox)))
 	(for-each (lambda (child)
-		    ;; (format #t "child: ~s~%" child)
 		    (if (gtk-box? child)
 			(begin
 			  (for-each (lambda (box-child)
