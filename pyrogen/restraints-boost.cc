@@ -24,6 +24,7 @@
 #include <GraphMol/GraphMol.h>
 
 #include <boost/python.hpp>
+
 using namespace boost::python;
 
 #define HAVE_GSL
@@ -49,9 +50,6 @@ namespace coot {
 					  const std::string &comp_id);
    RDKit::ROMol *hydrogen_transformations(const RDKit::ROMol &r);
    RDKit::ROMol *mogulify(const RDKit::ROMol &r);
-
-   // delete 
-   // mmff_b_a_restraints_container_t *mmff_bonds_and_angles(RDKit::ROMol &mol_in);
 
    // fiddle with mol
    void delocalize_guanidinos(RDKit::RWMol *mol);
@@ -108,6 +106,7 @@ BOOST_PYTHON_MODULE(pyrogen_boost) {
       .def("get_angle",   &coot::mmff_b_a_restraints_container_t::get_angle)
       ;
 }
+
 
 RDKit::ROMol*
 coot::mogulify(const RDKit::ROMol &mol) {
