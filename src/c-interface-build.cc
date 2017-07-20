@@ -5255,7 +5255,7 @@ PyObject *add_linked_residue_py(int imol, const char *chain_id, int resno, const
 
    int n_trials = 6000;
    PyObject *r = Py_False;
-   bool do_fit_and_refine = graphics_info_t::linked_residue_fit_and_refine_state;
+   //bool do_fit_and_refine = graphics_info_t::linked_residue_fit_and_refine_state;
 
    if (is_valid_model_molecule(imol)) {
       graphics_info_t g;
@@ -5280,7 +5280,7 @@ PyObject *add_linked_residue_py(int imol, const char *chain_id, int resno, const
       //
       graphics_info_t::molecules[imol].delete_extra_restraints_for_residue(new_res_spec);
 
-      if (do_fit_and_refine) {
+      if (mode > 1) {
          if (! new_res_spec.unset_p()) {
             r = residue_spec_to_py(new_res_spec);
             if (is_valid_map_molecule(imol_refinement_map())) {

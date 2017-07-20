@@ -18,7 +18,6 @@ def add_pyranose_pseudo_ring_plane_restraints(comp_id):
                                 ["pseudo-ring-3", [" C3 ", " C4 ", " O5 ", " C1 "], 0.01]] + \
                                 filter_out("pseudo-ring-", plane_restraints) # should be list already 
         restraints["_chem_comp_plane_atom"] = new_plane_restraints
-        print "BL DEBUG:: new plane restraints", new_plane_restraints
 
         set_monomer_restraints(comp_id, restraints)
         
@@ -233,27 +232,36 @@ def complex_plant_tree():
                 ["BETA1-4", "BMA"],
                 [
                     ["ALPHA1-6", "MAN"],
-                    ["BETA1-2", "NAG"],
-                    ["BETA1-4", "GAL"],
-                    [["ALPHA2-3", "SIA"],
-                     ["ALPHA2-6", "SIA"]
+                    [
+                        [["BETA1-2", "NAG"],
+                         ["BETA1-4", "GAL"],
+                         [["ALPHA2-3", "SIA"],
+                          ["ALPHA2-6", "SIA"]
+                        ]],
+                        [["BETA1-6", "NAG"],
+                         ["BETA1-4", "GAL"]]
                     ]
                     
                 ],
                 [
                     ["ALPHA1-3", "MAN"],
-                    ["BETA1-2", "NAG"],
-                    ["BETA1-4", "GAL"],
-                    [["ALPHA2-3", "SIA"],
-                     ["ALPHA2-6", "SIA"]
+                    [
+                        [["BETA1-2", "NAG"],
+                         ["BETA1-4", "GAL"],
+                         [["ALPHA2-3", "SIA"],
+                          ["ALPHA2-6", "SIA"]
+                         ]],
+                        [["BETA1-4", "NAG"],
+                         ["BETA1-4", "GAL"]]
                     ]
                 ],
                 [
-                    ["BETA1-4", "NAG"],
-                    ["BETA1-2", "XYP"]  # change link!?
+                    ["BETA1-4", "NAG"]
+                ],
+                [
+                    ["XYP-BMA", "XYP"]
                 ]
                ],
-               ["ALPHA1-6", "FUC"],
                ["ALPHA1-3", "FUC"]
            ]
     ]
@@ -385,7 +393,7 @@ def add_linked_residue_tree(imol, parent, tree):
         if not isinstance(glyco_tree, list):
             return False
         else:
-            if not (len(glyco_tree) == 0):
+            if not (len(glyco_tree) == 1):
                 return False
             else:
                 with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no,
@@ -430,7 +438,7 @@ def add_linked_residue_tree(imol, parent, tree):
         # 5n11 needs the is-just-an-ASN? test
         # 5n09/5wzy needs the null test. 
         # Hmmm.
-        if ((not start_tree) or (not is_just_an_ASN_qm(aa_imol, start_tree))):
+        if not ((start_tree == []) or (is_just_an_ASN_qm(aa_imol, start_tree))):
             info_dialog("Must start on Single ASN")
             print "start_tree:", start_tree
         else:
@@ -442,7 +450,10 @@ def add_linked_residue_tree(imol, parent, tree):
                 refine_residues(aa_imol, glyco_tree_residues(aa_imol, aa_res_spec))
             # validate build
             g = glyco_validate()
-            g.auto_delete_residues()
+            # BL says:: lets not auto delete since we may remove sugars in
+            # the middle of the tree (OK? doesnt take RSCC into account)
+            # g.auto_delete_residues()
+            g.validation_dialog()
     # reset
     set_default_temperature_factor_for_new_atoms(previous_m)
     set_matrix(current_weight)
@@ -477,7 +488,7 @@ def delete_all_cho():
                         rn = residue_name(aa_imol, chain_id, res_no, "")
                         if (isinstance(rn, str)):
                             if rn in ["NAG", "MAN", "BMA", "FUC", "XYP",
-                                      "SIA", "GLC"]:
+                                      "SIA", "GLC", "GAL"]:
                                 residue_spec = [chain_id, res_no, ""]
                                 delete_cho_ls.append(residue_spec)
 #                now we have delete_residues, we don't need to delete them one by one
@@ -490,10 +501,9 @@ def delete_all_cho():
 def interactive_add_cho_dialog():
 
     def refine_tree_func():
-        with AutoAccept():
-            with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code,
-                                           aa_atom_name, aa_alt_conf, aa_res_spec]:
-                refine_residues(aa_imol, glyco_tree_residues(aa_imol, aa_res_spec))
+        with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code,
+                                       aa_atom_name, aa_alt_conf, aa_res_spec]:
+            refine_residues(aa_imol, glyco_tree_residues(aa_imol, aa_res_spec))
 
     add_synthetic_pyranose_planes()
     use_unimodal_pyranose_ring_torsions()
@@ -733,7 +743,8 @@ def glyco_tree_dialog_set_button_active_state(button, glyco_id, tree_type):
                 if level_number == 4:
                     if residue_type == "MAN":
                         active_button_label_ls = ["Add an ALPHA1-3 MAN",
-                                                  "Add an ALPHA1-6 MAN"]
+                                                  "Add an ALPHA1-6 MAN",
+                                                  "Add a BETA1-2 NAG"]
                 
                 if level_number == 5:
                     if residue_type == "NAG":
@@ -957,7 +968,7 @@ def delete_glyco_tree():
         print active_residue
         print "glyco_tree_residues", glyco_tree_residues
         for res in glyco_tree_residues:
-            rn = residue_name_by_spec(imol, res)
+            rn = residue_spec2residue_name(imol, res)
             if rn != "ASN":
                 delete_residue_by_spec(imol, res)
     except KeyError as e:
@@ -970,8 +981,8 @@ def delete_glyco_tree():
 #
 def glyco_validation_dialog_set_go_to_residue(imol, residue_spec):
     rc = residue_centre(imol,
-                        res_spec_utils.residue_spec_to_chain_id(residue_spec),
-                        res_spec_utils.residue_spec_to_res_no(residue_spec),
+                        residue_spec2chain_id(residue_spec),
+                        residue_spec2res_no(residue_spec),
                         '')
     set_rotation_centre(*rc)
 
@@ -1024,10 +1035,10 @@ class glyco_validate:
                     words = l.split()
                     if len(words) > 12:
                         for r in glyco_tree_residues:
-                            rn = residue_name_by_spec(imol, r)
+                            rn = residue_spec2residue_name(imol, r)
                             try:
-                                res_id = rn + "-" + res_spec_utils.residue_spec_to_chain_id(r) + \
-                                         '-' + str(res_spec_utils.residue_spec_to_res_no(r))
+                                res_id = rn + "-" + residue_spec2chain_id(r) + \
+                                         '-' + str(residue_spec2res_no(r))
                                 # print "res_id", res_id
                                 if words[1] == res_id:
                                     # print words[12] , yes or check
