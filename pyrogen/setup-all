@@ -1,7 +1,0 @@
-
-
-setup csd
-cd ~/Projects/build-enhanced-ligand/src
-source setup-all
-cd -
-source setup-energy-lib

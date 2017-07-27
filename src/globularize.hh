@@ -1,4 +1,0 @@
-
-
-void globularize(int imol);
-
