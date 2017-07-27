@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="16px"
+   height="16px"
+   id="svg6971"
+   version="1.1"
+   inkscape:version="0.47 r22583"
+   sodipodi:docname="azerbaijan.svg">
+  <defs
+     id="defs6973">
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0 : 8 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_z="16 : 8 : 1"
+       inkscape:persp3d-origin="8 : 5.3333333 : 1"
+       id="perspective6979" />
+    <inkscape:perspective
+       id="perspective6989"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="15.696216"
+     inkscape:cx="5.012882"
+     inkscape:cy="10.250387"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:grid-bbox="true"
+     inkscape:document-units="px"
+     inkscape:window-width="717"
+     inkscape:window-height="753"
+     inkscape:window-x="0"
+     inkscape:window-y="25"
+     inkscape:window-maximized="0">
+    <inkscape:grid
+       type="xygrid"
+       id="grid7018" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata6976">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer">
+    <rect
+       width="16.184652"
+       height="8.0923262"
+       x="-0.064393632"
+       y="4.1280937"
+       style="fill:#0092c7;fill-opacity:1"
+       id="blue_stripe" />
+    <rect
+       width="16.184652"
+       height="2.6974421"
+       x="-0.064393632"
+       y="6.8255358"
+       style="fill:#ea0437;fill-opacity:1"
+       id="red_stripe" />
+    <rect
+       width="16.184652"
+       height="2.6974421"
+       x="-0.064393632"
+       y="9.5229797"
+       style="fill:#00ae68;fill-opacity:1"
+       id="green_stripe" />
+    <circle
+       cx="560"
+       cy="0"
+       r="84"
+       style="fill:#ffffff"
+       id="white_circle"
+       sodipodi:cx="560"
+       sodipodi:cy="0"
+       sodipodi:rx="84"
+       sodipodi:ry="84"
+       transform="matrix(0.01348721,0,0,0.01348721,-0.06439438,8.1742576)" />
+    <circle
+       cx="582"
+       cy="0"
+       r="70"
+       style="fill:#ea0437;fill-opacity:1"
+       id="red_circle"
+       sodipodi:cx="582"
+       sodipodi:cy="0"
+       sodipodi:rx="70"
+       sodipodi:ry="70"
+       transform="matrix(0.01348721,0,0,0.01348721,-0.06439438,8.1742576)" />
+    <path
+       d="m 9.0637096,8.6037266 -0.309488,-0.140712 -0.1198,0.318167 -0.119343,-0.318339 -0.30969,0.140267 0.140712,-0.309488 -0.318168,-0.1198 0.31834,-0.119343 -0.140267,-0.309691 0.309488,0.140714 0.1198,-0.318169 0.119342,0.318341 0.30969,-0.140268 -0.140712,0.309488 0.318168,0.119799 -0.31834,0.119343 0.140268,0.309691 z"
+       style="fill:#ffffff;fill-opacity:1"
+       id="path4162" />
+  </g>
+</svg>
