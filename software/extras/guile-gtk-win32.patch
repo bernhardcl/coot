@@ -1,0 +1,212 @@
+--- Makefile.in.orig	Tue Mar  4 12:40:28 2008
++++ Makefile.in	Tue Mar  4 12:40:46 2008
+@@ -197,7 +197,7 @@
+ LIBGLADE_CFLAGS = @LIBGLADE_CFLAGS@
+ LIBGLADE_LIBS = @LIBGLADE_LIBS@
+ LIBOBJS = @LIBOBJS@
+-LIBS = @LIBS@
++LIBS = -no-undefined @LIBS@
+ LIBTOOL = @LIBTOOL@
+ LN_S = @LN_S@
+ LTLIBOBJS = @LTLIBOBJS@
+--- gdk-glue.c.orig	Fri Feb 22 09:42:54 2008
++++ gdk-glue.c	Fri Feb 22 16:34:04 2008
+@@ -7,7 +7,6 @@
+ #include "guile-gtk-compat.h"
+ #include <gdk/gdk.h>
+ #include <gdk/gdkrgb.h>
+-#include <gdk/gdkx.h>
+ 
+ /* These macros not in pango 1.8.1 which comes with gtk 2.6.7 */
+ #ifndef PANGO_PIXELS_FLOOR
+@@ -2498,29 +2497,6 @@
+   return sgtk_wrap_gtkobj_nocopy ((GObject*)cr_ret);
+ }
+ 
+-static char s_gdk_image_new_bitmap_interp[] = "gdk-image-new-bitmap";
+-
+-SCM
+-sgtk_gdk_image_new_bitmap_interp (SCM p_visual, SCM p_data, SCM p_width, SCM p_height)
+-{
+-  GdkImage* cr_ret;
+-  GdkVisual* c_visual;
+-  sgtk_raw c_data;
+-  gint c_width;
+-  gint c_height;
+-  SCM_ASSERT (sgtk_is_a_gtkobj (gdk_visual_get_type(), p_visual), p_visual, SCM_ARG1, s_gdk_image_new_bitmap_interp);
+-  c_data = sgtk_scm2raw(p_data,SCM_ARG2,s_gdk_image_new_bitmap_interp);
+-  c_width = scm_to_int (p_width);
+-  c_height = scm_to_int (p_height);
+-  c_visual = (GdkVisual*)sgtk_get_gtkobj (p_visual);
+-  ;
+-  ;
+-  ;
+-  cr_ret = gdk_image_new_bitmap_interp (c_visual, c_data.raw,c_data.count, c_width, c_height);
+-
+-  return sgtk_wrap_gtkobj_nocopy ((GObject*)cr_ret);
+-}
+-
+ static char s_gdk_image_get[] = "gdk-image-get";
+ 
+ SCM
+@@ -4484,20 +4460,6 @@
+   return sgtk_list2scm (cr_ret, _sgtk_helper_toscm_copy_GdkWindow);
+ }
+ 
+-static char s_gdk_window_get_id[] = "gdk-window-get-id";
+-
+-SCM
+-sgtk_gdk_window_get_id (SCM p_window)
+-{
+-  guint cr_ret;
+-  GdkWindow* c_window;
+-  SCM_ASSERT (sgtk_is_a_gtkobj (gdk_window_object_get_type(), p_window), p_window, SCM_ARG1, s_gdk_window_get_id);
+-  c_window = (GdkWindow*)sgtk_get_gtkobj (p_window);
+-  cr_ret = gdk_window_get_id (c_window);
+-
+-  return scm_from_uint (cr_ret);
+-}
+-
+ static char s_gdk_font_load[] = "gdk-font-load";
+ 
+ SCM
+@@ -5758,17 +5720,6 @@
+   return cr_ret;
+ }
+ 
+-static char s_gdk_get_leader_window_id[] = "gdk-get-leader-window-id";
+-
+-SCM
+-sgtk_gdk_get_leader_window_id ()
+-{
+-  guint cr_ret;
+-  cr_ret = gdk_get_leader_window_id ();
+-
+-  return scm_from_uint (cr_ret);
+-}
+-
+ static char s_gdk_keyval_name[] = "gdk-keyval-name";
+ 
+ SCM
+@@ -7162,7 +7113,6 @@
+   scm_c_define_gsubr (s_gdk_keyval_to_upper, 1, 0, 0, sgtk_gdk_keyval_to_upper);
+   scm_c_define_gsubr (s_gdk_keyval_from_name, 1, 0, 0, sgtk_gdk_keyval_from_name);
+   scm_c_define_gsubr (s_gdk_keyval_name, 1, 0, 0, sgtk_gdk_keyval_name);
+-  scm_c_define_gsubr (s_gdk_get_leader_window_id, 0, 0, 0, sgtk_gdk_get_leader_window_id);
+   scm_c_define_gsubr (s_gdk_event_message, 1, 0, 0, sgtk_gdk_event_message);
+   scm_c_define_gsubr (s_gdk_event_message_type, 1, 0, 0, sgtk_gdk_event_message_type);
+   scm_c_define_gsubr (s_gdk_event_drag_context, 1, 0, 0, sgtk_gdk_event_drag_context);
+@@ -7247,7 +7197,6 @@
+   scm_c_define_gsubr (s_gdk_font_id, 1, 0, 0, sgtk_gdk_font_id);
+   scm_c_define_gsubr (s_gdk_fontset_load, 1, 0, 0, sgtk_gdk_fontset_load);
+   scm_c_define_gsubr (s_gdk_font_load, 1, 0, 0, sgtk_gdk_font_load);
+-  scm_c_define_gsubr (s_gdk_window_get_id, 1, 0, 0, sgtk_gdk_window_get_id);
+   scm_c_define_gsubr (s_gdk_window_get_toplevels, 0, 0, 0, sgtk_gdk_window_get_toplevels);
+   scm_c_define_gsubr (s_gdk_window_set_functions, 2, 0, 0, sgtk_gdk_window_set_functions);
+   scm_c_define_gsubr (s_gdk_window_set_decorations, 2, 0, 0, sgtk_gdk_window_set_decorations);
+@@ -7339,7 +7288,6 @@
+   scm_c_define_gsubr (s_gdk_image_get_pixel, 3, 0, 0, sgtk_gdk_image_get_pixel);
+   scm_c_define_gsubr (s_gdk_image_put_pixel, 4, 0, 0, sgtk_gdk_image_put_pixel);
+   scm_c_define_gsubr (s_gdk_image_get, 5, 0, 0, sgtk_gdk_image_get);
+-  scm_c_define_gsubr (s_gdk_image_new_bitmap_interp, 4, 0, 0, sgtk_gdk_image_new_bitmap_interp);
+   scm_c_define_gsubr (s_gdk_image_new, 4, 0, 0, sgtk_gdk_image_new);
+   scm_c_define_gsubr (s_gdk_region_get_clipbox_interp, 1, 0, 0, sgtk_gdk_region_get_clipbox_interp);
+   scm_c_define_gsubr (s_gdk_region_rect_in, 2, 0, 0, sgtk_gdk_region_rect_in);
+--- gdk-support.c.orig	Fri Feb 22 09:25:48 2008
++++ gdk-support.c	Fri Feb 22 14:32:08 2008
+@@ -23,7 +23,7 @@
+ #include <guile-gtk.h>
+ 
+ #include <glib-object.h>
+-#include <gdk/gdkx.h> /* for GDK_WINDOW_XID */
++//#include <gdk/gdkx.h> /* for GDK_WINDOW_XID */
+ 
+ #include "guile-gtk-compat.h"
+ #include "gtk-threads.h"
+@@ -1087,8 +1087,9 @@
+ guint32
+ gdk_get_leader_window_id (void)
+ {
+-  return GDK_WINDOW_XID
+-    (gdk_display_get_default_group (gdk_display_get_default()));
++//  return GDK_WINDOW_XID
++//    (gdk_display_get_default_group (gdk_display_get_default()));
++  return 0;
+ }
+ 
+ /* A guile-gtk extension.  Not sure what happens to GDK_WINDOW_XID on a
+@@ -1096,7 +1097,8 @@
+ guint32
+ gdk_window_get_id (GdkWindow *window)
+ {
+-  return GDK_WINDOW_XID (window);
++//  return GDK_WINDOW_XID (window);
++  return 0;
+ }
+ 
+ SCM_KEYWORD (kw_aspect,      "aspect");
+@@ -1443,7 +1445,8 @@
+   if (m_data == NULL)
+     scm_memory_error (func_name);
+   memcpy (m_data, data, count);
+-  return gdk_image_new_bitmap (visual, m_data, width, height);
++//  return gdk_image_new_bitmap (visual, m_data, width, height);
++  return 0;
+ }
+ 
+ GdkBitmap *
+--- guile-gtk.c.orig	Fri Feb 22 09:25:08 2008
++++ guile-gtk.c	Fri Feb 22 09:37:50 2008
+@@ -25,7 +25,7 @@
+ 
+ #include <gtk/gtk.h>
+ #include <gdk/gdkprivate.h>
+-#include <gdk/gdkx.h>
++//#include <gdk/gdkx.h>
+ 
+ #include <libguile.h>
+ #include <guile/gh.h>
+@@ -3288,11 +3288,11 @@
+      will use that to initialize gdk_threads_mutex */
+   sgtk_init_threads ();
+ 
+-  if (gdk_display == NULL)
+-    {
++//  if (gdk_display == NULL)
++//    {
+       gtk_set_locale ();
+       gtk_init (argcp, argvp);
+-    }
++//    }
+   sgtk_init_substrate ();
+   sgtk_inited = 1;
+ }
+--- gdk-pixbuf/Makefile.in.orig	Tue Mar  4 12:44:48 2008
++++ gdk-pixbuf/Makefile.in	Tue Mar  4 12:45:14 2008
+ INSTALL_PROGRAM = @INSTALL_PROGRAM@
+ INSTALL_SCRIPT = @INSTALL_SCRIPT@
+ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+-LDFLAGS = -no-undefined @LDFLAGS@
++LDFLAGS = @LDFLAGS@
+ LIBGLADE_CFLAGS = @LIBGLADE_CFLAGS@
+ LIBGLADE_LIBS = @LIBGLADE_LIBS@
+ LIBOBJS = @LIBOBJS@
+--- gtk-2.0/gtk.scm.orig	Mon Feb 25 14:43:30 2008
++++ gtk-2.0/gtk.scm	Mon Feb 25 14:43:42 2008
+@@ -17,7 +17,7 @@
+   :use-module (gtk-2.0 dynlink)
+   :use-module (gtk-2.0 gdk))
+ 
+-(merge-compiled-code "sgtk_init_gtk_gtk_glue" "libguilegtk-2.0")
++(merge-compiled-code "sgtk_init_gtk_gtk_glue" "libguilegtk-2.0-0")
+ 
+ (define-public (gtk-update)
+   (cond ((> (gtk-events-pending) 0)
+--- gtk-2.0/gdk.scm.orig	Mon Feb 25 14:43:14 2008
++++ gtk-2.0/gdk.scm	Mon Feb 25 14:43:24 2008
+@@ -16,4 +16,4 @@
+ (define-module (gtk-2.0 gdk)
+   :use-module (gtk-2.0 dynlink))
+ 
+-(merge-compiled-code "sgtk_init_gtk_gdk_glue" "libguilegtk-2.0")
++(merge-compiled-code "sgtk_init_gtk_gdk_glue" "libguilegtk-2.0-0")

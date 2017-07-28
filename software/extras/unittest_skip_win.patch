@@ -1,0 +1,117 @@
+--- unittest.py.orig	Wed Apr  4 19:17:36 2007
++++ unittest.py	Thu Apr 10 10:42:02 2008
+@@ -92,6 +92,8 @@
+ 
+ __unittest = 1
+ 
++class SkipException(Exception): pass
++
+ class TestResult:
+     """Holder for test result information.
+ 
+@@ -106,6 +108,7 @@
+     def __init__(self):
+         self.failures = []
+         self.errors = []
++        self.skipped = []
+         self.testsRun = 0
+         self.shouldStop = 0
+
+@@ -128,6 +130,11 @@
+         returned by sys.exc_info()."""
+         self.failures.append((test, self._exc_info_to_string(err, test)))
+ 
++    def addSkipped(self, test, err):
++        """Called when a test is skipped. 'err' is a tuble of values as
++        returned by sys.exc_info()."""
++        self.skipped.append((test, str(err[1])))
++
+     def addSuccess(self, test):
+         "Called when a test has completed successfully"
+         pass
+@@ -163,9 +170,9 @@
+         return length
+ 
+     def __repr__(self):
+-        return "<%s run=%i errors=%i failures=%i>" % \
++        return "<%s run=%i errors=%i failures=%i skipped=%i>" % \
+                (_strclass(self.__class__), self.testsRun, len(self.errors),
+-                len(self.failures))
++                len(self.failures), len(self.skipped))
+ 
+ class TestCase:
+     """A class whose instances are single test cases.
+@@ -249,6 +256,9 @@
+         try:
+             try:
+                 self.setUp()
++            except SkipException:
++                result.addSkipped(self, self._exc_info())
++                return
+             except KeyboardInterrupt:
+                 raise
+             except:
+@@ -261,6 +271,8 @@
+                 ok = True
+             except self.failureException:
+                 result.addFailure(self, self._exc_info())
++            except SkipException:
++                result.addSkipped(self, self._exc_info())
+             except KeyboardInterrupt:
+                 raise
+             except:
+@@ -380,6 +392,14 @@
+     assert_ = assertTrue = failUnless
+ 
+     assertFalse = failIf
++
++    def skip(self, msg=None):
++        """Skip the test, with the given message."""
++        raise SkipException, msg
++
++    def skipIf(self, expr, msg=None):
++        """Skip the test if the expression is true."""
++        if expr: raise SkipException, msg
+ 
+ 
+ 
+@@ -670,6 +690,16 @@
+         elif self.dots:
+             self.stream.write('F')
+ 
++    def addSkipped(self, test, err):
++        TestResult.addSkipped(self, test, err)
++        if self.showAll:
++            msg = str(err[1])
++            if msg:
++                msg = " (" + msg + ")"
++            self.stream.writeln("SKIPPED" + msg)
++        elif self.dots:
++            self.stream.write('S')
++
+     def printErrors(self):
+         if self.dots or self.showAll:
+             self.stream.writeln()
+@@ -713,15 +743,20 @@
+         self.stream.writeln()
+         if not result.wasSuccessful():
+             self.stream.write("FAILED (")
+-            failed, errored = map(len, (result.failures, result.errors))
++            failed, errored, skipped = map(len, (result.failures, result.errors, result.skipped))
+             if failed:
+                 self.stream.write("failures=%d" % failed)
+             if errored:
+                 if failed: self.stream.write(", ")
+                 self.stream.write("errors=%d" % errored)
++            if skipped:
++                self.stream.write(", skipped=%d" % skipped)
+             self.stream.writeln(")")
+         else:
+-            self.stream.writeln("OK")
++            if result.skipped:
++                self.stream.writeln("OK (skipped=%d)" % len(result.skipped))
++            else:
++                self.stream.writeln("OK")
+         return result
+ 
+ 

@@ -1,0 +1,29 @@
+--- library_utils.c.orig	2011-06-27 09:15:51 +0200
++++ library_utils.c	2011-06-27 10:17:44 +0200
+@@ -54,7 +54,7 @@
+ #include <io.h>
+ #endif
+ 
+-#if !defined (_MSC_VER)
++#if !defined (_MSC_VER) && !defined (_WIN32)
+ #include <pwd.h>
+ #endif
+ 
+@@ -461,7 +461,7 @@
+  * In these instances use getpwuid instead.
+  * @return pointer to character string containing login name.
+  */
+-#if ! defined (_MSC_VER)
++#if ! defined (_MSC_VER) && ! defined (_WIN32)
+ static const char userid_unknown[] = "unknown";
+ 
+ char *ccp4_utils_username(void)
+@@ -655,7 +655,7 @@
+  * @param tarray Array containing User and System times.
+  * @return Sum of User and System times.
+  */
+-#if ! defined (_MSC_VER) 
++#if ! defined (_MSC_VER) && ! defined (_WIN32)
+ float ccp4_utils_etime (float tarray[2])
+ {
+   static long clk_tck = 0;

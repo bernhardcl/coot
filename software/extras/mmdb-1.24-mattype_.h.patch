@@ -1,0 +1,15 @@
+--- src/mattype_.h.orig	2012-01-11 08:53:38 +0100
++++ src/mattype_.h	2012-01-11 08:55:04 +0100
+@@ -124,9 +124,12 @@
+ typedef   byte shortrealUniBin[5];
+ 
+ #ifdef _WIN32
++/* certainly not needed for MINGW */
++#ifdef _MVS
+ #define   strncasecmp _strnicmp
+ #define   strcasecmp  _stricmp
+ #define   strlen      (int)strlen
++#endif
+ pstr strcasestr ( pstr s1, cpstr s2 );
+ #endif
+ 

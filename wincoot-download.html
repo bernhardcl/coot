@@ -1,0 +1,277 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+
+    <meta http-equiv="content-type" content="text/html; charset=windows-1252">
+    <title>WinCoot download</title>
+    <meta content="Bernhard Lohkamp" name="author">
+    <meta content="Coot, WinCoot for Windows systems, molecular
+      graphics, download" name="description">
+    <link rel="icon" type="image/png" href="coot-favicon.png">
+  </head>
+  <body>
+    <h1>WinCoot install and download page</h1>
+    <form action=https://github.com/bernhardcl/coot/releases/download/Release-0.8.8/WinCoot-0.8.8.exe>
+               <input type='submit'
+                      value='Download
+WinCoot-0.8.8' 
+                      style='font-style:veranda; font-size:16px; font-weight:bold;color:yellow;background-color:blue;height:50px;border-style:ridged;text-align:center;'>
+               </form>
+    <h2>How to download and install WinCoot?</h2>
+    Since we have an installer there is hardly any manual intervention
+    required to install WinCoot. However if you have a multi-user
+    Windows
+    computer you might want to change a few things. Here is how things
+    are
+    done:<br>
+    <ul>
+      <li>Download the installer for
+        <a href="https://github.com/bernhardcl/coot/releases/download/Release-0.8.8/WinCoot-0.8.8.exe">WinCoot-0.8.8.exe</a> (or
+        use <b>NEW</b> experimental <a href=http://www.ysbl.york.ac.uk/~lohkamp/software/binaries/stable/WinCoot-0.8.6.1.msi>
+        msi installer</a>  - although old version at the moment;
+        look <a href="https://github.com/bernhardcl/coot/releases">here</a>
+        for even more options).</li>
+      <li>Double-click the downloaded file (WinCoot-<span
+          style="font-style: italic;">version</span>.exe).</li>
+      <li>WinCoot is extracted and
+        short cuts
+        created on the desktop and <span style="font-style: italic;">Start
+          Menu</span>
+        for the current user (N.B. you may want to avoid
+        spaces in the WinCoot master directory name, it may cause
+        problems. If you have Administrator privileges you will be asked
+        if you want to install it for all users).<br>
+      </li>
+      <li>That's all. You are ready to enjoy using WinCoot... Happy
+        model
+        building!<br>
+      </li>
+      <li>(You might want to read the installation notes for
+        multi-user
+        computers <a href="#multi-user">here</a>.) </li>
+    </ul>
+    N.B. (1) WinCoot will save your backup structures in a coot-backup
+    directory, which is default under <span style="font-style: italic;">C:\yourWinCootdirectory\</span>coot-backup.
+This
+    can be changed for every user. It will accumulate a lot of pdb
+    files and should be 'cleaned' occasionally.<br>
+    N.B. (2) You will need about 500MB of disk space for WinCoot (I hope
+    I
+    can reduce it somehow soon...).<br>
+    <br>
+    <h2>Source code download<br>
+    </h2>
+    You can download the source code from <a
+      href="https://github.com/bernhardcl/coot">here</a>.
+    However, I cannot garantee that you'll be able to build it on your
+    own
+    MinGW system. An autobuild script help you to do so (<a
+      href="https://github.com/bernhardcl/coot/raw/master/build-it-win">build-it-win</a>).
+Feel
+    free to email me if
+    you have problems and are desperate to do so.<br>
+    <h2>What are the different versions (stable/pre-release version)?</h2>
+    Stable releases are tested official releases (every few month). The
+    pre-release (developer) versions are build every night and are the latest coot
+    versions. Although these are tested they may not be fully functional
+    and contain unknown bugs.<br>
+    <h2><a name="multi-user"></a>Multi-user
+      Windows computer and single
+      user installation</h2>
+    WinCoot doesn't need to set any environment variables any more but
+    instead uses a .bat file which sets these in runtime. However
+    WinCoot
+    uses 2 directories (environment variables) which
+    could/should
+    be used individually by the user. These are COOT_HOME, which hosts
+    the <span style="font-style: italic;">.coot.py</span> <span
+      style="font-style: italic;"> </span>file and <span
+      style="font-style: italic;">.coot-preferences</span> directory,
+    and
+    COOT_BACKUP_DIR,
+    where intermediate, backup pdb
+    files are stored. For a multi-user Windows computer the
+    Administrator
+    might want to change these environment variables in the <span
+      style="font-style: italic;">runwincoot.bat</span> file
+    (by default in <span style="font-style: italic;">C:/yourWinCoot</span>)
+    for every
+    individual user (you obviously need a <span style="font-style:
+      italic;">runwincoot.bat</span>
+    file for every user).<br>
+    The coot state file will be saved in the directory where WinCoot is
+    started from (default is <span style="font-style: italic;">C:/yourWinCoot</span>).
+For
+    individual users you could change this in the <span
+      style="font-style: italic;">Properties</span> of the
+    WinCoot (desktop)
+    shortcut. Alternatively you start WinCoot (runwincoot.bat) from a
+    DOS
+    shell in the directory where you want to work in and the state file
+    to
+    be saved.<br>
+    <h2><a name="The_WinCoot_environment_variables."></a>The
+      WinCoot
+      environment variables.</h2>
+    This is a list of environment variables WinCoot uses. These are set
+    in
+    runtime when executing <span style="font-style: italic;">runwincoot.bat</span>.
+    So there is no need to set any variables. There is no need to change
+    the variables, except COOT_HOME and COOT_BACKUP_DIR for
+    individual users, if required. Feel free to edit the <span
+      style="font-style: italic;">runwincoot.bat</span> file.<br>
+    <br>
+    <table style="text-align: left; margin-left: 40px; width: 1023px;
+      height: 332px;" border="1" cellpadding="2" cellspacing="2">
+      <tbody>
+        <tr>
+          <td style="vertical-align: top;">Environment
+            Variable Name<br>
+          </td>
+          <td style="vertical-align: top;">Variable Value<br>
+          </td>
+          <td style="vertical-align: top;">Comment<br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_HOME</td>
+          <td style="vertical-align: top; font-style: italic;">C:\WinCoot</td>
+          <td style="vertical-align: top;">where <span
+              style="font-style: italic;">.coot.py</span> for
+            personal settings is
+            saved </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_BACKUP_DIR<br>
+          </td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>coot-backup</td>
+          <td style="vertical-align: top;">intermediate pdbs
+            are saved here<br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_REFMAC_LIB_DIR</td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\lib</td>
+          <td style="vertical-align: top;"><br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_SCHEME_DIR</td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:/WinCoot/</span>share/coot/scheme</td>
+          <td style="vertical-align: top;">only required for guile
+            add-on;
+            needs "/" instead
+            of "\" </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_STANDARD_RESIDUES</td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\coot\standard-residues.pdb</td>
+          <td style="vertical-align: top;"><br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_PIXMAPS_DIR<br>
+          </td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\coot\pixmaps</td>
+          <td style="vertical-align: top;"><br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_RESOURCES_FILE</td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\coot\cootrc</td>
+          <td style="vertical-align: top;"><br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_DATA_DIR<br>
+          </td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\coot</td>
+          <td style="vertical-align: top;"><br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_REF_STRUCTS</td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\coot\reference-structures</td>
+          <td style="vertical-align: top;"><br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_PYTHON_DIR<br>
+          </td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\coot\python</td>
+          <td style="vertical-align: top;"> <br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">COOT_REF_SEC_STRUCTS<br>
+          </td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\coot\ss-reference-structures</td>
+          <td style="vertical-align: top;"><br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">GUILE_LOAD_PATH<br>
+          </td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:/WinCoot</span>/share/guile/1.8; <span
+              style="font-style: italic;">C:/WinCoot</span>/share/guile;<br>
+            <span style="font-style: italic;">C:/WinCoot</span>/share/guile/gtk-2.0;
+
+            <span style="font-style: italic;">C:/WinCoot</span>/share/guile/gui;<br>
+            <span style="font-style: italic;">C:/WinCoot</span>/share/guile/www;
+
+            <span style="font-style: italic;">C:/WinCoot</span>/share/guile/site<br>
+            <br>
+          </td>
+          <td style="vertical-align: top;">only required for guile
+            Add-on;&nbsp; needs "/" instead
+            of "\"</td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">SYMINFO</td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>share\coot\syminfo.lib</td>
+          <td style="vertical-align: top;"><br>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top;">PATH&nbsp;&nbsp;
+            (edit, not new)<br>
+          </td>
+          <td style="vertical-align: top;"><span style="font-style:
+              italic;">C:\WinCoot\</span>bin; <span style="font-style:
+              italic;">C:\WinCoot</span>\lib<br>
+          </td>
+          <td style="vertical-align: top;">this is added to
+            your PATH<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <hr style="width: 100%; height: 2px;">
+    <div style="text-align: left;">
+      <address>Last modified 28/07/2017<br>
+        <script language="javascript">
+<!--
+var ppclink = "Bernhard.Lohkamp at ki.se";
+var ppcname = "Bernhard.Lohkamp";
+var ppchost = "ki.se";
+document.write("<a href=" + "mail" + "to:" + ppcname + "&#64;" + ppchost + ">" + ppclink + "</a>")
+//-->
+</script><noscript>
+email: Bernhard.Lohkamp (at) ki.se
+</noscript></address>
+    </div>
+  </body>
+</html>

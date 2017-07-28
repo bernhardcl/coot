@@ -1,0 +1,12 @@
+--- clipper/core/clipper_sysdep.h.orig	2014-10-27 09:28:37 +0100
++++ clipper/core/clipper_sysdep.h	2014-10-27 09:29:09 +0100
+@@ -109,7 +109,9 @@
+ 
+ // adding WIN32_LEAN_AND_MEAN makes some or all #undefs not necessary,
+ // but for now I'm leaving older workarounds unchanged
++#ifndef WIN32_LEAN_AND_MEAN
+ #define WIN32_LEAN_AND_MEAN 1
++#endif
+ 
+ #include <windows.h>
+ 

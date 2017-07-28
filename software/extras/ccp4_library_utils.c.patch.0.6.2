@@ -1,0 +1,29 @@
+--- library_utils.c.orig	Thu Feb 21 15:00:54 2008
++++ library_utils.c	Thu Feb 21 15:04:46 2008
+@@ -79,7 +79,7 @@
+ #include <io.h>
+ #endif
+ 
+-#if !defined (_MSC_VER)
++#if !defined (_MSC_VER) && !defined (_WIN32)
+ #include <pwd.h>
+ #endif
+ 
+@@ -486,7 +486,7 @@
+  * In these instances use getpwuid instead.
+  * @return pointer to character string containing login name.
+  */
+-#if ! defined (_MSC_VER)
++#if ! defined (_MSC_VER) && ! defined (_WIN32)
+ char *ccp4_utils_username(void)
+ { 
+   struct passwd *passwd_struct=NULL;
+@@ -673,7 +673,7 @@
+  * @param tarray Array containing User and System times.
+  * @return Sum of User and System times.
+  */
+-#if ! defined (_MVS) 
++#if ! defined (_MVS) && ! defined (_WIN32)
+ float ccp4_utils_etime (float tarray[2])
+ {
+   static long clk_tck = 0;

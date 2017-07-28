@@ -1,0 +1,167 @@
+--- guile-gtk-2.1/gtk-2.0.defs.orig	2008-04-07 15:48:15.389249000 +0100
++++ guile-gtk-2.1/gtk-2.0.defs	2008-04-11 15:17:59.137015000 +0100
+@@ -5189,10 +5189,29 @@
+ 
+ (define-object GtkTextTagTable (GObject))
+ 
++(define-object GtkTextTag (GObject))
++
++(define-object GtkTextMark (GObject))
++
+ (define-func gtk_text_tag_table_new
+   GtkTextTagTable
+   ())
+ 
++(define-func gtk_text_tag_table_add
++  none
++  ((GtkTextTagTable table)
++   (GtkTextTag tag)))
++
++(define-func gtk_text_tag_table_remove
++  none
++  ((GtkTextTagTable table)
++   (GtkTextTag tag)))
++
++(define-func gtk_text_tag_table_lookup
++  GtkTextTag
++  ((GtkTextTagTable table)
++   (string name)))
++
+ ;; GtkTextBuffer
+ 
+ (define-object GtkTextBuffer (GObject))
+@@ -5201,6 +5220,34 @@
+   GtkTextBuffer
+   ((GtkTextTagTable table (null-ok))))
+ 
++(define-func gtk_text_buffer_get_tag_table
++  GtkTextTagTable
++  ((GtkTextBuffer buffer)))
++
++(define-func gtk_text_buffer_insert
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextIter iter)
++   (string text)
++   (int len (= -1)))) ;; default whole of `text'
++
++(define-func gtk_text_buffer_insert_at_cursor
++  none
++  ((GtkTextBuffer buffer)
++   (string text)
++   (int len (= -1)))) ;; default whole of `text'
++
++(define-func gtk_text_buffer_insert_range
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextIter iter)
++   (GtkTextIter start)
++   (GtkTextIter end)))
++
++(define-func gtk_text_tag_new
++  GtkTextTag
++  ((string name)))
++
+ (define-func gtk_text_buffer_get_text
+   string
+   ((GtkTextBuffer buffer)
+@@ -5208,21 +5255,94 @@
+    (GtkTextIter end)
+    (bool include_hidden_chars)))
+ 
++(define-func gtk_text_buffer_create_mark
++  GtkTextMark
++  ((GtkTextBuffer buffer)
++   (string mark_name)
++   (GtkTextIter where)
++   (bool left_gravity)))
++
++(define-func gtk_text_buffer_move_mark
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextMark mark)
++   (GtkTextIter where)))
++
++(define-func gtk_text_buffer_add_mark
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextMark mark)
++   (GtkTextIter where)))
++
++(define-func gtk_text_buffer_delete_mark
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextMark mark)))
++
++(define-func gtk_text_buffer_get_mark
++  GtkTextMark
++  ((GtkTextBuffer buffer)
++   (string name)))
++
++(define-func gtk_text_buffer_apply_tag
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextTag tag)
++   (GtkTextIter start)
++   (GtkTextIter end)))
++
++(define-func gtk_text_buffer_remove_tag
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextTag tag)
++   (GtkTextIter start)
++   (GtkTextIter end)))
++
++(define-func gtk_text_buffer_apply_tag_by_name
++  none
++  ((GtkTextBuffer buffer)
++   (string name)
++   (GtkTextIter start)
++   (GtkTextIter end)))
++
++(define-func gtk_text_buffer_remove_tag_by_name
++  none
++  ((GtkTextBuffer buffer)
++   (string name)
++   (GtkTextIter start)
++   (GtkTextIter end)))
++
++(define-func gtk_text_buffer_remove_all_tags
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextIter start)
++   (GtkTextIter end)))
++
++(define-func gtk_text_buffer_get_iter_at_mark
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextIter iter)
++   (GtkTextMark mark)))
++
++(define-func gtk_text_buffer_get_start_iter
++  none
++  ((GtkTextBuffer buffer)
++   (GtkTextIter iter)))
++
+ (define-func gtk_text_buffer_get_end_iter
+   none
+   ((GtkTextBuffer buffer)
+    (GtkTextIter iter)))
+ 
+-(define-func gtk_text_buffer_set_text
++(define-func gtk_text_buffer_get_bounds
+   none
+   ((GtkTextBuffer buffer)
+-   (string text)
+-   (int len (= -1)))) ;; default whole of `text'
++   (GtkTextIter start)
++   (GtkTextIter end)))
+ 
+-(define-func gtk_text_buffer_insert
++(define-func gtk_text_buffer_set_text
+   none
+   ((GtkTextBuffer buffer)
+-   (GtkTextIter iter)
+    (string text)
+    (int len (= -1)))) ;; default whole of `text'
+ 

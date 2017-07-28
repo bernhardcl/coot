@@ -1,0 +1,14 @@
+--- src/file_.cpp.orig	Fri Nov  7 13:09:26 2008
++++ src/file_.cpp	Mon Nov 10 17:42:21 2008
+@@ -408,7 +408,11 @@
+     if (gzipIO==ARCH_GZIP)  {
+ #ifndef _MVS
+       p = NULL;
++#ifdef __WIN32__
++      CreateConcat  ( p,gzip_path,pstr(" | cat > "),FName );
++#else
+       CreateConcat  ( p,gzip_path,pstr(" > "),FName );
++#endif
+       hFile = popen ( p,"w" );
+       if (p)  delete[] p;
+ #else
