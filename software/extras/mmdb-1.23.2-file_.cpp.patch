@@ -1,0 +1,11 @@
+--- src/file_.cpp.orig	2011-07-20 17:00:07 +0200
++++ src/file_.cpp	2011-07-20 17:00:49 +0200
+@@ -65,7 +65,7 @@
+ #endif
+ 
+ 
+-#ifdef  _WIN32
++#ifdef  _WIN32_NEWLINE
+ //  for DOS/WINDOWS machines:
+ #define  NEWLINE  "\r\n"
+ #else

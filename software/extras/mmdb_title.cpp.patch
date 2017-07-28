@@ -1,0 +1,37 @@
+--- src/mmdb_title.cpp.orig	Sun May 10 17:27:33 2009
++++ src/mmdb_title.cpp	Sun May 10 18:33:30 2009
+@@ -67,6 +67,34 @@
+ #include "mmdb_cifdefs.h"
+ #endif
+ 
++// no strcasestr on windows, replacement function!?
++#ifdef __WIN32__
++#include <ctype.h>
++char *strcasestr (const char *psz_big, const char *psz_little)
++{
++    char *p_pos = (char *)psz_big;
++
++    if( !*psz_little ) return p_pos;
++
++    while( *p_pos )
++    {
++        if( toupper( *p_pos ) == toupper( *psz_little ) )
++        {
++            char * psz_cur1 = p_pos + 1;
++            char * psz_cur2 = (char *)psz_little + 1;
++            while( *psz_cur1 && *psz_cur2 &&
++                   toupper( *psz_cur1 ) == toupper( *psz_cur2 ) )
++            {
++                psz_cur1++;
++                psz_cur2++;
++            }
++            if( !*psz_cur2 ) return p_pos;
++        }
++        p_pos++;
++    }
++    return NULL;
++}
++#endif
+ 
+ //  ==============  CTitleContainer  ====================
+ 

@@ -1,0 +1,15 @@
+--- src/file_.cpp.orig	Thu Feb 21 14:35:22 2008
++++ src/file_.cpp	Thu Feb 21 14:42:42 2008
+@@ -66,6 +66,12 @@
+ #include <stdlib.h>
+ #endif
+ 
++#ifdef __WIN32__
++/* This needs to go first before stdio is included. */
++# include <windows.h>
++# define sleep Sleep
++# endif
++
+ #ifndef  __STDIO_H
+ #include <stdio.h>
+ #endif

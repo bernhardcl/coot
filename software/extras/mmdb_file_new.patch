@@ -1,0 +1,11 @@
+--- src/file_.cpp.orig	Fri Oct 23 07:54:51 2009
++++ src/file_.cpp	Fri Oct 23 07:57:04 2009
+@@ -408,7 +408,7 @@
+ #ifndef _MVS
+       p = NULL;
+ #ifdef __WIN32__
+-      CreateConcat  ( p,gzip_path,pstr(" | cat > "),FName );
++      CreateConcat  ( p,gzip_path,pstr(" > "),FName );
+ #else
+       CreateConcat  ( p,gzip_path,pstr(" > "),FName );
+ #endif
