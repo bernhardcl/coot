@@ -27,8 +27,8 @@
     following and please don't tell me about these ones again.<br>
     <ul id="mozToc">
       <!--mozToc h2 1 h3 2 h4 3 h5 4 h6 5 h6 6-->
-      <li><a href="#mozTocId444230">(Win)Coot reference, citation and
-          further information </a></li>
+      <li><a href="#mozTocId444230">(Win)Coot
+          reference, citation and furtherinformation </a></li>
       <li><a href="#mozTocId876747">Installation and Windows problems</a>
         <ul>
           <li><a href="#mozTocId169986">Which Windows version does
@@ -38,18 +38,20 @@
             </a>
             <ul>
               <li><a href="#mozTocId324286">Problem resizing/maximizing
-                  window.</a></li>
+                  or updating the WinCoot window.</a></li>
               <li><a href="#mozTocId910462">Downloading of pdbs does not
                   work/Python errors</a></li>
               <li><a href="#mozTocId689913">Installer hangs</a></li>
-              <li><a href="#mozTocId514994">Display not responsive in
+              <li><a href="#mozTocId514994">Display is not responsive in
                   full screen mode</a></li>
               <li><a href="#mozTocId514994">WinCoot hangs opening and/or
                   saving files </a></li>
               <li><a href="#mozTocId358284">WinCoot "automatically"
                   loads pdb files repeatedly</a></li>
-              <li><a href="#mozTocId514994">WinCoot has problems with
-                  virtual desktops (e.g. Dexpot, VirtuaWin) </a></li>
+              <li><a href="#mozTocId514994">Problems with virtual
+                  desktops (e.g. Dexpot, VirtuaWin) </a></li>
+              <li><a href="#mozTocId260018">Ramachandran plot (or
+                  sequence view) crashes</a></li>
               <li><a href="#mozTocId209103">Bizarre connectivity of
                   coordinate files </a></li>
             </ul>
@@ -68,7 +70,7 @@
               when using Scheme/Guile scripting</a></li>
         </ul>
       </li>
-      <li><a href="#mozTocId296675">Using WinCoot </a>
+      <li><a href="#mozTocId296675"> Using WinCoot </a>
         <ul>
           <li><a href="#mozTocId515894">What about WinCoot and CCP4?</a></li>
           <li><a href="#mozTocId56914">What are these 'Generic objects'?</a></li>
@@ -97,6 +99,7 @@
     <br>
     <h2><a class="mozTocH2" name="mozTocId444230"></a><a name="citation"></a>(Win)Coot
 reference,
+
       citation and furtherinformation<br>
     </h2>
     <p>The official reference for WinCoot is published now:</p>
@@ -217,7 +220,7 @@ reference,
     a thread about this topic on the bb.<br>
     (*) For the more interested. It appears that gtkglext does not work
     well with newer versions of GTK which causes this to be problematic
-    recently now.<br><h4>Ramachandran plot (or squence view) crashes</h4>This is caused by some underlying graphics libraries and usually happens with larger files. There is a fix in the pipeline but sadly no news as to when it will be available. In the meantime I can only suggest to split your larger structure into smaller ones (e.g. chains) and/or 
+    recently now.<br><h4><a name="mozTocId260018" class="mozTocH4"></a>Ramachandran plot (or sequence view) crashes</h4>This is caused by some underlying graphics libraries and usually happens with larger files. There is a fix in the pipeline but sadly no news as to when it will be available. In the meantime I can only suggest to split your larger structure into smaller ones (e.g. chains) and/or 
 use <a href="software/extras/rama_gui.py">this script</a> to get at least a clickable list of outliers.
 [Then    run the script file (Calculate-&gt;Run script), which will give a new menu 
 under validate to give you outliers in a button list form. NB if you put 
