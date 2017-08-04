@@ -7,16 +7,26 @@
     <meta content="Bernhard Lohkamp" name="author">
     <meta content="Coot, WinCoot for Windows systems, molecular
       graphics, download" name="description">
-    <link rel="icon" type="image/png" href="coot-favicon.png">
+      <link rel="icon" type="image/png" href="coot-favicon.png">
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="coot_script.js"></script>
+
   </head>
   <body>
     <h1>WinCoot install and download page</h1>
-    <form action=https://github.com/bernhardcl/coot/releases/download/Release-0.8.8/WinCoot-0.8.8.exe>
-               <input type='submit'
-                      value='Download
-WinCoot-0.8.8' 
-                      style='font-style:veranda; font-size:16px; font-weight:bold;color:yellow;background-color:blue;height:50px;border-style:ridged;text-align:center;'>
-               </form>
+    <div id="noscript-button">
+      <form action=https://github.com/bernhardcl/coot/releases/download/Release-0.8.8/WinCoot-0.8.8.exe>
+        <input type='submit'
+               value='Download WinCoot-0.8.8'
+               style='font-style:veranda; font-size:16px; font-weight:bold;color:yellow;background-color:blue;white-space:normal;width:150px;height:60px;border-style:ridged;text-align:center;'>
+      </form>
+      Note: you dont have JavaScript enabled, so the direct download links may be out of date. Either enable JavaScript or have a look at the <a href="https://github.com/bernhardcl/coot/releases/latest">release page</a> for the latest downloads.
+    </div>
+    <script>
+      document.getElementById('noscript-button').innerHTML="<form class='coot-download-action' action=bla> <input type='submit' value='Download WinCoot-0.8.8' style='font-style:veranda; font-size:16px; font-weight:bold;color:yellow;background-color:blue;white-space:normal;width:150px;height:60px;border-style:ridged;text-align:center;'> </form>"
+    </script>
+
     <h2>How to download and install WinCoot?</h2>
     Since we have an installer there is hardly any manual intervention
     required to install WinCoot. However if you have a multi-user
@@ -26,11 +36,14 @@ WinCoot-0.8.8'
     done:<br>
     <ul>
       <li>Download the installer for
-        <a href="https://github.com/bernhardcl/coot/releases/download/Release-0.8.8/WinCoot-0.8.8.exe">WinCoot-0.8.8.exe</a> (or
-        use <b>NEW</b> experimental <a href=http://www.ysbl.york.ac.uk/~lohkamp/software/binaries/stable/WinCoot-0.8.6.1.msi>
-        msi installer</a>  - although old version at the moment;
-        look <a href="https://github.com/bernhardcl/coot/releases">here</a>
-        for even more options).</li>
+        <a class="coot-download-href" href="https://github.com/bernhardcl/coot/releases/download/Release-0.8.8/WinCoot-0.8.8.exe"><span class="version-info">WinCoot-0.8.8.exe</span></a> (or
+        look <a id="release-page" href="https://github.com/bernhardcl/coot/releases">here</a>
+        <script>
+          document.getElementById('release-page').href="wincoot-releases.html";
+          </script>
+        for more options incl. pre-releases).
+        [<b>SORRY</b> no up to date experimental <a href=http://www.ysbl.york.ac.uk/~lohkamp/software/binaries/stable/WinCoot-0.8.6.1.msi>
+        msi installer</a> contact me for assistance.]</li>
       <li>Double-click the downloaded file (WinCoot-<span
           style="font-style: italic;">version</span>.exe).</li>
       <li>WinCoot is extracted and
