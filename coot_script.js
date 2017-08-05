@@ -32,7 +32,6 @@ function GetLatestReleaseInfo() {
                            
          $(".release-info").text(releaseInfo);
          $(".version-info").text(release.name);               
-
       });
 }
       
@@ -50,6 +49,15 @@ function GetReleases(repo, pre_release) {
             for (var i2 = 0; i2 < release.assets.length; i2++) {
                downloadCount += release.assets[i2].download_count;
             }
+            var md5sum_url = "dummy";
+            for (var j=0; j <release.assets.length; j++) {
+               var asset2 = release.assets[j];
+               var md5sum = asset.name + ".md5sum";
+               if (asset2.name == md5sum) {
+                  md5sum_url = asset2.browser_download_url;
+               }
+            }
+            
             totalDownloadCount += downloadCount;
             // to avoid an extra library (moment.js)
             var d = new Date(asset.updated_at);
@@ -58,8 +66,20 @@ function GetReleases(repo, pre_release) {
                   .append($("<tr>")
                           .append($("<td>")
                                   .append($("<a>")
-                                          .attr("href", asset.browser_download_url)
+                                          .attr("href", release.html_url)
                                           .text(release.name)
+                                          )
+                                  )
+                          .append($("<td>")
+                                  .append($("<a>")
+                                          .attr("href", asset.browser_download_url)
+                                          .text("download installer")
+                                          )
+                                  )
+                          .append($("<td>")
+                                  .append($("<a>")
+                                          .attr("href", md5sum_url)
+                                          .text("get md5sum")
                                           )
                                   )
                           .append($("<td>")
