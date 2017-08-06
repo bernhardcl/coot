@@ -61,7 +61,11 @@ function GetReleases(repo, pre_release) {
             totalDownloadCount += downloadCount;
             // to avoid an extra library (moment.js)
             var d = new Date(asset.updated_at);
-            if (pre_release == release.prerelease) {
+            
+            var isPre_release = (pre_release == 'true');
+            
+            if ((pre_release == "all") ||
+                (isPre_release == release.prerelease)) {
                $(".table-downloads tbody")
                   .append($("<tr>")
                           .append($("<td>")
@@ -115,12 +119,6 @@ function change_myselect(sel) {
 
    $(document).ready(function() {
          repo = "bernhardcl/coot";
-         if (sel == "all") {
-            GetReleases(repo, false);
-            GetReleases(repo, true);
-         } else {
-            var isTrueSet = (sel == 'true');
-            GetReleases(repo, isTrueSet);
-         }
+         GetReleases(repo, sel);
       });
 }
