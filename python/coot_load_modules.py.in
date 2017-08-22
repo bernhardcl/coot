@@ -27,11 +27,13 @@ import traceback
 # define some globals
 
 # This is full pathname of molprobity's probe program
+# we will try to pick it up automatically in group settings.
 # deftexi probe_command
 global probe_command
 probe_command = 'probe'
 
 # This is full pathname of molprobity's reduce program
+# we will try to pick it up automatically in the group settings.
 # deftexi reduce_command
 global reduce_command
 reduce_command = 'reduce'
@@ -191,6 +193,7 @@ for coot_python_file in python_list:
                 coot_real_exit(1)
     else:
         print "ERROR: cannot find", coot_python_file
+
 
 
 

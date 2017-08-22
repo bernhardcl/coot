@@ -178,7 +178,8 @@ if (use_gui_qm != 2):
 
 
     def probe_ligand_func():
-         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
+        global probe_command 
+        with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                             aa_ins_code, aa_atom_name, aa_alt_conf]:
             ss = "//" + aa_chain_id + "/" + str(aa_res_no)
             imol_selection = new_molecule_by_atom_selection(aa_imol, ss)

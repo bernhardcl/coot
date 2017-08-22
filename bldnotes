@@ -17,6 +17,9 @@ KCX, TPP
 * THINGS TO DO BEFORE 0.8.1 RELEASE * ONLY URGENT THING
 -------------------------------------------------------
 
+Aniso not working on windows machines 0.8.8 (incl build machine) was ok 0.8.2 
+	rev 5761 (ok on my machine too) => check libraries
+
 New Rama: drag residues->switch to selection and rather refine (e.g. add
 	extra torsion to ref target)?!
 
@@ -563,13 +566,15 @@ low importance
 
 **** Windows ****
 
-   o write a log to file (and maybe error too).
+   o make dict installation optional and depending on ccp4 installation
 
    o pass args from msi to exe
 
    o make real msi at some point
 
    o distribute probe and reduce (from Richardsons? if not ccp4)
+     make sure ccp4 version is working with current coot and update
+     FAQ accordingly
 
    o make batch msi (using msiwrapperbatch and config file)
 
@@ -1087,3 +1092,7 @@ Osaka 2010
    o new gtk/gtkglext disappears with Dexpot
 
 * not done but fixed by showing on all desktops. Nothing else can be done AFAIK.
+   o write an installer log to file (and maybe error too).
+
+* Done
+

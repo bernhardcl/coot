@@ -4095,31 +4095,31 @@ def setup_ccp4():
             CCP4_MASTER = os.path.abspath(os.path.join(ccp4_dir, os.pardir))
             # not all required I guess!? They should be set anyway
             ccp4_env_vars = {
-                "CCP4_SCR": ["C:\ccp4temp"],
-                "CCP4I_TCLTK": [CCP4_MASTER, "TclTk84\bin"],
-                "CBIN": [CCP4, "\bin"],
-                "CLIB": [CCP4, "\lib"],
-                "CLIBD": [CCP4, "\lib\data"],
-                "CEXAM": [CCP4, "\examples"],
-                "CHTML": [CCP4, "\html"],
-                "CINCL": [CCP4, "\include"],
-                "CCP4I_TOP": [CCP4, "\share\ccp4i"],
-                "CLIBD_MON": [CCP4, "\lib\data\monomers\\"],
-                "MMCIFDIC": [CCP4, "\lib\ccp4\cif_mmdic.lib"],
-                "CRANK": [CCP4, "\share\ccp4i\crank"],
+                "CCP4_SCR": ["C:\\ccp4temp"],
+                "CCP4I_TCLTK": [CCP4_MASTER, "TclTk84", "bin"],
+                "CBIN": [CCP4, "bin"],
+                "CLIB": [CCP4, "lib"],
+                "CLIBD": [CCP4, "lib", "data"],
+                "CEXAM": [CCP4, "examples"],
+                "CHTML": [CCP4, "html"],
+                "CINCL": [CCP4, "include"],
+                "CCP4I_TOP": [CCP4, "share", "ccp4i"],
+                "CLIBD_MON": [CCP4, "lib", "data", "monomers"],
+                "MMCIFDIC": [CCP4, "lib", "ccp4", "cif_mmdic.lib"],
+                "CRANK": [CCP4, "share", "ccp4i", "crank"],
                 "CCP4_OPEN": ["unknown"],
                 "GFORTRAN_UNBUFFERED_PRECONNECTED": ["Y"]
                 }
             for env_var in ccp4_env_vars:
                 env_dir = os.getenv(env_var)
                 if not env_dir:
-                    # variable not set, so let do so if exists
+                    # variable not set or empty, so let do so if exists
+                    key = ccp4_env_vars[env_var]
                     if len(key) > 1:
-                        if os.path.isdir(env_dir):
-                            # have dir so set variable
-                            key = ccp4_env_vars[env_var]
-                            value = os.path.join(key)
-                            #print "BL DEBUG:: set env variable to", env_var, value
+                        # dir should be:
+                        value = os.path.join(*key)
+                        #print "BL DEBUG:: set env variable to", env_var, value
+                        if os.path.isdir(value):
                             os.environ[env_var] = value
                     else:
                         value = key[0]
