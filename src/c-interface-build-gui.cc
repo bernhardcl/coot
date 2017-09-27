@@ -201,8 +201,22 @@ GtkWidget *wrapped_create_delete_item_dialog() {
 							"delete_item_water_radiobutton");
 	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(water_toggle_button), TRUE);
       } else { 
+	 if (delete_item_mode_is_sidechain_p()) {
+	 GtkWidget *sidechain_toggle_button = lookup_widget(widget,
+							"delete_item_sidechain_radiobutton");
+	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sidechain_toggle_button), TRUE);
 	 set_delete_residue_mode(); // The widget default radio button
 	 std::cout << "Click on an atom in the residue that you wish to delete\n";
+	 } else {
+	    if (delete_item_mode_is_chain_p()) {
+	       GtkWidget *chain_toggle_button = lookup_widget(widget,
+								  "delete_item_chain_radiobutton");
+	       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chain_toggle_button), TRUE);
+	    } else {
+	       set_delete_residue_mode(); // The widget default radio button
+	       std::cout << "Click on an atom in the residue that you wish to delete\n";
+	    }
+	 }
       }
    }
    graphics_info_t::pick_pending_flag = 1;
@@ -1262,7 +1276,6 @@ int do_align_mutate_sequence(GtkWidget *w) {
 	    std::string sequence(txt);
 
 	    if (is_valid_model_molecule(imol)) {
-	       graphics_info_t g;
 	       g.mutate_chain(imol, chain_id, sequence, do_auto_fit, renumber_residues_flag);
 	       g.update_geometry_graphs(g.molecules[imol].atom_sel, imol);
 	       graphics_draw();
@@ -1464,8 +1477,8 @@ show_fix_nomenclature_errors_gui(int imol,
 	       s = nomenclature_errors[i].first; // the residue type
 	       s += " ";
 	       s += nomenclature_errors[i].second.format();
-	       GtkWidget *label = gtk_label_new(s.c_str());
-	       gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(label), FALSE, FALSE, 2);
+	       GtkWidget *l = gtk_label_new(s.c_str());
+	       gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(l), FALSE, FALSE, 2);
 	       gtk_widget_show(GTK_WIDGET(label));
 	    }
 	 }
