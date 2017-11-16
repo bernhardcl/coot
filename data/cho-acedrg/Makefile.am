@@ -15,10 +15,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-cootdatadir = $(pkgdatadir)/data
-
-SUBDIRS = rama-coeffs cho-models cho-acedrg
+cootdatadir = $(pkgdatadir)/data/cho-acedrg
 
 dist_cootdata_DATA = \
-	tutorial-modern.pdb rnasa-1.8-all_refmac1.mtz ligands.db
+       BMA-acedrg.cif	FUC-acedrg.cif	MAN-acedrg.cif	NAG-acedrg.cif	SIA-acedrg.cif	XYP-acedrg.cif
 
