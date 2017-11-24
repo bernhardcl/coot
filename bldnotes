@@ -12,11 +12,9 @@ enhanced_ligand.py      test it
 
 Dictionaries:
 KCX, TPP
-
 -------------------------------------------------------
 * THINGS TO DO BEFORE 0.8.1 RELEASE * ONLY URGENT THING
 -------------------------------------------------------
-
 Aniso not working on windows machines 0.8.8 (incl build machine) was ok 0.8.2 
 	rev 5761 (ok on my machine too) => check libraries
 
@@ -119,11 +117,6 @@ scripting exercise
 ----------------
 
 **** General ****
-
-   o allow export of goograph points (and/or draw these separately after
-	passing of parameters)
-
-   o revisit (re)move TER when adding a C-terminal residue
 
    o revisit anti-aliasing. Seems we need to antialias before drawing map 
 	and lines and not in general, I think.
@@ -445,8 +438,6 @@ low importance
 
 **** Python ****
 
-   o two buttons for Aligment vs sequence e.g. to delete and insert
-	should centre on nearest residue
 
    o keep refmac pid to cancel and kill refmac in download pdbe
 
@@ -566,15 +557,11 @@ low importance
 
 **** Windows ****
 
-   o make dict installation optional and depending on ccp4 installation
-
    o pass args from msi to exe
 
    o make real msi at some point
 
    o distribute probe and reduce (from Richardsons? if not ccp4)
-     make sure ccp4 version is working with current coot and update
-     FAQ accordingly
 
    o make batch msi (using msiwrapperbatch and config file)
 
@@ -614,6 +601,8 @@ low importance
    o use CCP4s lib dir rather than REF_DIR!?
 
    o ccp4 project dir not showing up (with new gtk2 chooser)
+
+   o new gtk/gtkglext disappears with Dexpot
 
    o pop up dialog if disk space is limited!!
 
@@ -1088,11 +1077,3 @@ Osaka 2010
    o fix probe/reduce from ccp4 
 
 * Done 
-
-   o new gtk/gtkglext disappears with Dexpot
-
-* not done but fixed by showing on all desktops. Nothing else can be done AFAIK.
-   o write an installer log to file (and maybe error too).
-
-* Done
-

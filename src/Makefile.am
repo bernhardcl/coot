@@ -18,6 +18,20 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
+if COOT_USE_PYTHON
+
+# if coot.py is called __init.py and goes in site-packages/coot/
+#dist_pkgpython_SCRIPTS = __init__.py
+#dist_python_SCRIPTS = coot.pth
+
+#__init__.py: coot.py
+#	cp coot.py __init__.py
+
+
+dist_python_SCRIPTS = coot.py coot.pth
+
+
+endif
 
 
 ######## 20091001 ########################################################
@@ -92,9 +106,11 @@ EXTRA_DIST = \
 	junk.cc coot-gtk2.defs coot-dox.cfg post-gtk2-glade.sh \
         post-process-coot-wrap-guile.sh \
         post-process-coot-wrap-python.sh \
-	coot_wrap_guile_pre.cc 
+	coot_wrap_guile_pre.cc dynarama.glade
 
 
+subpkgdatadir = $(pkgdatadir)
+subpkgdata_DATA = dynarama.glade
 
 
 # use -DHAVE_MMDBSSM or use (expanded from) $(MMDBSSM) works.
@@ -209,7 +225,7 @@ coot_extended_la_SOURCES = coot-extended.cc
 coot_embedded_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined
 coot_embedded_la_LIBADD = \
                        $(top_builddir)/lidia-core/libcoot-lidia-core.la   \
-                       $(RDKIT_LIBS) $(L_BOOST_PYTHON) $(PYTHON_LIBS)
+                       $(RDKIT_LIBS) $(L_BOOST_PYTHON)
 coot_extended_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined
 coot_extended_la_LIBADD = \
                        $(top_builddir)/pli/libcoot-pli.la   \
@@ -219,14 +235,14 @@ endif
 endif
 
 if OS_WIN32
-# no more libexec for windows
-bin_PROGRAMS =  coot-bin coot-density-score-by-residue-bin \
-	coot-fix-nomenclature-errors
+# libexec_PROGRAMS =
+bin_PROGRAMS = coot-bin dynarama-bin coot-density-score-by-residue-bin coot-fix-nomenclature-errors
 else
-libexec_PROGRAMS = coot-bin coot-density-score-by-residue-bin
+libexec_PROGRAMS = coot-bin dynarama-bin coot-density-score-by-residue-bin
+# shouldn't coot-fix-nomenclature-errors be in libexec too? (it needs a shell wrapper for portability)
 bin_PROGRAMS =  coot-fix-nomenclature-errors
 endif
-dist_bin_SCRIPTS = coot coot-density-score-by-residue
+dist_bin_SCRIPTS = coot coot-density-score-by-residue dynarama
 check_PROGRAMS = test-coot-align test-cholesky
 
 coot_fix_nomenclature_errors_SOURCES = \
@@ -621,5 +637,14 @@ coot_density_score_by_residue_bin_LDADD  =	\
 	$(MMDB_LIBS)		\
 	$(GSL_LIBS)
 
-# subpkgdatadir = $(pkgdatadir)
-# subpkgdata_DATA = cfc.glade
+dynarama_bin_SOURCES = dynarama-main.cc rama_plot.cc rama_mousey.cc
+dynarama_bin_LDADD = \
+        $(top_builddir)/coords/libcoot-coords.la                \
+        $(top_builddir)/utils/libcoot-utils.la  \
+        $(top_builddir)/coot-utils/libcoot-coord-utils.la       \
+        $(top_builddir)/coot-surface/libcoot-surface.la         \
+        $(CLIPPER_LIBS)         \
+        $(MMDB_LIBS)            \
+        $(GLOB_LIBS)            \
+        $(GOOCANVAS_LIBS)       \
+        $(LIBGLADE_LIBS)
