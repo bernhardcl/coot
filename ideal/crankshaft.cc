@@ -7,8 +7,12 @@
 #include "geometry/main-chain.hh"
 #include "coot-utils/coot-coord-utils.hh"
 
+// for refinement (put refinement in new file?)
+#include "simple-restraint.hh"
+#include "coot-utils/coot-map-utils.hh"
+
 std::ostream &
-coot::operator<<(std::ostream &s, const coot::crankshaft::scored_angle_set_t &as) {
+coot::operator<<(std::ostream &s, const coot::crankshaft::scored_triple_angle_set_t &as) {
 
    std::cout << as.minus_log_prob << " from angles ";
    for (std::size_t i=0; i<as.angles.size(); i++)
@@ -428,7 +432,7 @@ coot::crankshaft::triple_spin_search(const residue_spec_t &spec_first_residue,
 
 // not const because we can change the atoms of mol if apply_best_angles_flag is set
 //
-std::vector<coot::crankshaft::scored_angle_set_t>
+std::vector<coot::crankshaft::scored_triple_angle_set_t>
 coot::crankshaft::find_maxima(const residue_spec_t &spec_first_residue,
 			      const zo::rama_table_set &zorts,
 			      unsigned int n_samples) {
@@ -437,7 +441,7 @@ coot::crankshaft::find_maxima(const residue_spec_t &spec_first_residue,
 
    // 0.1-2-3-4.5  (. for ref, - is spin)
 
-   std::vector<scored_angle_set_t> results;
+   std::vector<scored_triple_angle_set_t> results;
 
    try {
       triple_crankshaft_set tcs(spec_first_residue, zorts, mol);
@@ -466,7 +470,7 @@ coot::crankshaft::find_maxima(const residue_spec_t &spec_first_residue,
 	 // start_angles[1] = clipper::Util::d2rad(287.775);
 	 // start_angles[2] = clipper::Util::d2rad(49.7706);
 
-	 scored_angle_set_t as = run_optimizer(start_angles, tcs, zorts);
+	 scored_triple_angle_set_t as = run_optimizer(start_angles, tcs, zorts);
 
 	 if (as.filled()) {
 	    if (false)
@@ -547,7 +551,7 @@ coot::crankshaft::optimize_a_triple::f(const gsl_vector *v, void *params) {
    // convert from spin angles (in v) to phi,psi and then log probability
 
    // extract the table refs
-   const param_holder_t *param_holder = reinterpret_cast<param_holder_t *> (params);
+   const triple_set_param_holder_t *param_holder = reinterpret_cast<triple_set_param_holder_t *> (params);
    const zo::rama_table_set &zorts = param_holder->zorts;
 
    if (false)
@@ -603,10 +607,9 @@ coot::crankshaft::optimize_a_triple::df(const gsl_vector *v,
    bool do_numerical = true; // debugging
 
    // extract the table refs
-   const param_holder_t *param_holder = reinterpret_cast<param_holder_t *> (params);
+   const triple_set_param_holder_t *param_holder = reinterpret_cast<triple_set_param_holder_t *> (params);
    const zo::rama_table_set &zorts = param_holder->zorts;
 
-   gsl_vector_set(df_vec, 2, 0);
    for (unsigned int i=0; i<3; i++) {
       phi_psi_t pp = param_holder->tcs[i].phi_psi(gsl_vector_get(v, i));
       const std::string &rt = param_holder->tcs.residue_type(i+1);
@@ -619,8 +622,9 @@ coot::crankshaft::optimize_a_triple::df(const gsl_vector *v,
 
       if (do_numerical) {
 	 float delta = 0.002;
-	 phi_psi_t pp_1 = param_holder->tcs[i].phi_psi(gsl_vector_get(v, i) + delta);
-	 phi_psi_t pp_2 = param_holder->tcs[i].phi_psi(gsl_vector_get(v, i) - delta);
+	 float current_val = gsl_vector_get(v, i);
+	 phi_psi_t pp_1 = param_holder->tcs[i].phi_psi(current_val + delta);
+	 phi_psi_t pp_2 = param_holder->tcs[i].phi_psi(current_val - delta);
 	 float pr_1 = param_holder->tcs.log_prob(pp_1, i+1, zorts);
 	 float pr_2 = param_holder->tcs.log_prob(pp_2, i+1, zorts);
 	 float numerical_grad = - (pr_1 - pr_2) / (2 * delta);
@@ -644,7 +648,63 @@ coot::crankshaft::optimize_a_triple::fdf(const gsl_vector *x, void *params,
   df(x, params, df_in);
 }
 
-coot::crankshaft::scored_angle_set_t
+// static
+double
+coot::crankshaft::optimize_an_nmer::f(const gsl_vector *v, void *params) {
+
+   // convert from spin angles (in v) to phi,psi and then log probability
+
+   // extract the table refs
+   const triple_set_param_holder_t *param_holder = reinterpret_cast<triple_set_param_holder_t *> (params);
+   const zo::rama_table_set &zorts = param_holder->zorts;
+
+   float log_prob_sum = 0;
+   for (unsigned int i=0; i<3; i++) { // i is cs index, not residue_type index
+      phi_psi_t pp = param_holder->tcs[i].phi_psi(gsl_vector_get(v, i));
+      float pr = param_holder->tcs.log_prob(pp, i+1, zorts); // index i+1 is for residue type
+      log_prob_sum += pr;
+   }
+   return -log_prob_sum; // we want maxima
+}
+
+
+/* The gradient of f, df/da */
+void
+coot::crankshaft::optimize_an_nmer::df(const gsl_vector *v,
+				       void *params,
+				       gsl_vector *df_vec) {
+
+   // convert from spin angles (in v) to phi,psi and then log probability
+   // using numerical gradients! :-/
+
+   // extract the table refs
+   const nmer_set_param_holder_t *param_holder = reinterpret_cast<nmer_set_param_holder_t *> (params);
+   const zo::rama_table_set &zorts = param_holder->zorts;
+
+   for (unsigned int i=0; i<param_holder->cs.size(); i++) {
+
+      if (true) {
+	 float delta = 0.002;
+	 float current_val = gsl_vector_get(v, i);
+	 phi_psi_t pp_1 = param_holder->cs[i].phi_psi(current_val + delta);
+	 phi_psi_t pp_2 = param_holder->cs[i].phi_psi(current_val - delta);
+	 float pr_1 = param_holder->cs.log_prob(pp_1, i+1, zorts);
+	 float pr_2 = param_holder->cs.log_prob(pp_2, i+1, zorts);
+	 float numerical_grad = - (pr_1 - pr_2) / (2 * delta);
+	 gsl_vector_set(df_vec, i, numerical_grad);
+      }
+   }
+}
+
+/* Compute both f and df together. */
+void
+coot::crankshaft::optimize_an_nmer::fdf(const gsl_vector *x, void *params,
+					double *f_in, gsl_vector *df_in) {
+  *f_in = f(x, params);
+  df(x, params, df_in);
+}
+
+coot::crankshaft::scored_triple_angle_set_t
 coot::crankshaft::run_optimizer(float start_angles[],
 				const coot::triple_crankshaft_set &tcs,
 				const zo::rama_table_set &zorts) {
@@ -653,7 +713,7 @@ coot::crankshaft::run_optimizer(float start_angles[],
   int status;
 
   std::vector<std::string> residue_types; // where does this come from?
-  param_holder_t param_holder(zorts, tcs);
+  triple_set_param_holder_t param_holder(zorts, tcs);
 
   gsl_vector *x;
   gsl_multimin_function_fdf my_func;
@@ -695,7 +755,7 @@ coot::crankshaft::run_optimizer(float start_angles[],
 
   } while (status == GSL_CONTINUE && iter < 1000);
 
-  scored_angle_set_t sas; // empty
+  scored_triple_angle_set_t sas; // empty
 
   if (status == GSL_ENOPROG) {
      // std::cout << "No progress" << std::endl;
@@ -727,12 +787,12 @@ coot::crankshaft::run_optimizer(float start_angles[],
 	   }
 	}
 	float score = s->f;
-	sas = scored_angle_set_t(tcs, sv, score);
+	sas = scored_triple_angle_set_t(tcs, sv, score);
      }
-  }  
+  }
 
-  gsl_multimin_fdfminimizer_free (s);
-  gsl_vector_free (x);
+  gsl_multimin_fdfminimizer_free(s);
+  gsl_vector_free(x);
   return sas;
 
 }
@@ -968,20 +1028,32 @@ coot::triple_crankshaft_set::triple_crankshaft_set(mmdb::Residue *res_0,
 						   mmdb::Residue *res_5,
 						   const std::vector<std::string> &residue_types_in) {
 
-   std::cout << "debug:: constructing a crankshaft_set for 0" << std::endl;
    cs[0] = crankshaft_set(res_0, res_1, res_2, res_3);
-   std::cout << "debug:: constructing a crankshaft_set for 1" << std::endl;
    cs[1] = crankshaft_set(res_1, res_2, res_3, res_4);
-   std::cout << "debug:: constructing a crankshaft_set for 2" << std::endl;
    cs[2] = crankshaft_set(res_2, res_3, res_4, res_5);
    residue_types = residue_types_in;
-   
+}
+
+// we don't need to know the residue type of residues_in[0] (which has non-moving atoms)
+//
+coot::nmer_crankshaft_set::nmer_crankshaft_set(const std::vector<mmdb::Residue *> residues_in,
+					       const std::vector<std::string> &rts) {
+
+   int n_residues = residues_in.size();
+   if (n_residues > 3) {
+      int n_cs = n_residues - 3; // number of crankshaft sets (of 4 residues)
+      for (int i=0; i<n_cs; i++) {
+	 crankshaft_set crank_set(residues_in[i], residues_in[i+1], residues_in[i+2], residues_in[i+3]);
+	 cs.push_back(crank_set);
+      }
+   }
+   residue_types = rts;
 }
 
 
 // restores the atom positions in mol after write
 void
-coot::crankshaft::move_the_atoms_write_and_restore(scored_angle_set_t sas,
+coot::crankshaft::move_the_atoms_write_and_restore(scored_triple_angle_set_t sas,
 						   const std::string &pdb_file_name) {
 
    std::map<mmdb::Atom *, clipper::Coord_orth> original_positions;
@@ -992,13 +1064,13 @@ coot::crankshaft::move_the_atoms_write_and_restore(scored_angle_set_t sas,
    for (std::size_t i=0; i<3; i++) {
       // maybe this should be done in a crankshaft_set
       for (std::size_t iat=0; iat<4; iat++) {
-	 mmdb::Atom *at = sas.tcs[i].v[indices[iat]];
+	 mmdb::Atom *at = sas[i].v[indices[iat]];
 	 if (at) {
 	    clipper::Coord_orth pos = co(at);
 	    original_positions[at] = pos;
 	 }
       }
-      sas.tcs[i].move_the_atoms(sas.angles[i]);
+      sas[i].move_the_atoms(sas.angles[i]);
       // std::cout << "writing " << pdb_file_name << std::endl;
       mol->WritePDBASCII(pdb_file_name.c_str());
    }
@@ -1012,7 +1084,7 @@ coot::crankshaft::move_the_atoms_write_and_restore(scored_angle_set_t sas,
 
 // move the atoms, create a copy of mol, restore the atom positions
 mmdb::Manager *
-coot::crankshaft::new_mol_with_moved_atoms(scored_angle_set_t sas) {
+coot::crankshaft::new_mol_with_moved_atoms(scored_triple_angle_set_t sas) {
 
    // needs thread protection
    // auto tp_1 = std::chrono::high_resolution_clock::now();
@@ -1024,13 +1096,13 @@ coot::crankshaft::new_mol_with_moved_atoms(scored_angle_set_t sas) {
    for (std::size_t i=0; i<3; i++) {
       // maybe this should be done in a crankshaft_set
       for (std::size_t iat=0; iat<4; iat++) {
-	 mmdb::Atom *at = sas.tcs[i].v[indices[iat]];
+	 mmdb::Atom *at = sas[i].v[indices[iat]];
 	 if (at) {
 	    clipper::Coord_orth pos = co(at);
 	    original_positions[at] = pos;
 	 }
       }
-      sas.tcs[i].move_the_atoms(sas.angles[i]);
+      sas[i].move_the_atoms(sas.angles[i]);
    }
 
    // auto tp_2 = std::chrono::high_resolution_clock::now();
@@ -1050,3 +1122,258 @@ coot::crankshaft::new_mol_with_moved_atoms(scored_angle_set_t sas) {
 
    return mol_new;
 }
+
+
+// -----------------------------------------------------------------------------
+//   refine (in threads)
+// -----------------------------------------------------------------------------
+
+// static
+coot::crankshaft::molecule_score_t
+coot::crankshaft::refine_and_score_mol(mmdb::Manager *mol,
+		     const coot::residue_spec_t &res_spec_mid,
+		     const std::vector<coot::residue_spec_t> &residue_specs_for_scoring,
+		     const coot::protein_geometry &geom,
+		     const clipper::Xmap<float> &xmap,
+		     float map_weight,
+		     const std::string &output_pdb_file_name) {
+
+   molecule_score_t score;
+
+   if (mol) {
+      float radius = 2.2; // for the moment
+      std::vector<std::pair<bool, mmdb::Residue *> > residues;
+      std::vector<mmdb::Link> links;
+      std::vector<coot::atom_spec_t> fixed_atom_specs;
+      coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
+      flags = coot::TYPICAL_RESTRAINTS;
+      int imol = 0; // dummy
+      int nsteps_max = 4000;
+      bool make_trans_peptide_restraints = true;
+      short int print_chi_sq_flag = 1;
+      bool do_rama_plot_restraints = true;
+      coot::pseudo_restraint_bond_type pseudos = coot::NO_PSEUDO_BONDS;
+      int restraints_rama_type = coot::restraints_container_t::RAMA_TYPE_ZO;
+
+      mmdb::Residue *res_ref = coot::util::get_residue(res_spec_mid, mol);
+      if (res_ref) {
+	 std::vector<mmdb::Residue *> residues_near = coot::residues_near_residue(res_ref, mol, radius);
+	 residues.push_back(std::pair<bool,mmdb::Residue *>(true, res_ref));
+	 for (unsigned int i=0; i<residues_near.size(); i++) {
+	    std::pair<bool, mmdb::Residue *> p(true, residues_near[i]);
+	    residues.push_back(p);
+	 }
+      }
+
+      std::vector<coot::residue_spec_t> residue_specs_vec(residues.size());
+      for (std::size_t ir=0; ir<residues.size(); ir++)
+	 residue_specs_vec[ir] = coot::residue_spec_t(residues[ir].second);
+
+#ifdef HAVE_CXX_THREAD
+      auto tp_0 = std::chrono::high_resolution_clock::now();
+#endif
+      coot::restraints_container_t restraints(residues, links, geom, mol, fixed_atom_specs);
+      restraints.add_map(xmap, map_weight);
+      restraints.set_rama_type(restraints_rama_type);
+      restraints.set_rama_plot_weight(1);
+      restraints.make_restraints(imol, geom, flags, 1, make_trans_peptide_restraints,
+				 1.0, do_rama_plot_restraints, pseudos);
+      restraints.minimize(flags, nsteps_max, print_chi_sq_flag);
+      if (! output_pdb_file_name.empty())
+	 restraints.write_new_atoms(output_pdb_file_name);
+
+      coot::geometry_distortion_info_container_t gdic = restraints.geometric_distortions(flags);
+      for (std::size_t id=0; id<gdic.geometry_distortion.size(); id++) {
+	 // std::cout << "   " << gdic.geometry_distortion[id] << std::endl;
+      }
+
+#ifdef HAVE_CXX_THREAD
+      auto tp_1 = std::chrono::high_resolution_clock::now();
+#endif // HAVE_CXX_THREAD
+      bool mainchain_only_flag = true;
+      float score_map = coot::util::map_score_by_residue_specs(mol, residue_specs_for_scoring,
+							       xmap, mainchain_only_flag);
+#ifdef HAVE_CXX_THREAD
+
+      auto tp_2 = std::chrono::high_resolution_clock::now();
+      auto d10 = std::chrono::duration_cast<std::chrono::microseconds>(tp_1 - tp_0).count();
+      auto d21 = std::chrono::duration_cast<std::chrono::microseconds>(tp_2 - tp_1).count();
+      if (true) {
+	 std::cout << "refine mol : d10  " << d10 << " microseconds\n";
+	 std::cout << "map_score_by_residue_specs: d21  " << d21 << " microseconds\n";
+	 std::cout << "scores map: " << score_map << " distortion " << gdic.distortion()
+		   << " " << output_pdb_file_name << std::endl;
+      }
+#endif
+      score.density_score = score_map;
+      score.model_score = gdic.distortion();
+   }
+   return score;
+}
+
+
+
+// for use the threads:
+// static
+void
+coot::crankshaft::refine_and_score_mols(std::vector<mmdb::Manager *> mols,
+		      const std::vector<unsigned int> &mols_thread_vec,
+		      const coot::residue_spec_t &res_spec_mid,
+		      const std::vector<coot::residue_spec_t> &residue_specs_for_scoring,
+		      const coot::protein_geometry &geom,
+		      const clipper::Xmap<float> &xmap,
+		      float map_weight,
+		      std::vector<molecule_score_t> *mol_scores) {
+
+   for (std::size_t i=0; i<mols_thread_vec.size(); i++) {
+      molecule_score_t ms = refine_and_score_mol(mols[mols_thread_vec[i]],
+						 res_spec_mid, residue_specs_for_scoring,
+						 geom, xmap, map_weight, "");
+      (*mol_scores)[mols_thread_vec[i]] = ms;
+   }
+}
+
+// static
+void
+coot::crankshaft::crank_refine_and_score(const coot::residue_spec_t &rs, // mid-residue
+					 const clipper::Xmap<float> &xmap,
+					 // atom_selection_container_t asc,
+					 mmdb::Manager *mol_in,
+					 float map_weight,
+					 int n_samples) {
+
+   // cranshaft takes the first of 3 residues, so we want to call cranshaft with
+   // the residue before rs:
+   mmdb::Residue *prev_res = coot::util::get_previous_residue(rs, mol_in);
+   if (! prev_res) {
+      std::cout << "WARNING:: No residue previous to " << rs << std::endl;
+   } else {
+      coot::crankshaft cs(mol_in);
+      zo::rama_table_set zorts;
+
+      coot::residue_spec_t prev_residue_spec(prev_res);
+      std::cout << "INFO:: using residue specifier: " << rs << std::endl;
+
+      // consider changing the API to find_maxima to be the middle of the 3 residues
+      //
+      //
+      std::vector<coot::crankshaft::scored_triple_angle_set_t> sas =
+	 cs.find_maxima(prev_residue_spec, zorts, n_samples);
+      // where did they move to?
+      std::cout << "sas size: " << sas.size() << std::endl;
+
+      coot::protein_geometry geom;
+      geom.set_verbose(0);
+      geom.init_standard();
+
+      if (false) { // debug models
+	 for (std::size_t i=0; i<sas.size(); i++) {
+	    std::string output_pdb_file_name = "crankshaft-pre-ref-" +
+	       coot::util::int_to_string(i) + ".pdb";
+	    mmdb::Manager *mol = cs.new_mol_with_moved_atoms(sas[i]); // delete mol
+	    mol->WritePDBASCII(output_pdb_file_name.c_str());
+	    delete mol;
+	 }
+      }
+
+      std::vector<coot::residue_spec_t> local_residue_specs;
+      mmdb::Residue *res_ref = coot::util::get_residue(rs, mol_in);
+      if (res_ref) {
+	 float radius = 5;
+	 std::vector<mmdb::Residue *> residues_near =
+	    coot::residues_near_residue(res_ref, mol_in, radius);
+	 local_residue_specs.push_back(rs);
+	 for (unsigned int i=0; i<residues_near.size(); i++)
+	    local_residue_specs.push_back(coot::residue_spec_t(residues_near[i]));
+      }
+
+      std::vector<mmdb::Manager *> mols(sas.size(), 0);
+      std::vector<crankshaft::molecule_score_t> mol_scores(sas.size());
+      for (std::size_t i=0; i<sas.size(); i++) {
+	 // delete mol when finished with it
+	 mmdb::Manager *mol = cs.new_mol_with_moved_atoms(sas[i]); // d
+	 mols[i] = mol;
+      }
+
+#ifdef HAVE_CXX_THREAD
+      unsigned int n_threads = coot::get_max_number_of_threads();
+
+      if (n_threads > 0) {
+
+	 std::vector<std::thread> threads;
+	 unsigned int thread_idx = 0;
+	 std::cout << "debug:: making mols_thread_vec " << n_threads << std::endl;
+	 std::vector<std::vector<unsigned int> > mols_thread_vec(n_threads);
+	 std::cout << "debug:: done making mols_thread_vec " << std::endl;
+	 // put the mols in mols_thread_vec
+	 for (unsigned int ii=0; ii<mols.size(); ii++) {
+	    std::cout << "adding mol " << ii << " to thread " << thread_idx << std::endl;
+	    mols_thread_vec[thread_idx].push_back(ii);
+	    thread_idx++;
+	    if (thread_idx == n_threads) thread_idx = 0;
+	 }
+
+	 std::cout << "debug:: the mols_thread_vecs are: " << std::endl;
+	 for (std::size_t j=0; j<mols_thread_vec.size(); j++) {
+	    std::cout << "thread " << j << " of " << mols_thread_vec.size() << " threads " << std::endl;
+	    for (std::size_t k=0; k<mols_thread_vec[j].size(); k++) {
+	       std::cout << " " << mols_thread_vec[j][k];
+	    }
+	    std::cout << std::endl;
+	 }
+
+	 for (unsigned int i_thread=0; i_thread<n_threads; i_thread++) {
+
+	    auto tp_0 = std::chrono::high_resolution_clock::now();
+	    const std::vector<unsigned int> &i_mols = mols_thread_vec[i_thread];
+
+	    // Don't bother to push a thread if there are no molecules to refine
+	    // (this happens when there are more threads than there
+	    // are crankshaft probability maxima/solutions).
+	    //
+	    if (mols_thread_vec[i_thread].size() > 0) {
+	       threads.push_back(std::thread(refine_and_score_mols, mols, mols_thread_vec[i_thread],
+					     std::cref(rs), std::cref(local_residue_specs),
+					     std::cref(geom), std::cref(xmap), map_weight,
+					     &mol_scores));
+	       // threads.push_back(std::thread(dummy_func, mols)); // testing
+	       auto tp_1 = std::chrono::high_resolution_clock::now();
+	       auto d10 = std::chrono::duration_cast<std::chrono::microseconds>(tp_1 - tp_0).count();
+	       if (true)
+		  std::cout << "time to push thread: " << d10 << " microseconds\n";
+	    }
+	 }
+
+	 auto tp_2 = std::chrono::high_resolution_clock::now();
+	 for (unsigned int i_thread=0; i_thread<n_threads; i_thread++)
+	    threads.at(i_thread).join();
+	 auto tp_3 = std::chrono::high_resolution_clock::now();
+	 auto d32 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_3 - tp_2).count();
+	 if (true)
+	    std::cout << "time to join threads: " << d32 << " milliseconds\n";
+
+      } else {
+	 std::cout << "ERROR:: No threads" << std::endl;
+      }
+#endif // HAVE_CXX_THREAD
+
+      for (std::size_t i=0; i<sas.size(); i++) {
+
+	 // the higher the combi_score the better
+	 const molecule_score_t &ms = mol_scores[i];
+	 float combi_score = 0.01 * map_weight * ms.density_score - ms.model_score - sas[i].minus_log_prob;
+	 std::cout << "scores: " << i << " "
+		   << std::setw(9) << sas[i].minus_log_prob << " "
+		   << std::setw(9) << ms.density_score << " "
+		   << std::setw(9) << ms.model_score << " combi-score "
+		   << std::setw(9) << std::right << std::setprecision(3) << std::fixed << combi_score
+		   << std::endl;
+	 std::cout.setf(std::ios::fixed, std::ios::floatfield); // reset from std::fixed
+      }
+
+      for (std::size_t i=0; i<sas.size(); i++)
+	 delete mols[i];
+
+   }
+}
+
