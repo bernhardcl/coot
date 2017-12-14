@@ -870,6 +870,11 @@ coot::fill_distortion_torsion_gradients(const clipper::Coord_orth &P1,
       b_lengthsq = b_length * b_length; 
    }
 
+   if (true) {
+      if (b_length < 1.0)
+	 std::cout << "problem with b_length " << b_length << std::endl;
+   }
+
    double H = -clipper::Coord_orth::dot(a,c);
    double J =  clipper::Coord_orth::dot(a,b); 
    double K =  clipper::Coord_orth::dot(b,c); 
@@ -890,9 +895,48 @@ coot::fill_distortion_torsion_gradients(const clipper::Coord_orth &P1,
       throw std::runtime_error(mess);
    }
 
+   double al = sqrt(clipper::Coord_orth::dot(a,a));
+   double cl = sqrt(clipper::Coord_orth::dot(c,c));
+   double cos_a1 = clipper::Coord_orth::dot(a,b)/(al*b_length);
+   double cos_a2 = clipper::Coord_orth::dot(b,c)/(b_length*cl);
+
+   std::cout << "F " << F << " G " << G << " E " << E << " theta " << dtg.theta
+	     << " cos(a1) " << cos_a1 << " cos(a2) " << cos_a2
+	     << std::endl;
+
+   // instabilty when the P2-P3-P4 or P1-P2-p3 angle is linear. Give up with the derivatives
+   // similar escape in the distortion score
    
+   if (cos_a1 > 0.9 || cos_a2> 0.9) {
+
+      dtg.zero_gradients = true;
+
+      // x
+      dtg.dD_dxP1 = 0;
+      dtg.dD_dxP2 = 0;
+      dtg.dD_dxP3 = 0;
+      dtg.dD_dxP4 = 0;
+
+      // y
+      dtg.dD_dyP1 = 0;
+      dtg.dD_dyP2 = 0;
+      dtg.dD_dyP3 = 0;
+      dtg.dD_dyP4 = 0;
+
+      // z
+      dtg.dD_dzP1 = 0;
+      dtg.dD_dzP2 = 0;
+      dtg.dD_dzP3 = 0;
+      dtg.dD_dzP4 = 0;
+
+      return dtg;
+   }
+
+
    // 	    double clipper_theta = 
    // 	       clipper::Util::rad2d(clipper::Coord_orth::torsion(P1, P2, P3, P4));
+
+   dtg.zero_gradients = false;
 
    // x
    double dH_dxP1 =  c.x(); 
@@ -1013,7 +1057,7 @@ coot::fill_distortion_torsion_gradients(const clipper::Coord_orth &P1,
    dtg.dD_dzP2 = F*dE_dzP2 - EFF*(dH_dzP2 + JL*dK_dzP2 + KL*dJ_dzP2 + JK*dL_dzP2);
    dtg.dD_dzP3 = F*dE_dzP3 - EFF*(dH_dzP3 + JL*dK_dzP3 + KL*dJ_dzP3 + JK*dL_dzP3);
    dtg.dD_dzP4 = F*dE_dzP4 - EFF*(dH_dzP4 + JL*dK_dzP4 + KL*dJ_dzP4 + JK*dL_dzP4);
-  
+
    return dtg;
 } 
 
@@ -1033,7 +1077,7 @@ void coot::my_df_torsions_internal(const gsl_vector *v,
       (coot::restraints_container_t *)params;
 
    if (restraints->restraints_usage_flag & coot::TORSIONS_MASK) { 
-     
+
       for (unsigned int i=restraints->restraints_limits_torsions.first; i<=restraints->restraints_limits_torsions.second; i++) {
       
 	 if ( (*restraints)[i].restraint_type == coot::TORSION_RESTRAINT) {
@@ -1079,7 +1123,7 @@ void coot::my_df_torsions_internal(const gsl_vector *v,
 		     if (tdiff < -180) tdiff += 360;
 		     if (tdiff >  180) tdiff -= 360;
 		     // std::cout << "   iper: " << iper << "   " << dtg.theta << "   " << trial_target << "   " << tdiff << "   " << diff << std::endl;
-		     if (abs(tdiff) < abs(diff)) { 
+		     if (fabs(tdiff) < fabs(diff)) { 
 			diff = tdiff;
 		     }
 		  }
@@ -1091,11 +1135,11 @@ void coot::my_df_torsions_internal(const gsl_vector *v,
 		     }
 		  }
 		  
-		  if (0) 
+		  if (false)
 		     std::cout << "in df_torsion: dtg.theta is " << dtg.theta 
 			       <<  " and target is " << (*restraints)[i].target_value 
-			       << " and diff is " << diff 
-			       << " and periodicity: " << (*restraints)[i].periodicity <<  endl;
+			       << " and diff is " << diff
+			       << " and periodicity: " << (*restraints)[i].periodicity << std::endl;
 
 		  double tt = tan(clipper::Util::d2rad(dtg.theta));
 		  double torsion_scale = (1.0/(1+tt*tt)) *
@@ -1664,10 +1708,10 @@ double
 coot::restraints_container_t::electron_density_score_at_point(const clipper::Coord_orth &ao) const {
       double dv; 
       
-      clipper::Coord_frac af = ao.coord_frac(map.cell()); 
-      clipper::Coord_map  am = af.coord_map(map.grid_sampling()); 
+      clipper::Coord_frac af = ao.coord_frac(xmap.cell()); 
+      clipper::Coord_map  am = af.coord_map(xmap.grid_sampling()); 
       // clipper::Interp_linear::interp(map, am, dv); 
-      clipper::Interp_cubic::interp(map, am, dv); 
+      clipper::Interp_cubic::interp(xmap, am, dv); 
       
       return dv;  
 }
@@ -1678,11 +1722,11 @@ coot::restraints_container_t::electron_density_gradient_at_point(const clipper::
    clipper::Grad_map<double> grad;
    double dv;
    
-   clipper::Coord_frac af = ao.coord_frac(map.cell()); 
-   clipper::Coord_map  am = af.coord_map(map.grid_sampling()); 
-   clipper::Interp_cubic::interp_grad(map, am, dv, grad);
-   clipper::Grad_frac<double> grad_frac = grad.grad_frac(map.grid_sampling());
-   return grad_frac.grad_orth(map.cell());
+   clipper::Coord_frac af = ao.coord_frac(xmap.cell()); 
+   clipper::Coord_map  am = af.coord_map(xmap.grid_sampling()); 
+   clipper::Interp_cubic::interp_grad(xmap, am, dv, grad);
+   clipper::Grad_frac<double> grad_frac = grad.grad_frac(xmap.grid_sampling());
+   return grad_frac.grad_orth(xmap.cell());
 } 
 
 #endif // HAVE_GSL
