@@ -2313,6 +2313,13 @@ float rotation_centre_position(int axis); /* only return one value: x=0, y=1, z=
 /*! \brief centre on the ligand of the "active molecule", if we are
   already there, centre on the next hetgroup (etc) */
 void go_to_ligand();
+
+#ifdef USE_PYTHON
+#ifdef __cplusplus
+PyObject *go_to_ligand_py();
+#endif
+#endif
+
 /*! \brief go to the ligand that has more than n_atom_min atoms */
 void set_go_to_ligand_n_atoms_limit(int n_atom_min);
 /* \} */
@@ -6530,7 +6537,11 @@ float fit_to_map_by_random_jiggle(int imol, const char *chain_id, int resno, con
 				  int n_trials,
 				  float jiggle_scale_factor);
 
+/*!  \brief jiggle fit the molecule to the current refinment map.  return < -100 if
+  not possible, else return the new best fit for this molecule.  */
 float fit_molecule_to_map_by_random_jiggle(int imol, int n_trials, float jiggle_scale_factor);
+/*!  \brief jiggle fit the chain to the current refinment map.  return < -100 if
+  not possible, else return the new best fit for this chain.  */
 float fit_chain_to_map_by_random_jiggle(int imol, const char *chain_id, int n_trials, float jiggle_scale_factor); 
 /* \} */
 
