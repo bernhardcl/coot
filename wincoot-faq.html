@@ -27,8 +27,8 @@
     following and please don't tell me about these ones again.<br>
     <ul id="mozToc">
       <!--mozToc h2 1 h3 2 h4 3 h5 4 h6 5 h6 6-->
-      <li><a href="#mozTocId444230">(Win)Coot
-          reference, citation and furtherinformation </a></li>
+      <li><a href="#mozTocId444230">(Win)Coot reference, citation and
+          furtherinformation </a></li>
       <li><a href="#mozTocId876747">Installation and Windows problems</a>
         <ul>
           <li><a href="#mozTocId169986">Which Windows version does
@@ -39,8 +39,10 @@
             <ul>
               <li><a href="#mozTocId324286">Problem resizing/maximizing
                   or updating the WinCoot window.</a></li>
+              <li><a href="#mozTocId910462">Dll errors such as "Can't
+                  find entry point bla in xyz.dll": </a></li>
               <li><a href="#mozTocId910462">Downloading of pdbs does not
-                  work/Python errors/DLL errors</a></li>
+                  work/Python errors</a></li>
               <li><a href="#mozTocId689913">Installer hangs</a></li>
               <li><a href="#mozTocId514994">Display is not responsive in
                   full screen mode</a></li>
@@ -100,6 +102,8 @@
     <h2><a class="mozTocH2" name="mozTocId444230"></a><a name="citation"></a>(Win)Coot
 reference,
 
+
+
       citation and furtherinformation<br>
     </h2>
     <p>The official reference for WinCoot is published now:</p>
@@ -117,10 +121,14 @@ reference,
 
     </script>
     <pre>@Article{emsley10:coot,<br> author = {Emsley P, Lohkamp B, Scott W, Cowtan K},<br> title = {Features and Development of Coot},<br> journal = {Acta Crystallographica Section D - Biological Crystallography},<br> year = 2010,<br> volume = 66,<br> pages = 486-501<br>}<br></pre>
-    <p>The Coot paper is published in the <a href="http://journals.iucr.org/d/issues/2010/04/00/issconts.html">proceedings of the 2009 CCP4 Study Weekend</a>.<br>
+    <p>The Coot paper is published in the <a
+        href="http://journals.iucr.org/d/issues/2010/04/00/issconts.html">proceedings
+
+        of the 2009 CCP4 Study Weekend</a>.<br>
     </p>
     <p>You can view and download the paper from here:</p>
-    <p>&nbsp;&nbsp;&nbsp; <a href="http://journals.iucr.org/d/issues/2010/04/00/ba5144/index.html">http://journals.iucr.org/d/issues/2010/04/00/ba5144/index.html</a>
+    <p>&nbsp;&nbsp;&nbsp; <a
+        href="http://journals.iucr.org/d/issues/2010/04/00/ba5144/index.html">http://journals.iucr.org/d/issues/2010/04/00/ba5144/index.html</a>
     </p>
     <br>
     Additional&nbsp; information on Coot especially WinCoot can be found
@@ -130,12 +138,13 @@ reference,
     you. <br>
     Lohkamp, B., Emsley, P. &amp; Cowtan, K. (2005) Coot News. CCP4
     Newsletter, 42, Contribution 7.<br>
-    <h2><a class="mozTocH2" name="mozTocId876747"></a><a name="Known_bugs"></a>Installation and Windows problems</h2>
+    <h2><a class="mozTocH2" name="mozTocId876747"></a><a
+        name="Known_bugs"></a>Installation and Windows problems</h2>
     <h3><a class="mozTocH3" name="mozTocId169986"></a>Which Windows
       version does WinCoot run on?</h3>
-    WinCoot has been successfully tested on Windows 10, Windows 8(.1), Windows 7,
-    Windows Vista, Windows XP, Win2000, and WinNT . There may be some
-    specific problems...<br>
+    WinCoot has been successfully tested on Windows 10, Windows 8(.1),
+    Windows 7, Windows Vista, Windows XP, Win2000, and WinNT . There may
+    be some specific problems...<br>
     <h3><a class="mozTocH3" name="mozTocId856986"></a>WinCoot on Vista</h3>
     WinCoot in general works on Vista.&nbsp;As of 0.5-pre-1 (1339)
     WinCoot should work properly with Desktop Compositing (Vista Theme)
@@ -165,13 +174,29 @@ reference,
     More news once I tested more myself.<br>
     <h4><a class="mozTocH4" name="mozTocId324286"></a>Problem
       resizing/maximizing or updating the WinCoot window.</h4>
-    WinCoot may not update the graphics window upon resize/maximize (something like <a href="./images/wincoot_resizewindow_problem.png">this</a>) or in general not update (like <a href="images/wincoot_screen_update_problem.png">this</a>). The
+    WinCoot may not update the graphics window upon resize/maximize
+    (something like <a href="./images/wincoot_resizewindow_problem.png">this</a>)
+    or in general not update (like <a
+      href="images/wincoot_screen_update_problem.png">this</a>). The
     reason is most likely a graphics card driver issue. It usually can
-    be fixed by installing an updated and appropriate graphics card driver from the
-    manufacturer. E.g. if you have a "proper"/dedicated graphics card (i.e.
-    NVIDIA, ATI etc; not a build-in Intel) it is recommended to install
-    the drivers from the manufacturer rather than the ones supplied by
-    Windows.<br>
+    be fixed by installing an updated and appropriate graphics card
+    driver from the manufacturer. E.g. if you have a "proper"/dedicated
+    graphics card (i.e. NVIDIA, ATI etc; not a build-in Intel) it is
+    recommended to install the drivers from the manufacturer rather than
+    the ones supplied by Windows.<br>
+    <h4><a class="mozTocH4" name="mozTocId910462"></a>Dll errors such as
+      "Can't find entry point bla in xyz.dll": <br>
+    </h4>
+    This is related to Windows picking up wrong dll versions. Either
+    download a new installer (after WinCoot 0.8.8) or do the following:<br>
+    Copy (or move) everything (files and folders) from:<br>
+    <br>
+    C:\<span style="font-style: italic;"></span><span style="font-style:
+      italic;">YourWinCootDirectory</span>\libexec<br>
+    <br>
+    to<br>
+    <br>
+    C:\<span style="font-style: italic;">YourWinCootDirectory</span>\bin
     <h4><a class="mozTocH4" name="mozTocId910462"></a>Downloading of
       pdbs does not work/Python errors</h4>
     This is related to Windows picking up the wrong version of Python.
@@ -185,13 +210,14 @@ reference,
     to<br>
     <br>
     C:\<span style="font-style: italic;">YourWinCootDirectory</span>\libexec<br>
-    <h4><a class="mozTocH4" name="mozTocId689913"></a>Installer
-      hangs</h4>
+    <h4><a class="mozTocH4" name="mozTocId689913"></a>Installer hangs</h4>
     In the end of the installation the Installer may become unresponsive
     (only seen on Windows 8 and above so far). It appears that (usually)
     WinCoot is installed correctly though and there is no reason for
-    concern. Just kill the Installer. Working on a fix is in progress.<br><br><h4><a class="mozTocH4" name="mozTocId514994"></a>Display
-      is not responsive in full screen mode</h4>
+    concern. Just kill the Installer. Working on a fix is in progress.<br>
+    <br>
+    <h4><a class="mozTocH4" name="mozTocId514994"></a>Display is not
+      responsive in full screen mode</h4>
     This may be caused by the auto-hide function of the Windows Taskbar.
     If you disable the auto-hide Taskbar WinCoot should work fine.
     [Thanks to Jack Sadowsky]. On other occasions it was actually the
@@ -212,22 +238,46 @@ reference,
     the classic one (<i>Edit-&gt;Preferences...-&gt;General/File
       Selection tab</i>; top pane change to <i>Classic File Selector</i>)
     or avoid using the GUI for file selections by using e.g. drag'n'drop
-    to open files and Quick Save (Ctrl s) for saving files.<br><h4><a class="mozTocH4" name="mozTocId358284"></a>WinCoot "automatically" loads pdb files repeatedly<br></h4><p>This is most likely cause by other software interfering with WinCoot. The best known (to me) is the English-Chinese dictionary software called "youdao". So, either close the offending program or in the case of "youdao" just close the function of automatic translation when select or mouse move. In this way you can even use WinCoot and "youdao" together.<br></p>
-    <h4><a class="mozTocH4" name="mozTocId514994"></a>Problems with virtual desktops (e.g. Dexpot, VirtuaWin)<br>
+    to open files and Quick Save (Ctrl s) for saving files.<br>
+    <h4><a class="mozTocH4" name="mozTocId358284"></a>WinCoot
+      "automatically" loads pdb files repeatedly<br>
+    </h4>
+    <p>This is most likely cause by other software interfering with
+      WinCoot. The best known (to me) is the English-Chinese dictionary
+      software called "youdao". So, either close the offending program
+      or in the case of "youdao" just close the function of automatic
+      translation when select or mouse move. In this way you can even
+      use WinCoot and "youdao" together.<br>
+    </p>
+    <h4><a class="mozTocH4" name="mozTocId514994"></a>Problems with
+      virtual desktops (e.g. Dexpot, VirtuaWin)<br>
     </h4>
     Nothing which can be done from WinCoot side (*). However, you can
-    fix this by showing WinCoot on all Desktops. <a href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=R16628&amp;1=CCP4BB&amp;9=A&amp;J=on&amp;d=No+Match%3BMatch%3BMatches&amp;z=4">Here</a>
+    fix this by showing WinCoot on all Desktops. <a
+href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=R16628&amp;1=CCP4BB&amp;9=A&amp;J=on&amp;d=No+Match%3BMatch%3BMatches&amp;z=4">Here</a>
     a thread about this topic on the bb.<br>
     (*) For the more interested. It appears that gtkglext does not work
     well with newer versions of GTK which causes this to be problematic
-    recently now.<br><h4><a name="mozTocId260018" class="mozTocH4"></a>Ramachandran plot (or sequence view) crashes</h4>This is caused by some underlying graphics libraries and usually happens with larger files. There is a fix in the pipeline but sadly no news as to when it will be available. In the meantime I can only suggest to split your larger structure into smaller ones (e.g. chains) and/or 
-use <a href="software/extras/rama_gui.py">this script</a> to get at least a clickable list of outliers.
-[Then    run the script file (Calculate-&gt;Run script), which will give a new menu 
-under validate to give you outliers in a button list form. NB if you put 
-the file in your .coot-preference directory it will always be loaded.]<h4><a class="mozTocH3" name="mozTocId209103"></a>Bizarre
+    recently now.<br>
+    <h4><a name="mozTocId260018" class="mozTocH4"></a>Ramachandran plot
+      (or sequence view) crashes</h4>
+    Fixed in 0.8.9 pre-releases (from 7109 onward), so please download
+    the latest installer.<br>
+    This is caused by some underlying graphics libraries and usually
+    happens with larger files. There is a fix in the pipeline but sadly
+    no news as to when it will be available. In the meantime I can only
+    suggest to split your larger structure into smaller ones (e.g.
+    chains) and/or use <a href="software/extras/rama_gui.py">this
+      script</a> to get at least a clickable list of outliers. [Then run
+    the script file (Calculate-&gt;Run script), which will give a new
+    menu under validate to give you outliers in a button list form. NB
+    if you put the file in your .coot-preference directory it will
+    always be loaded.]
+    <h4><a class="mozTocH3" name="mozTocId209103"></a>Bizarre
       connectivity of coordinate files<br>
     </h4>
-    I guess you see something like <a href="http://www.ysbl.york.ac.uk/%7Eemsley/coot/ugly.png">this</a>.
+    I guess you see something like <a
+      href="http://www.ysbl.york.ac.uk/%7Eemsley/coot/ugly.png">this</a>.
     This should not happen any more (from 0.3.3.1), however there is
     rare cases on Windows 7 where it occurs again (this is progress for
     you!). So if it does please let me know about your system and try
@@ -235,7 +285,10 @@ the file in your .coot-preference directory it will always be loaded.]<h4><a cla
     <br>
     It may be that you have a 'non-english speaking' computer and
     changing some settings on your computer may fix this.<br>
-    Go to <span style="font-style: italic;">Start</span> -&gt; <span style="font-style: italic;">Settings</span> -&gt; <span style="font-style: italic;">Control Panel</span> -&gt;&nbsp; <span style="font-style: italic;">Regional and Language Options</span>.
+    Go to <span style="font-style: italic;">Start</span> -&gt; <span
+      style="font-style: italic;">Settings</span> -&gt; <span
+      style="font-style: italic;">Control Panel</span> -&gt;&nbsp; <span
+      style="font-style: italic;">Regional and Language Options</span>.
     Then <span style="font-style: italic;">Customise</span> your
     settings and change your <span style="font-style: italic;">Decimal
       symbol</span> to "." (dot) [was a "," comma I guess]. In turn you
@@ -247,7 +300,8 @@ the file in your .coot-preference directory it will always be loaded.]<h4><a cla
     In a more permanent fix (without messing with your usual setting)
     you can try the following:<br>
     <ul>
-      <li>download the language setting <a href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/extras/language.zip">files</a>.</li>
+      <li>download the language setting <a
+href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/extras/language.zip">files</a>.</li>
       <li>unzip the files in <i>yourWinCootDirectory</i></li>
       <li>Edit your runwincoot.bat file the following way:</li>
       <ul>
@@ -277,7 +331,8 @@ the file in your .coot-preference directory it will always be loaded.]<h4><a cla
     <ul>
       <li>N.B. the lang_xxx.xml files are for Swedish Swedish (sv-SV)
         and you have to change them to your regional setting (for codes
-        see <a href="http://msdn.microsoft.com/en-us/library/dd318693%28v=vs.85%29.aspx">this</a>
+        see <a
+href="http://msdn.microsoft.com/en-us/library/dd318693%28v=vs.85%29.aspx">this</a>
         MS site).<br>
       </li>
     </ul>
@@ -288,13 +343,18 @@ the file in your .coot-preference directory it will always be loaded.]<h4><a cla
     incomplete download of the installer. Please make sure that the
     WinCoot installer is downloaded completely. If not, try again. A
     brief check about the size can help (something above 70Mb
-    currently). The correct way is to varify the download via the <a href="http://www.openoffice.org/dev_docs/using_md5sums.html">md5sum</a>
-    (<a href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/binaries/stable/">stable</a>,
-    <a href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/binaries/nightlies/pre-release/">development</a>).<br>
+    currently). The correct way is to varify the download via the <a
+      href="http://www.openoffice.org/dev_docs/using_md5sums.html">md5sum</a>
+    (<a
+      href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/binaries/stable/">stable</a>,
+    <a
+href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/binaries/nightlies/pre-release/">development</a>).<br>
     <h3><a class="mozTocH3" name="mozTocId531754"></a>I only get a grey
       display window</h3>
     Turning down your graphics card acceleration should solve this. To
     do so go to <span style="font-style: italic;">Start-&gt;Settings-&gt;Control
+
+
 
 
 
@@ -318,15 +378,36 @@ the file in your .coot-preference directory it will always be loaded.]<h4><a cla
     LCD, ... IF you have the right hardware!!<br>
     <h4><a class="mozTocH4" name="mozTocId790933"></a>WinCoot with
       NVIDIA 3D Vision/120Hz LCDs?</h4>
-    This works if you have the high end <a href="http://www.nvidia.com/object/quadro_pro_graphics_boards.html">Quadro</a>
+    This works if you have the high end <a
+      href="http://www.nvidia.com/object/quadro_pro_graphics_boards.html">Quadro</a>
     graphics cards which enable OpenGL. To set the graphics card up,
     please follow the instructions e.g. given by the PyMOL community.
-    You find general information <a href="http://www.pymolwiki.org/index.php/Stereo_3D_Display_Options">here</a>
-    and here are specific instruction for <a href="http://sourceforge.net/mailarchive/message.php?msg_id=896B75251BA19745A529B1B867893FA50EB5CF%40planet.delsci.local">Vista</a>
-    and <a href="http://sourceforge.net/mailarchive/message.php?msg_id=896B75251BA19745A529B1B867893FA50EB5D0%40planet.delsci.local">XP</a>.<br><h4><a class="mozTocH4" name="mozTocId906434"></a>WinCoot with
-      NVIDIA and Win 10?</h4>If you run into problems with stereo on Windows 10 (using an NVIDA card), you can try the following (thanks to Jose Brito):<br><ul><li>Open NVIDIA Control Panel --&gt; Manage 3D settings.</li><li>Go to Program Settings tab.</li><li>Add the file you launch the program from by clicking on Add
-    button.</li><li>In the setting window, change the 'Power Management Mode' to
-    'Prefer Maximum Performance'. Also below settings as well:</li><ul><li>Vertical sync - off</li><li>Threaded optimization - off</li><li>Triple buffering - off</li><li>Stereo enable on</li></ul><li>Run the program and check.<br></li></ul>
+    You find general information <a
+      href="http://www.pymolwiki.org/index.php/Stereo_3D_Display_Options">here</a>
+    and here are specific instruction for <a
+href="http://sourceforge.net/mailarchive/message.php?msg_id=896B75251BA19745A529B1B867893FA50EB5CF%40planet.delsci.local">Vista</a>
+    and <a
+href="http://sourceforge.net/mailarchive/message.php?msg_id=896B75251BA19745A529B1B867893FA50EB5D0%40planet.delsci.local">XP</a>.<br>
+    <h4><a class="mozTocH4" name="mozTocId906434"></a>WinCoot with
+      NVIDIA and Win 10?</h4>
+    If you run into problems with stereo on Windows 10 (using an NVIDA
+    card), you can try the following (thanks to Jose Brito):<br>
+    <ul>
+      <li>Open NVIDIA Control Panel --&gt; Manage 3D settings.</li>
+      <li>Go to Program Settings tab.</li>
+      <li>Add the file you launch the program from by clicking on Add
+        button.</li>
+      <li>In the setting window, change the 'Power Management Mode' to
+        'Prefer Maximum Performance'. Also below settings as well:</li>
+      <ul>
+        <li>Vertical sync - off</li>
+        <li>Threaded optimization - off</li>
+        <li>Triple buffering - off</li>
+        <li>Stereo enable on</li>
+      </ul>
+      <li>Run the program and check.<br>
+      </li>
+    </ul>
     <h3><a class="mozTocH3" name="mozTocId966927"></a>Text missing in
       some widgets when using Scheme/Guile scripting</h3>
     Currently Scheme/Guile is not available, so no problem there...
@@ -339,20 +420,26 @@ want/need the text use Python...-->
     </h2>
     <h3><a class="mozTocH3" name="mozTocId515894"></a>What about WinCoot
       and CCP4?</h3>
-    Coot is part of the CCP4 Windows package (6.0.x) now. Previously it was CCP4's
-    own version and didn't seem to be fully functional (wasnt done by me). Now
-    CCP4 is distributing my WinCoot, so all is fine.<br>
-    However, I don't know when updates for the CCP4 packages will be made
-    available and how it interplays with CCP4i2!<br>
+    Coot is part of the CCP4 Windows package (6.0.x) now. Previously it
+    was CCP4's own version and didn't seem to be fully functional (wasnt
+    done by me). Now CCP4 is distributing my WinCoot, so all is fine.<br>
+    However, I don't know when updates for the CCP4 packages will be
+    made available and how it interplays with CCP4i2!<br>
     <h3><a class="mozTocH3" name="mozTocId56914"></a>What are these
       'Generic objects'?</h3>
-    These are (dot) objects generated by the programs <span style="font-style: italic;">probe</span> and <span style="font-style: italic;">reduce</span> from the <a href="http://kinemage.biochem.duke.edu">Richardson Lab</a>. The
+    These are (dot) objects generated by the programs <span
+      style="font-style: italic;">probe</span> and <span
+      style="font-style: italic;">reduce</span> from the <a
+      href="http://kinemage.biochem.duke.edu">Richardson Lab</a>. The
     generic objects will show you intra-molecular interactions. You will
     need to install these programs to use this function in (Win)Coot.
-    You can download them from <a href="http://kinemage.biochem.duke.edu/software">here</a>. Ideally
+    You can download them from <a
+      href="http://kinemage.biochem.duke.edu/software">here</a>. Ideally
     put the executables (probe.exe and reduceV2.13.2.win.exe) somewhere
     in you <span style="font-style: italic;">PATH&nbsp; </span>([or]
-    e.g. in C:\\<span style="font-style: italic;"></span><span style="font-style: italic;">YourWinCootDirectory</span>\\<span style="font-style: italic;"></span>bin) and off you go. More
+    e.g. in C:\\<span style="font-style: italic;"></span><span
+      style="font-style: italic;">YourWinCootDirectory</span>\\<span
+      style="font-style: italic;"></span>bin) and off you go. More
     detailed instructions below.<br>
     <br>
     <h3><a class="mozTocH3" name="mozTocId860510"></a>How do I get
@@ -361,11 +448,15 @@ want/need the text use Python...-->
     <br>
     WinCoot 0.5.1(-pre-1) and later:<br>
     <ol>
-      <li>download <a href="http://kinemage.biochem.duke.edu/php/downlode.php?filename=/downloads/software/probe/probe.2.12.071128.win.exe.zip">probe</a>.
-        (or look <a href="http://kinemage.biochem.duke.edu/downloads/software/probe/">here</a>;
+      <li>download <a
+href="http://kinemage.biochem.duke.edu/php/downlode.php?filename=/downloads/software/probe/probe.2.12.071128.win.exe.zip">probe</a>.
+        (or look <a
+          href="http://kinemage.biochem.duke.edu/downloads/software/probe/">here</a>;
         2.12.x)</li>
-      <li>download <a href="http://kinemage.biochem.duke.edu/php/downlode.php?filename=/downloads/software/reduce31/reduce.3.13.080428.win32.zip">reduce</a>.
-        (or look <a href="http://kinemage.biochem.duke.edu/downloads/software/reduce31/">here</a>;
+      <li>download <a
+href="http://kinemage.biochem.duke.edu/php/downlode.php?filename=/downloads/software/reduce31/reduce.3.13.080428.win32.zip">reduce</a>.
+        (or look <a
+          href="http://kinemage.biochem.duke.edu/downloads/software/reduce31/">here</a>;
         3.13.x)</li>
       <li>for probe:</li>
       <ul>
@@ -377,6 +468,8 @@ somewhere
 else
 in
 your
+
+
 
 
 
@@ -413,6 +506,8 @@ your
 
 
 
+
+
           <span style="font-style: italic;">PATH&nbsp;</span>; for an
           alternative see 5)</li>
         <li>Optionally: copy/move reduce_wwPDB_het_dict.txt to the same
@@ -422,7 +517,9 @@ your
     <p style="color: rgb(51, 51, 51);"><br>
     </p>
     <ol style="color: rgb(51, 51, 51);" start="5">
-      <li>OPTIONAL ALTERNATIVE: if the executables are NOT in <span style="font-style: italic;">PATH</span> (e.g. <span style="font-style: italic;">YourWinCootDirectory</span>\bin):
+      <li>OPTIONAL ALTERNATIVE: if the executables are NOT in <span
+          style="font-style: italic;">PATH</span> (e.g. <span
+          style="font-style: italic;">YourWinCootDirectory</span>\bin):
         edit either <span style="font-style: italic;">group_settings.py</span>
         (found in <span style="font-style: italic;">YourWinCootDirectory</span>\share\coot\python)
 so
@@ -430,6 +527,8 @@ that
 probe_command
 and
 reduce_command
+
+
 
 
 
@@ -464,21 +563,27 @@ reduce_command
     <ol>
     </ol>
     <ol>
-      <li>download <a href="http://kinemage.biochem.duke.edu/downloads/software/probe/probe.2.11.050121.win.exe">probe</a>.
-        (or look <a href="http://kinemage.biochem.duke.edu/downloads/software/probe/">here</a>
+      <li>download <a
+href="http://kinemage.biochem.duke.edu/downloads/software/probe/probe.2.11.050121.win.exe">probe</a>.
+        (or look <a
+          href="http://kinemage.biochem.duke.edu/downloads/software/probe/">here</a>
         BUT DO NOT INSTALL PROBE NEWER THAN 2.11 - for now)</li>
-      <li>download <a href="http://kinemage.biochem.duke.edu/downloads/software/reduce/reduce.2.13.991005.win.exe.zip">reduce</a>.
-        (or look <a href="http://kinemage.biochem.duke.edu/downloads/software/reduce/">here</a>)</li>
+      <li>download <a
+href="http://kinemage.biochem.duke.edu/downloads/software/reduce/reduce.2.13.991005.win.exe.zip">reduce</a>.
+        (or look <a
+          href="http://kinemage.biochem.duke.edu/downloads/software/reduce/">here</a>)</li>
       <li>run probe*.exe and extract into <span style="font-style:
           italic;">YourWinCootDirectory</span>\bin (or somewhere else in
         your <span style="font-style: italic;">PATH&nbsp;</span>; for
         an alternative see 5) </li>
       <li>extract the content of reduce*.exe.zip and move the files from
-        <span style="font-style: italic;">reduce4win</span> into <span style="font-style: italic;">YourWinCootDirectory</span>\bin
+        <span style="font-style: italic;">reduce4win</span> into <span
+          style="font-style: italic;">YourWinCootDirectory</span>\bin
         (or somewhere else in your <span style="font-style: italic;">PATH&nbsp;</span>;
         for an alternative see 5) </li>
       <li>if the executables are not in <span style="font-style:
-          italic;">PATH&nbsp;</span>: edit group_settings.py (found in <span style="font-style: italic;">YourWinCootDirectory</span>\share\coot\python)
+          italic;">PATH&nbsp;</span>: edit group_settings.py (found in <span
+          style="font-style: italic;">YourWinCootDirectory</span>\share\coot\python)
 so
 that
 probe_command
@@ -495,17 +600,22 @@ reduce_command
 
 
 
+
+
         describe the location of your files (e.g. probe_command =
         "C:\Mydirectory\probe.exe") </li>
     </ol>
     <div style="margin-left: 40px;"> [N.B. if you have a different
       reduce version to "reduceV2.13.2.win" or changed the name you have
-      either to change reduce_command_name = "reduceV2.13.2.win" in <span style="font-style: italic;">YourWinCootDirectory</span>\share\coot\python\generic_objects.py
+      either to change reduce_command_name = "reduceV2.13.2.win" in <span
+        style="font-style: italic;">YourWinCootDirectory</span>\share\coot\python\generic_objects.py
 to
 your
 correct
 name
 or
+
+
 
 
 
@@ -533,6 +643,8 @@ like
 
 
 
+
+
       reduce_command_name = "my_reduce_filename". OBS: no .exe in the
       end for the filenames!!!!] </div>
     <span style="font-weight: bold;"><br>
@@ -540,7 +652,8 @@ like
     <br>
     <h3><a class="mozTocH3" name="mozTocId721941"></a>How do I get
       raster3d and/or povray working with WinCoot?</h3>
-    Just download and install the appropriate program (<a href="http://skuld.bmsc.washington.edu/raster3d/raster3d.html">raster3d</a>,
+    Just download and install the appropriate program (<a
+      href="http://skuld.bmsc.washington.edu/raster3d/raster3d.html">raster3d</a>,
     <a href="http://www.povray.org">povray</a>) and WinCoot should find
     them. However it might be better (faster) to put them somewhere in
     your <span style="font-style: italic;">PATH</span>.<br>
@@ -556,7 +669,9 @@ like
     (runwincoot.bat) from the Command Prompt in the appropriate
     directory. Alternatively make a copy the 0-coot-state.py files and
     read it in as a python script file. Some additional informations can
-    be found on the <a href="wincoot-download.html">installation page</a><span style="text-decoration: underline;"></span>.<span style="font-weight: bold;"></span><br>
+    be found on the <a href="wincoot-download.html">installation page</a><span
+      style="text-decoration: underline;"></span>.<span
+      style="font-weight: bold;"></span><br>
     <span style="font-weight: bold;"></span><span style="font-weight:
       bold;"></span>
     <h3><a class="mozTocH3" name="mozTocId957959"></a>How does Python
@@ -568,7 +683,10 @@ like
     following way:<br>
     <pre style="margin-left: 40px;">GUILE scripting: (guile-command argument1 argument2)<br><br>PYTHON scripting: python_command(argument1,argument2)<br></pre>
     Some more information on Scheme/Guile and Python scripting can be
-    found on the <a href="http://strucbio.biologie.uni-konstanz.de/ccp4wiki/index.php/COOT">Coot
+    found on the <a
+      href="http://strucbio.biologie.uni-konstanz.de/ccp4wiki/index.php/COOT">Coot
+
+
 
 
 
@@ -588,8 +706,11 @@ like
     run REFMAC5 on your build structure from WinCoot. Be aware that
     there is some slight changes to the handling and filenames for extra
     refmac parameters in comparison to 'normal' Coot. First the file
-    which give refmac extra parameters is called <span style="font-style: italic;">refmac-extra-params.txt</span> for
+    which give refmac extra parameters is called <span
+      style="font-style: italic;">refmac-extra-params.txt</span> for
     easy text editing (see an example <a href="refmac-extra-params.txt">here</a>).
+
+
 
 
 
@@ -615,7 +736,8 @@ like
       <pre>refmac_extra_params = ['NCYC 3', 'WEIGHT 0.3']</pre>
     </div>
     <span style="font-weight: bold;"></span><br>
-    <h2><a class="mozTocH2" name="mozTocId371021"></a><a name="Hints_for_running"></a>Other WinCoot information<br>
+    <h2><a class="mozTocH2" name="mozTocId371021"></a><a
+        name="Hints_for_running"></a>Other WinCoot information<br>
     </h2>
     <h2><a class="mozTocH2" name="mozTocId200822"></a>Old FAQs
       (deprecated, pre-0.3, etc.)</h2>
@@ -658,7 +780,5 @@ document.write("<a href=" + "mail" + "to:" + ppcname + "&#64;" + ppchost + ">" +
 //-->
 </script></address>
     </div>
-  
-
-
-</body></html>
+  </body>
+</html>
