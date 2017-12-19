@@ -507,7 +507,7 @@ graphics_info_t::geometric_distortion(int imol) {
 
 #ifdef HAVE_GSL
 coot::geometry_distortion_info_container_t
-graphics_info_t::geometric_distortions(int imol, mmdb::Residue *residue_p, bool with_nbcs) {
+graphics_info_t::geometric_distortions(int imol, mmdb::Residue *residue_p, bool with_nbcs, bool with_torsions) {
    
    coot::geometry_distortion_info_container_t gdc(NULL, 0, "");
 #if defined(HAVE_GNOME_CANVAS) || defined(HAVE_GTK_CANVAS)
@@ -517,7 +517,7 @@ graphics_info_t::geometric_distortions(int imol, mmdb::Residue *residue_p, bool 
       if (mol) {
 	 atom_selection_container_t asc = make_asc(mol);
 	 std::vector<coot::geometry_distortion_info_container_t> v =
-	    geometric_distortions_from_mol(imol, asc, with_nbcs);
+       geometric_distortions_from_mol(imol, asc, with_nbcs, with_torsions);
 	 if (v.size() == 1) {
 	    if (v[0].geometry_distortion.size() > 1) {
 	       gdc = v[0];
@@ -536,7 +536,7 @@ graphics_info_t::geometric_distortions(int imol, mmdb::Residue *residue_p, bool 
 #if defined(HAVE_GNOME_CANVAS) || defined(HAVE_GTK_CANVAS)
 std::vector<coot::geometry_distortion_info_container_t>
 graphics_info_t::geometric_distortions_from_mol(int imol, const atom_selection_container_t &asc,
-						bool with_nbcs) {
+                  bool with_nbcs, bool with_torsions) {
 
    std::vector<coot::geometry_distortion_info_container_t> dcv;
    std::string altconf("");  // use this (e.g. "A") or "".
@@ -660,11 +660,18 @@ graphics_info_t::geometric_distortions_from_mol(int imol, const atom_selection_c
 		  flags = coot::BONDS_ANGLES_AND_PLANES;
 		  flags = coot::BONDS_ANGLES_PLANES_AND_CHIRALS;
 
-		  if (with_nbcs)
+        if (with_nbcs)
 		     flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
 		  
 		  short int do_residue_internal_torsions = 0;
-	       
+
+        if (with_torsions) {
+           flags = coot::BONDS_ANGLES_TORSIONS_PLANES_AND_CHIRALS;
+           do_residue_internal_torsions = 1;
+           if (with_nbcs)
+              flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_AND_CHIRALS;
+        }
+
 		  // 	       if (do_torsion_restraints) { 
 		  // 		  do_residue_internal_torsions = 1;
 		  // 		  flags = coot::BONDS_ANGLES_TORSIONS_PLANES_AND_NON_BONDED;

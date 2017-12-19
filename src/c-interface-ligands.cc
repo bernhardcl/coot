@@ -2777,7 +2777,7 @@ PyObject *kullback_liebler_py(PyObject *l1, PyObject *l2) {
 // stage. Perhaps a coot::geometry_distortion_info_container_t?
 //
 double
-print_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code) {
+print_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code, bool with_torsions) {
 
    double total_distortion = 0.0;
    
@@ -2791,7 +2791,7 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 		   << coot::residue_spec_t(chain_id, res_no, ins_code) << std::endl;
       } else {
 	 bool with_nbcs = true;
-	 coot::geometry_distortion_info_container_t gdc = g.geometric_distortions(imol, residue_p, with_nbcs);
+    coot::geometry_distortion_info_container_t gdc = g.geometric_distortions(imol, residue_p, with_nbcs, with_torsions);
 	 int n_restraints_bonds    = 0;
 	 int n_restraints_angles   = 0;
 	 int n_restraints_torsions = 0;
@@ -2806,12 +2806,13 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 	 double sum_penalties_nbcs     = 0;
 	 std::vector<std::pair<std::string,double> > penalty_string_bonds;
 	 std::vector<std::pair<std::string,double> > penalty_string_nbcs;
-	 std::vector<std::pair<std::string,double> > penalty_string_angles;
-	 std::cout << "Residue Distortion List: \n";
+    std::vector<std::pair<std::string,double> > penalty_string_angles;
+    std::vector<std::pair<std::string,double> > penalty_string_torsions;
+    std::cout << "Residue Distortion List: \n";
 	 for (unsigned int i=0; i<gdc.geometry_distortion.size(); i++) { 
 	    const coot::simple_restraint &rest = gdc.geometry_distortion[i].restraint;
 	    if (rest.restraint_type == coot::BOND_RESTRAINT) {
-	       n_restraints_bonds++;
+          n_restraints_bonds++;
 	       mmdb::Atom *at_1 = residue_p->GetAtom(rest.atom_index_1);
 	       mmdb::Atom *at_2 = residue_p->GetAtom(rest.atom_index_2);
 	       if (at_1 && at_2) {
@@ -2896,23 +2897,44 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 		  clipper::Coord_orth p1(at_1->x, at_1->y, at_1->z);
 		  clipper::Coord_orth p2(at_2->x, at_2->y, at_2->z);
 		  clipper::Coord_orth p3(at_3->x, at_3->y, at_3->z);
-		  clipper::Coord_orth p4(at_3->x, at_3->y, at_3->z);
+        clipper::Coord_orth p4(at_4->x, at_4->y, at_4->z);
 		  double torsion_rad = clipper::Coord_orth::torsion(p1, p2, p3, p4);
 		  double torsion = clipper::Util::rad2d(torsion_rad);
-		  double distortion = rest.torsion_distortion(torsion);
-		  double pen_score = distortion*distortion/(rest.sigma*rest.sigma);
+        double actual_torsion;
+        if (torsion < 0) {
+           actual_torsion = torsion + 360.;
+        } else {
+           actual_torsion = torsion;
+        }
+
+        double pos_angle;
+        double diff;
+        double distorsion = 9999.;
+        double target_value_corrected = 9999.;
+        for (unsigned int i=0; i<rest.periodicity; i++) {
+           pos_angle = rest.target_value + (double)i*360./(double)rest.periodicity;
+           if (pos_angle > 360.)
+              pos_angle -= 360.;
+           diff = 180. - fabs(180.- fabs(pos_angle - torsion));
+           if (fabs(diff) < fabs(distorsion)) {
+              distorsion = diff;
+              target_value_corrected = pos_angle;
+           }
+        }
+
+        double pen_score = rest.torsion_distortion(torsion);
 		  std::string s = std::string("torsion ")
 		     + std::string(at_1->name) + std::string(" - ")
 		     + std::string(at_2->name) + std::string(" - ")
 		     + std::string(at_3->name) + std::string(" - ")
 		     + std::string(at_4->name)
-		     + std::string("  target: ") + coot::util::float_to_string(rest.target_value)
+           + std::string("  target: ") + coot::util::float_to_string(target_value_corrected)
 		     + std::string(" model_torsion: ") + coot::util::float_to_string(torsion)
 		     + std::string(" sigma: ") + coot::util::float_to_string(rest.sigma)
-		     + std::string(" torsion-devi ") + coot::util::float_to_string(distortion)
+           + std::string(" torsion-devi ") + coot::util::float_to_string(distorsion)
 		     + std::string(" penalty-score:  ") + coot::util::float_to_string(pen_score);
-		  penalty_string_angles.push_back(std::pair<std::string,double> (s, pen_score));
-		  sum_penalties_angles += pen_score;
+        penalty_string_torsions.push_back(std::pair<std::string,double> (s, pen_score));
+        sum_penalties_torsions += pen_score;
 	       }
 	    }
 	    
@@ -2961,28 +2983,36 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 	 }
 	 
 	 std::sort(penalty_string_bonds.begin(),  penalty_string_bonds.end(),  coot::util::sd_compare);
-	 std::sort(penalty_string_angles.begin(), penalty_string_angles.end(), coot::util::sd_compare);
+    std::sort(penalty_string_angles.begin(), penalty_string_angles.end(), coot::util::sd_compare);
+    std::sort(penalty_string_torsions.begin(), penalty_string_torsions.end(), coot::util::sd_compare);
 
 	 std::reverse(penalty_string_bonds.begin(),  penalty_string_bonds.end());
-	 std::reverse(penalty_string_angles.begin(), penalty_string_angles.end());
+    std::reverse(penalty_string_angles.begin(), penalty_string_angles.end());
+    std::reverse(penalty_string_torsions.begin(), penalty_string_torsions.end());
 
 	 // sorted list, line by line
 	 for (unsigned int i=0; i<penalty_string_bonds.size(); i++)
 	    std::cout << "   " << penalty_string_bonds[i].first << std::endl;
-	 for (unsigned int i=0; i<penalty_string_angles.size(); i++)
-	    std::cout << "   " << penalty_string_angles[i].first << std::endl;
+    for (unsigned int i=0; i<penalty_string_angles.size(); i++)
+       std::cout << "   " << penalty_string_angles[i].first << std::endl;
+    for (unsigned int i=0; i<penalty_string_torsions.size(); i++)
+       std::cout << "   " << penalty_string_torsions[i].first << std::endl;
 
 	 
 	 // Summary:
 	 double av_penalty_bond = 0;
 	 double av_penalty_angle = 0;
+    double av_penalty_torsion = 0;
 	 double av_penalty_total = 0;
 	 if (n_restraints_bonds > 0)
 	    av_penalty_bond = sum_penalties_bonds/double(n_restraints_bonds);
-	 if (n_restraints_angles > 0)
-	    av_penalty_angle = sum_penalties_angles/double(n_restraints_angles);
-	 if ((n_restraints_bonds+n_restraints_angles) > 0) { 
-	    av_penalty_total = (sum_penalties_bonds+sum_penalties_angles)/(n_restraints_bonds+n_restraints_angles);
+    if (n_restraints_angles > 0)
+       av_penalty_angle = sum_penalties_angles/double(n_restraints_angles);
+    if (n_restraints_torsions > 0)
+       av_penalty_torsion = sum_penalties_torsions/double(n_restraints_torsions);
+    if ((n_restraints_bonds+n_restraints_angles) > 0) {
+       av_penalty_total = (sum_penalties_bonds+sum_penalties_angles)/
+             (n_restraints_bonds+n_restraints_angles);
 	 }
 	 total_distortion =
 	    sum_penalties_bonds  +
@@ -2994,13 +3024,22 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 	 std::cout << "Residue Distortion Summary: \n   "
 		   << n_restraints_bonds  << " bond restraints\n   "
 		   << n_restraints_angles << " angle restraints\n"
-		   << "   sum of bond  distortions penalties:  " << sum_penalties_bonds  << "\n"
-		   << "   sum of angle distortions penalties:  " << sum_penalties_angles << "\n"
-		   << "   average bond  distortion penalty:    " << av_penalty_bond  << "\n"
-		   << "   average angle distortion penalty:    " << av_penalty_angle << "\n"
-		   << "   total distortion penalty:            " << total_distortion
+         << ((with_torsions) ? "   " : "")
+         << ((with_torsions) ? coot::util::int_to_string(n_restraints_torsions) : "")
+         << ((with_torsions) ? " torsion restraints\n" : "")
+         << "   sum of bond  distortions penalties:  " << sum_penalties_bonds  << "\n"
+         << "   sum of angle distortions penalties:  " << sum_penalties_angles << "\n"
+         << ((with_torsions) ? "   sum of torsion distortions penalties:" : "")
+         << ((with_torsions) ? coot::util::float_to_string(sum_penalties_torsions) : "")
+         << ((with_torsions) ? "\n" : "")
+         << "   average bond  distortion penalty:    " << av_penalty_bond  << "\n"
+         << "   average angle distortion penalty:    " << av_penalty_angle << "\n"
+         << ((with_torsions) ? "   average torsion distortion penalty:  " : "")
+         << ((with_torsions) ? coot::util::float_to_string(av_penalty_torsion) : "")
+         << ((with_torsions) ? "\n" : "")
+         << "   total distortion penalty:            " << total_distortion
 		   << "\n"
-		   << "   average distortion penalty:          " << av_penalty_total
+         << "   average distortion penalty (b&a):    " << av_penalty_total
 		   << std::endl;
       }
    }
@@ -3024,7 +3063,8 @@ display_residue_distortions(int imol, std::string chain_id, int res_no, std::str
 		   << coot::residue_spec_t(chain_id, res_no, ins_code) << std::endl;
       } else {
 	 bool with_nbcs = true;
-	 coot::geometry_distortion_info_container_t gdc = g.geometric_distortions(imol, residue_p, with_nbcs);
+    bool with_torsions = true;
+    coot::geometry_distortion_info_container_t gdc = g.geometric_distortions(imol, residue_p, with_nbcs, with_torsions);
 	 if (gdc.geometry_distortion.size()) {
 
 	    std::string name = std::string("Ligand Distortion of ");

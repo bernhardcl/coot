@@ -86,7 +86,7 @@ PyObject *kullback_liebler_py(PyObject *l1, PyObject *l2);
 // stage. Perhaps a coot::geometry_distortion_info_container_t?
 //
 double
-print_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code);
+print_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code, bool with_torsions=0);
 void
 display_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code);
 
