@@ -755,7 +755,7 @@ class graphics_info_t {
       return gr;
    }
    std::vector<coot::geometry_distortion_info_container_t>
-     geometric_distortions_from_mol(int imol, const atom_selection_container_t &asc, bool with_nbcs);
+     geometric_distortions_from_mol(int imol, const atom_selection_container_t &asc, bool with_nbcs, bool with_torsions=0);
    void print_geometry_distortion(const std::vector<coot::geometry_distortion_info_container_t> &v) const;
 #endif // HAVE_GSL
 #endif // defined(HAVE_GNOME_CANVAS) || defined(HAVE_GTK_CANVAS)
@@ -3996,7 +3996,7 @@ string   static std::string sessionid;
    static float place_helix_here_fudge_factor;
 
    coot::geometry_distortion_info_container_t geometric_distortions(int imol, mmdb::Residue *residue_p,
-								    bool with_nbcs);
+                            bool with_nbcs, bool with_torsions=0);
 
    void tabulate_geometric_distortions(const coot::restraints_container_t &restraints) const;
 

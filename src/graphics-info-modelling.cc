@@ -483,6 +483,7 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 
 	 last_restraints->set_geman_mcclure_alpha(geman_mcclure_alpha);
          last_restraints->set_rama_type(restraints_rama_type);
+	 last_restraints->set_rama_plot_weight(rama_restraints_weight);
 
 	 if (molecules[imol_for_atoms].extra_restraints.has_restraints())
 	    last_restraints->add_extra_restraints(imol_for_atoms, molecules[imol_for_atoms].extra_restraints,
@@ -543,6 +544,7 @@ int
 graphics_info_t::copy_model_molecule(int imol) {
    int iret = -1;
    if (is_valid_model_molecule(imol)) { 
+      graphics_info_t g;
       int new_mol_number = graphics_info_t::create_molecule();
       mmdb::Manager *m = graphics_info_t::molecules[imol].atom_sel.mol;
       mmdb::Manager *n = new mmdb::Manager;
@@ -550,7 +552,6 @@ graphics_info_t::copy_model_molecule(int imol) {
       atom_selection_container_t asc = make_asc(n);
       std::string label = "Copy_of_";
       label += graphics_info_t::molecules[imol].name_;
-      graphics_info_t g;
       g.molecules[new_mol_number].install_model(new_mol_number, asc, g.Geom_p(), label, 1);
       update_go_to_atom_window_on_new_mol();
       iret = new_mol_number;
@@ -828,6 +829,7 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 
 	       last_restraints->set_geman_mcclure_alpha(geman_mcclure_alpha);
                last_restraints->set_rama_type(restraints_rama_type);
+               last_restraints->set_rama_plot_weight(rama_restraints_weight);
 
 	       if (molecules[imol].extra_restraints.has_restraints())
 		  last_restraints->add_extra_restraints(imol, molecules[imol].extra_restraints, *Geom_p());
@@ -1562,9 +1564,23 @@ graphics_info_t::refine(int imol, short int auto_range_flag, int i_atom_no_1, in
    }
    // now i_atom_no_2 is greater than i_atom_no_1.
 
-//    cout << "refine (fit to map): molecule " << imol
-// 	<< " atom index " << i_atom_no_1
-// 	<< " to " << i_atom_no_2 << endl; 
+   if (! is_valid_model_molecule(imol)) {
+      std::cout << "ERROR:: bad molecule number " << imol << std::endl;
+      return rr;
+   }
+   if (i_atom_no_1 < 0) {
+      std::cout << "ERROR:: bad atom index 1 " << i_atom_no_1 << std::endl;
+      return rr;
+   }
+   if (i_atom_no_2 < 0) {
+      std::cout << "ERROR:: bad atom index 2 " << i_atom_no_2 << std::endl;
+      return rr;
+   }
+   if (i_atom_no_2 >= molecules[imol].atom_sel.n_selected_atoms) {
+      std::cout << "out of range atom 2 " << i_atom_no_2 << " vs "
+		<< molecules[imol].atom_sel.n_selected_atoms<< std::endl;
+      return rr;
+   }
 
    int resno_1, resno_2;
 

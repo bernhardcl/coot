@@ -871,8 +871,9 @@ coot::fill_distortion_torsion_gradients(const clipper::Coord_orth &P1,
    }
 
    if (true) {
-      if (b_length < 1.0)
-	 std::cout << "problem with b_length " << b_length << std::endl;
+      if (b_length < 0.5)
+	 std::cout << "ERROR:: fill_distortion_torsion_gradients() problem with b_length "
+		   << b_length << std::endl;
    }
 
    double H = -clipper::Coord_orth::dot(a,c);
@@ -900,9 +901,10 @@ coot::fill_distortion_torsion_gradients(const clipper::Coord_orth &P1,
    double cos_a1 = clipper::Coord_orth::dot(a,b)/(al*b_length);
    double cos_a2 = clipper::Coord_orth::dot(b,c)/(b_length*cl);
 
-   std::cout << "F " << F << " G " << G << " E " << E << " theta " << dtg.theta
-	     << " cos(a1) " << cos_a1 << " cos(a2) " << cos_a2
-	     << std::endl;
+   if (false)
+      std::cout << "F " << F << " G " << G << " E " << E << " theta " << dtg.theta
+		<< " cos(a1) " << cos_a1 << " cos(a2) " << cos_a2
+		<< std::endl;
 
    // instabilty when the P2-P3-P4 or P1-P2-p3 angle is linear. Give up with the derivatives
    // similar escape in the distortion score
