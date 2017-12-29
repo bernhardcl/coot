@@ -1336,9 +1336,9 @@ def transform_map(*args):
     return ret
 
 
-# return then NCS master of the first molecule that has ncs.
+# return the NCS master of the first molecule that has NCS.
 # 
-# return "" on fail to find an ncs chain
+# return "" on fail to find an NCS chain
 #
 def get_first_ncs_master_chain():
 
@@ -4226,6 +4226,8 @@ def rename_alt_confs_active_residue():
         inscode  = active_atom[3]
 
         rename_alt_confs(imol, chain_id, resno, inscode)
+
+
 # Moved from gui_add_linked_cho.py to make a global function.
 def delete_residue_by_spec(imol, spec):
     delete_residue(imol,
@@ -4233,6 +4235,58 @@ def delete_residue_by_spec(imol, spec):
                    residue_spec_to_res_no(spec),
                    residue_spec_to_ins_code(spec))
 
+
+# Util function to pipe Coot C stdout to a file (Note: python stdout doesnt
+# touch C stdout, therefore this is needed. Of course could just tee out
+# all output, but that may not always be required).
+#
+# based on https://stackoverflow.com/questions/4675728/redirect-stdout-to-a-file-in-python
+#
+# use either e.g. with open file fn (fn= open(...)):
+#
+# with stdout_redirected(fn):
+#   do some coot things
+#
+# or:
+# with open('output.txt', 'w') as f, stdout_redirected(f):
+#  some coot commands
+#
+
+import os
+import sys
+from contextlib import contextmanager
+
+def fileno(file_or_fd):
+    fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
+    if not isinstance(fd, int):
+        raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
+    return fd
+
+@contextmanager
+def stdout_redirected(to=os.devnull, stdout=None):
+    if stdout is None:
+       stdout = sys.stdout
+
+    stdout_fd = fileno(stdout)
+    # copy stdout_fd before it is overwritten
+    #NOTE: `copied` is inheritable on Windows when duplicating a standard stream
+    with os.fdopen(os.dup(stdout_fd), 'wb') as copied: 
+        stdout.flush()  # flush library buffers that dup2 knows nothing about
+        try:
+            os.dup2(fileno(to), stdout_fd)  # $ exec >&to
+        except ValueError:  # filename
+            with open(to, 'wb') as to_file:
+                os.dup2(to_file.fileno(), stdout_fd)  # $ exec > to
+        try:
+            yield stdout # allow code to be run with the redirected stdout
+        finally:
+            # restore stdout to its previous value
+            #NOTE: dup2 makes stdout_fd inheritable unconditionally
+            stdout.flush()
+            os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
+
+
+    
 
 ####### Back to Paul's scripting.
 ####### This needs to follow find_exe

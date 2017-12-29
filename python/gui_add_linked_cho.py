@@ -29,10 +29,6 @@ def use_unimodal_pyranose_ring_torsions():
     for tlc in ["NAG", "BMA", "MAN", "GAL", "GLC", "FUC", "XYP"]:
         use_unimodal_ring_torsion_restraints(tlc)
 
-# to be filled later
-def add_cho_restraints_for_residue(imol, new_res_spec):
-    return False
-
 
 def multi_add_linked_residue(imol, res_spec, residues_to_add):
 
@@ -579,32 +575,32 @@ def interactive_add_cho_dialog():
     table = gtk.Table(3, 2, False)
     butt_1 = gtk.RadioButton(None, "High Mannose")
     butt_2 = gtk.RadioButton(butt_1, "Hybrid (Mammal)")
-    butt_3 = gtk.RadioButton(butt_1, "Hybrid (Plant)")
+#    butt_3 = gtk.RadioButton(butt_1, "Hybrid (Plant)")
     butt_4 = gtk.RadioButton(butt_1, "Complex (Mammal)")
     butt_5 = gtk.RadioButton(butt_1, "Complex (Plant)")
     butt_6 = gtk.RadioButton(butt_1, "Expert User Mode")
 
     butt_1.show()
     butt_2.show()
-    butt_3.show()
+ #   butt_3.show()
     butt_4.show()
     butt_5.show()
     butt_6.show()
 
     # add buttons for nice(?) layout/order
-    table.attach(butt_1, 0, 1, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0)
-    table.attach(butt_2, 1, 2, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0)
-    table.attach(butt_4, 2, 3, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0)
-    table.attach(butt_6, 0, 1, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0)
-    table.attach(butt_3, 1, 2, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0)
-    table.attach(butt_5, 2, 3, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0)
+    table.attach(butt_1, 0, 1, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # high mannose
+    table.attach(butt_4, 1, 2, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # complex mammal
+    table.attach(butt_6, 0, 1, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # Expert
+#    table.attach(butt_3, 1, 2, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0)
+    table.attach(butt_5, 1, 2, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # complex plant
+    table.attach(butt_2, 2, 3, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # hybrid mammal
     
     
     vbox.pack_start(table, True, True, 2)
     table.show()
     vbox.reorder_child(table, 0)
 
-    for butt in [butt_1, butt_2, butt_3, butt_4, butt_5, butt_6]:
+    for butt in [butt_1, butt_2, butt_4, butt_5, butt_6]:
         butt.connect("toggled", lambda func:
                      gui_add_linked_cho_dialog_vbox_set_rotation_centre_hook(vbox))
 
@@ -1121,7 +1117,7 @@ class glyco_validate:
             
 # graphics...
 
-def add_module_carbohydrate():
+def add_module_carbohydrate_gui():
     if (have_coot_python):
         if coot_python.main_menubar():
             menu = coot_menubar_menu("Glyco")
@@ -1251,10 +1247,11 @@ def add_module_carbohydrate():
             add_simple_coot_menu_menuitem(
                 menu, "Add Hybrid (Mammal)",
                 lambda func: add_oligo_tree_func(hybrid_mammal_tree()))
-
-            add_simple_coot_menu_menuitem(
-                menu, "Add Hybrid (Plant)",
-                lambda func: add_oligo_tree_func(hybrid_plant_derived_tree()))
+            
+#            in practice, no one will be doing this. 
+#            add_simple_coot_menu_menuitem(
+#                menu, "Add Hybrid (Plant)",
+#                lambda func: add_oligo_tree_func(hybrid_plant_derived_tree()))
 
             add_simple_coot_menu_menuitem(
                 menu, "Add Complex (Mammal)",

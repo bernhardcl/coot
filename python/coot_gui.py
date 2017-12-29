@@ -1105,9 +1105,12 @@ def map_molecule_chooser_gui(chooser_label, callback_function):
 # A pair of widgets, a molecule chooser and an entry.  The
 # callback_function is a function that takes a molecule number and a
 # text string.
+# if always-dismiss-on-ok-clicked is false then the dialog is not dismissed if 
+# callback-function returns False
 #
 def generic_chooser_and_entry(chooser_label, entry_hint_text,
-                              default_entry_text, callback_function):
+                              default_entry_text, callback_function,
+                              always_dismiss_on_ok_clicked=True):
 
     import operator
 
@@ -1123,8 +1126,14 @@ def generic_chooser_and_entry(chooser_label, entry_hint_text,
            active_mol_no = int(active_mol_no)
            print "INFO: operating on molecule number ", active_mol_no
            text = entry.get_text()
-           callback_function(active_mol_no,text)
-           delete_event()
+           cbf_ret = callback_function(active_mol_no, text)
+           if always_dismiss_on_ok_clicked:
+              delete_event()
+           else:
+              if cbf_ret:
+                 delete_event()
+              else:
+                 return True
         except:
            print "Failed to get a (molecule) number"
 

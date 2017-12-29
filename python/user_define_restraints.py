@@ -231,7 +231,7 @@ def user_defined_delete_restraint():
   user_defined_click(2, del_restr)
 
 
-# exte dist first chain A resi 19 ins . atom  N   second chain A resi 19 ins . atom  OG  value 2.70618 sigma 0.4
+# Example of a stack restraint: "exte dist first chain A resi 19 ins . atom  N   second chain A resi 19 ins . atom  OG  value 2.70618 sigma 0.4"
 #
 def extra_restraints2refmac_restraints_file(imol, file_name):
   restraints = list_extra_restraints(imol)

@@ -36,7 +36,7 @@ dist_pkgpython_PYTHON = \
    gui_add_linked_cho.py ligand_check.py     run_mogul.py                     \
    contact_score_isolated_ligand.py          gui_contact_score_isolated_ligand.py \
    enhanced_ligand.py	gui_ligand_sliders.py		      \
-   dictionary_generators.py    \
+   dictionary_generators.py cho_restraints_from_models.py   \
    coot_toolbuttons.py  rcrane_loader.py \
    pdbe_validation_data.py  ligand_validation_sliders.py \
    chemical_feature_clusters.py res_spec_utils.py \

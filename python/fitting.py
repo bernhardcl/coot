@@ -16,6 +16,17 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+def add_module_carbohydrate():
+
+    # add_linked_residue_tree_correlation_cut_off = 0.45
+
+    set_refinement_geman_mcclure_alpha(4.2)
+    read_acedrg_pyranose_dictionaries()
+
+    if (have_coot_python):
+        if coot_python.main_menubar():
+            add_module_carbohydrate_gui()
+    
 
 # For each residue in the protein (molecule number @var{imol}), do a
 # rotamer fit and real-space refinement.  Update the graphics and
