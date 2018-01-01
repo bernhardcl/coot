@@ -163,7 +163,6 @@ make_link              = make_link_py
 link_info              = link_info_py
 map_to_model_correlation = map_to_model_correlation_py
 map_to_model_correlation_per_residue = map_to_model_correlation_per_residue_py
-# qq_plot_map_and_model  = qq_plot_map_and_model_py  # comment out hack to load this smoothly.
 align_to_closest_chain = align_to_closest_chain_py
 key_sym_code           = key_sym_code_py
 screen_vectors         = screen_vectors_py
@@ -183,6 +182,7 @@ density_score_residue  = density_score_residue_py
 align_to_closest_chain = align_to_closest_chain_py
 active_atom_spec       = active_atom_spec_py
 map_statistics         = map_statistics_py
+qq_plot_map_and_model  = qq_plot_map_and_model_py
 
 # probe-clash-score.hh
 probe_clash_score      = probe_clash_score_py

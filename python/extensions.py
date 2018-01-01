@@ -455,13 +455,18 @@ if (have_coot_python):
 		lambda imol: copy_molecule(imol)))
 
 
+     # should stay open if helper function returns False
+     def atom_selection_from_fragmemt_func(imol, text):
+       jmol = new_molecule_by_atom_selection(imol, text)
+       return valid_model_molecule_qm(jmol)
      add_simple_coot_menu_menuitem(
        submenu_models,
        "Copy Fragment...", 
        lambda func: generic_chooser_and_entry("Create a new Molecule\n \
                                   From which molecule shall we seed?", 
-                                 "Atom selection for fragment", "//A/1-10", 
-		lambda imol, text: new_molecule_by_atom_selection(imol,text)))
+                                              "Atom selection for fragment", "//A/1-10", 
+		                              lambda imol, text: atom_selection_from_fragmemt_func(imol, text),
+                                              False))
 
 
      # --- D ---

@@ -435,8 +435,7 @@ molecule_class_info_t::bonds_sec_struct_representation() {
    // 
    Bond_lines_container bonds;
    bonds.do_colour_sec_struct_bonds(atom_sel, imol_no, 0.01, 1.9);
-   bool add_residue_indices = false;
-   bonds_box = bonds.make_graphical_bonds_no_thinning(add_residue_indices);
+   bonds_box = bonds.make_graphical_bonds_no_thinning();
    bonds_box_type = coot::BONDS_SEC_STRUCT_COLOUR;
 } 
   
@@ -460,8 +459,7 @@ molecule_class_info_t::ca_plus_ligands_rainbow_representation(coot::protein_geom
 				  2.4, 4.7,
 				  coot::COLOUR_BY_RAINBOW,
 				  draw_hydrogens_flag); // not COLOUR_BY_RAINBOW_BONDS
-   bool add_residue_indices = false;
-   bonds_box = bonds.make_graphical_bonds_no_thinning(add_residue_indices);
+   bonds_box = bonds.make_graphical_bonds_no_thinning();
    bonds_box_type = coot::COLOUR_BY_RAINBOW_BONDS;
 }
 
@@ -472,8 +470,7 @@ molecule_class_info_t::b_factor_representation() {
       Bond_lines_container::COLOUR_BY_B_FACTOR;
 
    Bond_lines_container bonds(atom_sel, imol_no, bond_type);
-   bool add_residue_indices = false;
-   bonds_box = bonds.make_graphical_bonds_no_thinning(add_residue_indices);
+   bonds_box = bonds.make_graphical_bonds_no_thinning();
    bonds_box_type = coot::COLOUR_BY_B_FACTOR_BONDS;
 } 
 
@@ -5194,21 +5191,24 @@ molecule_class_info_t::merge_molecules(const std::vector<atom_selection_containe
 	       if (r.size() == 1) {
 		  std::string adding_model_resname(add_molecules[imol].atom_selection[0]->residue->GetResName());
 		  if (r[0] == adding_model_resname) {
-		     add_residue_to_this_chain = this_chain_p;
-		     has_single_residue_type_chain_flag = true;
-		     break;
+		     // poly-ala helices (say) should not go into concatonated residues in the same chain
+		     if (adding_model_resname != "ALA") {
+			add_residue_to_this_chain = this_chain_p;
+			has_single_residue_type_chain_flag = true;
+			break;
+		     }
 		  }
 	       } 
 	    }
 
-       if (has_single_residue_type_chain_flag) {
-          if (add_molecules[imol].n_selected_atoms > 0) {
-             mmdb::Residue *add_model_residue = add_molecules[imol].atom_selection[0]->residue;
-                copy_and_add_residue_to_chain(add_residue_to_this_chain, add_model_residue);
+	    if (has_single_residue_type_chain_flag) {
+	       if (add_molecules[imol].n_selected_atoms > 0) {
+		  mmdb::Residue *add_model_residue = add_molecules[imol].atom_selection[0]->residue;
+		  copy_and_add_residue_to_chain(add_residue_to_this_chain, add_model_residue);
 		  multi_residue_add_flag = false;
 		  atom_sel.mol->FinishStructEdit();
 		  update_molecule_after_additions();
-             }
+	       }
 	    } else {
 	       multi_residue_add_flag = 1;
 	    } 
@@ -5238,7 +5238,7 @@ molecule_class_info_t::merge_molecules(const std::vector<atom_selection_containe
 
 	 // this should happen rarely these days...
 	 // 
-	 if (multi_residue_add_flag) { 
+	 if (multi_residue_add_flag) {
 
 	    std::vector<std::string> mapped_chains =
 	       map_chains_to_new_chains(adding_model_chains, this_model_chains);
@@ -5355,8 +5355,9 @@ molecule_class_info_t::try_add_by_consolidation(mmdb::Manager *adding_mol) {
 		  // We got a match, now add all of adding_mol chain_p
 		  // to this molecule's chain
 
-        // BL says:: we check in copy_and_add_chain_residues_to_chain if there
-        // are overlapping waters. Alternativley we could do it here already.
+		  // BL says:: we check in copy_and_add_chain_residues_to_chain if there
+		  // are overlapping waters. Alternativley we could do it here already.
+
 		  copy_and_add_chain_residues_to_chain(chain_p, it->second.second);
 		  done_this_chain = true;
 		  std::string cid = it->second.second->GetChainID();

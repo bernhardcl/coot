@@ -1,8 +1,32 @@
 
    For Release 0.8.9
 
-   o delete item, change to delete side chain click (closes)
-     delete item, delete side chain radio button is active, but delete residue happens on click
+   o If I set N-acetyl group to zero occ, does the refinement for the rest of the atoms
+     behave the same way as if I had deleted those atoms?  It should.  If not, why not?
+
+   o fix the empty nomenclature errors dialog ::: 1
+
+   o holiday project: NMR ring current cones. ::: 4
+
+   o Sphere refine on a disulphide - e.g. in tutorial ::: 2
+
+   o pyrogen -nM -w -r Y03 - regularize it - it fails ::: 1
+
+   o add mouse-scroll consolidation of contour level deltas
+
+   o doing a merge and doing a change chain ids should move over the Link records also.
+
+     Add a test ::: 1
+
+   o on merging molecules, remove the TER card if we are adding to an already existing chain.
+     Consider adding helices made of ALA.  Coot should make a new chain for these. Does it?
+     ::: 1
+
+   o It appears that merging coordinates (read from cif with
+     multi-character label_asym_id and auth_asym_id) in to another set
+     of coordinates will assign single-character chain IDs to the source
+     coordinates. Might it be better to just add a prefix to those ids?
+        - Wolfram Tempel
      ::: 1
 
    o Ryan Hibbs: 2 strands, low res map, user-defined distance restraint and
@@ -14,39 +38,19 @@
      linking in add_terminal_residue_complicado.
      allow_non_trival_linking ::: 2
 
-   o Fix the documentation generation (coot-dox.cfg needs to be generated from coot-dox.cfg.in)
-     because the source header files are not in the build directory. Useful?
-
-     http://chris-miceli.blogspot.co.uk/2011/01/integrating-doxygen-with-autotools.html
-
-     ::: 2
-
-   o put c-interface-refine.hh into the documenation generation ::: 1
-
-   o on merging molecules, remove the TER card if we are adding to an already existing chain.
-     Consider adding helices made of ALA.  Coot should make a new chain for these. Does it?
-     ::: 1
-
-   o in Find Ligands - make Conformer Options frame/entry dependent on flexible having been
-     clicked on. 
-     Add a signal connect for toggle of the button in fill_ligands_dialog_ligands_bits.
-     ::: 0.5
+* Have I fixed this problem already?
 
    o make cryo-EM mode in refinement work ::: 4
 
-   o qq-plot-map-and-model - is it in the documentation (and redefines)? ::: 0.5
+   o add  set_atom_attributes(SCM attribute_expression_list) to the documenation - preprocessing issues.
 
-   o pyrogen -nM -w -r Y03 - regularize it - it fails ::: 1
+   o add a button for refinement weight "Estimate": 0.6 -> 60 so 20 -> 60*0.6/20
 
-   o doing a merge and doing a chain chain ids should move over the Link records also.
-     Add a test ::: 1
+* Done.
 
-   o It appears that merging coordinates (read from cif with
-     multi-character label_asym_id and auth_asym_id) in to another set
-     of coordinates will assign single-character chain IDs to the source
-     coordinates. Might it be better to just add a prefix to those ids?
-        - Wolfram Tempel
-     ::: 1
+   o During Sphere Refine, where moving meets non-moving, interactive all-atom-contact dots
+     shows dots on links e.g cho-building, refine-tree, vs sphere-refine on 2nd NAG.
+     Also disulphides
 
 
 --------------
@@ -400,3 +404,70 @@ angle  292.05 [spec: model 1 "B" 464 "" " C1 " ""] [spec: model 1 "B" 141 "" " N
      should be. ::: 0.2
 
 * Can't reproduce
+
+   o put c-interface-refine.hh into the documenation generation ::: 1
+
+* Done.
+
+   o qq-plot-map-and-model - is it in the documentation (and redefines)? ::: 0.5
+
+* Done.
+
+   o delete item, change to delete side chain click (closes)
+     delete item, delete side chain radio button is active, but delete residue happens on click
+     ::: 1
+
+* Done
+
+   o expert mode in N-linked glyco addition
+
+In /Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/guile/gtk-2.0/gtk.scm:
+ 147:  0* [apply #<procedure #f ()> ()]
+In unknown file:
+   ?:  1  [#<procedure #f ()>]
+In /Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/gui-add-linked-cho.scm:
+    ...
+ 893:  2  (let* ((tree-type #)) (let* (#) (for-each # children) #t) #f)
+ 894:  3* (let* ((children #)) (for-each (lambda # #) children) #t)
+ 895:  4* [for-each #<procedure #f (child)> (# # # # ...)]
+In unknown file:
+   ?:  5* [#<procedure #f (child)> #<GtkButton 104b400e0>]
+In /Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/gui-add-linked-cho.scm:
+ 896:  6* (if # #)
+ 897:  7  [glyco-tree-dialog-set-button-active-state # # expert-user-mode]
+    ...
+ 849:  8  [gtk-widget-set-sensitive #<GtkButton 104b400e0> ...
+ 849:  9*  [string-member? "Add a NAG-ASN NAG" expert-user-mode]
+In /Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/coot-utils.scm:
+ 560: 10   (cond ((null? ls) #f) ((string=? atom (car ls)) #t) ...)
+ 562: 11*  [string=? "Add a NAG-ASN NAG" ...
+ 562: 12*   [car expert-user-mode]
+/Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/coot-utils.scm:562:20: In procedure car in expression (car ls):
+/Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/coot-utils.scm:562:20: Wrong type (expecting pair): expert-user-mode
+In /Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/guile/gtk-2.0/gtk.scm:
+ 147:  0* [apply #<procedure #f ()> ()]
+In unknown file:
+   ?:  1  [#<procedure #f ()>]
+In /Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/gui-add-linked-cho.scm:
+    ...
+ 893:  2  (let* ((tree-type #)) (let* (#) (for-each # children) #t) #f)
+ 894:  3* (let* ((children #)) (for-each (lambda # #) children) #t)
+ 895:  4* [for-each #<procedure #f (child)> (# # # # ...)]
+In unknown file:
+   ?:  5* [#<procedure #f (child)> #<GtkButton 104b400e0>]
+In /Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/gui-add-linked-cho.scm:
+ 896:  6* (if # #)
+ 897:  7  [glyco-tree-dialog-set-button-active-state # # expert-user-mode]
+    ...
+ 849:  8  [gtk-widget-set-sensitive #<GtkButton 104b400e0> ...
+ 849:  9*  [string-member? "Add a NAG-ASN NAG" expert-user-mode]
+In /Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/coot-utils.scm:
+ 560: 10   (cond ((null? ls) #f) ((string=? atom (car ls)) #t) ...)
+ 562: 11*  [string=? "Add a NAG-ASN NAG" ...
+ 562: 12*   [car expert-user-mode]
+/Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/coot-utils.scm:562:20: In procedure car in expression (car ls):
+/Users/pemsley/autobuild/build-coot+rdkit-pre-release-gtk2-python/share/coot/scheme/coot-utils.scm:562:20: Wrong type (expecting pair): expert-user-mode
+
+::: 1
+
+* Done.

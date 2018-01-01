@@ -631,7 +631,7 @@ int add_extra_bond_restraints_py(int imol, PyObject *extra_bond_restraints_py) {
    }
    return ebr_vec.size();
 }
-#endif // USE_GUILE
+#endif // USE_PYTHON
 
 
 int add_extra_torsion_restraint(int imol, 
