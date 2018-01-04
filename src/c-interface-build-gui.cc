@@ -376,7 +376,7 @@ void estimate_map_weight(GtkWidget *entry) {
       float mean = graphics_info_t::molecules[imol_map].map_mean();
       float sd   = graphics_info_t::molecules[imol_map].map_sigma();
 
-      float v = 50*0.6/sd;
+      float v = 50*0.3/sd;
       if (graphics_info_t::molecules[imol_map].is_EM_map())
 	 v *= 0.35;
       graphics_info_t::geometry_vs_map_weight = v;
@@ -1491,13 +1491,14 @@ show_fix_nomenclature_errors_gui(int imol,
 
 	 if (box) {
 	    // fill box
+
 	    for (unsigned int i=0; i<nomenclature_errors.size(); i++) {
 	       s = nomenclature_errors[i].first; // the residue type
 	       s += " ";
 	       s += nomenclature_errors[i].second.format();
 	       GtkWidget *l = gtk_label_new(s.c_str());
 	       gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(l), FALSE, FALSE, 2);
-	       gtk_widget_show(GTK_WIDGET(label));
+	       gtk_widget_show(GTK_WIDGET(l));
 	    }
 	 }
 	 gtk_widget_show(w);
