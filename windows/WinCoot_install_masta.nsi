@@ -25,6 +25,9 @@
 ; to detect windows version
 !include "WinVer.nsh"
 
+!ifndef src_dir
+!define src_dir "C:\MinGW\msys\1.0\home\bernhard\autobuild\MINGW32_NT-6.1-bernie-pc-pre-release-gtk2"
+!endif
 ; pre setting of Coot version
 !include "${src_dir}\coot-version"
 
@@ -488,10 +491,27 @@ Section /o "Windows feel" SEC02
 
 SectionEnd
 
+Section /o "Add probe&reduce" SEC03
+  ClearErrors
+  SetOverwrite on
+  SetOutPath "$INSTDIR\bin"
+  File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\probe.exe"
+  File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\reduce.exe"
+  SetOverwrite ifnewer
+
+  IfErrors 0 +5
+    ; ${ErrorHandler} 2 "Error in installation. Could not install probe&reduce." 1
+     DetailPrint "Error in installation. Could not install probe&reduce. Continuing."
+     SetErrorLevel 2
+     IfSilent +2 0
+        MessageBox MB_OK 'Error in Installation. Continuing!$\n$\r$\n$\rCould not install probe & reduce'
+
+SectionEnd
+
 ; we dont want guile for now
-; 2nd section for guile
+; 3rd section for guile
 !ifdef WITH_GUILE
-Section /o "Guile/Scheme Add-On" SEC03
+Section /o "Guile/Scheme Add-On" SEC04
   SetOverwrite on
   SetOutPath "$INSTDIR\bin"
   File "${src_dir}-guile\bin\coot-real.exe"
@@ -561,9 +581,10 @@ SectionEnd
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC01} "This is 'default' WinCoot (${WinCootVersion}) $\n$\nPython scripting only"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC02} "Tick if you want a $\nWindowsy feeling to WinCoot"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC03} "Select if you want $\nprobe and reduce installed.$\nNote: Not required if you have CCP4."
 ; disable guile for now
 !ifdef WITH_GUILE
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC02} "Tick if you want additionally $\nGuile/Scheme scripting"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC04} "Tick if you want additionally $\nGuile/Scheme scripting"
 !endif
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
@@ -690,6 +711,9 @@ Section Uninstall
   Delete "$INSTDIR\bin\pango-view.exe"
   Delete "$INSTDIR\bin\pkg-config.exe"
   Delete "$INSTDIR\bin\ppm2bmp.exe"
+  ; probe & reduce (optional?)
+  Delete "$INSTDIR\bin\probe.exe"
+  Delete "$INSTDIR\bin\reduce.exe"
   ; guile things
   Delete "$INSTDIR\bin\*guile*"
   Delete "$INSTDIR\bin\libgmp-3.dll"
@@ -843,11 +867,13 @@ Function .onInit
 
   ; logging
   ; if old log exists save simply (could be by date)
-  ; StrCpy $INSTDIR .
-  IfFileExists $INSTDIR\install.log 0 +4
-    IfFileExists $INSTDIR\install.log.1 0 +2
-      Delete $INSTDIR\install.log.1
-    Rename $INSTDIR\install.log $INSTDIR\install.log.1
+  ; StrCpy $TEMP .
+  ; Dont use INSTDIR as it doesnt exist from the beginning use $TEMP instead.
+  ; Maybe use a different place at some point.
+  IfFileExists $TEMP\install.log 0 +4
+    IfFileExists $TEMP\install.log.1 0 +2
+      Delete $TEMP\install.log.1
+    Rename $TEMP\install.log $TEMP\install.log.1
   LogSet on
 
     ; Get Command line parameters
@@ -1167,18 +1193,25 @@ ${If} $update = 0
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
   CreateDirectory "$SMPROGRAMS\$ICONS_GROUP"
   SetOutPath "$STARTDIR"
-  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico"
   CreateShortCut "$QUICKLAUNCH\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico"
   CreateShortCut "$DESKTOP\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico"
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico"
+  Sleep 10
   SetOutPath "$INSTDIR"
   CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\DynaRama.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\bin\dynarama.bat"' "$INSTDIR\bin\rama_all.ico"
+  Sleep 10
   WriteIniStr "$INSTDIR\WinCoot.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
   WriteIniStr "$INSTDIR\Coot.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE_2}"
   CreateShortCut "$SMPROGRAMS\WinCoot\WinCoot Website.lnk" "$INSTDIR\${PRODUCT_NAME}.url"
+  Sleep 10
   CreateShortCut "$SMPROGRAMS\WinCoot\Coot Website.lnk" "$INSTDIR\Coot.url"
+  Sleep 10
   CreateShortCut "$SMPROGRAMS\WinCoot\Uninstall.lnk" "$INSTDIR\uninst.exe"
+  Sleep 10
   CreateShortCut "$SMPROGRAMS\WinCoot\Coot Manual.lnk" "$INSTDIR\doc\coot-user-manual.pdf"
+  Sleep 10
   CreateShortCut "$SMPROGRAMS\WinCoot\Coot Keys and Buttons.lnk" "$INSTDIR\doc\crib-sheet.pdf"
+  Sleep 10
   CreateShortCut "$SMPROGRAMS\WinCoot\Coot Tutorial.lnk" "$INSTDIR\doc\tutorial.pdf"
   !insertmacro MUI_STARTMENU_WRITE_END
   SetOutPath "$INSTDIR"

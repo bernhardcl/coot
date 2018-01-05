@@ -364,6 +364,9 @@ if [ "$build_installer" = "0" ] ; then
    # some more extras (actually only required for newer msys!?
    wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/libgcc_s_dw2-1.dll
    wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/libstdc++-6.dll
+   # get probe and reduce (compiled self)
+   wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/probe.exe
+   wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/reduce.exe
    # now make the installer
    echo installer-progress > $PUBLIC_HTML_LOGS/gtk2-build-status
    echo
