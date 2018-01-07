@@ -1,0 +1,43 @@
+                           PROBE AND REDUCE
+                       from the Richardson Lab
+
+ Probe and Reduce are developed at the Richardson Laboratory at Duke
+ University, USA <http://kinemage.biochem.duke.edu/>. Provided versions
+ are compiled by Bernhard Lohkamp. No warranties. More information on 
+ the websites <http://kinemage.biochem.duke.edu/software/probe.php>, 
+ <http://kinemage.biochem.duke.edu/software/reduce.php> and below.
+
+                             Reduce 
+
+  Reduce is a program for adding hydrogens to a Protein DataBank (PDB) 
+molecular structure file. Hydrogens are added in standardized geometry 
+with optimization of the orientations of OH, SH, NH3+, Met methyls, Asn 
+and Gln sidechain amides, and His rings. Both proteins and nucleic 
+acids can be processed. HET groups can also be processed as long as the 
+atom connectivity is provided. A slightly modified version of the 
+connectivity table published by the PDB is available below. The program 
+is described in Word, et al.(1999) "Asparagine and glutamine: using 
+hydrogen atom contacts in the choice of sidechain amide orientation" 
+J. Mol. Biol. 285, 1735-1747.
+
+                              Probe 
+
+  The program Probe allows one to evaluate atomic packing, either within 
+or between molecules. It generates "contact dots" where atoms are in 
+close contact. Probe reads atomic coordinates from protein databank 
+(PDB) format files and writes dot-lists for inclusion in a kinemage 
+file. Alternatively, the packing information can be quantified and 
+displayed in a table listing scores for van der Waals interactions, 
+H-bonds and atomic overlaps ("clashes"). Essentially the inverse of the 
+Connolly algorithm, the approach is to place a very small probe 
+(typically of radius 0.25A) at points along the van der Waals surface 
+of a selected set of atoms and determine if this probe also contacts 
+atoms within a second "target" set. Probe provides a flexible method 
+for selecting the source and target atoms along with command line flags 
+for altering the probe radius and dot density. In addition, Probe can 
+generate contact surfaces within a set of atoms ("self dots") and even 
+"surface dots" where there are no nearby atoms. For a detailed 
+description see Word, et al. (1999), "Visualizing and Quantifying 
+Molecular Goodness-of-Fit: Small-probe Contact Dots with Explicit 
+Hydrogen Atoms" J. Mol. Biol. 285, 1709-1731.
+
