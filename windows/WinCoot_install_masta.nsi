@@ -65,12 +65,19 @@ Var STARTDIR
 !define MUI_HEADERIMAGE_BITMAP "C:\MinGW\msys\1.0\home\bernhard\installer\coot_pic_header.bmp"
 !define MUI_PAGE_CUSTOMFUNCTION_PRE InitPreFunction
 !insertmacro MUI_PAGE_WELCOME
-; License page
-!define MUI_PAGE_CUSTOMFUNCTION_PRE CheckForUpdate
-!insertmacro MUI_PAGE_LICENSE "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\COPYING"
 ; Components page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE CheckForUpdate
 !insertmacro MUI_PAGE_COMPONENTS
+; License page
+!define MUI_PAGE_CUSTOMFUNCTION_PRE CheckForUpdate
+!define MUI_LICENSEPAGE_TEXT_TOP "Coot licence"
+!define MUI_LICENSEPAGE_CHECKBOX
+!insertmacro MUI_PAGE_LICENSE "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\COPYING"
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipProbeReduceInfo
+!define MUI_LICENSEPAGE_TEXT_TOP "Probe && Reduce information"
+!define MUI_LICENSEPAGE_TEXT_BOTTOM "This is just for your information. No licence as such is required."
+!define MUI_LICENSEPAGE_BUTTON "Got it!"
+!insertmacro MUI_PAGE_LICENSE "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\probe_reduce.txt"
 ; Directory page (install directory)
 !define MUI_PAGE_CUSTOMFUNCTION_PRE ComponentPost
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW DirectoryShow
@@ -491,12 +498,15 @@ Section /o "Windows feel" SEC02
 
 SectionEnd
 
+; probe and reduce here 
 Section /o "Add probe&reduce" SEC03
   ClearErrors
   SetOverwrite on
   SetOutPath "$INSTDIR\bin"
   File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\probe.exe"
   File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\reduce.exe"
+  SetOutPath "$INSTDIR\share\coot"
+  File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\reduce_wwPDB_het_dict.txt"
   SetOverwrite ifnewer
 
   IfErrors 0 +5
@@ -508,9 +518,9 @@ Section /o "Add probe&reduce" SEC03
 
 SectionEnd
 
+!ifdef WITH_GUILE
 ; we dont want guile for now
 ; 3rd section for guile
-!ifdef WITH_GUILE
 Section /o "Guile/Scheme Add-On" SEC04
   SetOverwrite on
   SetOutPath "$INSTDIR\bin"
@@ -1093,6 +1103,13 @@ FunctionEnd
 Function CheckForUpdate
   ${If} $update = 1
      Abort
+  ${EndIf}
+FunctionEnd
+
+; to skip the probe & reduce info if we dont install this
+Function SkipProbeReduceInfo
+  ${IfNot} ${SectionIsSelected} ${SEC03}
+     abort ; no selected
   ${EndIf}
 FunctionEnd
 

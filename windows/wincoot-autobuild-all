@@ -367,6 +367,8 @@ if [ "$build_installer" = "0" ] ; then
    # get probe and reduce (compiled self)
    wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/probe.exe
    wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/reduce.exe
+   wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/reduce_wwPDB_het_dict.txt
+   wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/probe_reduce.txt
    # now make the installer
    echo installer-progress > $PUBLIC_HTML_LOGS/gtk2-build-status
    echo
