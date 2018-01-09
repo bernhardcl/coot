@@ -587,6 +587,19 @@ def set_reduce_het_dict():
         os.environ['REDUCE_HET_DICT'] = red_het_dict
         return True
       else:
-        print "BL WARNING:: could neither find nor set REDUCE_HET_DICT !"
-        return False
+        # before we give up check in share/coot
+        # this is where the windows installer shall put it
+        prefix_dir = os.getenv("COOT_PREFIX")
+        if not prefix_dir:
+          pkg_data_dir = pkgdatadir()
+        else:
+          pkg_data_dir = os.path.join(prefix_dir, "share", "coot")
+        red_het_file = os.path.join(pkg_data_dir, red_het_file)
+        if (os.path.isfile(red_het_dict)):
+          os.environ['REDUCE_HET_DICT'] = red_het_dict
+          return True
+        else:
+          # finally give up
+          print "BL WARNING:: could neither find nor set REDUCE_HET_DICT !"
+          return False
       

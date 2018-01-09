@@ -227,10 +227,12 @@ class UsingActiveAtom:
     
     > with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code, aa_atom_name, aa_alt_conf]:
           refine_zone(aa_imol, aa_chain_id, aa_res_no-2, aa_res_no+2, aa_ins_code)
+
     alternative usage to get res_spec as well
 
     > with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code, aa_atom_name, aa_alt_conf, aa_res_spec]:
           refine_zone(aa_imol, aa_chain_id, aa_res_no-2, aa_res_no+2, aa_ins_code)
+
     """
     
     def __init__(self, with_res_spec=False):
@@ -1033,8 +1035,6 @@ def atom_spec_to_alt_loc(atom_spec):
         return atom_spec[4]
     else:
         return False
-    
-    
 #
 def residue_info_dialog_displayed_qm():
     if (residue_info_dialog_is_displayed == 1):
@@ -3961,7 +3961,9 @@ def merge_solvent_chains(imol):
             change_chain_id(imol, chain_id, master_chain, 1,
                             new_start, new_end)
             last_prev_water = new_end
-            
+
+          
+    
 
 # helper to comvert functions to strings
 def cmd2str(*args):
@@ -4197,7 +4199,7 @@ def setup_ccp4():
                     if len(key) > 1:
                         # dir should be:
                         value = os.path.join(*key)
-                        #print "BL DEBUG:: set env variable to", env_var, value
+                            #print "BL DEBUG:: set env variable to", env_var, value
                         if os.path.isdir(value):
                             os.environ[env_var] = value
                     else:
@@ -4294,15 +4296,12 @@ def rename_alt_confs_active_residue():
 
         rename_alt_confs(imol, chain_id, resno, inscode)
 
-
 # Moved from gui_add_linked_cho.py to make a global function.
 def delete_residue_by_spec(imol, spec):
     delete_residue(imol,
                    residue_spec_to_chain_id(spec),
                    residue_spec_to_res_no(spec),
                    residue_spec_to_ins_code(spec))
-
-
 # Util function to pipe Coot C stdout to a file (Note: python stdout doesnt
 # touch C stdout, therefore this is needed. Of course could just tee out
 # all output, but that may not always be required).
@@ -4352,8 +4351,6 @@ def stdout_redirected(to=os.devnull, stdout=None):
             stdout.flush()
             os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
 
-
-    
 
 ####### Back to Paul's scripting.
 ####### This needs to follow find_exe
