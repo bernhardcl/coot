@@ -110,7 +110,6 @@ Var STARTDIR
 ; for replacing strings
 !include "WordFunc.nsh"
 !insertmacro WordReplace
-
 ; actually a macro wrapping the error handler function
 ; well, doesnt seem to work and always throws errors
 ; itself somewhere, so revert to old school if and repeating
@@ -462,7 +461,6 @@ Section "!WinCoot" SEC01
   SetOutPath "$INSTDIR\coot-backup"
   ; set outpath to $INSTDIR so that shortcuts are started in $INSTDIR
   SetOutPath "$INSTDIR"
-
   IfErrors 0 +6
 ;    ${ErrorHandler} 1 "Error in installation. Could not write files." 1
      DetailPrint "Error in installation. Could not write files."
@@ -481,7 +479,6 @@ Section /o "Windows feel" SEC02
   File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\cootrc"
   SetOverwrite ifnewer
 ;  maybe here the other guile things?!
-
   IfErrors 0 +5
   ;  ${ErrorHandler} 2 "Error in installation. Could not install Windows feel." 1
      DetailPrint "Error in installation. Could not install Windows feel. Continuing."
@@ -522,7 +519,6 @@ SectionEnd
 ; WITH_GUILE
 
 Section -AddIcons
-
   ;; First install for all users, if anything fails, install
   ;; for current user only.
   ClearErrors
@@ -544,14 +540,12 @@ Section -AddIcons
   ; won't be edited.
   IfSilent 0 +2
     Call FinishPagePreFunction
-
   IfErrors 0 +5
     ; ${ErrorHandler} 3 "Error in installation. Could not install icons." 0
     DetailPrint "Error in installation. Could not install icons. Continuing."
     SetErrorLevel 3
     IfSilent +2 0
         MessageBox MB_OK 'Error in Installation. Continuing!$\n$\r$\n$\rCould not install icons.'
-
 SectionEnd
 
 Section -Post
@@ -565,14 +559,12 @@ Section -Post
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
-
   IfErrors 0 +5
     ; ${ErrorHandler} 4 "Error in installation. Could not write uninstaller." 0
     DetailPrint "Error in installation. Could not write uninstaller."
     SetErrorLevel 4
     IfSilent +2 0
         MessageBox MB_OK 'Error in Installation. Continuing!$\n$\r$\n$\rCould not write uninstaller.'
-
 SectionEnd
 
 
@@ -838,14 +830,12 @@ Section Uninstall
 ;  DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
 ;  DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
   SetAutoClose true
-
   IfErrors 0 +5
     ;${UnErrorHandler} 5 "Error in uninstallation. Could not completely uninstall." 1
     DetailPrint "Error in uninstallation. Could not completely uninstall."
     SetErrorLevel 5
     IfSilent +2 0
         MessageBox MB_OK 'Error in Uninstallation. Aborting!$\n$\r$\n$\rCould not completely uninstall.'
-
 SectionEnd
 
 ######################
@@ -862,7 +852,6 @@ FunctionEnd
 !endif
 
 Function .onInit
-
   ClearErrors
 
   ; logging
@@ -932,7 +921,6 @@ Function .onInit
   ${If} $STARTDIR == ""
     StrCpy $STARTDIR "$INSTDIR"
   ${EndIf}
-
   IfErrors 0 +6
     ;${ErrorHandler} 6 "Error in installation. Could not initiate installation." 1
     DetailPrint "Error in installation. Could not initiate installation."
@@ -968,7 +956,6 @@ Function .onGUIEnd
     SetOutPath $STARTDIR
     Exec $INSTDIR\wincoot.bat
   ${EndIf}
-
   IfErrors 0 +6
     ; ${ErrorHandler} 7 "Error in installation. Could not write/edit runwincoot.bat." 1
     DetailPrint "Error in installation. Could not write/edit runwincoot.bat."
@@ -1136,7 +1123,8 @@ Function FinishPagePreFunction
    ${If} ${AtLeastWinVista}
        ; change to run on 1 core only (to enable compositing!)
        !insertmacro AdvReplaceInFile "coot-bin.exe" "start /affinity 1 coot-bin.exe" "0" "1" "$INSTDIR\wincoot.bat.tmp"
-   ${EndIf}
+     ${EndIf}
+
    ; if we have an old bat file
    ${If} $have_bat == "True"
      ; check if wincootbats are different
@@ -1217,5 +1205,4 @@ ${If} $update = 0
   SetOutPath "$INSTDIR"
  ${Endif}
 FunctionEnd
-
 
