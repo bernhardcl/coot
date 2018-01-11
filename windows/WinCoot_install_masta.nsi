@@ -271,7 +271,6 @@ Section "!WinCoot" SEC01
   File "${src_dir}\bin\findligand"
   File "${src_dir}\bin\findwaters"
   File "${src_dir}\bin\coot-fix-nomenclature-errors.exe"
-  File "${src_dir}\bin\dynarama"
   File "${src_dir}\bin\gdk-pixbuf-csource.exe"
   File "${src_dir}\bin\gdk-pixbuf-query-loaders.exe"
   File "${src_dir}\bin\glib-genmarshal.exe"
@@ -676,8 +675,10 @@ Section Uninstall
   Delete "$INSTDIR\bin\coot-density-score-by-residue"
   Delete "$INSTDIR\bin\density-score-by-residue-bin.exe"
   Delete "$INSTDIR\bin\density-score-by-residue"
-  Delete "$INSTDIR\bin\dynarama"
   Delete "$INSTDIR\bin\dynarama-bin.exe"
+  Delete "$INSTDIR\bin\dynarama.bat"
+  Delete "$INSTDIR\bin\dynarama"
+  Delete "$INSTDIR\bin\rama_all.ico"
   Delete "$INSTDIR\bin\findligand"
   Delete "$INSTDIR\bin\findligand-bin.exe"
   Delete "$INSTDIR\bin\findligand-real.exe"
@@ -873,7 +874,12 @@ Function .onInit
     IfFileExists $TEMP\install.log.1 0 +2
       Delete $TEMP\install.log.1
     Rename $TEMP\install.log $TEMP\install.log.1
+  ; Seems install.log always goes to $INSTDIR, since this doesnt
+  ; exists yet we try to set it in another way 
+  Push $INSTDIR 
+  StrCpy $INSTDIR $TEMP 
   LogSet on
+  Pop $INSTDIR 
 
     ; Get Command line parameters
         var /GLOBAL INSTDIR_TMP
