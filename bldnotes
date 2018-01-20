@@ -1,63 +1,41 @@
  -*-text-*-
 
-scripts      rev 5732 (some prodrg stuff needs testing) generic objects, update running of jligand?! (r4782, need to use gtk.gdk.pixbuf_new_from_file() then) , check_ligand.py is dummy dict-gen for windows...
 check drugbox in python
-tests        rev 5460 update
+python i sup to date until py-update tag
+
 build-it-win rev 4739 (check 0.8 pre builder, add publishing?!)
-missing script:
-ligand_check.py
-run_mogul.py 
-ligand_check_refmac_columns in enhanced_ligand.py
-enhanced_ligand.py      test it
 
-Dictionaries:
+python scripts:
+run_mogul.py needs checking with mogul (I dont have it)
+
+Dictionaries to be checked:
 KCX, TPP
+
 -------------------------------------------------------
-* THINGS TO DO BEFORE 0.8.1 RELEASE * ONLY URGENT THING
+* THINGS TO DO BEFORE 0.8.9.1 RELEASE * ONLY URGENT THING
 -------------------------------------------------------
-Aniso not working on windows machines 0.8.8 (incl build machine) was ok 0.8.2 
-	rev 5761 (ok on my machine too) => check libraries
-
-New Rama: drag residues->switch to selection and rather refine (e.g. add
-	extra torsion to ref target)?!
-
-
-check up to dateness of supplied manuals
 
 refinement selection with insertion code not working
 
-Fix installer guile warning for windows feel.
 
-
-
--- before 0.8
+-- before 0.9?
 
 Windows:
  o replace msys with HOME in wincoot build scripts
  o in general make wincoot build more general/compatible
  o check installer on win 8 (hangs after finished)
  o distribute src code!!!
- o change runwincoot.bat to (win)coot.bat
  o write things to WINDIR (rather than HOME)
  o check if    clipper::ClipperInstantiator::instance().destroy(); is still needed in c-interface-gui.cc
 
 ---- FINISH URGENT ----
 
 Tsukuba 2014:
-- toolbuttons (or such - combobox/menu?) to switch on/off helix/strand restraints 
-
- * Done, but missing integration
-- DB loop for guile -> activate?!
 - BUG (?):dock sequence window stuck at ~ 7 sequences - maybe not, but not scrollable
 
 BioCrys 2012:
 - sequencing GUI: give more approriate error messages, e.g. if chain 
 	id is missing 
-- preferences of older Coot versions may not be compatible with newer ones.
-	Maybe only try to import, to avoid crashes!
-- Tutorial 2: 
-  o try to move baton building to later
-  o update position of baton build (other modelling tools or such)
 
 CCP4 APS 2012:
 - GUI for patterson (Garib)
@@ -69,7 +47,6 @@ CCP4 SW:
 
 - add nomenclature error check to preferences
 - show all bond distances (angles etc?) for ligand/residue
-- update WIKI (key bindings)
 
 OIST-CCP4
 - indicate rotamer option somewhere/how [PhilE]
@@ -84,11 +61,9 @@ OIST-CCP4
   .. maybe alignment parameters should be cutsomisable....
 
 APS 2011(?)
-- copy NCS (chain and residue range) to specific chains (not just all)
 - wider range for B sharpening (est. from Wilson?! determine cf Bruenger?) - needed?
 - automatically adjust NCS matrix type (i.e. fast for larger mols/more ncs)
 - backrub selection in refinement selection dialog
-- 
 
 CCP4
 - baton build no chainid (?)
@@ -117,6 +92,8 @@ scripting exercise
 ----------------
 
 **** General ****
+
+   o optimise sharpen B on kurtosis, e.g. use only a part of the unit cell for large maps (but which one? results will depend on the selection).
 
    o revisit anti-aliasing. Seems we need to antialias before drawing map 
 	and lines and not in general, I think.
@@ -557,7 +534,7 @@ low importance
 
 **** Windows ****
 
-   o distribute probe and reduce (from Richardsons? if not ccp4)
+   o check up to dateness of supplied manuals
 
    o make batch msi (using msiwrapperbatch and config file)
 
@@ -701,6 +678,9 @@ low importance
 
 
 **** dynarama ****
+
+   o New Rama: drag residues->switch to selection and rather refine (e.g. add
+	extra torsion to ref target)?!
 
    o give phi-psi info in tooltip (maybe optional)
 
@@ -1133,3 +1113,32 @@ Osaka 2010
    o fix probe/reduce from ccp4 
 
 * Done 
+
+Aniso not working on windows machines 0.8.8 (incl build machine) was ok 0.8.2 
+	rev 5761 (ok on my machine too) => check libraries
+
+* Done (at least no issue any more)
+
+   o distribute probe and reduce (from Richardsons? if not ccp4)
+
+* Done 0.8.9
+ 
+Fix installer guile warning for windows feel.
+
+* Done (i.e. not there any more)
+
+ o change runwincoot.bat to (win)coot.bat
+
+* Done (0.8.9)
+
+ o toolbuttons (or such - combobox/menu?) to switch on/off helix/strand restraints 
+
+ * Done, but missing integration
+
+ o DB loop for guile -> activate?!
+
+* Done
+
+ o copy NCS (chain and residue range) to specific chains (not just all)
+
+* Done (could use a gui)

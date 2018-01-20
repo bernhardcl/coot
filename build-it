@@ -1426,7 +1426,7 @@ echo Date: $date
 
 # now in $AUTOBUILD_BUILD
 BUILDING_DIR=${BUILDING_DIR:=${HOST}_$date}
-mkdir_maybe $BUILDING_DIR
+mkdir $BUILDING_DIR
 if [ $? -ne 0 ] ; then
 	echo mkdir  $BUILDING_DIR failed for some reason. Now in `pwd`
 fi
