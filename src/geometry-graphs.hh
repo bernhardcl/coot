@@ -200,12 +200,12 @@ namespace coot {
 				  int offset, 
 				  const std::vector<b_factor_block_info_t> &biv);
 
-      void render_b_factor_blocks(      int imol,
-                                        int ichain,
-                                        const std::string  &chain_id,
-                                        int offset,
-                                        const std::vector<b_factor_block_info_t> &biv,
-                                        double scale_val        );
+      void render_b_factor_blocks_with_scale(int imol,
+                                             int ichain,
+                                             const std::string  &chain_id,
+                                             int offset,
+                                             const std::vector<b_factor_block_info_t> &biv,
+                                             double scale_val);
 
       void render_omega_blocks(const omega_distortion_info_container_t &om_dist,
 			       int chain_number,

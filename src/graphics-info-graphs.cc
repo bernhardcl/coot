@@ -745,7 +745,7 @@ graphics_info_t::calc_b_factor_graphs(int imol) {
 
 #ifdef HAVE_GSL
 #if defined(HAVE_GNOME_CANVAS) || defined(HAVE_GTK_CANVAS)
-   double bscale=b_factor_scale;
+   double bscale = b_factor_graph_scale_factor;
    if (imol<n_molecules())
       if (imol >= 0)
          if (molecules[imol].has_model()) {
@@ -865,7 +865,7 @@ graphics_info_t::calc_b_factor_graphs(int imol) {
                         double rscale = 40.0/m2s;
                         for (unsigned int ich=0; ich<n_chains; ich++)
                                 if (ich < bfa_chain_info.size())
-                                        graphs->render_b_factor_blocks( imol, ich, bfa_chain_info[ich].chain_id,
+                                        graphs->render_b_factor_blocks_with_scale( imol, ich, bfa_chain_info[ich].chain_id,
                                                           voff[ich], vbfiv[ich], bscale*rscale );
                }
             }
@@ -880,7 +880,8 @@ graphics_info_t::b_factor_graphs(int imol) {
 
 #ifdef HAVE_GSL
 #if defined(HAVE_GNOME_CANVAS) || defined(HAVE_GTK_CANVAS)
-   double bscale=b_factor_scale;
+   // Not sure if we want the scale factor here probably not.
+   // double bscale = b_factor_graph_scale_factor;
    if (imol<n_molecules())
       if (imol >= 0)
          if (molecules[imol].has_model()) {
@@ -945,7 +946,7 @@ graphics_info_t::b_factor_graphs(int imol) {
                         for (unsigned int ich=0; ich<n_chains; ich++)
                                 if (ich < bfa_chain_info.size())
                                           graphs -> render_b_factor_blocks( imol, ich, bfa_chain_info[ich].chain_id,
-                                                          voff[ich], vbfiv[ich] , bscale*rscale );
+                                                          voff[ich], vbfiv[ich]);
                }
             }
          }

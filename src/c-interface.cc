@@ -6644,11 +6644,11 @@ void change_peptide_carbonyl_by_current_button_pos(int ix, int iy) {
 } 
 
 void
-set_b_factor_scale( double bfs ){
+set_b_factor_graph_scale_factor( double bfs ){
         if( bfs > 0)
-                graphics_info_t::b_factor_scale = bfs;
+                graphics_info_t::b_factor_graph_scale_factor = bfs;
         else
-                graphics_info_t::b_factor_scale = 1.0;
+                graphics_info_t::b_factor_graph_scale_factor = 1.0;
 }
 
 

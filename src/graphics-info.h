@@ -1466,7 +1466,7 @@ public:
      return directory_for_filechooser;
    }
 
-   static float b_factor_scale;
+   static float b_factor_graph_scale_factor;
    
    static int map_line_width;
 
