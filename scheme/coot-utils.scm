@@ -469,6 +469,14 @@
 (define (shelx-molecule? imol)
   (= (is-shelx-molecule imol) 1))
 
+;; return an int. 0 means no, 1 means yes, -1 on error
+;;
+(define is-protein-chain? is-protein-chain-p)
+
+;; return an int. 0 means no, 1 means yes, -1 on error
+;;
+(define is-nucleotide-chain? is-nucleotide-chain-p)
+
 
 ;;; No! don't define this.  It is misleading.  It can return 0, which
 ;;; is true!  use instead valid-model-molecule?
@@ -2312,7 +2320,6 @@
 	    (begin
 	      (format #t "we have dict and model for tlc already~%")
 	      have-tlc-molecule)))))
-      
 
   ;; 
   (define (mutate-it)
@@ -2354,7 +2361,7 @@
 			      ))
 			(accept-regularizement)
 			(set-refinement-immediate-replacement replacement-state))
-		      
+
 		      (set-mol-displayed imol-ligand 0)
 		      (set-mol-active imol-ligand 0)))))))))
 
