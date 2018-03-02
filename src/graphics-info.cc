@@ -261,8 +261,9 @@ GtkWidget *graphics_info_t::wrapped_nothing_bad_dialog(const std::string &label)
       GtkWidget *label_widget = lookup_widget(w, "nothing_bad_label");
       gtk_label_set_use_markup(GTK_LABEL(label_widget), TRUE); // needed?
       gtk_label_set_text(GTK_LABEL(label_widget), label.c_str());
+      gtk_window_set_transient_for(GTK_WINDOW(w), GTK_WINDOW(lookup_widget(graphics_info_t::glarea, "window1")));
    }
-      return w;
+   return w;
 }
 
 void
@@ -1659,7 +1660,7 @@ graphics_info_t::drag_refine_refine_intermediate_atoms() {
       std::cout << "Null last restraints " << std::endl;
       return retprog;
    }
-   
+
    // While the results of the refinement are a conventional result
    // (unrefined), let's continue.  However, there are return values
    // that we will stop refining and remove the idle function is on a
