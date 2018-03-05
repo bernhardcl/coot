@@ -523,11 +523,21 @@ coot::restraints_container_t::init_from_residue_vec(const std::vector<std::pair<
       std::cout << "debug::info in init_from_residue_vec() calling bonded_flanking_residues_by_residue_vector() "
 		<< std::endl;
 
-   bonded_pair_container_t bpc = bonded_flanking_residues_by_residue_vector(geom);
+   float dist_crit = 2.3; // 20170924-PE was 3.0 but this made a horrible link in a tight turn
+                          // (which I suspect is not uncommon) crazy-neighbour-refine-519.pdb
+                          // for EMDB 6224.
+                          // 520 was bonded to 522 in a neighb (3-residue) refine on 519.
+                          // This function is called by init (and (I think) make_restraints)
+                          // init doesn't set bonded_pairs_container (make_restraints does that).
+
+   std::map<mmdb::Residue *, std::set<mmdb::Residue *> > neighbour_set = residues_near_residues(residues_vec, mol, dist_crit);
+   std::map<mmdb::Residue *, std::set<mmdb::Residue *> >::const_iterator it_map;
+
+   bonded_pair_container_t bpc = bonded_flanking_residues_by_residue_vector(neighbour_set, geom);
 
    // internal variable non_bonded_neighbour_residues is set by this
    // function:
-   set_non_bonded_neighbour_residues_by_residue_vector(bpc, geom);
+   set_non_bonded_neighbour_residues_by_residue_vector(neighbour_set, bpc, geom);
 
    // std::cout << "   DEBUG:: made " << bpc.size() << " bonded flanking pairs " << std::endl;
 
@@ -535,9 +545,8 @@ coot::restraints_container_t::init_from_residue_vec(const std::vector<std::pair<
    // 
    std::vector<mmdb::Residue *> all_residues;
    std::vector<mmdb::Residue *>::const_iterator it;
-   for (unsigned int i=0; i<residues.size(); i++) {
+   for (unsigned int i=0; i<residues.size(); i++)
       all_residues.push_back(residues[i].second);
-   }
 
    // Include only the fixed residues, because they are the flankers,
    // the other residues are the ones in the passed residues vector.
@@ -907,6 +916,28 @@ coot::operator<<(std::ostream &s, const simple_restraint &r) {
       s << "Rama   ";
    s << "}";
    return s;
+}
+
+std::string
+coot::simple_restraint::type() const {
+
+   std::string s;
+   if (restraint_type == coot::BOND_RESTRAINT)
+      s = "Bond";
+   if (restraint_type == coot::ANGLE_RESTRAINT)
+      s = "Angle";
+   if (restraint_type == coot::TORSION_RESTRAINT)
+      s = "Torsion";
+   if (restraint_type == coot::PLANE_RESTRAINT)
+      s = "Plane";
+   if (restraint_type == coot::NON_BONDED_CONTACT_RESTRAINT)
+      s = "NBC";
+   if (restraint_type == coot::CHIRAL_VOLUME_RESTRAINT)
+      s = "Chiral";
+   if (restraint_type == coot::RAMACHANDRAN_RESTRAINT)
+      s = "Rama";
+   return s;
+   
 }
 
 
@@ -1726,7 +1757,6 @@ coot::restraints_container_t::make_restraints(int imol,
       if (sec_struct_pseudo_bonds == coot::STRAND_PSEUDO_BONDS) {
 	 make_strand_pseudo_bond_restraints();
       }
-
 
       if (restraints_usage_flag & coot::NON_BONDED_MASK) {
 	 if ((iret_prev > 0) || are_all_one_atom_residues) {
@@ -2795,7 +2825,81 @@ coot::restraints_container_t::closest_approach(mmdb::Residue *r1, mmdb::Residue 
 } 
 
 
+// 20180224 New-style: Post Weizmann 
+//
+// find residues in the neighbourhood that are not in the refining set
+// and are not already marked as bonded flankers.
+//
+// set the class variable non_bonded_neighbour_residues
+void
+coot::restraints_container_t::set_non_bonded_neighbour_residues_by_residue_vector(const std::map<mmdb::Residue *, std::set<mmdb::Residue *> > &neighbour_set,
+										  const coot::bonded_pair_container_t &bonded_flanking_pairs, const coot::protein_geometry &geom) {
 
+   // non_bonded_neighbour_residues becomes this:
+   //
+   std::vector<mmdb::Residue *> nbr; // non-bonded residues 
+   float dist_crit = 3.0;
+
+   std::map<mmdb::Residue *, std::set<mmdb::Residue *> >::const_iterator it_map;
+
+   // don't iterate like this:
+   // for (unsigned int ir=0; ir<residues_vec.size(); ir++) {
+   // std::vector<mmdb::Residue *> neighbours =
+   // coot::residues_near_residue(residues_vec[ir].second, mol, dist_crit);
+
+   for(it_map=neighbour_set.begin(); it_map!=neighbour_set.end(); it_map++) {
+
+      const std::set<mmdb::Residue *> &neighbours = it_map->second;
+      std::set<mmdb::Residue *>::const_iterator it_set;
+
+      for (it_set=neighbours.begin(); it_set!=neighbours.end(); it_set++) {
+	 mmdb::Residue *test_res = *it_set;
+	 if (std::find(nbr.begin(), nbr.end(), test_res) == nbr.end()) {
+	    // not already there...
+	    bool found = false;
+
+	    if (false) // debug
+	       std::cout << ".... about to compare " << residue_spec_t(test_res) << " to "
+			 << residues_vec.size() << " refining residues " << std::endl;
+	    for (unsigned int ires=0; ires<residues_vec.size(); ires++) {
+	       if (test_res == residues_vec[ires].second) {
+		  found = true;
+		  break;
+	       }
+	    }
+
+	    if (! found) {
+	       // OK, so this neighbour was not in the passed set of
+	       // moving residues (and not already in nbr)... it can
+	       // be a flanking residue then...
+
+	       // check that it is not a bonded flanking residue...
+	       for (unsigned int iflank=0; iflank<bonded_flanking_pairs.size(); iflank++) { 
+		  if (bonded_flanking_pairs[iflank].res_1 == test_res) {
+		     found = 1;
+		     // std::cout << "      oops bonded flanking residue res1 " << std::endl;
+		     break;
+		  } 
+		  if (bonded_flanking_pairs[iflank].res_2 == test_res) {
+		     found = 1;
+		     // std::cout << "   oops bonded flanking residue res2 " << std::endl;
+		     break;
+		  }
+	       }
+
+	       if (! found) {
+		  // std::cout << ".... adding non-bonded neighbour " << residue_spec_t(test_res) << std::endl;
+		  nbr.push_back(test_res);
+	       }
+	    }
+	 }
+      }
+   }
+   non_bonded_neighbour_residues = nbr;
+}
+
+// 20180224 pre-Weizmann
+//
 // find residues in the neighbourhood that are not in the refining set
 // and are not already marked as bonded flankers.
 // 
@@ -3628,7 +3732,7 @@ coot::restraints_container_t::symmetry_non_bonded_contacts(bool print_table) {
 	 std::cout << "\n";
       }
    }
-} 
+}
 
 
 // fill the member data filtered_non_bonded_atom_indices
@@ -3905,7 +4009,7 @@ coot::restraints_container_t::construct_non_bonded_contact_list_by_res_vec(const
 			 << " matched_oxt: " << matched_oxt << std::endl;
 
 	    if (! matched_oxt) {
-	    
+
 	       // In this section, we don't want NCBs within or to fixed
 	       // residues (including the flanking residues), so if both
 	       // atoms are in residues that are not in residue_vec, then
@@ -3946,6 +4050,14 @@ coot::restraints_container_t::construct_non_bonded_contact_list_by_res_vec(const
       }
    }
 
+   if (false) { // debug - how many bonded atoms are we talking about here?
+      int n = 0;
+      for (int iat=0; iat<n_atoms; iat++) {
+	 n += bonded_atom_indices[iat].size();
+      }
+      std::cout << "DEBUG:: " << n << " bonded atom pairs to check " << std::endl;
+   }
+
    // now add NBC restraints between atoms that are moving and atoms
    // of the neighbour residues.
    // 
@@ -3983,9 +4095,9 @@ coot::restraints_container_t::construct_non_bonded_contact_list_by_res_vec(const
 			   bpc.match_info(bonded_atom_residue, other_atom_residue);
 
 			if (! mi.state) {
-		      
+
 			   // Simple part, the residues were not bonded to each other.
-		     
+
 			   if (! is_member_p(bonded_atom_indices[iat], jat)) {
 			
 			      // atom j is not bonded to atom i, is it close? (i.e. within dist_crit?)
@@ -4224,10 +4336,15 @@ coot::restraints_container_t::add_N_terminal_residue_bonds_and_angles_to_hydroge
    int N_index = -1; // residue-based. -2 is "checked and not here", -1 is "not check"
    int CA_index = -1;  // ditto
 
+   // we need the map to deal with the alt-confs
+   std::map<std::string, int> h1s;
+   std::map<std::string, int> h2s;
+   std::map<std::string, int> h3s;
+
    for (int i=0; i<n_residue_atoms; i++) {
       mmdb::Atom *at = residue_atoms[i];
       std::string atom_name(at->GetAtomName());
-      if (atom_name == " H1 " || atom_name == " H2 " || atom_name == " H3 ") {
+      if (atom_name == " H1 " || atom_name == " H2 " || atom_name == " H3 ") {  // PDBv3 FIXME
 	 if (N_index == -1) // unset
 	    N_index  = get_N_index(residue_p);
 	 if (CA_index == -1)
@@ -4252,9 +4369,56 @@ coot::restraints_container_t::add_N_terminal_residue_bonds_and_angles_to_hydroge
 	       n_bond_restraints++;
 	       rc.n_bond_restraints++;
 	       rc.n_angle_restraints++;
+	       bonded_atom_indices[atom_index_1].push_back(atom_index_2);
+	       bonded_atom_indices[atom_index_2].push_back(atom_index_1);
+	       bonded_atom_indices[atom_index_1].push_back(atom_index_3);
+	       bonded_atom_indices[atom_index_3].push_back(atom_index_1);
 
-	       // are nbcs still being applied between these atoms?
 	    }
+	 }
+
+	 // PDBv3 FIXME
+
+	 // store atoms for inter-hydrogen angle restraints
+	 if (atom_name == " H1 ") {
+	    int ai;
+	    at->GetUDData(udd_atom_index_handle, ai);
+	    h1s[at->altLoc] = ai;
+	 }
+	 if (atom_name == " H2 ") {
+	    int ai;
+	    at->GetUDData(udd_atom_index_handle, ai);
+	    h2s[at->altLoc] = ai;
+	 }
+	 if (atom_name == " H3 ") {
+	    int ai;
+	    at->GetUDData(udd_atom_index_handle, ai);
+	    h3s[at->altLoc] = ai;
+	 }
+      }
+   }
+
+   // Now do the inter-hydrogen angle restraints
+
+   if (N_index >= 0) {
+      std::map<std::string, int>::const_iterator it_1, it_2, it_3;
+      for(it_1=h1s.begin(); it_1!=h1s.end(); it_1++) {
+	 const std::string &key_alt_conf = it_1->first;
+	 it_2 = h2s.find(key_alt_conf);
+	 it_3 = h3s.find(key_alt_conf);
+	 if (it_2 != h2s.end()) {
+	    std::vector<bool> fixed_flags_a12 = make_fixed_flags(it_1->second, N_index, it_2->second);
+	    add(ANGLE_RESTRAINT, it_1->second, N_index, it_2->second, fixed_flags_a12, 109.5, 2.0, 0.0);
+	 }
+
+	 if (it_3 != h3s.end()) {
+	    std::vector<bool> fixed_flags_a13 = make_fixed_flags(it_1->second, N_index, it_3->second);
+	    add(ANGLE_RESTRAINT, it_1->second, N_index, it_3->second, fixed_flags_a13, 109.5, 2.0, 0.0);
+	 }
+
+	 if (it_2 != h2s.end() && it_3 != h3s.end()) {
+	    std::vector<bool> fixed_flags_a23 = make_fixed_flags(it_2->second, N_index, it_3->second);
+	    add(ANGLE_RESTRAINT, it_2->second, N_index, it_3->second, fixed_flags_a23, 109.5, 2.0, 0.0);
 	 }
       }
    }

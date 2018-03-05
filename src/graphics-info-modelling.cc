@@ -430,10 +430,12 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 	 // xmap in the restraints_container_t is a const ref, so the constructor for a
 	 // restraints_container_t needs to contain a reference to a real map (which can
 	 // be a dummy ;-)).
-	 clipper::Xmap<float> xmap_dummy;
-	 clipper::Xmap<float> &xmap_ref = xmap_dummy;
+
+	 clipper::Xmap<float> &xmap_ref = *dummy_xmap;
+
 	 if (is_valid_map_molecule(imol_for_map))
 	    xmap_ref = molecules[imol_for_map].xmap;
+
 	 last_restraints = new coot::restraints_container_t(resno_1,
 							    resno_2,
 							    have_flanking_residue_at_start,
@@ -446,7 +448,7 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 							    xmap_ref);
 
 	 // this is where regularize and refine differ:
-	 if (imol_for_map != -1)
+	 if (is_valid_map_molecule(imol_for_map))
 	    last_restraints->add_map(geometry_vs_map_weight);
 
 	 atom_selection_container_t local_moving_atoms_asc =
@@ -624,6 +626,10 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
          }
       }
 
+      // ---------------------------------------------------------------------
+      //  refinement loop
+      // ---------------------------------------------------------------------
+
       while ((step_count < step_count_lim) && continue_flag) {
 
 	 if (false)
@@ -640,6 +646,10 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
 	    continue_flag = false;
 	    rr = graphics_info_t::saved_dragged_refinement_results;
 	 }
+	 if (retval == -1) { // no restrainst, because the user pressed Esc
+	    continue_flag = false;
+	    rr = graphics_info_t::saved_dragged_refinement_results;
+	 }
       }
 
       // if we reach here with continue_flag == 1, then we
@@ -651,7 +661,7 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
 	 rr = graphics_info_t::saved_dragged_refinement_results;
 	 rr.info = "Time's up...";
       }
-      
+
    } else { 
       if (use_graphics_interface_flag) {
 
@@ -803,7 +813,10 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	       for (unsigned int i=0; i<residues_mol_and_res_vec.second.size(); i++)
 		  local_residues.push_back(std::pair<bool, mmdb::Residue *>(0, residues_mol_and_res_vec.second[i]));
 
-	       const clipper::Xmap<float> &xmap = molecules[Imol_Refinement_Map()].xmap;
+	       int imol_for_map = Imol_Refinement_Map();
+	       clipper::Xmap<float> &xmap = *dummy_xmap;
+	       if (is_valid_map_molecule(imol_for_map))
+		  xmap = molecules[imol_for_map].xmap;
 
 	       if (last_restraints) {
 		  std::cout << "----------------------------------------------" << std::endl;
@@ -857,6 +870,8 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 		  last_restraints->set_do_numerical_gradients();
 
 	       std::string dummy_chain = ""; // not used
+
+	       std::cout << "calling update_refinement_atoms() "  << std::endl;
 		   
 	       rr = update_refinement_atoms(n_restraints, last_restraints, rr, local_moving_atoms_asc,
 					    0, imol, dummy_chain);

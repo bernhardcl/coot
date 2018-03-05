@@ -163,6 +163,8 @@ bool graphics_info_t::do_expose_swap_buffers_flag = 1;
 ctpl::thread_pool graphics_info_t::static_thread_pool(coot::get_max_number_of_threads());
 #endif // HAVE_CC_THREAD
 
+clipper::Xmap<float> *graphics_info_t::dummy_xmap = new clipper::Xmap<float>;
+
 
 //WII
 #ifdef WII_INTERFACE_WIIUSE
@@ -1349,6 +1351,11 @@ std::vector<std::pair<clipper::Coord_orth, std::string> > graphics_info_t::user_
 unsigned int graphics_info_t::user_defined_interesting_positions_idx = 0;
 
 
+std::pair<bool, float> graphics_info_t::model_display_radius = std::pair<bool, float> (false, 15);
+
+// need to configure for this!
+// #define GDKGLEXT_HAVE_MODE_SAMPLES_SHIFT true
+
 // Chemical Feature Clusters, cfc
 GtkWidget *graphics_info_t::cfc_dialog = NULL;
 
@@ -2127,7 +2134,14 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
 	 glFogf(GL_FOG_END,    fog_end);
 	 // std::cout << "GL_FOG_START " << fog_start << " with far  " << far  << std::endl;
 	 // std::cout << "GL_FOG_END "   << fog_end   << " with near " << near << std::endl;
+      }
 
+      if (false) { // try/test clipping
+	 // I don't understand what I need to do
+	 GLdouble plane[] = { 0.0, 0.0, -1.0, -2.0};
+	 glEnable(GL_CLIP_PLANE0);
+	 glClipPlane(GL_CLIP_PLANE0, plane);
+	 glPopMatrix();
       }
 
       glMatrixMode(GL_MODELVIEW);
@@ -2144,6 +2158,15 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
       glTranslatef(-graphics_info_t::RotationCentre_x(),
 		   -graphics_info_t::RotationCentre_y(),
 		   -graphics_info_t::RotationCentre_z());
+
+      if (false) { // try/test clipping
+	 // This does indeed clip the model, but it's in world coordinates,
+	 // not eye coordinates
+	 GLdouble plane[] = { 0.0, 0.0, -1.0, -2.0};
+	 glEnable(GL_CLIP_PLANE0);
+	 glClipPlane(GL_CLIP_PLANE0, plane);
+	 glPopMatrix();
+      }
 
       if (! graphics_info_t::esoteric_depth_cue_flag) { 
       	 coot::Cartesian front = unproject(0.0);
@@ -2345,9 +2368,11 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
          graphics_info_t::Increment_Frames();
       }
 
+
       if (graphics_info_t::display_mode == coot::ZALMAN_STEREO)
 	glDisable(GL_STENCIL_TEST);
-  
+
+
    } // gtkgl make area current test
 
    gdkglext_finish_frame(widget);
@@ -3149,6 +3174,9 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
       // std::cout << "GDK_Escape pressed" << std::endl;
 
       clear_up_moving_atoms();
+
+      // stop the refinement
+      graphics_info_t::remove_drag_refine_idle_function();
       
       if (graphics_info_t::accept_reject_dialog) {
 	 if (graphics_info_t::accept_reject_dialog_docked_flag == coot::DIALOG) {

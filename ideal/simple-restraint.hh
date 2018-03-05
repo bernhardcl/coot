@@ -600,7 +600,7 @@ namespace coot {
 					   const protein_geometry &geom);
 
       double torsion_distortion(double model_torsion) const; 
-      
+      std::string type() const; // a string representation of the restraint type
       friend std::ostream &operator<<(std::ostream &s, const simple_restraint &r);
    };
    std::ostream &operator<<(std::ostream &s, const simple_restraint &r);
@@ -928,6 +928,7 @@ namespace coot {
       void init(bool unset_deriv_locks) {
       	 verbose_geometry_reporting = NORMAL;
 	 n_atoms = 0;
+	 x = 0;
 	 mol = 0;
 	 n_atoms = 0;
 	 atom = 0;
@@ -1389,8 +1390,10 @@ namespace coot {
       bonded_pair_container_t
       bonded_flanking_residues(const protein_geometry &geom) const;
    
-      // new flanking residue search
       bonded_pair_container_t bonded_flanking_residues_by_residue_vector(const protein_geometry &geom) const;
+      // new flanking residue search
+      bonded_pair_container_t bonded_flanking_residues_by_residue_vector(const std::map<mmdb::Residue *, std::set<mmdb::Residue *> > &resm,
+									 const protein_geometry &geom) const;
       // old style linear search (n +/- 1) selection for flanking residues
       bonded_pair_container_t bonded_flanking_residues_by_linear(const protein_geometry &geom) const;
       // find residues in the neighbourhood that are not in the refining set
@@ -1398,9 +1401,14 @@ namespace coot {
       // 
       std::vector<mmdb::Residue *> non_bonded_neighbour_residues;
       // set by this function:
-      void set_non_bonded_neighbour_residues_by_residue_vector(const bonded_pair_container_t &bonded_flanking_pairs, const protein_geometry &geom);
+      // old version 20180224
+      void set_non_bonded_neighbour_residues_by_residue_vector(const bonded_pair_container_t &bonded_flanking_pairs,
+							       const protein_geometry &geom);
+      // new version
+      void set_non_bonded_neighbour_residues_by_residue_vector(const std::map<mmdb::Residue *, std::set<mmdb::Residue *> > &resm,
+							       const bonded_pair_container_t &bonded_flanking_pairs,
+							       const protein_geometry &geom);
 
-      
       int make_flanking_atoms_rama_restraints(const protein_geometry &geom);
 
       // return a container of all the bonded residues (as pairs) from
@@ -1511,6 +1519,7 @@ namespace coot {
 			 short int is_fixed_second_res,
 			 const protein_geometry &geom);
       void symmetry_non_bonded_contacts(bool p);
+      // bonded_atom_indices also contain 1-3 atoms of angles
       std::vector<std::vector<int> > bonded_atom_indices;
 
       class reduced_angle_info_container_t {
@@ -1745,8 +1754,8 @@ namespace coot {
       geometric_distortions(restraint_usage_Flags flags);
 
       // Here we use the internal flags.  Causes crash currently (no inital atom positions?)
-      geometry_distortion_info_container_t
-      geometric_distortions() const;
+      // remove const
+      geometry_distortion_info_container_t geometric_distortions();
 
       omega_distortion_info_container_t
       omega_trans_distortions(const protein_geometry &geom,
@@ -1912,7 +1921,11 @@ namespace coot {
       // because chi_squareds is const:
       const simple_restraint& operator[] (const unsigned int &i) const { 
 	 return restraints_vec[i]; 
-      } 
+      }
+
+      const simple_restraint& at(const unsigned int &i) const{
+	 return restraints_vec[i];
+      }
   
       void setup_gsl_vector_variables();
 

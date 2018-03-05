@@ -822,6 +822,17 @@ class graphics_info_t {
 			     int imol,
 			     std::string chain_id);
 
+   // 201803004:
+   // refinement now uses references to Xmaps.
+   // A dummy_map is created and a reference to that is created. Then
+   // the reference is reset to a real xmap in a molecule (imol_for_map).
+   // But, for a reason I don't understand, the refinement crashes when I do that.
+   // When the initial dummy_xmap doesn't go out of scope, then the refinement is OK.
+   // So this static dummy map is the map that doesn't go out of scope.
+   // We only need one of it, so it goes here, rather than get created every
+   // time we do a refinement. It may need to be public in future.
+   static clipper::Xmap<float> *dummy_xmap;
+
    std::string adjust_refinement_residue_name(const std::string &resname) const;
    static void info_dialog_missing_refinement_residues(const std::vector<std::string> &res_names);
    void info_dialog_alignment(coot::chain_mutation_info_container_t mutation_info) const;
@@ -1220,6 +1231,7 @@ public:
       preset_number_refmac_cycles->push_back(15);
       preset_number_refmac_cycles->push_back(20);
       preset_number_refmac_cycles->push_back(50);
+
    }
 
    static bool prefer_python;
@@ -1737,6 +1749,7 @@ public:
    static double idle_function_rock_angle_previous; 
    static gint drag_refine_idle_function(GtkWidget *widget);
    static void add_drag_refine_idle_function();
+   static void remove_drag_refine_idle_function();
    static gint drag_refine_refine_intermediate_atoms();
    static double refinement_drag_elasticity;
    static coot::refinement_results_t saved_dragged_refinement_results;
@@ -4023,6 +4036,17 @@ string   static std::string sessionid;
    void undisplay_all_model_molecules_except(const std::vector<int> &keep_these);
    static GtkWidget *cfc_dialog;
 
+
+   static std::pair<bool, float> model_display_radius;
+   void set_model_display_radius(bool on_off, float radius_in) {
+      model_display_radius.first  = on_off;
+      model_display_radius.second = radius_in;
+   }
+   // molecules use this to see if the point is within the distance from the screen centre
+   // - maybe this is not the best place for this function?
+   static bool is_within_display_radius(const coot::CartesianPair &p);
+   static bool is_within_display_radius(const coot::Cartesian &p);
+
    static bool cif_dictionary_file_selector_create_molecule_flag;
 
    static double geman_mcclure_alpha;
@@ -4037,6 +4061,9 @@ string   static std::string sessionid;
    PyObject *pyobject_from_graphical_bonds_container(int imol,
 						     const graphical_bonds_container &bonds_box) const;
    PyObject *get_intermediate_atoms_bonds_representation();
+   PyObject *get_intermediate_atoms_distortions_py();
+   PyObject *restraint_to_py(const coot::simple_restraint &restraint); // make const?
+   PyObject *geometry_distortion_to_py(const coot::geometry_distortion_info_t &gd);
 #endif
 
 #ifdef HAVE_CXX_THREAD
@@ -4051,7 +4078,7 @@ class molecule_rot_t {
  public:   
    static float x_axis_angle;
    static float y_axis_angle;
-}; 
+};
    
 void initialize_graphics_molecules();
 

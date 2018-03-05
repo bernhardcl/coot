@@ -1,24 +1,144 @@
 
    For Release 0.8.9.1
 
+   o reopen LSQ fit - the display says 24 but it chooses 0 for the reference molecule ::: 1
+
+   o the half-bonds of a C-S bond (e.g. CYS) doesn't add the correct atom indicies ::: 2
+
+   o long bonds in bonds representation ::: 2
+
    o map weights for cryo-EM carbohydrate fitting ::: 2
 
    o GM sigma and alpha for carbohydrate fitting ::: 2
 
-   o enter an invalid SMILES into lidia ::: 1
+   o Make RCrane work again ::: 4
 
-   o adjust the lights in draw_display_list_objects() ::: 0.5
+   o document how to remove additional representations ::: 0.5
 
-   o the half-bonds of a C-S bond (e.g. CYS) doesn't add the correct atom indicies ::: 2
-
-   o when you reject intemediate atoms of a very bumpy solution, then it should delete, or undisplay
-     the contact dots of generic display objects
-
-   o reopen LSQ fit - the display says 24 but it chooses 0 for the reference molecule
-
-   o coot-reduce: Add N-terminus amide Hydrogen atoms
-
-   o refine: make sure we can correctly refine N-terminus amide hydrogen atoms
 
 --------------
 
+   o adjust the lights in draw_display_list_objects() ::: 0.5
+
+* Done
+
+   o when you reject intemediate atoms of a very bumpy solution, then it should delete, or undisplay
+     the contact dots of generic display objects ::: 0.5
+
+* Done.
+
+   o Donna Matzov: can the mutate residue range gui be used for nucleic acids (instead of
+     us having to use the scripting window)?
+
+* Yes. Donna, Christmas came early this year ;-) I also changed the dialog to show when there
+   was a sequence number match. ::: 1.5
+
+   o Also add a counter or a marker that the residue range and the number of
+     residues match ::: 2
+
+* Done.
+
+   o Replace residue -> ADE -> A -> crash ::: 2
+
+* Done.
+
+   o Make Link needs a redraw after link has been made ::: 0.5
+
+* Seems OK (now?)
+
+   o coot-reduce: Add N-terminus amide Hydrogen atoms ::: 2
+
+* Done.
+
+   o refine: make sure we can correctly refine N-terminus amide hydrogen atoms ::: 2
+
+* Done.
+
+   o mark_multiple_atoms_as_fixed_py needs a scm version ::: 0.5
+
+* Done.
+
+   o get a low resolution map and sphere refine. Look at the borders between moving and non-moving
+     Are the non-bonded contact restraints working correctly? Perhaps the Hydrogen atom non-bonded
+     contacts? ::: 1
+
+* Done.
+
+
+   o Jiggle Fit: Cut out the A chain from tutorial-modern.  Rotate/translate it for a test
+     orientation.  Jiggle-fit this molecule or chain. It gets close. It seems to need a
+     rigid body fit. Does this mean that the top 10 solution optimization is not working? ::: 0
+
+* I don't think that this is a thing.
+
+   o enter an invalid SMILES into lidia ::: 1
+
+* Done.
+
+   o make the scripting windows wider ::: 0.5
+
+* Done.
+
+   o parse an alignment ::: 2
+
+* Done. I think
+
+   o Do a pull from Bernie ::: 1
+
+* Done. I think
+
+   o make a function to left-hand align the text of the molecule names in the display manager
+     use gtk_misc_set_alignment() when filling the display manager
+     perhaps API function display_manager_entries_set_x_alignment(0.5)
+     ::: 0
+
+* Punt. Way too tricky. Not a gtk+ thing.
+
+   o Crash on read thing.map.gz as a map.
+
+     Can't reproduce.  Perhaps depends on the map.  I guess that the
+     clipper::CNSMAPfile::open_read() is failing.
+
+     ::: 1
+
+   o Fun: make an auto-ncs-jump function: Use 3whe (for example) ::: 1
+
+* Done.
+
+   o refmac-multi-sharp.sh should be a window in coot ::: 1
+
+* Done. It's in a module.
+
+   o update the symmetry after a merge molecule  ::: 1
+
+* Done.
+
+   o document how to remove contact dots. ::: 0.5
+
+* Done. In the API :-)
+
+   o cache and use the histogram data for the map properties dialog ::: 0.5
+
+* Done.
+
+   o read in a PHE, write out an ins - it fails due to no cell - but this is not
+     apparent in the gui. ::: 1
+
+* Done.
+
+   o Give me a function so that I can set the cell. ::: 1
+
+* Done.
+
+   o Give me a function so that I can set the cell and symmetry from that of another molecule. ::: 1
+
+* Done.
+
+   o try to flev a residue that doesn't have a dictionary.  Give me a better
+     means of seeing that things went wrong or what went wrong
+
+     e.g. valence error (if you can manage the setup such a problem).
+
+     ::: 1
+
+* Forget the valence thing for now. Error message improved.

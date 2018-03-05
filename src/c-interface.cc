@@ -995,7 +995,7 @@ void set_dti_stereo_mode(short int state) {
       }
    }
    // add_to_history_simple("dti-side-by-side-stereo-mode");
-} 
+}
 
 
 int stereo_mode_state() {
@@ -1015,6 +1015,12 @@ void set_hardware_stereo_angle_factor(float f) {
 float hardware_stereo_angle_factor_state() {
    add_to_history_simple("hardware-stereo-angle-factor-state");
    return graphics_info_t::hardware_stereo_angle_factor;
+}
+
+void set_model_display_radius(int state, float radius) {
+
+   graphics_info_t::model_display_radius.first  = state;
+   graphics_info_t::model_display_radius.second = radius;
 }
 
 
@@ -5320,6 +5326,36 @@ void display_only_active() {
    graphics_draw();
 }
 
+void set_only_last_model_molecule_displayed() {
+
+   int n_mols = graphics_info_t::n_molecules();
+   int imol_last = -1;
+   std::vector<int> turn_these_off; // can contain last
+   for (int i=0; i<n_mols; i++) {
+      if (is_valid_model_molecule(i)) {
+	 if (mol_is_displayed(i)) {
+	    turn_these_off.push_back(i);
+	    imol_last = i;
+	 }
+      }
+   }
+   if (turn_these_off.size() > 1) {
+      turn_these_off.pop_back();
+      for (unsigned int j=0; j<turn_these_off.size(); j++) {
+	 set_mol_displayed(turn_these_off[j], 0);
+	 set_mol_active(turn_these_off[j], 0);
+      }
+   }
+   if (is_valid_model_molecule(imol_last)) {
+      if (! mol_is_displayed(imol_last)) {
+	 set_mol_displayed(imol_last, 0);
+	 set_mol_active(imol_last, 0);
+      }
+   }
+
+}
+
+
 
 // Bleugh.
 char *
@@ -5917,6 +5953,29 @@ PyObject *residue_spec_to_py(const coot::residue_spec_t &res) {
 }
 #endif // USE_PYTHON
 
+#ifdef USE_GUILE
+int mark_multiple_atoms_as_fixed_scm(int imol, SCM atom_spec_list, int state) {
+
+   // not tested
+   int r = 0;
+   SCM list_length_scm = scm_length(atom_spec_list);
+   int n = scm_to_int(list_length_scm);
+   
+   for (int ispec = 0; ispec<n; ispec++) {
+      SCM atom_spec_scm = scm_list_ref(atom_spec_list, SCM_MAKINUM(ispec));
+      coot::atom_spec_t spec = atom_spec_from_scm_expression(atom_spec_scm);
+      graphics_info_t::mark_atom_as_fixed(imol, spec, state);
+   }
+   
+   if (n > 0) {
+      graphics_draw();
+   }
+   
+   return n; //return a count of how many atoms we successfully marked
+}
+#endif // USE_GUILE
+
+
 #ifdef USE_PYTHON
 // Garanteed to return a triple list (will return unset-spec if needed).
 // 
@@ -6067,7 +6126,7 @@ void post_scheme_scripting_window() {
 		  << std::endl;
         // load the fallback window if we have COOT_SCHEME_DIR (only Windows?!)
         // only for gtk2!
-#if (GTK_MAJOR_VERSION > 1)
+
         GtkWidget *window; 
         GtkWidget *scheme_entry; 
         window = create_scheme_window();
@@ -6075,7 +6134,7 @@ void post_scheme_scripting_window() {
         scheme_entry = lookup_widget(window, "scheme_window_entry");
         setup_guile_window_entry(scheme_entry); // USE_PYTHON and USE_GUILE used here
         gtk_widget_show(window);        
-#endif /* GTK_MAJOR_VERSION */
+
      } else { 
 	std::cout << COOT_SCHEME_DIR << " was not defined - cannot open ";
 	std::cout << "scripting window" << std::endl; 

@@ -256,6 +256,7 @@ coot_bin_SOURCES = \
 	c-interface-database.hh  \
 	c-interface-database.cc  \
 	c-interface-generic-objects.h	 \
+	c-interface-geometry-distortion.hh \
 	c-interface-gui.cc	 \
 	c-interface-gtk2.cc	 \
 	c-interface-gtk-widgets.h \
@@ -304,6 +305,8 @@ coot_bin_SOURCES = \
 	c-interface.cc		 \
 	c-interface-test.cc      \
 	cc-interface.hh		 \
+	cc-interface-alignment.cc \
+	cc-interface-alignment.hh \
 	cc-interface-ncs.hh      \
 	cc-interface-network.hh  \
 	cc-interface-mogul.hh    \
@@ -410,6 +413,7 @@ coot_bin_SOURCES = \
 	ligand-check.hh          \
         map-statistics.hh        \
 	molecule-class-info.cc 	 \
+	molecule-class-info-alignment.cc \
 	molecule-class-info-bonds.cc    \
 	molecule-class-info-maps.cc 	\
 	molecule-class-info-maps-2.cc 	\

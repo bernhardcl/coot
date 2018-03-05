@@ -5221,6 +5221,8 @@ create_display_control_window_glade (void)
   GtkWidget *hbox236;
   GtkWidget *label258;
   GtkWidget *display_control_all_models_togglebutton;
+  GtkWidget *display_control_last_model_only_button;
+  GtkWidget *display_control_align_labels_checkbutton;
   GtkWidget *scrolledwindow22;
   GtkWidget *viewport14;
   GtkWidget *display_molecule_vbox;
@@ -5285,15 +5287,22 @@ create_display_control_window_glade (void)
   gtk_box_pack_start (GTK_BOX (paned_molecules_vbox), hbox236, FALSE, FALSE, 0);
   gtk_container_set_border_width (GTK_CONTAINER (hbox236), 2);
 
-  label258 = gtk_label_new ("   Molecules     ");
+  label258 = gtk_label_new ("   Molecules    ");
   gtk_widget_show (label258);
   gtk_box_pack_start (GTK_BOX (hbox236), label258, FALSE, FALSE, 0);
   gtk_label_set_justify (GTK_LABEL (label258), GTK_JUSTIFY_CENTER);
 
   display_control_all_models_togglebutton = gtk_toggle_button_new_with_mnemonic ("   All   ");
   gtk_widget_show (display_control_all_models_togglebutton);
-  gtk_box_pack_start (GTK_BOX (hbox236), display_control_all_models_togglebutton, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox236), display_control_all_models_togglebutton, FALSE, FALSE, 4);
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (display_control_all_models_togglebutton), TRUE);
+
+  display_control_last_model_only_button = gtk_button_new_with_mnemonic ("Last Only");
+  gtk_widget_show (display_control_last_model_only_button);
+  gtk_box_pack_start (GTK_BOX (hbox236), display_control_last_model_only_button, FALSE, FALSE, 3);
+
+  display_control_align_labels_checkbutton = gtk_check_button_new_with_mnemonic ("Align Labels");
+  gtk_box_pack_start (GTK_BOX (hbox236), display_control_align_labels_checkbutton, FALSE, FALSE, 3);
 
   scrolledwindow22 = gtk_scrolled_window_new (NULL, NULL);
   gtk_widget_show (scrolledwindow22);
@@ -5347,6 +5356,12 @@ create_display_control_window_glade (void)
   g_signal_connect ((gpointer) display_control_all_models_togglebutton, "toggled",
                     G_CALLBACK (on_display_control_all_models_togglebutton_toggled),
                     NULL);
+  g_signal_connect ((gpointer) display_control_last_model_only_button, "clicked",
+                    G_CALLBACK (on_display_control_last_model_only_button_clicked),
+                    NULL);
+  g_signal_connect ((gpointer) display_control_align_labels_checkbutton, "toggled",
+                    G_CALLBACK (on_display_control_align_labels_checkbutton_toggled),
+                    NULL);
   g_signal_connect ((gpointer) display_control_ok_button, "clicked",
                     G_CALLBACK (on_display_control_ok_button_clicked),
                     NULL);
@@ -5366,6 +5381,8 @@ create_display_control_window_glade (void)
   GLADE_HOOKUP_OBJECT (display_control_window_glade, hbox236, "hbox236");
   GLADE_HOOKUP_OBJECT (display_control_window_glade, label258, "label258");
   GLADE_HOOKUP_OBJECT (display_control_window_glade, display_control_all_models_togglebutton, "display_control_all_models_togglebutton");
+  GLADE_HOOKUP_OBJECT (display_control_window_glade, display_control_last_model_only_button, "display_control_last_model_only_button");
+  GLADE_HOOKUP_OBJECT (display_control_window_glade, display_control_align_labels_checkbutton, "display_control_align_labels_checkbutton");
   GLADE_HOOKUP_OBJECT (display_control_window_glade, scrolledwindow22, "scrolledwindow22");
   GLADE_HOOKUP_OBJECT (display_control_window_glade, viewport14, "viewport14");
   GLADE_HOOKUP_OBJECT (display_control_window_glade, display_molecule_vbox, "display_molecule_vbox");
@@ -16255,6 +16272,11 @@ create_mutate_sequence_dialog (void)
   GtkWidget *label186;
   GtkWidget *scrolledwindow12;
   GtkWidget *mutate_molecule_sequence_text;
+  GtkWidget *hbox444;
+  GtkWidget *label808;
+  GtkWidget *mutate_sequence_green_light_image;
+  GtkWidget *mutate_sequence_red_light_image;
+  GtkWidget *mutate_residue_range_counts_label;
   GtkWidget *label187;
   GtkWidget *mutate_sequence_do_autofit_checkbutton;
   GtkWidget *mutate_sequence_use_ramachandran_restraints_checkbutton;
@@ -16277,7 +16299,7 @@ create_mutate_sequence_dialog (void)
   GtkWidget *label417;
 
   mutate_sequence_dialog = gtk_dialog_new ();
-  gtk_window_set_title (GTK_WINDOW (mutate_sequence_dialog), "Mutate sequence");
+  gtk_window_set_title (GTK_WINDOW (mutate_sequence_dialog), "Mutate Residue Range");
   gtk_window_set_type_hint (GTK_WINDOW (mutate_sequence_dialog), GDK_WINDOW_TYPE_HINT_DIALOG);
 
   dialog_vbox58 = GTK_DIALOG (mutate_sequence_dialog)->vbox;
@@ -16383,6 +16405,28 @@ create_mutate_sequence_dialog (void)
   gtk_widget_set_size_request (mutate_molecule_sequence_text, -1, 70);
   gtk_text_view_set_wrap_mode (GTK_TEXT_VIEW (mutate_molecule_sequence_text), GTK_WRAP_WORD);
 
+  hbox444 = gtk_hbox_new (FALSE, 0);
+  gtk_widget_show (hbox444);
+  gtk_box_pack_start (GTK_BOX (vbox116), hbox444, FALSE, FALSE, 0);
+
+  label808 = gtk_label_new ("Match: ");
+  gtk_widget_show (label808);
+  gtk_box_pack_start (GTK_BOX (hbox444), label808, FALSE, FALSE, 0);
+
+  mutate_sequence_green_light_image = gtk_image_new_from_stock ("gtk-yes", GTK_ICON_SIZE_BUTTON);
+  gtk_box_pack_start (GTK_BOX (hbox444), mutate_sequence_green_light_image, TRUE, TRUE, 0);
+  gtk_misc_set_alignment (GTK_MISC (mutate_sequence_green_light_image), 0, 0.5);
+
+  mutate_sequence_red_light_image = gtk_image_new_from_stock ("gtk-no", GTK_ICON_SIZE_BUTTON);
+  gtk_widget_show (mutate_sequence_red_light_image);
+  gtk_box_pack_start (GTK_BOX (hbox444), mutate_sequence_red_light_image, TRUE, TRUE, 0);
+  gtk_misc_set_alignment (GTK_MISC (mutate_sequence_red_light_image), 0, 0.5);
+
+  mutate_residue_range_counts_label = gtk_label_new ("Counts: Residue numbers: -: Sequence: -");
+  gtk_widget_show (mutate_residue_range_counts_label);
+  gtk_box_pack_start (GTK_BOX (hbox444), mutate_residue_range_counts_label, FALSE, FALSE, 0);
+  gtk_misc_set_alignment (GTK_MISC (mutate_residue_range_counts_label), 0.02, 0.5);
+
   label187 = gtk_label_new ("");
   gtk_widget_show (label187);
   gtk_box_pack_start (GTK_BOX (vbox116), label187, FALSE, FALSE, 0);
@@ -16468,6 +16512,21 @@ create_mutate_sequence_dialog (void)
   gtk_widget_show (label417);
   gtk_box_pack_start (GTK_BOX (hbox248), label417, FALSE, FALSE, 0);
 
+  g_signal_connect ((gpointer) mutate_molecule_resno_1_entry, "changed",
+                    G_CALLBACK (on_mutate_molecule_resno_1_entry_changed),
+                    NULL);
+  g_signal_connect ((gpointer) mutate_molecule_resno_2_entry, "changed",
+                    G_CALLBACK (on_mutate_molecule_resno_2_entry_changed),
+                    NULL);
+  g_signal_connect ((gpointer) mutate_molecule_sequence_text, "insert_at_cursor",
+                    G_CALLBACK (on_mutate_molecule_sequence_text_insert_at_cursor),
+                    NULL);
+  g_signal_connect ((gpointer) mutate_molecule_sequence_text, "key_release_event",
+                    G_CALLBACK (on_mutate_molecule_sequence_text_key_release_event),
+                    NULL);
+  g_signal_connect ((gpointer) mutate_molecule_sequence_text, "button_release_event",
+                    G_CALLBACK (on_mutate_molecule_sequence_text_button_release_event),
+                    NULL);
   g_signal_connect ((gpointer) mutate_sequence_do_autofit_checkbutton, "toggled",
                     G_CALLBACK (on_mutate_sequence_do_autofit_checkbutton_toggled),
                     NULL);
@@ -16507,6 +16566,11 @@ create_mutate_sequence_dialog (void)
   GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, label186, "label186");
   GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, scrolledwindow12, "scrolledwindow12");
   GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, mutate_molecule_sequence_text, "mutate_molecule_sequence_text");
+  GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, hbox444, "hbox444");
+  GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, label808, "label808");
+  GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, mutate_sequence_green_light_image, "mutate_sequence_green_light_image");
+  GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, mutate_sequence_red_light_image, "mutate_sequence_red_light_image");
+  GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, mutate_residue_range_counts_label, "mutate_residue_range_counts_label");
   GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, label187, "label187");
   GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, mutate_sequence_do_autofit_checkbutton, "mutate_sequence_do_autofit_checkbutton");
   GLADE_HOOKUP_OBJECT (mutate_sequence_dialog, mutate_sequence_use_ramachandran_restraints_checkbutton, "mutate_sequence_use_ramachandran_restraints_checkbutton");
@@ -26123,6 +26187,8 @@ create_add_reps_dialog (void)
   GtkWidget *add_rep_rep_ball_and_stick_radiobutton;
   GtkWidget *label621;
   GtkWidget *label619;
+  GtkWidget *label809;
+  GtkWidget *hseparator19;
   GtkWidget *dialog_action_area110;
   GtkWidget *add_rep_add_rep_button;
   GtkWidget *alignment118;
@@ -26419,6 +26485,15 @@ create_add_reps_dialog (void)
   gtk_frame_set_label_widget (GTK_FRAME (frame268), label619);
   gtk_label_set_use_markup (GTK_LABEL (label619), TRUE);
 
+  label809 = gtk_label_new ("Display of Addtional Representations is controlled in the Display Control dialog");
+  gtk_widget_show (label809);
+  gtk_box_pack_start (GTK_BOX (vbox267), label809, FALSE, FALSE, 0);
+  gtk_misc_set_alignment (GTK_MISC (label809), 0.03, 0.5);
+
+  hseparator19 = gtk_hseparator_new ();
+  gtk_widget_show (hseparator19);
+  gtk_box_pack_start (GTK_BOX (vbox267), hseparator19, TRUE, TRUE, 2);
+
   dialog_action_area110 = GTK_DIALOG (add_reps_dialog)->action_area;
   gtk_widget_show (dialog_action_area110);
   gtk_button_box_set_layout (GTK_BUTTON_BOX (dialog_action_area110), GTK_BUTTONBOX_END);
@@ -26528,6 +26603,8 @@ create_add_reps_dialog (void)
   GLADE_HOOKUP_OBJECT (add_reps_dialog, add_rep_rep_ball_and_stick_radiobutton, "add_rep_rep_ball_and_stick_radiobutton");
   GLADE_HOOKUP_OBJECT (add_reps_dialog, label621, "label621");
   GLADE_HOOKUP_OBJECT (add_reps_dialog, label619, "label619");
+  GLADE_HOOKUP_OBJECT (add_reps_dialog, label809, "label809");
+  GLADE_HOOKUP_OBJECT (add_reps_dialog, hseparator19, "hseparator19");
   GLADE_HOOKUP_OBJECT_NO_REF (add_reps_dialog, dialog_action_area110, "dialog_action_area110");
   GLADE_HOOKUP_OBJECT (add_reps_dialog, add_rep_add_rep_button, "add_rep_add_rep_button");
   GLADE_HOOKUP_OBJECT (add_reps_dialog, alignment118, "alignment118");

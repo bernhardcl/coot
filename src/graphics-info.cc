@@ -261,8 +261,9 @@ GtkWidget *graphics_info_t::wrapped_nothing_bad_dialog(const std::string &label)
       GtkWidget *label_widget = lookup_widget(w, "nothing_bad_label");
       gtk_label_set_use_markup(GTK_LABEL(label_widget), TRUE); // needed?
       gtk_label_set_text(GTK_LABEL(label_widget), label.c_str());
+      gtk_window_set_transient_for(GTK_WINDOW(w), GTK_WINDOW(lookup_widget(graphics_info_t::glarea, "window1")));
    }
-      return w;
+   return w;
 }
 
 void
@@ -279,9 +280,9 @@ bool
 graphics_info_t::background_is_black_p() const {
 
    bool v = 0;
-   if (background_colour[0] < 0.1)
-      if (background_colour[1] < 0.1)
-	 if (background_colour[2] < 0.1)
+   if (background_colour[0] < 0.3)
+      if (background_colour[1] < 0.3)
+	 if (background_colour[2] < 0.3)
 	    v = 1;
 
    return v;
@@ -1659,7 +1660,7 @@ graphics_info_t::drag_refine_refine_intermediate_atoms() {
       std::cout << "Null last restraints " << std::endl;
       return retprog;
    }
-   
+
    // While the results of the refinement are a conventional result
    // (unrefined), let's continue.  However, there are return values
    // that we will stop refining and remove the idle function is on a
@@ -5771,3 +5772,43 @@ graphics_info_t::remove_last_lsq_plane_atom() {
    return 0;
 }
 
+
+
+// molecule_info_class_t draw_bonds() function use this to see if the point is within the 
+// distance from the screen centre.
+// Maybe this is not the best place for this function?
+// static
+bool
+graphics_info_t::is_within_display_radius(const coot::CartesianPair &p) {
+
+   coot::Cartesian c(graphics_info_t::RotationCentre_x(),
+		     graphics_info_t::RotationCentre_y(),
+		     graphics_info_t::RotationCentre_z());
+   float d_sqrd = graphics_info_t::model_display_radius.second * graphics_info_t::model_display_radius.second;
+
+   coot::Cartesian delta_1 = p.getStart() - c;
+   if (delta_1.amplitude_squared() > d_sqrd) {
+      return false;
+   } else {
+      coot::Cartesian delta_2 = p.getFinish() - c;
+      return (delta_2.amplitude_squared() <= d_sqrd);
+   }
+
+}
+
+// molecule_info_class_t draw_bonds() function use this to see if the point is within the 
+// distance from the screen centre.
+// Maybe this is not the best place for this function?
+// static
+bool
+graphics_info_t::is_within_display_radius(const coot::Cartesian &p) {
+
+   coot::Cartesian c(graphics_info_t::RotationCentre_x(),
+		     graphics_info_t::RotationCentre_y(),
+		     graphics_info_t::RotationCentre_z());
+   float d_sqrd = graphics_info_t::model_display_radius.second * graphics_info_t::model_display_radius.second;
+
+   coot::Cartesian delta = p - c;
+   return (delta.amplitude_squared() <= d_sqrd);
+
+}

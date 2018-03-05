@@ -1424,33 +1424,33 @@ PyObject *refine_residues_with_modes_with_alt_conf_py(int imol, PyObject *res_sp
 
    PyObject *rv = Py_False;
    if (is_valid_model_molecule(imol)) {
-     std::vector<coot::residue_spec_t> residue_specs = py_to_residue_specs(res_specs_py);
+      std::vector<coot::residue_spec_t> residue_specs = py_to_residue_specs(res_specs_py);
 
       if (residue_specs.size() > 0) {
-        std::vector<mmdb::Residue *> residues;
-        for (unsigned int i=0; i<residue_specs.size(); i++) {
-          coot::residue_spec_t rs = residue_specs[i];
-          mmdb::Residue *r = graphics_info_t::molecules[imol].get_residue(rs);
-          if (r) {
-            residues.push_back(r);
-          }
-        }
+	 std::vector<mmdb::Residue *> residues;
+	 for (unsigned int i=0; i<residue_specs.size(); i++) {
+	    coot::residue_spec_t rs = residue_specs[i];
+	    mmdb::Residue *r = graphics_info_t::molecules[imol].get_residue(rs);
+	    if (r) {
+	       residues.push_back(r);
+	    }
+	 }
 
-        if (residues.size() > 0) {
-          graphics_info_t g;
-          int imol_map = g.Imol_Refinement_Map();
-          if (! is_valid_map_molecule(imol_map)) { 
-            add_status_bar_text("Refinement map not set");
-          } else {
-            // normal
-	     mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
+	 if (residues.size() > 0) {
+	    graphics_info_t g;
+	    int imol_map = g.Imol_Refinement_Map();
+	    if (! is_valid_map_molecule(imol_map)) { 
+	       add_status_bar_text("Refinement map not set");
+	    } else {
+	       // normal
+	       mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
 
-	     bool soft_mode_hard_mode = false;
-	     if (PyString_Check(mode_1)) {
-		std::string s = PyString_AsString(mode_1);
-		if (s == "soft-mode/hard-mode")
-		   soft_mode_hard_mode = true;
-	     }
+	       bool soft_mode_hard_mode = false;
+	       if (PyString_Check(mode_1)) {
+		  std::string s = PyString_AsString(mode_1);
+		  if (s == "soft-mode/hard-mode")
+		     soft_mode_hard_mode = true;
+	       }
 
 	     if (soft_mode_hard_mode) {
 // 		double w_orig = g.geometry_vs_map_weight;
@@ -3317,24 +3317,12 @@ SCM merge_molecules(SCM add_molecules, int imol) {
    std::vector<int> vam;
    SCM l_length_scm = scm_length(add_molecules);
 
-#if (SCM_MAJOR_VERSION > 1) || (SCM_MINOR_VERSION > 7)
-
    int l_length = scm_to_int(l_length_scm);
    for (int i=0; i<l_length; i++) {
       SCM le = scm_list_ref(add_molecules, SCM_MAKINUM(i));
       int ii = scm_to_int(le);
       vam.push_back(ii);
    } 
-   
-#else
-   
-   int l_length = gh_scm2int(l_length_scm);
-   for (int i=0; i<l_length; i++) {
-      SCM le = scm_list_ref(add_molecules, SCM_MAKINUM(i));
-      int ii =  gh_scm2int(le);
-      vam.push_back(ii);
-   }
-#endif // SCM_VERSION   
    
    std::pair<int, std::vector<std::string> > v = merge_molecules_by_vector(vam, imol);
 
@@ -3440,7 +3428,7 @@ int clear_and_update_molecule(int molecule_number, SCM molecule_expression) {
    } else {
       std::cout << "WARNING:: " << molecule_number << " is not a valid model molecule"
 		<< std::endl;
-   } 
+   }
    return state;
 }
 #endif // USE_GUILE
@@ -4875,6 +4863,9 @@ int write_shelx_ins_file(int imol, const char *filename) {
 	 graphics_info_t g;
 	 g.add_status_bar_text(stat.second);
 	 std::cout << stat.second << std::endl;
+	 if (istat != 1) {
+	    wrapped_nothing_bad_dialog(stat.second);
+	 }
       } else {
 	 std::cout << "WARNING:: invalid molecule (" << imol
 		   << ") for write_shelx_ins_file" << std::endl;

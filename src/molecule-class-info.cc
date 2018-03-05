@@ -2139,6 +2139,9 @@ molecule_class_info_t::display_bonds(const graphical_bonds_container &bonds_box,
 				     float p_bond_width,
 				     bool against_a_dark_background) {
 
+   // pass this?
+   const std::pair<bool, float> &use_radius_limit = graphics_info_t::model_display_radius;
+
    coot::Cartesian front = unproject(0.0);
    coot::Cartesian back  = unproject(1.0);
 
@@ -2177,7 +2180,7 @@ molecule_class_info_t::display_bonds(const graphical_bonds_container &bonds_box,
 
 	 glBegin(GL_LINES); 
 	 for (int j=0; j< bonds_box.bonds_[i].num_lines; j++) {
-	    
+
 	    // 	 if ( j > 200000) {
 	    // 	    cout << "Heuristics fencepost failure j " << j << endl;
 	    // 	    exit(1);
@@ -2201,31 +2204,69 @@ molecule_class_info_t::display_bonds(const graphical_bonds_container &bonds_box,
 	    zsc *= 0.5;
  
 	 glBegin(GL_QUADS); 
-	 for (int j=0; j< bonds_box.bonds_[i].num_lines; j++) {
 
-	    if ((single_model_view_current_model_number == 0) ||
-		(single_model_view_current_model_number == ll.pair_list[j].model_number)) {
+	 if (! use_radius_limit.first) {
 
-	       // is this slow?
-	       coot::Cartesian vec_perp_to_screen_z =
-		  get_vector_pependicular_to_screen_z(front, back,
-						      ll.pair_list[j].positions.getFinish() -
-						      ll.pair_list[j].positions.getStart(),
-						      zsc, p_bond_width);
+	    for (int j=0; j< bonds_box.bonds_[i].num_lines; j++) {
 
-	       glVertex3f(ll.pair_list[j].positions.getStart().get_x()+vec_perp_to_screen_z.get_x(),
-			  ll.pair_list[j].positions.getStart().get_y()+vec_perp_to_screen_z.get_y(),
-			  ll.pair_list[j].positions.getStart().get_z()+vec_perp_to_screen_z.get_z());
-	       glVertex3f(ll.pair_list[j].positions.getStart().get_x()-vec_perp_to_screen_z.get_x(),
-			  ll.pair_list[j].positions.getStart().get_y()-vec_perp_to_screen_z.get_y(),
-			  ll.pair_list[j].positions.getStart().get_z()-vec_perp_to_screen_z.get_z());
+	       if ((single_model_view_current_model_number == 0) ||
+		   (single_model_view_current_model_number == ll.pair_list[j].model_number)) {
 
-	       glVertex3f(ll.pair_list[j].positions.getFinish().get_x()-vec_perp_to_screen_z.get_x(),
-			  ll.pair_list[j].positions.getFinish().get_y()-vec_perp_to_screen_z.get_y(),
-			  ll.pair_list[j].positions.getFinish().get_z()-vec_perp_to_screen_z.get_z());
-	       glVertex3f(ll.pair_list[j].positions.getFinish().get_x()+vec_perp_to_screen_z.get_x(),
-			  ll.pair_list[j].positions.getFinish().get_y()+vec_perp_to_screen_z.get_y(),
-			  ll.pair_list[j].positions.getFinish().get_z()+vec_perp_to_screen_z.get_z());
+		  // is this slow?
+		  coot::Cartesian vec_perp_to_screen_z =
+		     get_vector_pependicular_to_screen_z(front, back,
+							 ll.pair_list[j].positions.getFinish() -
+							 ll.pair_list[j].positions.getStart(),
+							 zsc, p_bond_width);
+
+		  glVertex3f(ll.pair_list[j].positions.getStart().get_x()+vec_perp_to_screen_z.get_x(),
+			     ll.pair_list[j].positions.getStart().get_y()+vec_perp_to_screen_z.get_y(),
+			     ll.pair_list[j].positions.getStart().get_z()+vec_perp_to_screen_z.get_z());
+		  glVertex3f(ll.pair_list[j].positions.getStart().get_x()-vec_perp_to_screen_z.get_x(),
+			     ll.pair_list[j].positions.getStart().get_y()-vec_perp_to_screen_z.get_y(),
+			     ll.pair_list[j].positions.getStart().get_z()-vec_perp_to_screen_z.get_z());
+
+		  glVertex3f(ll.pair_list[j].positions.getFinish().get_x()-vec_perp_to_screen_z.get_x(),
+			     ll.pair_list[j].positions.getFinish().get_y()-vec_perp_to_screen_z.get_y(),
+			     ll.pair_list[j].positions.getFinish().get_z()-vec_perp_to_screen_z.get_z());
+		  glVertex3f(ll.pair_list[j].positions.getFinish().get_x()+vec_perp_to_screen_z.get_x(),
+			     ll.pair_list[j].positions.getFinish().get_y()+vec_perp_to_screen_z.get_y(),
+			     ll.pair_list[j].positions.getFinish().get_z()+vec_perp_to_screen_z.get_z());
+	       }
+	    }
+	 } else {
+
+	    // I am not sure that this (is_within_display_radius) split is necessary...
+
+	    for (int j=0; j< bonds_box.bonds_[i].num_lines; j++) {
+
+	       if ((single_model_view_current_model_number == 0) ||
+		   (single_model_view_current_model_number == ll.pair_list[j].model_number)) {
+
+		  // is this slow?
+		  coot::Cartesian vec_perp_to_screen_z =
+		     get_vector_pependicular_to_screen_z(front, back,
+							 ll.pair_list[j].positions.getFinish() -
+							 ll.pair_list[j].positions.getStart(),
+							 zsc, p_bond_width);
+
+		  if (graphics_info_t::is_within_display_radius(ll.pair_list[j].positions)) {
+
+		     glVertex3f(ll.pair_list[j].positions.getStart().get_x()+vec_perp_to_screen_z.get_x(),
+				ll.pair_list[j].positions.getStart().get_y()+vec_perp_to_screen_z.get_y(),
+				ll.pair_list[j].positions.getStart().get_z()+vec_perp_to_screen_z.get_z());
+		     glVertex3f(ll.pair_list[j].positions.getStart().get_x()-vec_perp_to_screen_z.get_x(),
+				ll.pair_list[j].positions.getStart().get_y()-vec_perp_to_screen_z.get_y(),
+				ll.pair_list[j].positions.getStart().get_z()-vec_perp_to_screen_z.get_z());
+
+		     glVertex3f(ll.pair_list[j].positions.getFinish().get_x()-vec_perp_to_screen_z.get_x(),
+				ll.pair_list[j].positions.getFinish().get_y()-vec_perp_to_screen_z.get_y(),
+				ll.pair_list[j].positions.getFinish().get_z()-vec_perp_to_screen_z.get_z());
+		     glVertex3f(ll.pair_list[j].positions.getFinish().get_x()+vec_perp_to_screen_z.get_x(),
+				ll.pair_list[j].positions.getFinish().get_y()+vec_perp_to_screen_z.get_y(),
+				ll.pair_list[j].positions.getFinish().get_z()+vec_perp_to_screen_z.get_z());
+		  }
+	       }
 	    }
 	 }
 	 glEnd();
@@ -2245,6 +2286,9 @@ void molecule_class_info_t::display_bonds_stick_mode_atoms(const graphical_bonds
    if (display_stick_mode_atoms_flag) {
 
       if (bonds_box.atom_centres_) { 
+
+	 // pass this?
+	 const std::pair<bool, float> &use_radius_limit = graphics_info_t::model_display_radius;
 
 	 // std::cout << "draw " << bonds_box.n_atom_centres_ << " atom centres "
 	 // << std::endl;
@@ -2270,9 +2314,14 @@ void molecule_class_info_t::display_bonds_stick_mode_atoms(const graphical_bonds
 	    for (unsigned int i=0; i<bonds_box.consolidated_atom_centres[icol].num_points; i++) { 
 	       // no points for hydrogens
 	       if (! bonds_box.consolidated_atom_centres[icol].points[i].is_hydrogen_atom) {
-		  coot::Cartesian fake_pt = bonds_box.consolidated_atom_centres[icol].points[i].position;
-		  fake_pt += z_delta;
-		  glVertex3f(fake_pt.x(), fake_pt.y(), fake_pt.z());
+
+		  if ((use_radius_limit.first == false) ||
+		      (graphics_info_t::is_within_display_radius(bonds_box.consolidated_atom_centres[icol].points[i].position))) {
+		     
+		     coot::Cartesian fake_pt = bonds_box.consolidated_atom_centres[icol].points[i].position;
+		     fake_pt += z_delta;
+		     glVertex3f(fake_pt.x(), fake_pt.y(), fake_pt.z());
+		  }
 	       }
 	    }
 	 }
@@ -2345,10 +2394,14 @@ void molecule_class_info_t::display_bonds_stick_mode_atoms(const graphical_bonds
 		  for (unsigned int i=0; i<bonds_box.consolidated_atom_centres[icol].num_points; i++) { 
 		     // no points for hydrogens
 		     if (! bonds_box.consolidated_atom_centres[icol].points[i].is_hydrogen_atom) {
-			const coot::Cartesian &pos = bonds_box.consolidated_atom_centres[icol].points[i].position;
-			coot::Cartesian pt = pos + offset;
-		  
-			glVertex3f(pt.x(), pt.y(), pt.z());
+
+			if ((use_radius_limit.first == false) ||
+			    (graphics_info_t::is_within_display_radius(bonds_box.consolidated_atom_centres[icol].points[i].position))) {
+			   
+			   const coot::Cartesian &pos = bonds_box.consolidated_atom_centres[icol].points[i].position;
+			   coot::Cartesian pt = pos + offset;
+			   glVertex3f(pt.x(), pt.y(), pt.z());
+			}
 		     }
 		  }
 	       }
@@ -2362,10 +2415,14 @@ void molecule_class_info_t::display_bonds_stick_mode_atoms(const graphical_bonds
 		  for (unsigned int i=0; i<bonds_box.consolidated_atom_centres[icol].num_points; i++) { 
 		     // no points for hydrogens
 		     if (! bonds_box.consolidated_atom_centres[icol].points[i].is_hydrogen_atom) {
-			const coot::Cartesian &pos = bonds_box.consolidated_atom_centres[icol].points[i].position;
-			coot::Cartesian pt = pos + offset + z_delta;
-		  
-			glVertex3f(pt.x(), pt.y(), pt.z());
+
+			if ((use_radius_limit.first == false) ||
+			    (graphics_info_t::is_within_display_radius(bonds_box.consolidated_atom_centres[icol].points[i].position))) {
+			   const coot::Cartesian &pos = bonds_box.consolidated_atom_centres[icol].points[i].position;
+			   coot::Cartesian pt = pos + offset + z_delta;
+
+			   glVertex3f(pt.x(), pt.y(), pt.z());
+			}
 		     }
 		  }
 	       }
@@ -3559,7 +3616,7 @@ molecule_class_info_t::update_extra_restraints_representation_bonds() {
 	 }
       }
 
-      // std::cout << "debug ifound_1 and ifound_2 " << ifound_1 << " " << ifound_2 << std::endl;
+      // std::cout << "post: debug ifound_1 and ifound_2 " << ifound_1 << " " << ifound_2 << std::endl;
 
       if (! ifound_1) {
 	 std::cout << "no spec for " << extra_restraints.bond_restraints[i].atom_1 << std::endl;
@@ -6010,7 +6067,10 @@ molecule_class_info_t::save_coordinates(const std::string filename,
    int ierr = 0;
    std::string ext = coot::util::file_name_extension(filename);
    if (coot::util::extension_is_for_shelx_coords(ext)) {
-      write_shelx_ins_file(filename);
+      std::pair<int, std::string> status_pair = write_shelx_ins_file(filename);
+      // we need to reverse the logic of the status, 1 is good for write_shelx_ins_file()
+      if (status_pair.first != 1)
+	 ierr = 1;
    } else {
       mmdb::byte bz = mmdb::io::GZM_NONE;
 
@@ -6020,7 +6080,7 @@ molecule_class_info_t::save_coordinates(const std::string filename,
    }
 
    if (ierr) {
-      std::cout << "WARNING!! Coordinates write to " << filename
+      std::cout << "WARNING:: Coordinates write to " << filename
 		<< " failed!" << std::endl;
       std::string ws = "WARNING:: export coords: There was an error ";
       ws += "in writing ";
@@ -6028,7 +6088,7 @@ molecule_class_info_t::save_coordinates(const std::string filename,
       GtkWidget *w = graphics_info_t::wrapped_nothing_bad_dialog(ws);
       gtk_widget_show(w);
    } else {
-      std::cout << "INFO: saved coordinates " << filename << std::endl;
+      std::cout << "INFO:: saved coordinates " << filename << std::endl;
       have_unsaved_changes_flag = 0;
 
       // Now we have updated the molecule name, how shall we restore
@@ -7697,10 +7757,10 @@ molecule_class_info_t::get_cell_and_symm() const {
    return cell_spgr;
 } 
 
-void 
+void
 molecule_class_info_t::set_mmdb_cell_and_symm(std::pair<std::vector<float>, std::string> cell_spgr) {
 
-   if (cell_spgr.first.size() == 6) { 
+   if (cell_spgr.first.size() == 6) {
       std::vector<float> a = cell_spgr.first; // short name
       atom_sel.mol->SetCell(a[0], a[1], a[2], a[3], a[4], a[5]);
       atom_sel.mol->SetSpaceGroup(cell_spgr.second.c_str());

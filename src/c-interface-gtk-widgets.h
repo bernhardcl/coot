@@ -378,6 +378,8 @@ void save_display_control_widget_in_graphics(GtkWidget *widget);
 
 GtkWidget *wrapped_create_display_control_window();
 
+void align_labels_checkbutton_toggled(GtkToggleButton *togglebutton);
+
 GtkWidget *wrapped_create_merge_molecules_dialog();
 void do_merge_molecules_gui();
 void do_merge_molecules(GtkWidget *dialog);
@@ -791,6 +793,10 @@ void save_refmac_phase_params_to_map(int imol_map,
                                     const char *hlb,
                                     const char *hlc,
                                     const char *hld);
+
+/* Donna's request to do the counts in the Mutate Residue range dialog */
+void mutate_molecule_dialog_check_counts(GtkWidget *res_no_1_widget, GtkWidget *res_no_2_widget,
+					 GtkWidget *text_widget, GtkWidget *label_widget);
 
 #endif /* C_INTERFACE_GTK_WIDGETS_H */
 END_C_DECLS
