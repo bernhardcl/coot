@@ -1,20 +1,7 @@
 
    For Release 0.8.9.1
 
-   o reopen LSQ fit - the display says 24 but it chooses 0 for the reference molecule ::: 1
-
-   o the half-bonds of a C-S bond (e.g. CYS) doesn't add the correct atom indicies ::: 2
-
-   o long bonds in bonds representation ::: 2
-
-   o map weights for cryo-EM carbohydrate fitting ::: 2
-
-   o GM sigma and alpha for carbohydrate fitting ::: 2
-
-   o Make RCrane work again ::: 4
-
-   o document how to remove additional representations ::: 0.5
-
+   o get-ebi.scm for updated pdb_redo usage
 
 --------------
 
@@ -142,3 +129,41 @@
      ::: 1
 
 * Forget the valence thing for now. Error message improved.
+
+   o the half-bonds of a C-S bond (e.g. CYS) doesn't add the correct atom indices ::: 1
+
+* Done.
+
+   o long bonds in bonds representation ::: 1
+
+* Done.
+
+   o when a difference map is selected (from a 2fofc map) in find ligands, change the rmd level
+     to 3.0 if it is default.
+
+* Done.
+
+   o document how to remove additional representations ::: 0.5
+
+* Done.
+
+   o sequence view tool tip for residue number ::: 0.5
+
+* Done.
+
+   o fix up the "Only Last" molecule button ::: 0.5
+
+* Done.
+
+   o map weights for cryo-EM carbohydrate fitting ::: 1
+
+* Done.
+
+   o GM sigma and alpha for carbohydrate fitting ::: 1
+
+* Done.
+
+   o reopen LSQ fit - the display says 24 but it chooses 0 for the reference molecule ::: 1
+
+* Done? I sorted out the setting of the mov and ref molecules at least.
+

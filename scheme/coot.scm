@@ -103,6 +103,8 @@
 								      "shelx-extensions.scm"
 								      "enhanced-ligand.scm"
 								      "ligand-check.scm"
+								      "acedrg-link.scm"
+								      "interactive-nudge-residues.scm"
 								      "gui-ligand-sliders.scm"
 								      )))
 	      (else 

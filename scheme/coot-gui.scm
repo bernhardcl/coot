@@ -3946,16 +3946,33 @@
   (if (defined? 'coot-main-menubar)
       (add-module-cryo-em-gui)))
 
+;;
+(define (add-module-ccp4)
+  (if (defined? 'coot-main-menubar)
+      (add-module-ccp4-gui)))
+
+;;
 (define (add-module-cryo-em-gui)
   (if (defined? 'coot-main-menubar)
       (let ((menu (coot-menubar-menu "Cryo-EM")))
 
 	(add-simple-coot-menu-menuitem
 	 menu "Multi-sharpen"
-	 refmac-multi-sharpen-gui))))
+	 refmac-multi-sharpen-gui)
 
+	(add-simple-coot-menu-menuitem
+	 menu "Interactive Nudge Residues"
+	 (lambda ()
+	   (using-active-atom (nudge-residues-gui aa-imol aa-res-spec)))))))
+;;
+(define (add-module-ccp4-gui)
+  (if (defined? 'coot-main-menubar)
+      (let ((menu (coot-menubar-menu "CCP4")))
 
-
+	(add-simple-coot-menu-menuitem
+	 menu "Make Link via Acedrg"
+	 (lambda ()
+	   (acedrg-link-generation-control-window))))))
 
 
 ;; let the c++ part of coot know that this file was loaded:
