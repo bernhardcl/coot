@@ -292,7 +292,8 @@ class molecule_class_info_t {
    
    std::string make_symm_atom_label_string(mmdb::PAtom atom,
 					   const std::pair <symm_trans_t, Cell_Translation> &symm_trans) const;
-   std::string make_atom_label_string(mmdb::PAtom atom, int brief_atom_labels_flag) const;
+   std::string make_atom_label_string(mmdb::PAtom atom, int brief_atom_labels_flag,
+				      short int seg_ids_in_atom_labels_flag) const;
 
    // rebuild/save state command
    std::vector<std::string> save_state_command_strings_;
@@ -804,7 +805,7 @@ public:        //                      public
 
    void label_symmetry_atom(int i);
    
-   void label_atom(int i, int brief_atom_labels_flag);
+   void label_atom(int i, int brief_atom_labels_flag, short int seg_ids_in_atom_labels_flag);
 
    void debug_selection() const; 
    void debug() const;
@@ -1076,7 +1077,7 @@ public:        //                      public
    void make_bonds_type_checked(bool add_residue_indices=false);
 
 
-   void label_atoms(int brief_atom_labels_flag);
+   void label_atoms(int brief_atom_labels_flag, short int seg_ids_in_atom_labels_flag);
    
    //
    void update_molecule_after_additions(); // cleanup, new
@@ -1694,6 +1695,9 @@ public:        //                      public
    int delete_chain(const std::string &chain_id);
 
    int delete_sidechains_for_chain(const std::string &chain_id);
+
+   int delete_sidechain_range(const coot::residue_spec_t &res_1,
+			      const coot::residue_spec_t &res_2);
 
    // closing molecules, delete maps and atom sels as appropriate
    // and unset "filled" variables.  Set name_ to "".
@@ -3126,6 +3130,8 @@ public:        //                      public
 						 const clipper::Xmap<float> &xmap,
 						 float map_weight,
 						 int n_samples);
+
+   std::vector<std::pair<mmdb::Atom *, mmdb::Atom *> > peptide_C_N_pairs(const std::vector<mmdb::Residue *> &residues) const;
 
    mean_and_variance<float> map_histogram_values;
    mean_and_variance<float> set_and_get_histogram_values(unsigned int n_bins); // fill above
