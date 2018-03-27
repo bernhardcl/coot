@@ -1014,6 +1014,9 @@ namespace coot {
       // return success status.
       bool copy_cell_and_symm_headers(mmdb::Manager *m1, mmdb::Manager *m2);
 
+      // All headers except (optionally) cell, symmetry, origin and scale.
+      bool copy_headers(mmdb::Manager *m_from, mmdb::Manager *m_to, bool include_cryst);
+
       // adjust the atoms of residue_p
       void delete_alt_confs_except(mmdb::Residue *residue_p, const std::string &alt_conf);
       
@@ -1309,6 +1312,9 @@ namespace coot {
       // outlierness.
       std::vector<std::pair<atom_spec_t, std::string> >
       gln_asn_b_factor_outliers(mmdb::Manager *mol);
+
+      std::vector<std::pair<mmdb::Atom *, mmdb::Atom *> > peptide_C_N_pairs(mmdb::Chain *chain_p);
+      void standardize_peptide_C_N_distances(const std::vector<std::pair<mmdb::Atom *, mmdb::Atom *> > &C_N_pairs);
 
       // return the number of cis peptides in mol:
       int count_cis_peptides(mmdb::Manager *mol);

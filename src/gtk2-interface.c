@@ -1332,7 +1332,7 @@ create_window1 (void)
   help1_menu = gtk_menu_new ();
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (help1), help1_menu);
 
-  remarks_browser1 = gtk_menu_item_new_with_mnemonic ("Remarks Browser...");
+  remarks_browser1 = gtk_menu_item_new_with_mnemonic ("Header/Remarks Browser...");
   gtk_widget_show (remarks_browser1);
   gtk_container_add (GTK_CONTAINER (help1_menu), remarks_browser1);
   gtk_tooltips_set_tip (tooltips, remarks_browser1, "View the REMARK cards from the PDB file in a dialog", NULL);
@@ -10057,6 +10057,7 @@ create_delete_item_dialog (void)
   GtkWidget *delete_item_water_radiobutton;
   GtkWidget *delete_item_atom_radiobutton;
   GtkWidget *delete_item_sidechain_radiobutton;
+  GtkWidget *delete_item_sidechain_range_radiobutton;
   GtkWidget *delete_item_chain_radiobutton;
   GtkWidget *delete_item_residue_hydrogens_radiobutton;
   GtkWidget *delete_item_residue_range_radiobutton;
@@ -10123,6 +10124,13 @@ create_delete_item_dialog (void)
   gtk_container_set_border_width (GTK_CONTAINER (delete_item_sidechain_radiobutton), 3);
   gtk_radio_button_set_group (GTK_RADIO_BUTTON (delete_item_sidechain_radiobutton), delete_item_residue_radiobutton_group);
   delete_item_residue_radiobutton_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (delete_item_sidechain_radiobutton));
+
+  delete_item_sidechain_range_radiobutton = gtk_radio_button_new_with_mnemonic (NULL, "Sidechain Zone");
+  gtk_widget_show (delete_item_sidechain_range_radiobutton);
+  gtk_box_pack_start (GTK_BOX (vbox63), delete_item_sidechain_range_radiobutton, FALSE, FALSE, 0);
+  gtk_container_set_border_width (GTK_CONTAINER (delete_item_sidechain_range_radiobutton), 3);
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (delete_item_sidechain_range_radiobutton), delete_item_residue_radiobutton_group);
+  delete_item_residue_radiobutton_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (delete_item_sidechain_range_radiobutton));
 
   delete_item_chain_radiobutton = gtk_radio_button_new_with_mnemonic (NULL, "Chain");
   gtk_widget_show (delete_item_chain_radiobutton);
@@ -10199,6 +10207,9 @@ create_delete_item_dialog (void)
   g_signal_connect ((gpointer) delete_item_sidechain_radiobutton, "toggled",
                     G_CALLBACK (on_delete_item_sidechain_radiobutton_toggled),
                     NULL);
+  g_signal_connect ((gpointer) delete_item_sidechain_range_radiobutton, "toggled",
+                    G_CALLBACK (on_delete_item_sidechain_range_radiobutton_toggled),
+                    NULL);
   g_signal_connect ((gpointer) delete_item_chain_radiobutton, "toggled",
                     G_CALLBACK (on_delete_item_chain_radiobutton_toggled),
                     NULL);
@@ -10225,6 +10236,7 @@ create_delete_item_dialog (void)
   GLADE_HOOKUP_OBJECT (delete_item_dialog, delete_item_water_radiobutton, "delete_item_water_radiobutton");
   GLADE_HOOKUP_OBJECT (delete_item_dialog, delete_item_atom_radiobutton, "delete_item_atom_radiobutton");
   GLADE_HOOKUP_OBJECT (delete_item_dialog, delete_item_sidechain_radiobutton, "delete_item_sidechain_radiobutton");
+  GLADE_HOOKUP_OBJECT (delete_item_dialog, delete_item_sidechain_range_radiobutton, "delete_item_sidechain_range_radiobutton");
   GLADE_HOOKUP_OBJECT (delete_item_dialog, delete_item_chain_radiobutton, "delete_item_chain_radiobutton");
   GLADE_HOOKUP_OBJECT (delete_item_dialog, delete_item_residue_hydrogens_radiobutton, "delete_item_residue_hydrogens_radiobutton");
   GLADE_HOOKUP_OBJECT (delete_item_dialog, delete_item_residue_range_radiobutton, "delete_item_residue_range_radiobutton");
