@@ -444,6 +444,7 @@ def add_linked_residue_tree(imol, parent, tree):
             go_to_view_number(start_pos_view, 0)
             with AutoAccept():
                 refine_residues(aa_imol, glyco_tree_residues(aa_imol, aa_res_spec))
+
             # add a test here that the tree here (centre of screen) matches a known tree.
             #
             # and that each is 4C1 (or 1C4 for FUC?) (XYP?)
@@ -452,8 +453,12 @@ def add_linked_residue_tree(imol, parent, tree):
             # g = glyco_validate()
             # BL says:: lets not auto delete since we may remove sugars in
             # the middle of the tree (OK? doesnt take RSCC into account)
+
+            # 20180330-PE OK.
+            #
             # g.auto_delete_residues()
             # g.validation_dialog()
+
     # reset
     set_default_temperature_factor_for_new_atoms(previous_m)
     set_matrix(current_weight)
@@ -970,7 +975,7 @@ def delete_glyco_tree():
         print active_residue
         print "glyco_tree_residues", glyco_tree_residues
         for res in glyco_tree_residues:
-            rn = residue_spec2residue_name(imol, res)
+            rn = residue_name_by_spec(imol, res)
             if rn != "ASN":
                 delete_residue_by_spec(imol, res)
     except KeyError as e:
@@ -983,8 +988,8 @@ def delete_glyco_tree():
 #
 def glyco_validation_dialog_set_go_to_residue(imol, residue_spec):
     rc = residue_centre(imol,
-                        residue_spec2chain_id(residue_spec),
-                        residue_spec2res_no(residue_spec),
+                        residue_spec_to_chain_id(residue_spec),
+                        residue_spec_to_res_no(residue_spec),
                         '')
     set_rotation_centre(*rc)
 
@@ -1037,10 +1042,10 @@ class glyco_validate:
                     words = l.split()
                     if len(words) > 12:
                         for r in glyco_tree_residues:
-                            rn = residue_spec2residue_name(imol, r)
+                            rn = residue_name_by_spec(imol, r)
                             try:
-                                res_id = rn + "-" + residue_spec2chain_id(r) + \
-                                         '-' + str(residue_spec2res_no(r))
+                                res_id = rn + "-" + residue_spec_to_chain_id(r) + \
+                                         '-' + str(residue_spec_to_res_no(r))
                                 # print "res_id", res_id
                                 if words[1] == res_id:
                                     # print words[12] , yes or check
