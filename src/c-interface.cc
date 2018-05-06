@@ -1421,6 +1421,14 @@ GtkWidget *main_toolbar() {
    return w; 
 }
 
+GtkWidget *main_hbox() {
+
+   GtkWidget *w = lookup_widget(graphics_info_t::statusbar, "main_window_hbox");
+   return w;
+
+}
+
+
 
 
 
@@ -2037,7 +2045,6 @@ handle_symmetry_colour_change(int mol, gdouble* col) {
    graphics_info_t::symmetry_colour[2] = col[2];
 
    graphics_draw();
-
 }
 
 gdouble*
