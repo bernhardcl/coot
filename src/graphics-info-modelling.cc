@@ -2453,6 +2453,11 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 		  } 
 
 		  molecules[imol_moving_atoms].insert_coords(tmp_asc);
+
+		  if (terminus_type == "C" || terminus_type == "MC") {
+		     molecules[imol_moving_atoms].move_O_atom_of_added_to_residue(res_p, chain_id);
+		  }
+
 		  graphics_draw();
 	       }
 	    }
@@ -3633,7 +3638,7 @@ graphics_info_t::get_rotamer_probability(mmdb::Residue *res,
 	    r = v[0];
 	 } 
       }
-      catch (std::runtime_error e) {
+      catch (const std::runtime_error &e) {
 	 std::cout << "get_rotamer_probability: caught: " << e.what() << std::endl;
       } 
    } else {
@@ -3770,12 +3775,12 @@ graphics_info_t::update_residue_by_chi_change(int imol, mmdb::Residue *residue,
 	       display_density_level_screen_string += float_to_string(new_torsion);
 	       add_status_bar_text(display_density_level_screen_string);
 	    }
-	    catch (std::runtime_error rte) {
+	    catch (const std::runtime_error &rte) {
 	       std::cout << "Update chi - contact fall-back fails - " << rte.what() << std::endl;
 	    }
 	 }
       }
-      catch (std::runtime_error rte) {
+      catch (const std::runtime_error &rte) {
 	 // atoms of the torsion not found.
 	 std::cout << rte.what() << std::endl;
       }

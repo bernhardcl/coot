@@ -2054,7 +2054,7 @@ molecule_class_info_t::auto_fit_best_rotamer(int resno,
 		     try { 
 			residue_mol[ifrag].addresidue(residue_res, 0);
 		     }
-		     catch (std::runtime_error rte) {
+		     catch (const std::runtime_error &rte) {
 			std::cout << "ERROR:: auto_fit_best_rotamer() 2 " << rte.what() << std::endl;
 		     } 
 		     coot::minimol::molecule moved_mol = residue_mol;
@@ -2238,7 +2238,7 @@ molecule_class_info_t::backrub_rotamer(const std::string &chain_id, int res_no,
 		     bool mzo = g.refinement_move_atoms_with_zero_occupancy_flag;
 		     replace_coords(fragment_asc, 0, mzo);
 		  }
-		  catch (std::runtime_error rte) {
+		  catch (const std::runtime_error &rte) {
 		     std::cout << "WARNING:: thrown " << rte.what() << std::endl;
 		  }
 	       } else {
@@ -7716,9 +7716,6 @@ molecule_class_info_t::cis_trans_conversion(const std::string &chain_id, int res
 int
 molecule_class_info_t::cis_trans_conversion(mmdb::Atom *at, short int is_N_flag) {
 
-   std::cout << "in molecule_class_info_t::cis_trans_conversion() atom_sel.mol is "
-	     << atom_sel.mol << std::endl;
-
    // These 3 are pointers, each of which are of size 2
    mmdb::PResidue *trans_residues = NULL;
    mmdb::PResidue *cis_residues = NULL;
@@ -7859,6 +7856,7 @@ molecule_class_info_t::cis_trans_convert(mmdb::PResidue *mol_residues,
       mmdb::Atom *mol_residue_O_1  = NULL;
       mmdb::Atom *mol_residue_CA_2 = NULL;
       mmdb::Atom *mol_residue_N_2  = NULL;
+      mmdb::Atom *mol_residue_H_2  = NULL;
       
       mmdb::PPAtom mol_residue_atoms = NULL;
       int n_residue_atoms;
@@ -7884,6 +7882,9 @@ molecule_class_info_t::cis_trans_convert(mmdb::PResidue *mol_residues,
 	 }
 	 if (atom_name == " N  ") {
 	    mol_residue_N_2 = mol_residue_atoms[i];
+	 }
+	 if (atom_name == " H  ") {
+	    mol_residue_H_2 = mol_residue_atoms[i];
 	 }
       }
 
@@ -8073,6 +8074,18 @@ molecule_class_info_t::cis_trans_convert(mmdb::PResidue *mol_residues,
 	       mol_residue_N_2->y = newpos.y();
 	       mol_residue_N_2->z = newpos.z();
 
+	       if (mol_residue_H_2) {
+		  // 20180510 place H on N as a riding atom, not using transformation
+		  clipper::Coord_orth at_c_pos  = coot::co(mol_residue_C_1);
+		  clipper::Coord_orth at_n_pos  = coot::co(mol_residue_N_2);
+		  clipper::Coord_orth at_ca_pos = coot::co(mol_residue_CA_1);
+		  double bl = 0.86;
+		  double angle = clipper::Util::d2rad(125.0);
+		  clipper::Coord_orth H_pos(at_ca_pos, at_c_pos, at_n_pos, bl, angle, M_PI);
+		  mol_residue_H_2->x = H_pos.x();
+		  mol_residue_H_2->y = H_pos.y();
+		  mol_residue_H_2->z = H_pos.z();
+	       }
 	       istatus = 1;
 	    }
 	 }
@@ -8165,7 +8178,7 @@ molecule_class_info_t::reverse_direction_of_fragment(const std::string &chain_id
 			try { 
 			   f.addresidue(r, 0);
 			}
-			catch (std::runtime_error rte) { 
+			catch (const std::runtime_error &rte) {
 			   std::cout << "ERROR:: auto_fit_best_rotamer() " << rte.what() << std::endl;
 			}
 		     }
@@ -8275,6 +8288,45 @@ molecule_class_info_t::do_180_degree_side_chain_flip(const std::string &chain_id
  	    residue_copy->GetAtomTable(residue_atoms_copy, n_atom_residue_copy);
 // 	    for (int iat=0; iat<n_atom_residue_copy; iat++)
 // 	       std::cout << residue_atoms_copy[iat] << std::endl;
+
+            // check that the N comes before the CA and the CA comes before
+            // the CB (if it has one).
+            if (coot::util::is_standard_amino_acid_name(resname)) {
+               bool needs_reordering = false;
+               int idx_N  = -1;
+               int idx_CA = -1;
+               int idx_CB = -1;
+	       for (int iat=0; iat<n_atom_residue_copy; iat++) {
+                  mmdb::Atom *at = residue_atoms_copy[iat];
+                  std::string at_name(at->GetAtomName());
+                  if (at_name == " N  ") {  // PDBv3 FIXME
+                     idx_N = iat;
+                  }
+                  if (at_name == " CA ") {  // PDBv3 FIXME
+                     idx_CA = iat;
+                  }
+                  if (at_name == " CB ") {  // PDBv3 FIXME
+                     idx_CB = iat;
+                  }
+               }
+               if (idx_N != -1) {
+                  if (idx_CA != -1) {
+                     if (idx_N > idx_CA) {
+                        needs_reordering = true;
+                     }
+                  }
+               }
+               if (idx_CB != -1) {
+                  if (idx_CA != -1) {
+                     if (idx_CA > idx_CB) {
+                        needs_reordering = true;
+                     }
+                  }
+               }
+               if (needs_reordering) {
+                  coot::put_amino_acid_residue_atom_in_standard_order(residue_copy);
+               }
+            }
 
 	    coot::chi_angles chi_ang(residue_copy, 0);
 	    std::vector<std::vector<int> > contact_indices(n_atom_residue_copy);
@@ -9117,7 +9169,7 @@ molecule_class_info_t::lsq_improve(mmdb::Manager *mol_ref, const std::string &re
 	 have_unsaved_changes_flag = 1;
 	 make_bonds_type_checked(); // calls update_ghosts()
       }
-      catch (std::runtime_error rte) {
+      catch (const std::runtime_error &rte) {
 	 std::cout << "lsq_improve ERROR::" << rte.what() << std::endl;
       } 
    } 
