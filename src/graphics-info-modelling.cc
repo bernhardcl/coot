@@ -742,7 +742,7 @@ graphics_info_t::regularize_residues_vec(int imol,
 //
 coot::refinement_results_t
 graphics_info_t::generate_molecule_and_refine(int imol,
-					      const std::vector<mmdb::Residue *> &residues,
+					      const std::vector<mmdb::Residue *> &residues_in,
 					      const char *alt_conf,
 					      mmdb::Manager *mol,
 					      bool use_map_flag) { 
@@ -766,6 +766,18 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	 flags = coot::ALL_RESTRAINTS;
       
       std::vector<coot::atom_spec_t> fixed_atom_specs = molecules[imol].get_fixed_atoms();
+
+      // refinement goes a bit wonky if there are multiple occurrances of the same residue
+      // in input residue vector, so let's filter out duplicates here
+      //
+      std::vector<mmdb::Residue *> residues;
+      std::set<mmdb::Residue *> residues_set;
+      std::set<mmdb::Residue *>::const_iterator it;
+      for (std::size_t i=0; i<residues_in.size(); i++)
+	 residues_set.insert(residues_in[i]);
+      residues.reserve(residues_set.size());
+      for(it=residues_set.begin(); it!=residues_set.end(); it++)
+	 residues.push_back(*it);
 
       // OK, so the passed residues are the residues in the graphics_info_t::molecules[imol]
       // molecule.  We need to do 2 things:
@@ -2453,6 +2465,11 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 		  } 
 
 		  molecules[imol_moving_atoms].insert_coords(tmp_asc);
+
+		  if (terminus_type == "C" || terminus_type == "MC") {
+		     molecules[imol_moving_atoms].move_O_atom_of_added_to_residue(res_p, chain_id);
+		  }
+
 		  graphics_draw();
 	       }
 	    }
@@ -3633,7 +3650,7 @@ graphics_info_t::get_rotamer_probability(mmdb::Residue *res,
 	    r = v[0];
 	 } 
       }
-      catch (std::runtime_error e) {
+      catch (const std::runtime_error &e) {
 	 std::cout << "get_rotamer_probability: caught: " << e.what() << std::endl;
       } 
    } else {
@@ -3770,12 +3787,12 @@ graphics_info_t::update_residue_by_chi_change(int imol, mmdb::Residue *residue,
 	       display_density_level_screen_string += float_to_string(new_torsion);
 	       add_status_bar_text(display_density_level_screen_string);
 	    }
-	    catch (std::runtime_error rte) {
+	    catch (const std::runtime_error &rte) {
 	       std::cout << "Update chi - contact fall-back fails - " << rte.what() << std::endl;
 	    }
 	 }
       }
-      catch (std::runtime_error rte) {
+      catch (const std::runtime_error &rte) {
 	 // atoms of the torsion not found.
 	 std::cout << rte.what() << std::endl;
       }

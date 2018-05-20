@@ -4606,3 +4606,28 @@ void
 on_delete_item_sidechain_range_radiobutton_toggled
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data);
+
+void
+on_symmetry_colorbutton_color_set      (GtkColorButton  *colorbutton,
+                                        gpointer         user_data);
+
+void
+on_symmetry_colorbutton_color_set      (GtkColorButton  *colorbutton,
+                                        gpointer         user_data);
+
+void
+on_curlew_install_button_clicked       (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+on_curlew_dialog_closebutton_clicked   (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+on_curlew_dialog_close                 (GtkDialog       *dialog,
+                                        gpointer         user_data);
+
+void
+on_curlew_dialog_response              (GtkDialog       *dialog,
+                                        gint             response_id,
+                                        gpointer         user_data);
