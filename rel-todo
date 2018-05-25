@@ -1,7 +1,14 @@
 
    For Release 0.8.9.2
 
-   o Make RCrane work again ::: 6
+   o sync bernie ::: 1
+
+   o morph-fit-by-secondary-structure-elements does a bad job for the loop at 202 with
+     do-a-better-job-at-moving-the-loop-on-SS-morph-fit.pdb, 6771 ::: 2
+
+   o Check that H on N moves on cis-trans ::: 1
+
+* Needs a fixed test.
 
 ------
 
@@ -58,10 +65,6 @@ command "cprodrg" not found
 
 * Done. More tricky than expected. Nice.
 
-   o Check that H on N moves on cis-trans ::: 1
-
-* It didn't. It does. Added a test.
-
    o make restraints for a big protein, then delete them using ...
      delete deviants(?) Fix the slowness ::: 2
 
@@ -100,4 +103,26 @@ command "cprodrg" not found
 
 * Done with a bit of a hack in atom ordering.
 
+   o Make RCrane work again ::: 2
 
+* Done - residue_info() had changed.
+
+   o Update the density fit graph on delete zone ::: 1
+
+* Done.
+
+   o fix crash in all_molecule_ramachandran_score_py() ::: 0.5
+
+* Done.
+
+   o put this in the status-bar:
+
+     Sorry atom with name " CA " alt-loc "empty", res-no: 20, ins-code "", chain: "A" not found in molecule 0
+
+    ::: 0.5
+
+* Done.
+
+   o replace fragment using Edit gui menu item ::: 0.2
+
+* Done.

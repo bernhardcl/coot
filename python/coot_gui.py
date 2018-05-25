@@ -1116,7 +1116,6 @@ def generic_chooser_and_entry(chooser_label, entry_hint_text,
                               always_dismiss_on_ok_clicked=True):
 
    print "BL DEBUG:: --- deal with always_dissmiss...", always_dismiss_on_ok_clicked
-   # cf = lambda text, dummy: callback_function(text)
    generic_chooser_and_entry_and_check_button(chooser_label, entry_hint_text,
                                               default_entry_text, False,
                                               callback_function,
