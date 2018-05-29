@@ -118,7 +118,7 @@ namespace molecule_map_type {
 #include "fragment-info.hh"
 #include "atom-name-bits.hh"
 #include "rama-rota-score.hh"
-
+#include "merge-molecule-results-info-t.hh"
 
 namespace coot {
 
@@ -806,19 +806,18 @@ public:        //                      public
 				 bool warn_about_missing_symmetry_flag);
 
    void label_symmetry_atom(int i);
-   
+
+   // used for raster3d (where we need to know the position of the label)
+   std::pair<std::string, clipper::Coord_orth>
+   make_atom_label_string(unsigned int ith_labelled_atom,
+			  int brief_atom_labels_flag,
+			  short int seg_ids_in_atom_labels_flag) const;
+
    void label_atom(int i, int brief_atom_labels_flag, short int seg_ids_in_atom_labels_flag);
 
    void debug_selection() const; 
-   void debug() const;
+   void debug(bool debug_atoms_also_flag=false) const;
 
-   // Ugh.  Horrible.  I don't want outside access to setting of
-   // imol_no - I want to do it in the constructor.  Must FIX. 
-   // 
-   void set_mol_number(int i) {
-      imol_no = i;
-      *imol_no_ptr = i;
-   }; 
    void set_bond_colour_by_mol_no(int icolour,
 				  bool against_a_dark_background);  // not const because
 					   	                    // we also set
@@ -2336,10 +2335,10 @@ public:        //                      public
 
    // merge molecules
    
-   std::pair<int, std::vector<std::string> > merge_molecules(const std::vector<atom_selection_container_t> &add_molecules);
+   std::pair<int, std::vector<merge_molecule_results_info_t> > merge_molecules(const std::vector<atom_selection_container_t> &add_molecules);
    std::pair<bool, std::vector<std::string> > try_add_by_consolidation(mmdb::Manager *adding_mol);
    bool merge_molecules_just_one_residue_homogeneous(atom_selection_container_t molecule_to_add);
-   bool merge_ligand_to_near_chain(mmdb::Manager *mol); // return success status
+   std::pair<bool, coot::residue_spec_t> merge_ligand_to_near_chain(mmdb::Manager *mol); // return success status and spec if new residue if possible.
 
    int renumber_residue_range(const std::string &chain_id,
 			      int start_resno, int last_resno, int offset);
