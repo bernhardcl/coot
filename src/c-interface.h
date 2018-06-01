@@ -2942,6 +2942,11 @@ PyObject *symmetry_operators_to_xHM_py(PyObject *symmetry_operators);
 
 /*! \brief merge molecules
 
+@return a pair, the first item of which is a status (1 is good) the second is
+a list of merge-infos (one for each of the items in add_molecules). If the
+molecule of an add_molecule item is just one residue, return a spec for the
+new residue, if it is many residues return a chain id.
+
 the first argument is a list of molecule numbers and the second is the target 
    molecule into which the others should be merged  */
 #ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
@@ -5598,6 +5603,8 @@ void set_raster3d_shadows_enabled(int state);
 /*! \brief set the flag to show waters as spheres for the Raster3D 
 representation. 1 show as spheres, 0 the usual stars. */
 void set_raster3d_water_sphere(int istate);
+/*! \brief set the font size (as a string) for raster3d*/
+void set_raster3d_font_size(const char *size_in);
 /*! \brief run raster3d and display the resulting image.  */
 void raster_screen_shot(); /* run raster3d or povray and guile */
                            /* script to render and display image */
