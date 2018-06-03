@@ -77,8 +77,8 @@ predict = function(x_pos, y_pos) {
 a = read.table('burn-up.tab')
 
 
-# it's tricky to change the plot resolution (sigh)
-# png('burn-up.png', res=480, pointsize=8)
+# change the plot resolution
+# png('burn-up.png', res=92, width=640, height=640)
 png('burn-up.png')
 
 do_plot = function() {
@@ -87,9 +87,9 @@ do_plot = function() {
                xlab="Real Days (since development start)",
                ylab="'Dev' Days")
 
+   grid()
    points(a$V1, a$V3*0.5, t='l', lwd=3, lty=1, col='brown')
    points(a$V1, a$V2*0.5, t='l', lwd=3, lty=1, col='black')
-   grid()
 
    leg.txt <- c("Scope", "Done")
    legend(legend_x, legend_y, legend=leg.txt, col=c("brown", "black"), lty=1:1, lwd=3, cex=0.7)
