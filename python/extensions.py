@@ -472,7 +472,6 @@ if (have_coot_python):
      #    	                                               lambda imol, text, button_state: atom_selection_from_fragmemt_func(imol, text, button_state),
      #                                          False))
 
-
      # --- D ---
 
      # now in main menu
