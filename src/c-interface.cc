@@ -171,7 +171,7 @@ std::string coot_version_extra_info() {
    version_string += ".";
    version_string += coot::util::int_to_string(SCM_MICRO_VERSION);
    version_string += " embedded]\n";
-#endif    
+#endif
 #ifdef USE_PYTHON
    version_string += "[with python ";
    version_string += coot::util::int_to_string(PY_MAJOR_VERSION);
@@ -179,9 +179,21 @@ std::string coot_version_extra_info() {
    version_string += coot::util::int_to_string(PY_MINOR_VERSION);
    version_string += ".";
    version_string += coot::util::int_to_string(PY_MICRO_VERSION);
-   version_string += " embedded]";
-#endif    
-   int len = version_string.length();
+   version_string += " embedded]\n";
+#endif
+   std::string s = COOT_BUILD_INFO_STRING;
+   if (! s.empty()) {
+      version_string += "Builder_info: ";
+      version_string += COOT_BUILD_INFO_STRING;
+      version_string += "\n";
+   }
+
+   s = COOT_SYS_BUILD_TYPE;
+   if (! s.empty()) {
+      version_string += "Binary type: ";
+      version_string += COOT_SYS_BUILD_TYPE;
+      version_string += "\n";
+   }
 
    return version_string;
 }

@@ -551,7 +551,8 @@ class graphics_info_t {
    mmdb::Residue *get_first_res_of_moving_atoms();
    static int imol_moving_atoms;
    static int imol_refinement_map;
-   static int moving_atoms_n_cis_peptides; 
+   static int moving_atoms_n_cis_peptides;
+   static bool moving_atoms_have_hydrogens_displayed;
 
    //
    static int undo_molecule; // -1 initially
@@ -2253,19 +2254,19 @@ public:
    coot::refinement_results_t
      generate_molecule_and_refine(int imol,  // needed for UDD Atom handle transfer
 				  const std::vector<mmdb::Residue *> &residues,
-				  const char *alt_conf,
+				  const std::string &alt_conf,
 				  mmdb::Manager *mol, 
 				  bool use_map_flag);
 
    coot::refinement_results_t
      refine_residues_vec(int imol, 
 			 const std::vector<mmdb::Residue *> &residues,
-			 const char *alt_conf,
+			 const std::string &alt_conf,
 			 mmdb::Manager *mol);
    coot::refinement_results_t
      regularize_residues_vec(int imol, 
 			     const std::vector<mmdb::Residue *> &residues,
-			     const char *alt_conf,
+			     const std::string &alt_conf,
 			     mmdb::Manager *mol);
 			       
 
@@ -3231,7 +3232,9 @@ public:
    static bool find_hydrogen_torsions_flag;
 
    // pickable moving atoms molecule
-   pick_info moving_atoms_atom_pick() const;
+   // (we want to be able to avoid picking hydrogen atoms if the
+   // are not displayed)
+   pick_info moving_atoms_atom_pick(short int pick_mode) const;
    static short int in_moving_atoms_drag_atom_mode_flag;
    // when shift is pressed move (more or less) just the "local"
    // moving atoms atoms, we do this by making the shift proportional
