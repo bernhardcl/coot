@@ -2247,7 +2247,7 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
         else:
             print "we have dict and model for tlc already"
             return have_tlc_molecule
-    
+
     #
     def mutate_it():
         imol_ligand = get_monomer_and_dictionary(tlc)
@@ -2267,12 +2267,14 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
                 new_res_spec = new_chain_id_info[1]
                 new_chain_id = residue_spec_to_chain_id(new_res_spec)
                 print "BL DEBUG:: new res spec", new_res_spec
+                print "BL DEBUG:: change_residue_number to", resno
                 change_residue_number(imol, new_chain_id,
                                       residue_spec_to_res_no(new_res_spec),
                                       residue_spec_to_ins_code(new_res_spec),
                                       resno, "")
-                # not needed any more
-                #change_chain_id(imol, new_chain_id, chain_id_in, 1, resno, resno)
+                if not (new_chain_id == chain_id_in):
+                    change_chain_id(imol, new_chain_id, chain_id_in, 1, resno,
+                                    resno)
 
                 replacement_state = refinement_immediate_replacement_state()
                 imol_map = imol_refinement_map()
