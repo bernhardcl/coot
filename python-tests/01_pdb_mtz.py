@@ -842,6 +842,10 @@ class PdbMtzTestFunctions(unittest.TestCase):
         # atoms move less here
 	# 20160608 - they move still less  (not sure why this time)
 	#
+        # 20180606-PE New style refinement (wrapping residue
+        # vec means that refinement has changed) atoms are still
+        # still moving though. Hmm. Perhaps the A atoms should not
+        # move and we should test for that.
         self.failIf(d < 0.09,
                     "   refined atom failed to move: d=%s" %d)
 
