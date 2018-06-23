@@ -35,7 +35,7 @@
 #include "coords/mmdb-extras.h"
 #include "coords/mmdb-crystal.h"
 
-#include "lbg/flev-annotations.hh" // animated ligand interactions
+#include "pli/flev-annotations.hh" // animated ligand interactions
 #include "named-rotamer-score.hh"
 
 #include "coords/phenix-geo.hh"
@@ -330,9 +330,10 @@ void add_to_database(const std::vector<std::string> &command_strings);
 /*  ----------------------------------------------------------------------- */
 /*                         Merge Molecules                                  */
 /*  ----------------------------------------------------------------------- */
+#include "merge-molecule-results-info-t.hh"
 // return the status and vector of chain-ids of the new chain ids.
 // 
-std::pair<int, std::vector<std::string> > merge_molecules_by_vector(const std::vector<int> &add_molecules, int imol);
+std::pair<int, std::vector<merge_molecule_results_info_t> > merge_molecules_by_vector(const std::vector<int> &add_molecules, int imol);
 
 /*  ----------------------------------------------------------------------- */
 /*                         Dictionaries                                     */
@@ -699,6 +700,22 @@ PyObject *residues_near_residue_py(int imol, PyObject *residue_in, float radius)
 //!
 PyObject *residues_near_position_py(int imol, PyObject *pos_in, float radius);
 
+//! \brief return a Python object for the bonds
+//
+PyObject *get_bonds_representation(int imol);
+
+//! \brief return a Python object for the radii of the atoms in the dictionary
+//
+PyObject *get_dictionary_radii();
+
+//! \brief return a Python object for the representation of bump and hydrogen bonds of
+//          the specified residue
+PyObject *get_environment_distances_representation_py(int imol, PyObject *residue_spec_py);
+
+//! \brief return a Python object for the intermediate atoms bonds
+//
+PyObject *get_intermediate_atoms_bonds_representation();
+
 #endif // USE_PYTHON
 
 //! \}
@@ -880,6 +897,13 @@ void spin_search_by_atom_vectors(int imol_map, int imol, const std::string &chai
 //!   fit to density of imol_map map of the first atom in
 //!   moving_atom_list.  Works (only) with atoms in altconf "" 
 void spin_search(int imol_map, int imol, const char *chain_id, int resno, const char *ins_code, SCM direction_atoms_list, SCM moving_atoms_list);
+//! \brief Spin N and CB (and the rest of the side chain if extant)
+//!
+//!  Sometime on N-terminal addition, then N ends up pointing the wrong way.
+//!  The allows us to (more or less) interchange the positions of the CB and the N.
+//!  angle is in degrees.
+//!
+void spin_N_scm(int imol, SCM residue_spec_scm, float angle);
 #endif
 
 #ifdef USE_PYTHON
@@ -888,7 +912,15 @@ void spin_search(int imol_map, int imol, const char *chain_id, int resno, const 
 //!   fit to density of imom_map map of the first atom in
 //!   moving_atom_list.  Works (only) with atoms in altconf ""
 void spin_search_py(int imol_map, int imol, const char *chain_id, int resno, const char *ins_code, PyObject *direction_atoms_list, PyObject *moving_atoms_list);
+//! \brief Spin N and CB (and the rest of the side chain if extant)
+//!
+//!  Sometime on N-terminal addition, then N ends up pointing the wrong way.
+//!  The allows us to (more or less) interchange the positions of the CB and the N.
+//!  angle is in degrees.
+//!
+void spin_N_py(int imol, PyObject *residue_spec, float angle);
 #endif
+
 //! \}
 
 
@@ -1251,7 +1283,7 @@ int handle_drag_and_drop_string(const std::string &uri);
 /* ------------------------------------------------------------------------- */
 
 #ifdef USE_PYTHON
-/*! \name Map Contouring */
+/*! \name Map Contouring Functions */
 // \{
 //! \brief return two lists: a list of vertices and a list of indices for connection
 PyObject *map_contours(int imol, float contour_level);
@@ -1277,6 +1309,14 @@ void set_map_correlation_atom_radius(float r);
 // points of (potentially overlapping) neighbour_residue_spec.
 // 
 #ifdef USE_GUILE
+//! \brief atom-mask-mode is as follows:
+// 0: all-atoms
+// 1: main-chain atoms if is standard amino-acid, else all atoms
+// 2: side-chain atoms if is standard amino-acid, else all atoms
+// 3: side-chain atoms-excluding CB if is standard amino-acid, else all atoms
+// 4: main-chain atoms if is standard amino-acid, else nothing
+// 5: side-chain atoms if is standard amino-acid, else nothing
+// 10: atom radius is dependent atom atom B-factor
 SCM map_to_model_correlation_scm(int imol,
 				 SCM residue_specs,
 				 SCM neighb_residue_specs,
@@ -1484,10 +1524,6 @@ SCM align_to_closest_chain_scm(std::string target_seq, float match_fraction);
 //! \brief make a simple text dialog.
 void simple_text_dialog(const std::string &dialog_title, const std::string &text,
 			int geom_x, int geom_y);
-
-// gui nuts and bolts
-void on_simple_text_dialog_close_button_pressed( GtkWidget *button,
-						 GtkWidget *dialog);
 
 
 /*  ----------------------------------------------------------------------- */

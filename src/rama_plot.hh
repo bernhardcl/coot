@@ -29,6 +29,7 @@
 #ifdef HAVE_GOOCANVAS
 #include <goocanvas.h>
 #endif
+
 // ------------------------ Canvas stuff -----------------------------------
 #if defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
 #ifdef HAVE_GTK_CANVAS
@@ -108,14 +109,14 @@ namespace coot {
 
    public:
       int model_number;
-      std::map<residue_spec_t, util::phi_psi_t> phi_psi;
+      std::map<residue_spec_t, util::phi_psi_with_residues_t> phi_psi;
       phi_psis_for_model_t(int model_number_in) {
 	 model_number = model_number_in;
       }
-      void add_phi_psi(const residue_spec_t &spec, const util::phi_psi_t &phi_psi_in) {
+      void add_phi_psi(const residue_spec_t &spec, const util::phi_psi_with_residues_t &phi_psi_in) {
 	 phi_psi[spec] = phi_psi_in;
       }
-      util::phi_psi_t operator[](const residue_spec_t &spec) {
+      util::phi_psi_with_residues_t operator[](const residue_spec_t &spec) {
  	 return phi_psi[spec];
       }
       unsigned int size() { return phi_psi.size(); } 
@@ -263,14 +264,13 @@ class rama_plot {
    std::pair<int, int> molecule_numbers_; // needed for undating kleywegt plots
    std::pair<std::string, std::string> chain_ids_; // ditto.
    std::pair<mmdb::Manager *, mmdb::Manager *> mols_; // ditto.
-   int dialog_position_x; 
+   int dialog_position_x;
    int dialog_position_y;
    float current_level_prefered;
    float current_level_allowed;
    bool kleywegt_plot_uses_chain_ids;
    void hide_stats_frame();
    void counts_to_stats_frame(const rama_stats_container_t &sc);
-
    void counts_to_canvas(cairo_t *cr);
    bool resize_it;
    
@@ -307,7 +307,7 @@ class rama_plot {
 
    double drag_x, drag_y;
    gboolean dragging;
-  
+
    bool is_outlier(const coot::util::phi_psi_t &phi_psi) const;
    bool draw_outliers_only;
    int psi_axis_mode;
@@ -343,15 +343,17 @@ public:
    GtkWidget *selection_checkbutton;
 
    rama_plot() {
+#ifdef HAVE_GOOCANVAS
       green_box_item = NULL;
-      dynawin = NULL;
-      canvas = NULL;
-      stand_alone_flag = 0;
-      resize_it = FALSE;
       current_bg = NULL;
       current_residue = NULL;
       residues_grp = NULL;
       arrow_grp = NULL;
+#endif
+      dynawin = NULL;
+      canvas = NULL;
+      stand_alone_flag = 0;
+      resize_it = FALSE;
       saved_counts = rama_stats_container_t();
       rama_mol_name = "";
       plot_type = -1;
@@ -362,7 +364,9 @@ public:
       pad_w = 0.;
       pad_h = 0.;
       resize_canvas_with_window = 0;
-      dialog_position_x = -100; dialog_position_y = -100; }
+      dialog_position_x = -100; dialog_position_y = -100;
+      psi_axis_mode = PSI_CLASSIC;
+   }
 
    rama_stats_container_t saved_counts;
    std::string rama_mol_name;
@@ -401,11 +405,11 @@ public:
    void draw_it(mmdb::Manager *mol, int SelHnd, int primary=0);
    void draw_it(int imol1, int imol2, mmdb::Manager *mol1, mmdb::Manager *mol2); // no chain ids.
    void draw_it(int imol1, int imol2,
-		mmdb::Manager *mol1, mmdb::Manager *mol2,
+                mmdb::Manager *mol1, mmdb::Manager *mol2,
                 int SelHnd1, int SelHnd2);
    void draw_it(int imol1, int imol2,
                 mmdb::Manager *mol1, mmdb::Manager *mol2,
-		const std::string &chain_id_1, const std::string &chain_id_2);
+                const std::string &chain_id_1, const std::string &chain_id_2);
    
    void draw_it(const util::phi_psi_t &phipsi);
    void draw_it(const std::vector<util::phi_psi_t> &phipsi);
@@ -472,6 +476,9 @@ public:
    void set_data_for_phi_psi_point_item(const std::string &label,
                                         const coot::util::phi_psi_t &phi_psi,
                                         GooCanvasItem *item);
+   void set_data_for_phi_psi_point_item_other(const std::string &label,
+					      const coot::util::phi_psi_t &phi_psi,
+					      GooCanvasItem *item);
 #endif
 
    rama_stats_container_t draw_phi_psi_points();
@@ -528,7 +535,7 @@ public:
    void draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1,
                                       mmdb::Manager *mol2,
                                       int SelHnd1, int SelHnd2);
-   void draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1, 
+   void draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1,
 				      mmdb::Manager *mol2,
 				      std::string chain_id1, std::string chain_id2);
 
@@ -588,12 +595,17 @@ public:
       if (model_no < phi_psi_model_sets.size())
 	 r = phi_psi_model_sets[model_no];
       return r;
-   } 
-
+   }
+   
+   void show_outliers_only(mmdb::Manager *mol, int state);
+   void show_outliers_only(int state);
+   
    void write_pdf(std::string &file_name);
    void write_png(std::string &file_name);
+#ifdef HAVE_GOOCANVAS
    void write_png_simple(std::string &file_name, GooCanvasItem *item = NULL);
    void write_svg(std::string &file_name, GooCanvasItem *item = NULL);
+#endif
    void make_bg_images();
 
    void fill_kleywegt_comboboxes(int imol);
@@ -601,8 +613,6 @@ public:
    void fill_kleywegt_comboboxes(mmdb::Manager *mol1,
                                  mmdb::Manager *mol2);
 
-   void show_outliers_only(mmdb::Manager *mol, int state);
-   void show_outliers_only(int state);
    void psi_axis_changed();
    void set_rama_psi_axis(int state);
    void show_selection_widget(int state);

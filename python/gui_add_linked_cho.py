@@ -1,265 +1,464 @@
 
-def add_pyranose_pseudo_ring_plane_restraints(comp_id):
+def interactive_add_cho_dialog():
 
-    def filter_out(plane_name_sub_string, plane_restraints):
-        return plane_restraints
-        
-    restraints = monomer_restraints(comp_id)
+    def refine_tree_func():
+        with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code,
+                                       aa_atom_name, aa_alt_conf, aa_res_spec]:
+            refine_residues(aa_imol, glyco_tree_residues(aa_imol, aa_res_spec))
 
-    if (not isinstance(restraints, dict)):
-        print "failed to get %s restraints" %comp_id
-    else:
-        plane_restraints = restraints["_chem_comp_plane_atom"]
-        new_plane_restraints = ["_chem_comp_plane_atom",
-                                [["pseudo-ring-1", [" C1 ", " C2 ", " C4 ", " C5 "], 0.01],
-                                 ["pseudo-ring-2", [" C2 ", " C3 ", " C5 ", " O5 "], 0.01],
-                                 ["pseudo-ring-3", [" C3 ", " C4 ", " O5 ", " C1 "], 0.01]]] + \
-                                filter_out("pseudo-ring-3", plane_restraints) #should be list already
-        restraints["_chem_comp_plane_atom"] = new_plane_restraints
-        print "BL DEBUG:: new plane restraints", new_plane_restraints
+    add_synthetic_pyranose_planes()
+    use_unimodal_pyranose_ring_torsions()
+    # button list with [label, function]
+    buttons = [
+        ["Update for Current Residue", lambda func: printf("dummy")],
+        ["Refine Tree", lambda func: refine_tree_func()],
+        ["Add a NAG-ASN NAG",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("NAG", "NAG-ASN")],
+        ["Add a BETA1-4 NAG",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("NAG", "BETA1-4")],
+        ["Add a BETA1-4 BMA",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("BMA", "BETA1-4")],
+        ["Add an ALPHA1-2 MAN",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("MAN", "ALPHA1-2")],
+        ["Add an ALPHA1-3 MAN",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("MAN", "ALPHA1-3")],
+        ["Add an ALPHA2-3 MAN",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("MAN", "ALPHA2-3")],
+        ["Add an ALPHA2-3 GAL",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("GAL", "ALPHA2-3")],
+        ["Add an ALPHA1-6 MAN",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("MAN", "ALPHA1-6")],
+        ["Add a BETA1-2 NAG",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("NAG", "BETA1-2")],
+        ["Add a BETA1-4 GAL",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("GAL", "BETA1-4")],
+        ["Add an ALPHA1-2 FUC",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("FUC", "ALPHA1-2")],
+        ["Add an ALPHA1-3 FUC",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("FUC", "ALPHA1-3")],
+        ["Add an ALPHA1-6 FUC",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("FUC", "ALPHA1-6")],
+        ["Add an BETA1-6 FUL",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("FUL", "BETA1-6")],
+        ["Add an XYP-BMA XYP",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("XYP", "XYP-BMA")],
+        ["Add an ALPHA2-3 SIA",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("SIA", "ALPHA2-3")],
+        ["Add an ALPHA2-6 SIA",
+         lambda func:
+         add_linked_residue_with_extra_restraints_to_active_residue("SIA", "ALPHA2-6")]
+    ]
 
-        set_monomer_restraints(comp_id, restraints)
-        
-def add_synthetic_carbohydrate_planes():
-    add_pyranose_pseudo_ring_plane_restraints("NAG")
-    add_pyranose_pseudo_ring_plane_restraints("BMA")
-    add_pyranose_pseudo_ring_plane_restraints("MAN")
-    add_pyranose_pseudo_ring_plane_restraints("GAL")
-    add_pyranose_pseudo_ring_plane_restraints("GLC")
-    add_pyranose_pseudo_ring_plane_restraints("XYP")
-    add_pyranose_pseudo_ring_plane_restraints("FUC")
+    vbox = dialog_box_of_buttons("Add N-linked Glycan",
+                                 [420, 600], buttons, "Close")
+    gui_add_linked_cho_dialog_vbox_set_rotation_centre_hook(vbox)
+    # set the callback on the first button
+    children = vbox.get_children()
+    if isinstance(children, list):
+        if len(children) > 0:
+            first_button = children[0]
+            first_button.connect("clicked", lambda func:
+                                 gui_add_linked_cho_dialog_vbox_set_rotation_centre_hook(vbox))
 
+    # add a widget to allow the user to choose the tree type
+    table = gtk.Table(3, 2, False)
+    butt_1 = gtk.RadioButton(None, "High Mannose")
+    butt_2 = gtk.RadioButton(butt_1, "Hybrid (Mammal)")
+#    butt_3 = gtk.RadioButton(butt_1, "Hybrid (Plant)")
+    butt_4 = gtk.RadioButton(butt_1, "Complex (Mammal)")
+    butt_5 = gtk.RadioButton(butt_1, "Complex (Plant)")
+    butt_6 = gtk.RadioButton(butt_1, "Expert User Mode")
 
-def multi_add_linked_residue(imol, res_spec, residues_to_add):
+    butt_1.show()
+    butt_2.show()
+ #   butt_3.show()
+    butt_4.show()
+    butt_5.show()
+    butt_6.show()
 
-    set_go_to_atom_molecule(imol)
-    current_matrix = matrix_state() # BL says:: maybe should save
-                                    # and return to original weight?!
-    set_matrix(8)
+    # add buttons for nice(?) layout/order
+    table.attach(butt_1, 0, 1, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # high mannose
+    table.attach(butt_4, 1, 2, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # complex mammal
+    table.attach(butt_6, 0, 1, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # Expert
+#    table.attach(butt_3, 1, 2, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0)
+    table.attach(butt_5, 1, 2, 1, 2, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # complex plant
+    table.attach(butt_2, 2, 3, 0, 1, gtk.EXPAND|gtk.FILL, gtk.EXPAND|gtk.FILL, 0, 0) # hybrid mammal
+    
+    
+    vbox.pack_start(table, True, True, 2)
+    table.show()
+    vbox.reorder_child(table, 0)
 
-    current_refinement_rate = dragged_refinement_steps_per_frame()
+    for butt in [butt_1, butt_2, butt_4, butt_5, butt_6]:
+        butt.connect("toggled", lambda func:
+                     gui_add_linked_cho_dialog_vbox_set_rotation_centre_hook(vbox))
 
-    current_residue_spec = res_spec
-    for residue_to_add in residues_to_add:
+    # "global" var post-set-rotation-centre-hook
+    # BL Note:: maybe should be a global!?
+    global post_set_rotation_centre_script
+    def post_set_rotation_centre_script():
+        gui_add_linked_cho_dialog_vbox_set_rotation_centre_hook(vbox)
 
-        set_go_to_atom_from_res_spec(current_residue_spec)
-        set_dragged_refinement_steps_per_frame(300)
+#
+def glyco_tree_dialog_set_button_active_state(button, glyco_id, tree_type):
 
-        if (not isinstance(current_residue_spec, list)):
-            print "OOps not a proper res_spec %s with residue_to_add: %s" \
-                  %(current_residue_spec, residue_to_add)
-            return False
+    def glyco_id2level_number(glyco_id):
+        return glyco_id[0]
+
+    def glyco_id2prime_arm_sym(glyco_id):
+        return glyco_id[1]
+
+    def glyco_id2residue_type(glyco_id):
+        return glyco_id[2]
+
+    def glyco_id2link_type(glyco_id):
+        return glyco_id[3]
+
+    def glyco_id2paren_residue_type(glyco_id):
+        return glyco_id[4]
+
+    def glyco_id2residue_spec(glyco_id):
+        return glyco_id[5]
+    
+    def get_sensitive_button_list(glyco_id, tree_type):
+
+        if not isinstance(glyco_id, list):
+            return []
         else:
-            if not residue_to_add:
-                return "done" # odd return?! why?
-            else:
-                if (not isinstance(residue_to_add, list) and \
-                    not len(residue_to_add) == 2):
-                    print "Oops - not a residue_link string pair when adding new_res_pair"
-                else:
-                    new_res = residue_to_add[0]
-                    new_link = residue_to_add[1]
+            level_number = glyco_id2level_number(glyco_id)
+            prim_arm_sym = glyco_id2prime_arm_sym(glyco_id)
+            residue_type = glyco_id2residue_type(glyco_id)
+            link_type = glyco_id2link_type(glyco_id)
+            parent_residue_type = glyco_id2paren_residue_type(glyco_id)
+            residue_spec = glyco_id2residue_spec(glyco_id)
+            active_button_label_ls = []
+            
+            if tree_type == 'expert-user-mode':
+                active_button_label_ls = "expert-user-mode" # ???
 
+            # -----------------------------------------------------------------------------------
+            # Note the trees tested here match those from (get-tree-type) which examines the button
+            # label of the active radio button in the dialog (these are not the auto-build trees)
+            # ------------------------------------------------------------------------------------
+            # BL says:: test and control the trees
 
-                    new_res_spec = add_linked_residue(imol,
-                                                      res_spec2chain_id(current_residue_spec),
-                                                      res_spec2res_no(current_residue_spec),
-                                                      res_spec2ins_code(current_residue_spec),
-                                                      new_res,
-                                                      new_link)
+            if tree_type == 'oligomannose':
 
+                if level_number == 0:
+                    if residue_type == "ASN":
+                        active_button_label_ls = ["Add a NAG-ASN NAG"]
+                        
+                if level_number == 1:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 NAG"]
+                        
+                if level_number == 2:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 BMA"]
 
-                    # residues_near_residue takes a 3-part spec and makes 3-part specs
-                    ls = residues_near_residue(imol, current_residue_spec, 1.9)
-                    with AutoAccept():
-                        refine_residues(imol, [current_residue_spec] + ls)
-                    # make the new res the one to add to (remove starting bool)
-                    current_residue_spec = new_res_spec[1:]  
+                if level_number == 3:
+                    if residue_type == "BMA":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN"]
 
-    # restore refinement mode and matrix weight
-    set_dragged_refinement_steps_per_frame(current_refinement_rate)
-    set_matrix(current_matrix)
+                if level_number == 4:
+                    if residue_type == "MAN":
+                        if link_type == "ALPHA1-3":
+                            active_button_label_ls = ["Add an ALPHA1-2 MAN"]
+                        if link_type == "ALPHA1-6":
+                            active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                      "Add an ALPHA1-6 MAN"]
+                        
+                if level_number == 5:
+                    if residue_type == "MAN":
+                        # active_button_label_ls is the same, so no if required?
+                        # or wrong tree branches. FIXME.
+                        if link_type == "ALPHA1-2":
+                            active_button_label_ls = ["Add an ALPHA1-2 MAN"]
+                        if link_type == "ALPHA1-6":
+                            active_button_label_ls = ["Add an ALPHA1-2 MAN"]
+                        if link_type == "ALPHA1-3":
+                            active_button_label_ls = ["Add an ALPHA1-2 MAN"]
+                            
+                if level_number == 6:
+                    if residue_type == "MAN":
+                        if link_type == "ALPHA1-2":
+                            active_button_label_ls = ["Add an ALPHA1-3 GLC"]
 
+                # inconsistencies between links here. FIXME
+                if level_number == 7:
+                    if residue_type == "GLC":
+                        if link_type == "ALPHA1-2":
+                            active_button_label_ls = ["Add an ALPHA1-3 GLC"]
 
-def oligomannose_tree():
-    ret = [["NAG-ASN", "NAG"],
-           ["BETA1-4", "NAG"],
-           ["BETA1-4", "BMA"],
-           [
-               ["ALPHA1-6", "MAN"],
-               [
-                   ["ALPHA1-6", "MAN"],
-                   ["ALPHA1-2", "MAN"]
-                   ],
-               [
-                   ["ALPHA1-3", "MAN"],
-                   ["ALPHA1-2", "MAN"]
-                   ]
-               ],
-           [
-               ["ALPHA1-3", "MAN"],
-               ["ALPHA1-2", "MAN"],
-               ["ALPHA1-2", "MAN"]
-               ]
-           ]
-    return ret
+                if level_number == 8:
+                    if residue_type == "GLC":
+                        if link_type == "ALPHA1-2":
+                            active_button_label_ls = ["Add an ALPHA1-2 GLC"]
 
-def paucimannose_tree():
-    ret = [["NAG-ASN", "NAG"],
-           [  ["ALPHA1-3", "FUC"] ],
-           [  ["BETA1-4", "NAG"],
-              ["BETA1-4", "BMA"],
-              [ ["XYP-BMA",  "XYP"] ],
-              [ ["ALPHA1-3", "MAN"] ],
-              [ ["ALPHA1-6", "MAN"] ]
-           ]
-           ]
-    return ret
+            # hybrid mammal
+            if tree_type == 'hybrid-mammal':
 
-# now can be user defined
-global add_linked_residue_tree_correlation_cut_off
-add_linked_residue_tree_correlation_cut_off = 0.6
+                if level_number == 0:
+                    if residue_type == "ASN":
+                        active_button_label_ls = ["Add a NAG-ASN NAG"]
+                        
+                if level_number == 1:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 NAG",
+                                                  "Add an ALPHA1-3 FUC"]
+                        
+                if level_number == 2:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 BMA"]
 
-def add_linked_residue_tree(imol, parent, tree):
+                if level_number == 2:
+                    if residue_type == "FUC":
+                        active_button_label_ls = ["Add a BETA1-4 GAL"]
 
-    global add_linked_residue_tree_correlation_cut_off
-    
-    def centre_view_on_residue_centre(res_spec):
-        res_centre = residue_centre(imol,
-                                    residue_spec2chain_id(res_spec),
-                                    residue_spec2res_no(res_spec),
-                                    residue_spec2ins_code(res_spec))
-        if (isinstance(res_centre, list)):
-            set_rotation_centre(*res_centre)
-    
-    def well_fitting_qm(res_spec):
-        with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
-                                   aa_ins_code, aa_atom_name, aa_alt_conf]:
-            neighbs = residues_near_residue(aa_imol, res_spec, 4)
-            c = map_to_model_correlation(imol, [res_spec], neighbs, 0,
-                                         imol_refinement_map())
-            print "######## new residue %s density correlation: %s" %(res_spec, c)
-            if (not isNumber(c)):
-                return False
-            else:
-                return c > add_linked_residue_tree_correlation_cut_off
-    
-    def delete_residue_by_spec(spec):
-        delete_residue(imol,
-                       residue_spec2chain_id(spec),
-                       residue_spec2res_no(spec),
-                       residue_spec2ins_code(spec))
+                if level_number == 3:
+                    if residue_type == "BMA":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN"]
 
-    def func(parent, res_pair):
-        if (not isinstance(parent, list)):
-            print "WARNING:: OOps not a proper res_spec %s with residue_to_add: %s" %(parent, res_pair)
-            return False
-        else:
-            # OK. go go go
-            new_link = res_pair[0]
-            new_res_type = res_pair[1]
+                if level_number == 3:
+                    if residue_type == "GAL":
+                        active_button_label_ls = ["Add an ALPHA1-2 FUC"]
 
-            centre_view_on_residue_centre(parent)
+                if level_number == 4:
+                    if residue_type == "MAN":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN",
+                                                  "Add a BETA1-2 NAG"]
+                
+                if level_number == 5:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 GAL"]
+                
+                if level_number == 5:
+                    if residue_type == "GAL":
+                        active_button_label_ls = ["Add an ALPHA2-3 SIA",
+                                                  "Add an ALPHA2-6 SIA"]
+                
+            # hybrid plant
+            if tree_type == 'hybrid-plant':
 
-            active_atom = active_residue_py()
-            active_residue = active_atom[:4]
-            save_residue_specs = glyco_tree_residues_py(imol, active_residue)
+                if level_number == 0:
+                    if residue_type == "ASN":
+                        active_button_label_ls = ["Add a NAG-ASN NAG"]
+                        
+                if level_number == 1:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 NAG",
+                                                  "Add an ALPHA1-3 FUC"]
+                        
+                if level_number == 2:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 BMA"]
 
-            imol_glyco_pre = new_molecule_by_residue_specs_py(imol, save_residue_specs)
-            set_mol_displayed(imol_glyco_pre, 0)
-            set_mol_active(imol_glyco_pre, 0)
-            new_res_spec = add_linked_residue(imol,
-                                              res_spec2chain_id(parent),
-                                              res_spec2res_no(parent),
-                                              res_spec2ins_code(parent),
-                                              new_res_type,
-                                              new_link)
-            ls = residues_near_residue(imol, parent, 1.9)
-            local_ls = [parent] + ls
-            with AutoAccept():
-                refine_residues(imol, local_ls)
-            # make this optional
-            rotate_y_scene(200, 0.5)
-            if (not isinstance(new_res_spec, list)):
-                # badness
-                return False
-            else:
-                # okay!?
-                preped_new_res_spec = new_res_spec[1:]  # strip off leading result
-                if well_fitting_qm(preped_new_res_spec):
-                    # close_molecule(imol_glyco_pre)
-                    return preped_new_res_spec
-                else:
-                    print "----------- That was not well fitting. Deleting:", preped_new_res_spec
-                    delete_residue_by_spec(preped_new_res_spec)
-                    replace_residues_from_mol_py(imol, imol_glyco_pre, save_residue_specs)
-                    with AutoAccept():
-                        # Note: may not get rid of screwed up refinement from
-                        # adding a carb too much...
-                        refine_residues(imol, local_ls)
-                        return False
-                    
-    def process_tree(parent, tree, proc_func):
-        for branch in tree:
-            if ((len(branch) == 2) and
-                isinstance(branch[0], str) and
-                isinstance(branch[0], str)):
-                # have the link, res pair!
-                new_res = proc_func(parent, branch)
-                if new_res:
-                    parent = new_res
-                else:
-                    break
-            else:
-                if isinstance(branch, list):
-                    process_tree(parent, branch, proc_func)
+                if level_number == 2:
+                    if residue_type == "FUC":
+                        active_button_label_ls = ["Add a BETA1-4 GAL"]
 
-    # main line of add_linked_residue_tree
+                if level_number == 3:
+                    if residue_type == "BMA":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN",
+                                                  "Add an XYP-BMA XYP"]
+
+                if level_number == 3:
+                    if residue_type == "GAL":
+                        active_button_label_ls = ["Add an ALPHA1-2 FUC"]
+
+                # note that level-number is not enough for complete disambiguation,
+                # we need to know we are 4 or 4' (Vliegenthart et al 1983 nomenclature).
+                if level_number == 4:
+                    if residue_type == "MAN":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN",
+                                                  "Add a BETA1-2 NAG"]
+                
+                if level_number == 5:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 GAL"]
+                
+                if level_number == 5:
+                    if residue_type == "GAL":
+                        active_button_label_ls = ["Add an ALPHA2-3 SIA",
+                                                  "Add an ALPHA2-6 SIA"]
+                
+            # complex mammal
+            #
+            if tree_type == 'complex-mammal':
+
+                if level_number == 0:
+                    if residue_type == "ASN":
+                        active_button_label_ls = ["Add a NAG-ASN NAG"]
+                        
+                if level_number == 1:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 NAG",
+                                                  "Add an ALPHA1-6 FUC"]
+                        
+                if level_number == 2:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 BMA"]
+
+                if level_number == 3:
+                    if residue_type == "BMA":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN",
+                                                  "Add a BETA1-4 NAG"]
+
+                #  note that level-number is not enough for complete disambiguation, 
+                # we need to know we are 4 or 4' (Vl...? nomenclature).
+                #
+                if level_number == 4:
+                    if residue_type == "MAN":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN",
+                                                  "Add a BETA1-2 NAG"]
+
+                if level_number == 5:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 GAL"]
+
+                if level_number == 6:
+                    if residue_type == "GAL":
+                        active_button_label_ls = ["Add an ALPHA2-3 SIA",
+                                                  "Add an ALPHA2-6 SIA"]
+
+                        
+            # complex plant
+            #
+            if tree_type == 'complex-plant':
+
+                if level_number == 0:
+                    if residue_type == "ASN":
+                        active_button_label_ls = ["Add a NAG-ASN NAG"]
+                        
+                if level_number == 1:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 NAG",
+                                                  "Add an ALPHA1-3 FUC",
+                                                  "Add an ALPHA1-6 FUC"]
+                        
+                if level_number == 2:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 BMA"]
+
+                if level_number == 3:
+                    if residue_type == "BMA":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN",
+                                                  "Add an XYP-BMA XYP",
+                                                  "Add a BETA1-4 NAG"]
+
+                if level_number == 4:
+                    if residue_type == "MAN":
+                        active_button_label_ls = ["Add an ALPHA1-3 MAN",
+                                                  "Add an ALPHA1-6 MAN",
+                                                  "Add a BETA1-2 NAG"]
+
+                if level_number == 5:
+                    if residue_type == "NAG":
+                        active_button_label_ls = ["Add a BETA1-4 GAL"]
+
+                if level_number == 6:
+                    if residue_type == "GAL":
+                        active_button_label_ls = ["Add an ALPHA2-3 SIA",
+                                                  "Add an ALPHA2-6 SIA"]
+                        
+            return active_button_label_ls
+
+    # main line
     #
-    add_synthetic_carbohydrate_planes()
-    set_residue_selection_flash_frames_number(1)
-    set_go_to_atom_molecule(imol)
-    previous_m = default_new_atoms_b_factor()
-    m = median_temperature_factor(imol)
-    try:
-        new_m = m * 1.55
-        if new_m > 0:
-            set_default_temperature_factor_for_new_atoms(new_m)
-    except:
-        print "BL INFO:: not changing default B for new carb atoms"
-    process_tree(parent, tree, func)
-    g = glyco_validate()
-    g.auto_delete_residues()
-    # reset
-    set_default_temperature_factor_for_new_atoms(previous_m)
+    l = button.get_label()
+    active_button_label_ls = get_sensitive_button_list(glyco_id, tree_type)
+    if (active_button_label_ls == "expert-user-mode"):
+        button.set_sensitive(True)
+    else:
+        if not (l == "Update for Current Residue") and not (l == "Refine Tree"):
+            button.set_sensitive(l in active_button_label_ls)
+
+# vbox is the vbox of the dialog box of buttons. One of the children of the vbox
+# is the table that contains the buttons
+#
+def gui_add_linked_cho_dialog_vbox_set_rotation_centre_hook(vbox):
+
+    def get_tree_type():
+        tree_type = "oligomannose"
+        children = vbox.get_children()
+        for child in children:
+            if type(child) == gtk.Table:
+                for table_child in child:
+                    if type(table_child) == gtk.RadioButton:
+                        if table_child.get_active():
+                            l = table_child.get_label()
+                            # this is a bit ugly because we are testing that these strings
+                            # match button labels (set in interactive-add-cho-dialog)
+                            if l == "High Mannose":
+                                tree_type = 'oligomannose'
+                            if l == "Hybrid (Mammal)":
+                                tree_type = 'hybrid-mammal'
+                            if l == "Hybrid (Plant)":
+                                tree_type = 'hybrid-plant'
+                            if l == "Expert User Mode":
+                                tree_type = 'expert-user-mode'
+                            if l == "Complex (Mammal)":
+                                tree_type = 'complex-mammal'
+                            if l == "Complex (Plant)":
+                                tree_type = 'complex-plant'
+        return tree_type
+
+    with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code,
+                                   aa_atom_name, aa_alt_conf, aa_res_spec]:
+        glyco_id = glyco_tree_residue_id(aa_imol, aa_res_spec)
+        # Paule says:
+        # if it was an ASP create a level-0 glyco-id for that (glyco-tree-residue-id doesn't
+        # do that (not sure why)).
+        if not glyco_id:
+            rn = residue_name(aa_imol, aa_chain_id, aa_res_no, aa_ins_code)
+            if isinstance(rn, str):
+                if rn == "ASN":
+                    glyco_id = [0, "unset", "ASN", "", "", aa_res_spec]
+        if isinstance(glyco_id, list):
+            tree_type = get_tree_type()
+            children = vbox.get_children()
+            for child in children:
+                if (type(child) == gtk.Button):
+                    glyco_tree_dialog_set_button_active_state(child, glyco_id,
+                                                              tree_type)
+            return True
+        return False
 
 
-def delete_glyco_tree():
+# There is some graphics to the validation here, so keep it in the graphics part
+# wont be missed in the non-grpahical part for now, I think (BL that is).
     
-    active_atom = active_residue_py()
-    try:
-        imol = active_atom[0]
-        active_residue = active_atom[:4]
-        print "active_residue", active_residue
-        glyco_tree_residues = glyco_tree_residues_py(imol, active_residue)
-        print active_residue
-        print "glyco_tree_residues", glyco_tree_residues
-        for res in glyco_tree_residues:
-            rn = residue_name_by_spec(imol, res)
-            if rn != "ASN":
-                delete_residue_by_spec(imol, res)
-    except KeyError as e:
-        print e
-    except TypeError as e:
-        print e
-
 # this has to be at the top level for reasons that I don't understand
 # (python function scoping) - I'll just put it down to python being shit as usual.
 #
 def glyco_validation_dialog_set_go_to_residue(imol, residue_spec):
     rc = residue_centre(imol,
-                        res_spec_utils.residue_spec_to_chain_id(residue_spec),
-                        res_spec_utils.residue_spec_to_res_no(residue_spec),
+                        residue_spec_to_chain_id(residue_spec),
+                        residue_spec_to_res_no(residue_spec),
                         '')
     set_rotation_centre(*rc)
 
@@ -314,8 +513,8 @@ class glyco_validate:
                         for r in glyco_tree_residues:
                             rn = residue_name_by_spec(imol, r)
                             try:
-                                res_id = rn + "-" + res_spec_utils.residue_spec_to_chain_id(r) + \
-                                         '-' + str(res_spec_utils.residue_spec_to_res_no(r))
+                                res_id = rn + "-" + residue_spec_to_chain_id(r) + \
+                                         '-' + str(residue_spec_to_res_no(r))
                                 # print "res_id", res_id
                                 if words[1] == res_id:
                                     # print words[12] , yes or check
@@ -398,114 +597,153 @@ class glyco_validate:
             
 # graphics...
 
-def add_module_carbohydrate():
+def add_module_carbohydrate_gui():
     if (have_coot_python):
         if coot_python.main_menubar():
             menu = coot_menubar_menu("Glyco")
 
-            def add_carbo_link_func(sugar, link):
-                current_weight = matrix_state()
-                set_matrix(8)
-                with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
-                                           aa_ins_code, aa_atom_name, aa_alt_conf]:
-                    add_linked_residue(aa_imol, aa_chain_id, aa_res_no, aa_ins_code,
-                                       sugar, link)
-                    set_matrix(current_weight)
-                    
             add_simple_coot_menu_menuitem(
-                menu, "Add a ASN-NAG NAG",
-                lambda func: add_carbo_link_func("NAG", "NAG-ASN"))
-
-            add_simple_coot_menu_menuitem(
-                menu, "Add a BETA1-4 NAG",
-                lambda func: add_carbo_link_func("NAG", "BETA1-4"))
-
-            add_simple_coot_menu_menuitem(
-                menu, "Add a BETA1-4 BMA",
-                lambda func: add_carbo_link_func("BMA", "BETA1-4"))
+                menu, "N-linked Glycan Addition Dialog...",
+                lambda func:
+                interactive_add_cho_dialog())
             
-            add_simple_coot_menu_menuitem(
-                menu, "Add an ALPHA1-2 MAN",
-                lambda func: add_carbo_link_func("MAN", "ALPHA1-2"))
-            
-            add_simple_coot_menu_menuitem(
-                menu, "Add an ALPHA1-3 MAN",
-                lambda func: add_carbo_link_func("MAN", "ALPHA1-3"))
-
-            # we should do this only if we are sitting on an SIA.
-            # Attaching a SIA to a MAN (i.e. reverse order) would be a
-            # good test too...
-            add_simple_coot_menu_menuitem(
-                menu, "Add an ALPHA2-3 MAN",
-                lambda func: add_carbo_link_func("MAN", "ALPHA2-3"))
-
-            # same consideration as above
-            add_simple_coot_menu_menuitem(
-                menu, "Add an ALPHA2-3 GAL",
-                lambda func: add_carbo_link_func("GAL", "ALPHA2-3"))
-
-            add_simple_coot_menu_menuitem(
-                menu, "Add an ALPHA1-6 MAN",
-                lambda func: add_carbo_link_func("MAN", "ALPHA1-6"))
-
-            add_simple_coot_menu_menuitem(
-                menu, "Add an ALPHA1-3 FUC",
-                lambda func: add_carbo_link_func("FUC", "ALPHA1-3"))
-
-            add_simple_coot_menu_menuitem(
-                menu, "Add an ALPHA1-6 FUC",
-                lambda func: add_carbo_link_func("FUC", "ALPHA1-6"))
-
-            add_simple_coot_menu_menuitem(
-                menu, "Add an XYP-BMA XYP",
-                lambda func: add_carbo_link_func("XYP", "XYP-BMA"))
-
             def add_multi_carbo_link_func(link_list):
                 with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                            aa_ins_code, aa_atom_name, aa_alt_conf]:
                     multi_add_linked_residue(aa_imol,
                                              [aa_chain_id, aa_res_no, aa_ins_code],
                                              link_list)
+
+
+            def set_default_cho_b_factor_func():
+                with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no,
+                                               aa_ins_code, aa_atom_name,
+                                               aa_alt_conf, aa_res_spec]:
+                    residues = residues_near_residue(aa_imol, aa_res_spec, 10)
+                    imol_region = new_molecule_by_residue_specs(aa_imol, residues)
+                    # BL says:: why not do a new mol by sphere selection?!
+                    m = median_temperature_factor(imol_region)
+                    close_molecule(imol_region)
+                    if isNumber(m):
+                        new_m = m* 1.55
+                        set_default_temperature_factor_for_new_atoms(new_m)
+                        s = "New Temperature Factor set to " + str(new_m)
+                        info_dialog(s)
                 
+            add_simple_coot_menu_menuitem(
+                menu, "Set Default N-linked CHO Atoms B-factor",
+                lambda func: set_default_cho_b_factor_func()
+            )
+
+            
             add_simple_coot_menu_menuitem(
                 menu, "N-link add NAG, NAG, BMA",
                 lambda func: add_multi_carbo_link_func([["NAG", "NAG-ASN"],
                                                         ["NAG", "BETA1-4"],
                                                         ["BMA", "BETA1-4"]]))
+            
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add a ASN-NAG NAG",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("NAG", "NAG-ASN"))
 
-            add_simple_coot_menu_menuitem(
-                menu, "Auto Fit & Refine On for Link Addition",
-                lambda func: set_add_linked_residue_do_fit_and_refine(1))
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add a BETA1-4 NAG",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("NAG", "BETA1-4"))
 
-            add_simple_coot_menu_menuitem(
-                menu, "Auto Fit & Refine Off for Link Addition",
-                lambda func: set_add_linked_residue_do_fit_and_refine(0))
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add a BETA1-4 BMA",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("BMA", "BETA1-4"))
+            
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add an ALPHA1-2 MAN",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("MAN", "ALPHA1-2"))
+            
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add an ALPHA1-3 MAN",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("MAN", "ALPHA1-3"))
 
-            def add_oligo_mannose_func():
+            # we should do this only if we are sitting on an SIA.
+            # Attaching a SIA to a MAN (i.e. reverse order) would be a
+            # good test too...
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add an ALPHA2-3 MAN",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("MAN", "ALPHA2-3"))
+
+            # # same consideration as above
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add an ALPHA2-3 GAL",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("GAL", "ALPHA2-3"))
+
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add an ALPHA1-6 MAN",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("MAN", "ALPHA1-6"))
+
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add an ALPHA1-3 FUC",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("FUC", "ALPHA1-3"))
+
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add an ALPHA1-6 FUC",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("FUC", "ALPHA1-6"))
+
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Add an XYP-BMA XYP",
+            #     lambda func:
+            #     add_linked_residue_with_extra_restraints_to_active_residue("XYP", "XYP-BMA"))
+
+
+            # the mode in the function call now takes take of this
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Auto Fit & Refine On for Link Addition",
+            #     lambda func: set_add_linked_residue_do_fit_and_refine(1))
+
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Auto Fit & Refine Off for Link Addition",
+            #     lambda func: set_add_linked_residue_do_fit_and_refine(0))
+
+            def add_oligo_tree_func(oligo_tree):
                 with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                            aa_ins_code, aa_atom_name, aa_alt_conf]:
                     make_backup(aa_imol)
                     # switch backup off?!
                     add_linked_residue_tree(aa_imol,
                                             [aa_chain_id, aa_res_no, aa_ins_code],
-                                            oligomannose_tree())
+                                            oligo_tree)
                 
-            def add_paucimannose_func():
-                with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
-                                           aa_ins_code, aa_atom_name, aa_alt_conf]:
-                    make_backup(aa_imol)
-                    # switch backup off?!
-                    add_linked_residue_tree(aa_imol,
-                                            [aa_chain_id, aa_res_no, aa_ins_code],
-                                            paucimannose_tree())
+            add_simple_coot_menu_menuitem(
+                menu, "Add High Mannose",
+                lambda func: add_oligo_tree_func(oligomannose_tree()))
 
             add_simple_coot_menu_menuitem(
-                menu, "Add Oligomannose",
-                lambda func: add_oligo_mannose_func())
+                menu, "Add Hybrid (Mammal)",
+                lambda func: add_oligo_tree_func(hybrid_mammal_tree()))
+            
+#            in practice, no one will be doing this. 
+#            add_simple_coot_menu_menuitem(
+#                menu, "Add Hybrid (Plant)",
+#                lambda func: add_oligo_tree_func(hybrid_plant_derived_tree()))
 
             add_simple_coot_menu_menuitem(
-                menu, "Add Paucimannose",
-                lambda func: add_paucimannose_func())
+                menu, "Add Complex (Mammal)",
+                lambda func: add_oligo_tree_func(complex_mammal_tree()))
+
+            add_simple_coot_menu_menuitem(
+                menu, "Add Complex (Plant)",
+                lambda func: add_oligo_tree_func(complex_plant_tree()))
+
+            add_simple_coot_menu_menuitem(
+                menu, "Delete All Carbohydrate",
+                lambda func: delete_all_cho())
 
             def torsion_fit_this_func(refine = False):
                 with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
@@ -528,15 +766,14 @@ def add_module_carbohydrate():
                     if refine:
                         with AutoAccept():
                             refine_residues(aa_imol, [centre_residue])
-                
+
             add_simple_coot_menu_menuitem(
                 menu, "Torsion Fit this residue",
                 lambda func: torsion_fit_this_func())
 
-            add_simple_coot_menu_menuitem(
-                menu, "Torsion Fit This Residue and Neighbours",
-                lambda func: torsion_fit_this_and_neighbours_func())
-
+            # add_simple_coot_menu_menuitem(
+            #     menu, "Torsion Fit This Residue and Neighbours",
+            #     lambda func: torsion_fit_this_and_neighbours_func())
 
             add_simple_coot_menu_menuitem(
                 menu, "Torsion Fit & Refine this residue",
@@ -544,5 +781,13 @@ def add_module_carbohydrate():
 
             add_simple_coot_menu_menuitem(
                 menu, "Add synthetic pyranose plane restraints",
-                lambda func: add_synthetic_carbohydrate_planes())
+                lambda func: add_synthetic_pyranose_planes())
 
+            add_simple_coot_menu_menuitem(
+                menu, "Use Unimodal ring torsion restraints",
+                lambda func: use_unimodal_pyranose_ring_torsions())
+
+            add_simple_coot_menu_menuitem(
+                menu, "Extract this Tree",
+                lambda func:
+                new_molecule_from_this_glyco_tree())

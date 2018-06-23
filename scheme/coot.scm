@@ -84,6 +84,8 @@
 			   "tips.scm"
 			   "3d-generator-import.scm"
 			   "dictionary-generators.scm"
+			   "cho-restraints-from-models.scm"
+			   "add-linked-cho.scm"
 			   "jligand.scm"
 			   "americanisms.scm"
 			   "group-settings.scm")))
@@ -102,6 +104,8 @@
 								      "shelx-extensions.scm"
 								      "enhanced-ligand.scm"
 								      "ligand-check.scm"
+								      "acedrg-link.scm"
+								      "interactive-nudge-residues.scm"
 								      "gui-ligand-sliders.scm"
 								      )))
 	      (else 

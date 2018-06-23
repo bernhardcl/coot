@@ -49,6 +49,9 @@
 ;(greg-gui 'make-gui)
 
 
+(set-map-radius 4.5) ;; faster
+
+
 (let ((ccp4-master (getenv "CCP4_MASTER")))
   (if (string? ccp4-master)
       (begin
@@ -115,7 +118,7 @@
 
      (define (matches-attributes atts-obs atts-ref)
        (equal? atts-obs atts-ref))
-       
+
 
      ;; main line
      (if (not (file-exists? ins-code-frag-pdb))
@@ -173,6 +176,29 @@
 		 (format #t "   fail: real: ~s expected: ~s ~%" 
 			 (car real-results) (car expected-results))
 		 #f)))))))))
+
+(greg-testcase "Replace Residue gets correct residue number" #t
+   (lambda ()
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+       (mutate-by-overlap imol "A" 86 "PTR")
+       (let ((rn (residue-name imol "A" 86 "")))
+	 (if (not (string? rn))
+	     #f
+	     (if (not (string=? rn "PTR"))
+		 #f
+		 ;; OK, did the the refinement run OK? Check the C-N distance
+		 (let ((N-atom (get-atom imol "A" 86 "" " N  " ""))
+		       (C-atom (get-atom imol "A" 85 "" " C  " "")))
+
+		   (let ((dd (bond-length-from-atoms N-atom C-atom)))
+		     (if (> dd 1.4)
+			 #f
+			 (if (< dd 1.25)
+			     #f
+			     (begin
+			       (format #t "C-N dist good enough: ~s~%" dd)
+			       #t)))))))))))
 
 
 (greg-testcase "Read a bogus map" #t
@@ -393,6 +419,40 @@
 	     (throw 'fail)))
        #t)))
 
+(greg-testcase "Add Terminal Residue O Position" #t
+   (lambda ()
+
+     (let* ((imol (greg-pdb "tutorial-modern.pdb"))
+	    (mtz-file-name (append-dir-file
+			    greg-data-dir
+			    "rnasa-1.8-all_refmac1.mtz"))
+	    (imol-map (make-and-draw-map mtz-file-name "FWT" "PHWT" "" 0 0)))
+
+       ;; move the O close to where the N will end up - a bad place.
+       ;; (we check that it moves there)
+       ;;
+       (let ((attribs (list (list imol "A" 93 "" " O  " "" "x" 58.5)
+			    (list imol "A" 93 "" " O  " "" "y"  2.9)
+			    (list imol "A" 93 "" " O  " "" "z" -1.9))))
+	 (set-atom-attributes attribs)
+	 (let ((O-atom-o (get-atom imol "A" 93 "" " O  " "")))
+	   (with-no-backups imol
+			    (let ((dummy 'making-a-thunk))
+			      (add-terminal-residue imol "A" 93 "ALA" 1)
+			      (let ((N-atom-n (get-atom imol "A" 94 "" " N  " "")))
+			      (let ((O-atom-n (get-atom imol "A" 93 "" " O  " "")))
+				(let ((dd-1 (bond-length-from-atoms O-atom-o N-atom-n))
+				      (dd-2 (bond-length-from-atoms O-atom-n N-atom-n)))
+				  (format #t "Add terminal residue bond check dd-1: ~s~%" dd-1)
+				  (format #t "Add terminal residue bond check dd-2: ~s~%" dd-2)
+				  ;; the new N will not always go into the same place
+				  ;; allow a bit more generosity in position difference
+				  (if (not (< dd-1 0.4)) ;; 0.4 should be generous enough
+				      #f
+				      (if (not (> dd-2 1.9))
+					  #f
+					  #t ; hooray
+					  ))))))))))))
 
 				       
 (greg-testcase "Select by Sphere" #t
@@ -509,6 +569,42 @@
 		       (throw 'fail))))))))))
 
 
+
+(greg-testcase "HIS with unusual atom order rotates correct fragment for 180 sidechain flip" #t
+   (lambda ()
+
+     (let ((imol (greg-pdb "eleanor-HIS.pdb")))
+       (if (not (valid-model-molecule? imol))
+	   (begin
+	     (format #t "BAD imol for 180 sidechain flip test imol: ~s~%" imol)
+	     (throw 'fail))
+
+	   (let ((N-atom-o   (get-atom imol "A" 111 "" " N  " ""))
+		 (ND1-atom-o (get-atom imol "A" 111 "" " ND1" "")))
+	     (with-no-backups imol
+	      (do-180-degree-side-chain-flip imol "A" 111 "" ""))
+	     (let ((N-atom-n   (get-atom imol "A" 111 "" " N  " ""))
+		   (ND1-atom-n (get-atom imol "A" 111 "" " ND1" "")))
+
+	       ;; the N-atom stays still
+	       ;; the ND1 atom moves by > 1A.
+
+	       (let ((dd-1 (bond-length-from-atoms N-atom-o N-atom-n))
+		     (dd-2 (bond-length-from-atoms ND1-atom-o ND1-atom-n)))
+
+		 (format #t "dd-1: ~s dd-2: ~s~%" dd-1 dd-2)
+
+		 (if (> dd-1 0.01)
+		     (begin
+		       (format #t "N atom moved - fail\n")
+		       (throw 'fail))
+
+		     (if (< dd-2 1.01)
+			 (begin
+			   (format #t "ND1 atom did not move enough - fail\n")
+			   (throw 'fail))
+
+			 #t)))))))))
 
 ;; Don't reset the occupancies of the other parts of the residue
 ;; on regularization using alt confs
@@ -772,7 +868,7 @@
 ;; is not built).
 ;; 
 (greg-testcase "Correction of CISPEP test" #t
-   (lambda ()	      
+   (lambda ()
 
 ;; In this test the cis-pep-12A has indeed a CIS pep and has been
 ;; refined with refmac and is correctly annotated.  There was 4 on
@@ -818,16 +914,37 @@
 
 		  (let ((tmp-file "tmp-fixed-cis.pdb"))
 		    (write-pdb-file cis-pep-mol tmp-file)
-		    (let ((o (run-command/strings "grep" (list"-c" "CISPEP" tmp-file) '())))
-		      (if (not (list? o))
-			  (throw 'fail)
-			  (if (not (= (length o) 1))
-			      (throw 'fail)
-			      (let ((parts (split-after-char-last #\: (car o) list)))
-				(format #t "   CISPEPs: ~s~%" (car (cdr parts)))
-				(if (not (string=? "3" (car (cdr parts))))
-				    (throw 'fail)
-				    #t)))))))))))))
+
+		    (call-with-input-file tmp-file
+		      (lambda (port)
+
+			(let ((n-cispeps
+			       (let loop ((line (read-line port))
+					  (n-cispeps 0))
+				 (cond
+				  ((eof-object? line) n-cispeps)
+				  ((string=? (substring line 0 4) "CISP") (loop (read-line port) (+ n-cispeps 1)))
+				  ((string=? (substring line 0 4) "ATOM") n-cispeps)
+				  (else
+				   (loop (read-line port) n-cispeps))))))
+
+			  (= n-cispeps 3))))))))))))
+
+
+(greg-testcase "H on a N moves on cis-trans convert" #t
+   (lambda ()
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+       (let ((imol-2 (new-molecule-by-atom-selection imol "//A/1-10")))
+	 (coot-reduce imol-2)
+	 (let ((H-atom-o (get-atom imol-2 "A" 6 "" " H  " "")))
+	     (with-no-backups imol-2 (cis-trans-convert imol-2 "A" 5 "")) ;; 5-6 peptide
+	     (let ((H-atom-n   (get-atom imol-2 "A" 6 "" " H  " "")))
+	       (let ((dd (bond-length-from-atoms H-atom-o H-atom-n)))
+		 (close-molecule imol)
+		 (close-molecule imol-2)
+		 (format #t "dd: ~s~%" dd)
+		 (> dd 1.4))))))))
 
 
 
@@ -849,7 +966,12 @@
 	     ;; the atom should move in refinement
 	     (format #t "   refined moved: d=~s~%" d)
 
-	     (if (< d 0.2) ;; 20120110 new-style NBCs means that the
+	     (if (< d 0.09) ;; 20180606-PE New style refinement (wrapping residue 
+                           ;; vec means that refinement has changed) atoms are still
+		           ;; still moving though. Hmm. Perhaps the A atoms should not
+		           ;; move and we should test for that.
+                           ;;
+                           ;; 20120110 new-style NBCs means that the
                            ;; atoms move less here
 		           ;; 20160608 - they move still less  (not sure
                            ;; why this time)
@@ -963,6 +1085,53 @@
 		 (set-matrix new-weight)
 		 (loop (refine-zone-with-full-residue-spec imol "A" 40 "" 43 "" "")))))))))
 
+
+
+(greg-testcase "Neighbour-Refine doesn't destroy disulfide bonds" #t
+   (lambda ()
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+
+       (set-imol-refinement-map imol-rnase-map)
+       (set-go-to-atom-molecule imol)
+       (set-go-to-atom-chain-residue-atom-name "B" 7 " CA ")
+
+	(let* ((rc-spec (list "B" 7 ""))
+	       (ls (residues-near-residue imol rc-spec 2.2))
+	       (residues-list (cons rc-spec ls)))
+
+	  ;; (format #t "debug::::: neighbour-refine test: residues-list: ~s~%" residues-list)
+
+	  (with-auto-accept (refine-residues imol residues-list))
+	  (let ((at-spec-1 (list "B"  7 "" " SG " ""))
+		(at-spec-2 (list "B" 96 "" " SG " "")))
+	    (let ((at-1 (get-atom-from-spec imol at-spec-1))
+		  (at-2 (get-atom-from-spec imol at-spec-2)))
+	      (let ((bl (bond-length-from-atoms at-1 at-2)))
+
+		;; (format #t "bl-1: ~s~%" bl)
+
+		(let ((state (bond-length-within-tolerance? at-1 at-2 2.0 0.05)))
+
+		  ;; (format #t "bond-length within tolerance?: ~s~%" state)
+
+		  (if (not state)
+		      #f
+
+		      ;; do it again
+		      (begin
+			(with-auto-accept (refine-residues imol residues-list))
+			(let ((at-spec-1 (list "B"  7 "" " SG " ""))
+			      (at-spec-2 (list "B" 96 "" " SG " "")))
+			  (let ((at-1 (get-atom-from-spec imol at-spec-1))
+				(at-2 (get-atom-from-spec imol at-spec-2)))
+			    (let ((bl (bond-length-from-atoms at-1 at-2)))
+
+			      ;; (format #t "bl-2: ~s~%" bl)
+
+			      (let ((state (bond-length-within-tolerance? at-1 at-2 2.0 0.05)))
+
+				state))))))))))))))
 
 
 
@@ -1632,11 +1801,11 @@
 (greg-testcase "Make a glycosidic linkage" #t 
    (lambda ()
 
-     (let* ((carbo "multi-carbo-coot-2.pdb")
+     (let* ((carbo "multi-carbo-coot-3.pdb")
 	    (imol (greg-pdb carbo)))
 
        (if (not (valid-model-molecule? imol))
-	   (begin 
+	   (begin
 	     (format #t "file not found: ~s~%" carbo)
 	     #f)
 	   
@@ -1670,7 +1839,7 @@
        (if (not (valid-model-molecule? imol))
 	   (throw 'failed-to-find-pdb2qc1-sans-cho))
        
-       (let ((status (add-linked-residue imol "B" 141 "" "NAG" "NAG-ASN")))
+       (let ((status (add-linked-residue imol "B" 141 "" "NAG" "NAG-ASN" 3000)))
 
 	 (with-auto-accept (refine-residues imol (list (list "B" 141 "") (list "B" 464 ""))))
 
@@ -1711,7 +1880,8 @@
 
 
 
-(greg-testcase "Test for mangling of hydrogen names from a PDB v 3.0" #t
+
+(greg-testcase "Test for regularization and mangling of hydrogen names from a PDB v 3.0" #t
    (lambda ()
 
      ;; Note that it seems to me that the bonds are not within
@@ -1730,7 +1900,7 @@
 
        (with-auto-accept (regularize-zone imol "B" 6 6 ""))
        (let ((atom-pairs 
-	      (list 
+	      (list
 	       (cons "HD11" " CD1")
 	       (cons "HD12" " CD1")
 	       (cons "HD13" " CD1")
@@ -1744,11 +1914,13 @@
 	     (let ((atom-1 (get-atom imol "B" 6 "" (car pair)))
 		   (atom-2 (get-atom imol "B" 6 "" (cdr pair))))
 	       (if (bond-length-within-tolerance? atom-1 atom-2 0.96 0.02)
-		   #t 
+		   #t
 		   (begin
-		     (format #t "Hydrogen names mangled from PDB ~s ~s~%"
-			     atom-1 atom-2)
-		     #f))))
+		     (let ((bl (bond-length-from-atoms atom-1 atom-2)))
+		       (format #t "  Oops! bond length not within tolerance: ~s~%" bl)
+		       (format #t "  Hydrogen names mangled from PDB~%   ~s~%   ~s~%"
+			       atom-1 atom-2)
+		       #f)))))
 	   atom-pairs))))))
 
 
@@ -1899,7 +2071,7 @@
      (let ((imol (greg-pdb "monomer-ACT.pdb")))
        (read-cif-dictionary (append-dir-file greg-data-dir "libcheck_ACT.cif"))
        (if (not (valid-model-molecule? imol))
-	   (begin 
+	   (begin
 	     (format #t "   bad molecule from ACT from greg data dir~%")
 	     (throw 'fail)))
        
@@ -1989,6 +2161,45 @@
 
        (let ((c (chain-ids imol)))
 	 (chains-in-order? c)))))
+
+
+(greg-testcase "Chain-ids in links change also on change chain id" #t 
+   (lambda ()
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+
+       (let ((spec-1 (list "B" 42 "" " N  " ""))
+	     (spec-2 (list "B" 62 "" " O  " "")))
+
+	 (make-link imol spec-1 spec-2 "test-link" 2.2)
+
+	 (let ((li-1 (link-info imol)))
+
+	   (change-chain-id imol "B" "C" 0 0 0)
+
+	   (let ((li-2 (link-info imol)))
+
+	     ;; li-1 should not contain C and should contain B
+	     ;; li-2 should not contain B and should contain C
+
+	     ;; (format #t "li-1: ~s~%" li-1)
+	     ;; (format #t "li-2: ~s~%" li-2)
+
+	     (let ((ch-B-1 (list-ref (list-ref (list-ref li-1 0) 1) 1)) ;; before
+		   (ch-B-2 (list-ref (list-ref (list-ref li-1 0) 2) 1))
+		   (ch-A-1 (list-ref (list-ref (list-ref li-2 0) 1) 1)) ;; after
+		   (ch-A-2 (list-ref (list-ref (list-ref li-2 0) 2) 1)))
+
+	       ;(format #t "ch-B-1: ~s~%" ch-B-1)
+	       ;(format #t "ch-B-2: ~s~%" ch-B-2)
+	       ;(format #t "ch-A-1: ~s~%" ch-A-1)
+	       ;(format #t "ch-A-2: ~s~%" ch-A-2)
+
+	       (all-true? (list
+			   (string=? ch-B-1 "B")
+			   (string=? ch-B-2 "B")
+			   (string=? ch-A-1 "C")
+			   (string=? ch-A-2 "C"))))))))))
 
 
 
@@ -2169,10 +2380,7 @@
 
      (define (residue-in-molecule? imol chain-id resno ins-code)
        (let ((r (residue-info imol chain-id resno ins-code)))
-;;	 (format #t "::: res-info: ~s ~s ~s ~s -> ~s~%" imol chain-id resno ins-code r)
-	 (if r
-	     #t
-	     #f)))
+	 (if r #t #f)))
 
      ;; in this PDB file 60 and 61 have been deleted. Relative to the
      ;; where we want to be (tutorial-modern.pdb, say) 62 to 93 have
@@ -2186,31 +2394,34 @@
 	     (throw 'fail))
 	   (let ((renumber? 1))
 
+	     (set-alignment-gap-and-space-penalty -3.0 -0.5)
 	     (align-and-mutate imol "A" rnase-seq-string renumber?)
 	     (write-pdb-file imol "mutated.pdb")
 
-	     (all-true? 
-	      (map 
-	       (lambda (residue-info)
-		 (let ((residue-spec (cdr residue-info))
-		       (expected-status (car residue-info)))
-		   (format #t "    ::::: ~s ~s ~s~%" residue-spec 
-			   (apply residue-in-molecule? residue-spec)
-			   expected-status)
-		   (eq? 
-		    (apply residue-in-molecule? residue-spec)
-		    expected-status)))
-	       (list 
-		(list #f imol "A"  1 "")
-		(list #t imol "A"  4 "")
-		(list #t imol "A" 59 "")
-		(list #f imol "A" 60 "")
-		(list #f imol "A" 61 "")
-		(list #t imol "A" 92 "")
-		(list #f imol "A" 94 "")
-		))))))))
+	     (let ((results
+		    (map
+		     (lambda (residue-info)
+		       (let ((residue-spec (cdr residue-info))
+			     (expected-status (car residue-info)))
+			 (format #t "    ::::: ~s ~s ~s~%" residue-spec
+				 (apply residue-in-molecule? residue-spec)
+				 expected-status)
+			 (eq?
+			  (apply residue-in-molecule? residue-spec)
+			  expected-status)))
+		     (list
+		      (list #f imol "A"  1 "")
+		      (list #t imol "A"  4 "")
+		      (list #t imol "A" 57 "")
+		      (list #f imol "A" 60 "")
+		      (list #f imol "A" 61 "")
+		      (list #t imol "A" 92 "")
+		      (list #f imol "A" 94 "")
+		      ))))
 
+	       (format #t "results: ~s~%" results)
 
+	       (all-true? results)))))))
 
 
 (greg-testcase "renumbered residues should be in seqnum order" #t
@@ -2754,6 +2965,51 @@
 				    )))))))
 
 
+(greg-testcase "Test for good chain ids after a merge" #t
+   (lambda ()
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+
+       (change-chain-id imol "A" "AAA" 0 0 0)
+
+       (let ((imol-new (new-molecule-by-atom-selection imol "//B/1-90")))
+
+	 (change-chain-id imol-new "B" "B-chain" 0 0 0)
+
+	 (merge-molecules (list imol-new) imol)
+
+	 (let ((chids (chain-ids imol)))
+
+	   (format #t "chain-ids: ~s~%" chids)
+
+	   ;; should be '("AAA" "B" "B-chain")
+
+	   (if (not (= (length chids) 3))
+	       (throw 'fail))
+
+	   (if (not (string=? (list-ref chids 2) "B-chain"))
+	       (throw 'fail))
+
+	   ;; now Wolfram Tempel test: multi-char chain matcher needs
+	   ;; prefix, not new single letter
+
+	   (change-chain-id imol-new "B-chain" "AAA" 0 0 0)
+
+	   (merge-molecules (list imol-new) imol)
+
+	   (let ((chids-2 (chain-ids imol)))
+
+	     (format #t "--- chain-ids: ~s~%" chids-2)
+
+	     (if (not (= (length chids-2) 4))
+		 (throw 'fail))
+
+	     (if (not (string=? (list-ref chids-2 3) "AAA_2"))
+		 (throw 'fail))
+
+	     #t))))))
+
+
 	
 (greg-testcase "LSQ by atom" #t
    (lambda ()
@@ -2868,4 +3124,38 @@
 		 (throw 'fail)))))
 
        #t)))
+
+
+
+(greg-testcase "Fix for Oliver Clarke fit by atom selection bug"  #t
+   (lambda ()
+
+     ;; Atoms of the A chain (up to residue 71) moves when the B chain is refined
+     ;;
+
+     (let ((imol-rnase (greg-pdb "tutorial-modern.pdb"))
+	   (imol-map (make-and-draw-map rnase-mtz "FWT" "PHWT" "" 0 0)))
+
+       (set-imol-refinement-map imol-map)
+
+       (with-auto-accept
+	(rigid-body-refine-by-atom-selection imol-rnase "//B"))
+
+       ;; did we get silly superposition?
+       ;; test that the A-chain atom is close to where it should be
+
+       (let ((atom (get-atom imol-rnase "A" 43 "" " CA " "")))
+	 (if (not (list? atom))
+	     (begin
+	       (format #t "Failure to extract atom~%~!")
+	       #f)
+	     (let ((atom-pos (list-ref atom 2)))
+	       (let ((bl (bond-length atom-pos (list 46.4 11.6 12.1))))
+		 (format #t "bl: ~s~%" bl)
+		 (if (> bl 1.0)
+		     (begin
+		       (format #t  "Fail: moved atom ~s~%" bl)
+		       #f)
+		     #t ; OK, it didn't move much
+		     ))))))))
 

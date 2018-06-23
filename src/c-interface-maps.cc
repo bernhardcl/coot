@@ -1305,6 +1305,18 @@ int export_map_fragment(int imol, float x, float y, float z, float radius, const
    return rv;
 }
 
+int export_map_fragment_to_plain_file(int imol, float x, float y, float z, float radius, const char *file_name) {
+
+   int rv = 0;
+   if (is_valid_map_molecule(imol)) {
+      graphics_info_t g;
+      clipper::Coord_orth pos(x,y,z);
+      g.molecules[imol].export_map_fragment_to_plain_file(radius, pos, file_name);
+      rv = 1;
+   }
+   return rv;
+}
+
 /*! convenience function, called from callbacks.c */
 void export_map_fragment_with_text_radius(int imol, const char *radius_text, const char *filename) {
 
@@ -1345,7 +1357,6 @@ void map_histogram(int imol_map) {
 	    n_bins = 400;
 	 }
 	 mean_and_variance<float> mv = map_density_distribution(xmap, n_bins, false, ignore_pseudo_zeros);
-
 
 	 if (mv.bins.size() > 0) { 
 	    std::vector<std::pair<double, double> > data(mv.bins.size());
@@ -1388,12 +1399,12 @@ void map_histogram(int imol_map) {
 		  std::cout << ":::::::::: y_max_secondary " << y_max_secondary << std::endl;
 	    
 		  g->set_extents(coot::goograph::X_AXIS,
-				 mv.mean-8*sqrt(mv.variance),
-				 mv.mean+8*sqrt(mv.variance)
+				 mv.mean-3*sqrt(mv.variance),
+				 mv.mean+3*sqrt(mv.variance)
 				 );
 		  std::cout << "::::: set_extents() X: "
-			    << mv.mean-4*sqrt(mv.variance) << " " 
-			    << mv.mean+4*sqrt(mv.variance) << "\n";
+			    << mv.mean-3*sqrt(mv.variance) << " " 
+			    << mv.mean+3*sqrt(mv.variance) << "\n";
 	    
 		  if (y_max_secondary > 0) {
 		     double y_max_graph = y_max_secondary * 1.4;

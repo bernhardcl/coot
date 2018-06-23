@@ -90,8 +90,8 @@ coot::high_res::get_middle_pos(const coot::minimol::molecule &minimol_mol) const
    
    int err = mol->GetTMatrix(my_matt, 0, 0, 0, 0);
    if (err != mmdb::SYMOP_Ok) {
-      cout << "!! Warning:: No symmetry available for this molecule"
-	   << endl;
+      std::cout << "!! Warning:: No symmetry available for this molecule"
+		<< std::endl;
    } else { 
 
       mol->SeekContacts(asc.atom_selection, asc.n_selected_atoms, 
@@ -174,7 +174,7 @@ coot::high_res::fill_globular_protein(const coot::minimol::molecule &mol,
       try { 
 	 globular_molecule[igfrag].addresidue(residue, 0);
       }
-      catch (std::runtime_error rte) {
+      catch (const std::runtime_error &rte) {
 	 std::cout << "ERROR:: fill_globular_protein() " << rte.what() << std::endl;
       } 
    }

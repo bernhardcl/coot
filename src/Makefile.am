@@ -18,6 +18,20 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
+if COOT_USE_PYTHON
+
+# if coot.py is called __init.py and goes in site-packages/coot/
+#dist_pkgpython_SCRIPTS = __init__.py
+#dist_python_SCRIPTS = coot.pth
+
+#__init__.py: coot.py
+#	cp coot.py __init__.py
+
+
+dist_python_SCRIPTS = coot.py coot.pth
+
+
+endif
 
 
 ######## 20091001 ########################################################
@@ -52,6 +66,7 @@ GTKGL_CONTEXT_LIBS   = $(GTKGL_LIBS) $(GTKGLEXT_LIBS)
 
 COOT_EXTRA_LIBS = \
 	$(top_builddir)/lbg/libcoot-lidia.la      		\
+	$(top_builddir)/pli/libcoot-pli.la      		\
 	$(top_builddir)/ligand/libcoot-ligand.la      		\
 	$(top_builddir)/lidia-core/libcoot-lidia-core.la      	\
 	$(top_builddir)/goograph/libcoot-goograph.la      	\
@@ -87,7 +102,7 @@ COOT_EXTRA_LIBS = \
 #
 EXTRA_DIST = \
 	coot.i post-glade add-c-extern.sh blank.cc fix-gettext.sh \
-	mol-hierachy.cc \
+	mol-hierarchy.cc \
 	junk.cc coot-gtk2.defs coot-dox.cfg post-gtk2-glade.sh \
         post-process-coot-wrap-guile.sh \
         post-process-coot-wrap-python.sh \
@@ -110,6 +125,7 @@ coot_wrap_guile_pre.cc:      $(top_srcdir)/src/c-interface.h    \
 			     $(top_srcdir)/src/c-interface-generic-objects.h \
                              $(top_srcdir)/src/sdf-interface.hh \
                              $(top_srcdir)/src/cfc.hh \
+                             $(top_srcdir)/src/curlew.hh \
                              $(top_srcdir)/src/cmtz-interface.hh \
                              $(top_srcdir)/src/c-interface-mogul.hh
 	swig -o $@ -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CFLAGS) $(WITH_GUILE_CFLAGS)  $(USE_LIBCURL) -I$(top_srcdir)/src -I$(top_srcdir) -guile -c++  $(top_srcdir)/src/coot.i
@@ -123,14 +139,15 @@ coot_wrap_guile.cc: coot_wrap_guile_pre.cc
 # python
 
 coot_wrap_python_pre.cc: $(top_srcdir)/src/c-interface.h      \
-			      $(top_srcdir)/src/cc-interface.hh    \
-	                      $(top_srcdir)/src/coot.i             \
-                              $(top_srcdir)/src/cc-interface-ncs.hh  \
-			      $(top_srcdir)/src/lbg-interface.hh   \
-                              $(top_srcdir)/src/c-interface-ligands-swig.hh \
-			      $(top_srcdir)/src/sdf-interface.hh   \
-                              $(top_srcdir)/src/cfc.hh \
-                              $(top_srcdir)/src/c-interface-mogul.hh
+			 $(top_srcdir)/src/cc-interface.hh    \
+	                 $(top_srcdir)/src/coot.i             \
+                         $(top_srcdir)/src/cc-interface-ncs.hh  \
+			 $(top_srcdir)/src/lbg-interface.hh   \
+                         $(top_srcdir)/src/c-interface-ligands-swig.hh \
+			 $(top_srcdir)/src/sdf-interface.hh   \
+                         $(top_srcdir)/src/cfc.hh \
+                         $(top_srcdir)/src/curlew.hh \
+                         $(top_srcdir)/src/c-interface-mogul.hh
 	swig -o $@ -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CFLAGS) $(PYTHON_CFLAGS)  $(USE_LIBCURL) -I$(top_srcdir)/src  -I$(top_srcdir) -shadow -python -c++ $(top_srcdir)/src/coot.i
 
 coot_wrap_python.cc: coot_wrap_python_pre.cc
@@ -202,10 +219,35 @@ AM_CPPFLAGS = \
 
 pkginclude_HEADERS = crunch-model.hh
 
-libexec_PROGRAMS = coot-bin coot-density-score-by-residue-bin dynarama-bin
+if COOT_USE_PYTHON
+if MAKE_ENHANCED_LIGAND_TOOLS
+coot_embedded_la_SOURCES = coot-embedded.cc
+coot_extended_la_SOURCES = coot-extended.cc
+# use -Wl,--no-undefined or  -Wl,-undefined,error (clang) ?
+coot_embedded_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined
+coot_embedded_la_LIBADD = \
+                       $(top_builddir)/lidia-core/libcoot-lidia-core.la   \
+                       $(RDKIT_LIBS) $(L_BOOST_PYTHON)
+coot_extended_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined
+coot_extended_la_LIBADD = \
+                       $(top_builddir)/pli/libcoot-pli.la   \
+                       $(RDKIT_LIBS) $(L_BOOST_PYTHON)
+pyexec_LTLIBRARIES = coot_embedded.la coot_extended.la
+endif
+endif
+
+
+if OS_WIN32
+# no more libexec for windows
+bin_PROGRAMS =  coot-bin coot-density-score-by-residue-bin \
+	coot-fix-nomenclature-errors dynarama-bin
+else
+libexec_PROGRAMS = coot-bin coot-density-score-by-residue-bin \
+	dynarama-bin
 bin_PROGRAMS =  coot-fix-nomenclature-errors
-dist_bin_SCRIPTS = coot coot-density-score-by-residue
-check_PROGRAMS = test-coot-align test-cholesky
+endif
+dist_bin_SCRIPTS = coot coot-density-score-by-residue dynarama
+check_PROGRAMS = test-coot-align test-cholesky 
 
 coot_fix_nomenclature_errors_SOURCES = \
 	fix-nomenclature.cc    \
@@ -223,15 +265,19 @@ coot_bin_SOURCES = \
 	scm-boot-guile.cc 	 \
 	c-interface.h            \
 	c-interface-analysis.cc	 \
+	c-interface-bonds.hh	 \
+	c-interface-bonds.cc	 \
 	c-interface-build.cc	 \
 	c-interface-build-morph.cc	 \
 	c-interface-build-main-chain.cc	 \
 	c-interface-build-side-chain.cc	 \
 	c-interface-build-symmetry.cc	 \
 	c-interface-build-gui.cc \
+	c-interface-curlew.cc    \
 	c-interface-database.hh  \
 	c-interface-database.cc  \
 	c-interface-generic-objects.h	 \
+	c-interface-geometry-distortion.hh \
 	c-interface-gui.cc	 \
 	c-interface-gtk2.cc	 \
 	c-interface-gtk-widgets.h \
@@ -280,10 +326,14 @@ coot_bin_SOURCES = \
 	c-interface.cc		 \
 	c-interface-test.cc      \
 	cc-interface.hh		 \
+	cc-interface-alignment.cc \
+	cc-interface-alignment.hh \
 	cc-interface-ncs.hh      \
 	cc-interface-network.hh  \
 	cc-interface-mogul.hh    \
-	cc-interface-scripting.hh \
+	cc-interface-scripting.hh\
+	cc-interface-image.hh    \
+	cc-interface-png.cc      \
 	cc-interface-user-defined-atom-colours.hh \
 	cc-interface-user-defined-atom-colours.cc \
 	callbacks.c callbacks.h	 \
@@ -321,7 +371,8 @@ coot_bin_SOURCES = \
 	coot-setup-python.cc     \
 	coot-setup-python.hh     \
 	coot-version.hh          \
-	coot_wrap_guile.cc  \
+	coot_wrap_guile.cc       \
+        curlew.hh                \
         dots-representation.hh   \
 	drag-and-drop.hh         \
 	drag-and-drop.cc         \
@@ -373,6 +424,7 @@ coot_bin_SOURCES = \
 	gtk-manual.hh		 \
 	guile-fixups.h		 \
 	history_list.hh		 \
+        idles.hh                 \
 	interface.c	 	 \
 	interface.h              \
         manipulation-modes.hh    \
@@ -382,7 +434,9 @@ coot_bin_SOURCES = \
 	lbg-interface.cc 	 \
 	ligand-check.hh          \
         map-statistics.hh        \
+	merge-molecule-results-info-t.hh \
 	molecule-class-info.cc 	 \
+	molecule-class-info-alignment.cc \
 	molecule-class-info-bonds.cc    \
 	molecule-class-info-maps.cc 	\
 	molecule-class-info-maps-2.cc 	\
@@ -426,6 +480,10 @@ coot_bin_SOURCES = \
 	sdf-interface.hh         \
 	sdf-internal.hh          \
 	sdf-interface.cc         \
+	sequence-view.hh         \
+	sequence-view.cc         \
+	seq-view-interface.c     \
+	seq-view-interface.h     \
 	startup-scripts.hh       \
 	support.c support.h 	 \
 	support-gtk2-extras.c    \
@@ -435,14 +493,11 @@ coot_bin_SOURCES = \
 	trackball.c trackball.h  \
 	triangle-extras.h 	 \
 	select-atom-info.hh      \
-	sequence-view.hh         \
-	sequence-view.cc         \
-	seq-view-interface.c     \
-	seq-view-interface.h     \
 	user-mods.hh user-mods.cc\
 	validation-graphs.hh	 \
 	xmap-utils.cc 		 \
 	xmap-utils.h             \
+	remarks-browser-gtk-widgets.hh \
 	rama-rota-score.hh 	 \
 	fragment-info.hh 	 \
 	atom-name-bits.hh 	 \
@@ -455,7 +510,8 @@ coot_bin_SOURCES = \
 	model-view.hh 		 \
 	view.hh 		 \
 	view.cc 		 \
-	new-centre.hh
+	new-centre.hh            \
+        json.hpp
 
 if COOT_USE_PYTHON
    coot_bin_SOURCES += coot_wrap_python.cc
@@ -526,7 +582,8 @@ coot_bin_LDADD = $(OPENMP_CFLAGS)       \
 		$(CURL_LIBS)		\
 		$(LIBGLADE_LIBS)	\
 	  	$(RDKIT_LIBS)	        \
-	        $(L_BOOST_PYTHON)	\
+		$(BOOST_LDFLAGS)        \
+		$(L_BOOST_PYTHON)	\
 		$(GOOCANVAS_LIBS)       \
 		$(SQLITE3_LIBS)         \
 		@GTK_LIBS@
@@ -597,6 +654,7 @@ coot_density_score_by_residue_bin_LDADD  =	\
 	$(CLIPPER_LIBS) 	\
 	$(MMDB_LIBS)		\
 	$(GSL_LIBS)
+
 dynarama_bin_SOURCES = dynarama-main.cc rama_plot.cc rama_mousey.cc
 dynarama_bin_LDADD = \
         $(top_builddir)/coords/libcoot-coords.la                \
@@ -607,7 +665,5 @@ dynarama_bin_LDADD = \
         $(MMDB_LIBS)            \
         $(GLOB_LIBS)            \
         $(GOOCANVAS_LIBS)       \
-        $(LIBGLADE_LIBS)
-
-# subpkgdatadir = $(pkgdatadir)
-# subpkgdata_DATA = cfc.glade
+        $(LIBGLADE_LIBS) 	\
+        @GTK_LIBS@

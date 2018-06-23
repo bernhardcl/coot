@@ -398,9 +398,13 @@ void sort_residues(int imol);
 /*! \brief a gui dialog showing remarks header info (for a model molecule). */
 void remarks_dialog(int imol);
 
-/*! \brief simply print secondardy structure info to the
+/*! \brief simply print secondary structure info to the
   terminal/console.  In future, this could/should return the info.  */
 void print_header_secondary_structure_info(int imol);
+
+/*! \brief add secondary structure info to the
+  internal representation of the model */
+void add_header_secondary_structure_info(int imol);
 
 
 /*  Placeholder only.
@@ -1216,6 +1220,8 @@ void export_map_fragment_with_text_radius(int imol, const char *radius_text, con
 /*! \brief export a fragment of the map about (x,y,z)  */
 int export_map_fragment_with_origin_shift(int imol, float x, float y, float z, float radius, const char *filename);
 
+/*! \brief tmp interface for Hamish */
+int export_map_fragment_to_plain_file(int imol, float x, float y, float z, float radius, const char *filename);
 
 /* return the new molecule number. The cell is given in Angstroms and
    the angles in degrees.  The ref_space_group can be a H-M symbol or
@@ -1579,20 +1585,28 @@ short int mtz_use_weight_for_map(int imol_map);
 
 #ifdef __cplusplus
 #ifdef USE_GUILE
-/*! \brief return the parameter that made the map, #f or something
-  like ("xxx.mtz" "FPH" "PHWT" "" #f) */
+/*! \brief return the parameter that made the map, 
+
+@return false or a string
+  like ("xxx.mtz" "FPH" "PHWT" "" False) */
 SCM map_parameters_scm(int imol);
-/*! \brief return the parameter that made the map, #f or something
+/*! \brief return the parameter that made the map, 
+
+@return false or a list
   like (45 46 47 90 90 120), angles in degress */
 SCM cell_scm(int imol);
 /*! \brief return the parameter of the molecule, something 
   like (45 46 47 90 90 120), angles in degress */
 #endif /* USE_GUILE */
 #ifdef USE_PYTHON
-/*! \brief return the parameter that made the map, False or something
+/*! \brief return the parameter that made the map, 
+
+@return False or something
   like ["xxx.mtz", "FPH", "PHWT", "", False] */
 PyObject *map_parameters_py(int imol);
-/*! \brief return the parameter that made the map, False or something
+/*! \brief return the parameter that made the map, 
+
+@return False or something
   like [45, 46, 47, 90, 90, 120], angles in degress */
 PyObject *cell_py(int imol);
 #endif /* USE_PYTHON */
@@ -1609,7 +1623,11 @@ PyObject *cell_py(int imol);
 
 /*! \brief write molecule number imol as a PDB to file file_name */
 /*  return 0 on success, 1 on error. */
-int write_pdb_file(int imol, const char *file_name); 
+int write_pdb_file(int imol, const char *file_name);
+
+/*! \brief write molecule number imol as a mmCIF to file file_name */
+/*  return 0 on success, 1 on error. */
+int write_cif_file(int imol, const char *file_name);
 
 /*! \brief write molecule number imol's residue range as a PDB to file
   file_name */
@@ -1860,7 +1878,7 @@ SCM origin_pre_shift_scm(int imol);
   ints or Python false on failure  */
 PyObject *origin_pre_shift_py(int imol);
 #endif  /* USE_PYTHON */
-#endif 
+#endif
 
 void setup_save_symmetry_coords();
 
@@ -1868,8 +1886,25 @@ void setup_save_symmetry_coords();
 
  for shelx FA pdb files, there is no space group.  So allow the user
    to set it.  This can be initted with a HM symbol or a symm list for
-   clipper.  Return the succes status of the setting. */
+   clipper.
+
+This will only work on model molecules.
+
+@return the success status of the setting  (1 good, 0 fail). */
 short int set_space_group(int imol, const char *spg);
+
+//! \brief set the unit cell for a given model molecule
+//!
+//! Angles in degress, cell lengths in Angstroms.
+//!
+//! @return  the success status of the setting (1 good, 0 fail).
+int set_unit_cell_and_space_group(int imol, float a, float b, float c, float alpha, float beta, float gamma, const char *space_group);
+
+//! \brief set the unit cell for a given model molecule using the cell of moecule imol_from
+//!
+//! This will only work on model molecules.
+//! @return  the success status of the setting (1 good, 0 fail).
+int set_unit_cell_and_space_group_using_molecule(int imol, int imol_from);
 
 /*! \brief set the cell shift search size for symmetry searching.
 
@@ -2191,6 +2226,8 @@ void set_hardware_stereo_angle_factor(float f);
 /*! \brief return the hardware stereo angle factor */
 float hardware_stereo_angle_factor_state();
 
+void set_model_display_radius(int state, float radius);
+
 /*! \brief set position of Model/Fit/Refine dialog */
 void set_model_fit_refine_dialog_position(int x_pos, int y_pos);
 /*! \brief set position of Display Control dialog */
@@ -2303,6 +2340,13 @@ float rotation_centre_position(int axis); /* only return one value: x=0, y=1, z=
 /*! \brief centre on the ligand of the "active molecule", if we are
   already there, centre on the next hetgroup (etc) */
 void go_to_ligand();
+
+#ifdef USE_PYTHON
+#ifdef __cplusplus
+PyObject *go_to_ligand_py();
+#endif
+#endif
+
 /*! \brief go to the ligand that has more than n_atom_min atoms */
 void set_go_to_ligand_n_atoms_limit(int n_atom_min);
 /* \} */
@@ -2372,6 +2416,12 @@ void set_reset_b_factor_moved_atoms(int state);
 /*! \brief return the state if temperature factors shoudl be reset for
   moved atoms */
 int get_reset_b_factor_moved_atoms_state();
+
+#ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
+#ifdef USE_GUILE
+void set_temperature_factors_for_atoms_in_residue_scm(int imol, SCM residue_spec_scm, float bf);
+#endif
+#endif
 
 /*! \brief set a numberical attibute to the atom with the given specifier.
 
@@ -2753,10 +2803,18 @@ void glyco_tree_test();
 #ifdef USE_GUILE
 SCM glyco_tree_scm(int imol, SCM active_residue_scm);
 SCM glyco_tree_residues_scm(int imol, SCM active_residue_scm);
+SCM glyco_tree_internal_distances_fn_scm(int imol, SCM residue_spec, const std::string &file_name); // testing function
+SCM glyco_tree_residue_id_scm(int imol, SCM residue_spec_scm);
+SCM glyco_tree_compare_trees_scm(int imol_1, SCM res_spec_1, int imol_2, SCM res_spec_2);
+SCM glyco_tree_matched_residue_pairs_scm(int imol_1, SCM res_spec_1, int imol_2, SCM res_spec_2);
 #endif
 #ifdef USE_PYTHON
 PyObject *glyco_tree_py(int imol, PyObject *active_residue_py);
 PyObject *glyco_tree_residues_py(int imol, PyObject *active_residue_py);
+PyObject *glyco_tree_internal_distances_fn_py(int imol, PyObject *residue_spec, const std::string &file_name); // testing function
+PyObject *glyco_tree_residue_id_py(int imol, PyObject *residue_spec_py);
+PyObject *glyco_tree_compare_trees_py(int imol_1, PyObject *res_spec_1, int imol_2, PyObject *res_spec_2);
+PyObject *glyco_tree_matched_residue_pairs_py(int imol_1, PyObject *res_spec_1, int imol_2, PyObject *res_spec_2);
 #endif /* PYTHON */
 #endif
 
@@ -2827,6 +2885,10 @@ void set_all_maps_displayed(int on_or_off);
   for other values of on_or_off turn on all models. */
 void set_all_models_displayed_and_active(int on_or_off);
 
+/*! \brief only display the last model molecule
+*/
+void set_only_last_model_molecule_displayed();
+
 /*\brief display only the active mol and the refinement map */
 void display_only_active();
 
@@ -2880,6 +2942,11 @@ PyObject *symmetry_operators_to_xHM_py(PyObject *symmetry_operators);
 
 /*! \brief merge molecules
 
+@return a pair, the first item of which is a status (1 is good) the second is
+a list of merge-infos (one for each of the items in add_molecules). If the
+molecule of an add_molecule item is just one residue, return a spec for the
+new residue, if it is many residues return a chain id.
+
 the first argument is a list of molecule numbers and the second is the target 
    molecule into which the others should be merged  */
 #ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
@@ -2911,7 +2978,9 @@ void set_alignment_gap_and_space_penalty(float wgap, float wspace);
 #ifdef USE_GUILE
 SCM alignment_results_scm(int imol, const char* chain_id, const char *seq); 
 /*! \brief return the residue spec of the nearest residue by sequence
-  numbering.  Return scheme #f if not possible */
+  numbering.  
+
+@return  scheme false if not possible */
 SCM nearest_residue_by_sequence_scm(int imol, const char* chain_id, int resno, const char *ins_code);
 #endif /* USE_GUILE */
 #ifdef USE_PYTHON
@@ -3167,6 +3236,9 @@ SCM regularize_residues_scm(int imol, SCM r); /* presumes the alt_conf is "". */
 SCM regularize_residues_with_alt_conf_scm(int imol, SCM r, const char *alt_conf); 
 #endif
 #ifdef USE_PYTHON
+/*! \brief refine the residues in the given residue spec list
+
+@return the refinement summary statistics  */
 PyObject *refine_residues_py(int imol, PyObject *r);  /* presumes the alt_conf is "". */
 PyObject *refine_residues_with_modes_with_alt_conf_py(int imol, PyObject *r, const char *alt_conf,
 						      PyObject *mode_1,
@@ -3225,6 +3297,8 @@ void refine_zone_atom_index_define(int imol, int ind1, int ind2);
 
  presumes that imol_Refinement_Map has been set */
 void refine_zone(int imol, const char *chain_id, int resno1, int resno2, const char *altconf);
+/*! \brief repeat the previous (user-selected) refine zone */
+void repeat_refine_zone(); /* use stored atom indices to re-run the refinement using the same atoms as previous */
 #ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
 #ifdef USE_GUILE
 SCM refine_zone_with_score_scm(int imol, const char *chain_id, int resno1, int resno2, const char *altconf);
@@ -3281,6 +3355,9 @@ void set_refinement_drag_elasticity(float e);
 /*! \brief turn on Ramachandran angles refinement in refinement and regularization */
 /*! name consistent with set_refine_with_torsion_restraints() !?  */
 void set_refine_ramachandran_angles(int state);
+
+void set_refine_ramachandran_restraints_type(int type);
+void set_refine_ramachandran_restraints_weight(float w);
 
 int refine_ramachandran_angles_state();
 
@@ -3351,12 +3428,20 @@ int delete_restraints(const char *comp_id);
    restraint was stored.  */
 
 int add_extra_bond_restraint(int imol, const char *chain_id_1, int res_no_1, const char *ins_code_1, const char *atom_name_1, const char *alt_conf_1, const char *chain_id_2, int res_no_2, const char *ins_code_2, const char *atom_name_2, const char *alt_conf_2, double bond_dist, double esd);
-int add_extra_angle_restraint(int imol, 
+#ifdef __cplusplus
+#ifdef USE_GUILE
+int add_extra_bond_restraints_scm(int imol, SCM extra_bond_restraints_scm);
+#endif // USE_GUILE
+#ifdef USE_PYTHON
+int add_extra_bond_restraints_py(int imol, PyObject *extra_bond_restraints_py);
+#endif // USE_GUILE
+#endif
+int add_extra_angle_restraint(int imol,
 				const char *chain_id_1, int res_no_1, const char *ins_code_1, const char *atom_name_1, const char *alt_conf_1, 
 				const char *chain_id_2, int res_no_2, const char *ins_code_2, const char *atom_name_2, const char *alt_conf_2, 
 				const char *chain_id_3, int res_no_3, const char *ins_code_3, const char *atom_name_3, const char *alt_conf_3, 
 				double torsion_angle, double esd);
-int add_extra_torsion_restraint(int imol, 
+int add_extra_torsion_restraint(int imol,
 				const char *chain_id_1, int res_no_1, const char *ins_code_1, const char *atom_name_1, const char *alt_conf_1, 
 				const char *chain_id_2, int res_no_2, const char *ins_code_2, const char *atom_name_2, const char *alt_conf_2, 
 				const char *chain_id_3, int res_no_3, const char *ins_code_3, const char *atom_name_3, const char *alt_conf_3, 
@@ -3378,6 +3463,15 @@ void delete_all_extra_restraints(int imol);
 
 /*! \brief clear out all the extra/user-defined restraints for this residue in molecule number imol  */
 void delete_extra_restraints_for_residue(int imol, const char *chain_id, int res_no, const char *ins_code);
+
+#ifdef __cplusplus
+#ifdef USE_GUILE
+void delete_extra_restraints_for_residue_spec_scm(int imol, SCM residue_spec_in);
+#endif // USE_GUILE
+#ifdef USE_PYTHON
+void delete_extra_restraints_for_residue_spec_py(int imol, PyObject *residue_spec_in_py);
+#endif // USE_PYTHON
+#endif // __cplusplus
 
 void delete_extra_restraints_worse_than(int imol, float n_sigma);
 
@@ -3539,6 +3633,20 @@ void clear_last_simple_distance();
 /* \} */
 
 /*  ----------------------------------------------------------------------- */
+/*               GUI edit functions                                   */
+/*  ----------------------------------------------------------------------- */
+/* section Edit Fuctions */
+/*! \name Edit Fuctions */
+/* \{ */
+
+void  do_edit_copy_molecule();
+void  do_edit_copy_fragment();
+void  do_edit_replace_residue();
+void  do_edit_replace_fragment();
+
+/* \} */
+
+/*  ----------------------------------------------------------------------- */
 /*                  residue environment                                     */
 /*  ----------------------------------------------------------------------- */
 /* section Residue Environment Functions */
@@ -3680,11 +3788,10 @@ int read_cif_dictionary(const char *filename);
  Apply to the given molecule.
 
  imol_enc can be the model molecule number or
- -1 for all
- -2 for auto
- -3 for unset
+ IMOL_ENC_ANY = -999999, IMOL_ENC_AUTO = -999998, IMOL_ENC_UNSET = -999997
+
  */
-int handle_cif_dictionary_for_molecule(const char *filename, int imol_enc);
+int handle_cif_dictionary_for_molecule(const char *filename, int imol_enc, short int new_molecule_from_dictionary_cif_checkbutton_state);
 
 int write_connectivity(const char* monomer_name, const char *filename);
 /*! \brief open the cif dictionary file selector dialog */
@@ -3728,8 +3835,9 @@ int write_shelx_ins_file(int imol, const char *filename);
 int handle_shelx_fcf_file_internal(const char *filename);
 #ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
 #ifdef USE_GUILE
-/*! \brief @return the chain id for the given residue.  Return #f if
-  can't do it/fail. */
+/*! \brief @return the chain id for the given residue.  
+
+@return false if can't do it/fail. */
 SCM chain_id_for_shelxl_residue_number(int imol, int resno);
 #endif /* USE_GUILE */
 /* return 1 for yes, 0 for invalid imol or no. */
@@ -3958,6 +4066,9 @@ void set_brief_atom_labels(int istat);
 
 /*! \brief the brief atom label state */
 int brief_atom_labels_state();
+
+/*! \brief set if brief atom labels should have seg-ids also */
+void set_seg_ids_in_atom_labels(int istat);
 /* \} */
 
 /*  ----------------------------------------------------------------------- */
@@ -4392,6 +4503,9 @@ void set_bond_thickness(int imol, float t);
 /*! \brief set the thickness of the bonds of the intermediate atoms to t pixels  */
 void set_bond_thickness_intermediate_atoms(float t);
 
+/*! \brief allow lines that are further away to be thinner */
+void set_use_variable_bond_thickness(short int state);
+
 /*! \brief set bond colour for molecule */
 void set_bond_colour_rotation_for_molecule(int imol, float f);
 
@@ -4403,7 +4517,7 @@ float get_bond_colour_rotation_for_molecule(int imol);
 
 void set_unbonded_atom_star_size(float f);
 
-/*! \brief set the default represenation type (default 1).*/
+/*! \brief set the default representation type (default 1).*/
 void set_default_representation_type(int type);
 
 /*! \brief get the default thickness for bonds*/
@@ -4701,6 +4815,7 @@ void set_add_terminal_residue_n_phi_psi_trials(int n);
 /* Add Terminal Residues actually build 2 residues, this allows us to
    see both residues - default is 0 (off). */
 void set_add_terminal_residue_add_other_residue_flag(int i);
+void set_add_terminal_residue_do_rigid_body_refine(short int v); 
 void set_terminal_residue_do_rigid_body_refine(short int v); 
 int add_terminal_residue_immediate_addition_state(); 
 
@@ -4761,6 +4876,16 @@ void delete_residue_range(int imol, const char *chain_id, int resno_start, int e
 void delete_residue(int imol, const char *chain_id, int resno, const char *inscode); 
 /*! \brief delete residue with altconf  */
 void delete_residue_with_full_spec(int imol, int imodel, const char *chain_id, int resno, const char *inscode, const char *altloc); 
+#ifdef __cplusplus 
+#ifdef USE_GUILE
+/*! \brief delete residues in the residue spec list */
+void delete_residues_scm(int imol, SCM residue_specs_scm);
+#endif
+#ifdef USE_PYTHON
+/*! \brief delete residues in the residue spec list */
+void delete_residues_py(int imol, PyObject *residue_specs_py);
+#endif
+#endif	/* c++ */
 /*! \brief delete hydrogen atoms in residue  */
 void delete_residue_hydrogens(int imol, const char *chain_id, int resno, const char *inscode, const char *altloc); 
 /*! \brief delete atom in residue */
@@ -4773,7 +4898,14 @@ void delete_residue_sidechain(int imol, const char *chain_id, int resno, const c
    @return number of hydrogens deleted. */
 int delete_hydrogens(int imol);
 
+/*! \brief delete the chain  */
+void delete_chain(int imol, const char *chain_id);
+
+/*! \brief delete the side chains in the chain  */
+void delete_sidechains_for_chain(int imol, const char *chain_id);
+
 void post_delete_item_dialog();
+
 
 
 /* toggle callbacks */
@@ -4783,10 +4915,14 @@ void set_delete_residue_zone_mode();
 void set_delete_residue_hydrogens_mode();
 void set_delete_water_mode();
 void set_delete_sidechain_mode();
+void set_delete_sidechain_range_mode();
+void set_delete_chain_mode();
 short int delete_item_mode_is_atom_p(); /* (predicate) a boolean */
 short int delete_item_mode_is_residue_p(); /* predicate again */
 short int delete_item_mode_is_water_p();
 short int delete_item_mode_is_sidechain_p();
+short int delete_item_mode_is_sidechain_range_p();
+short int delete_item_mode_is_chain_p();
 void clear_pending_delete_item(); /* for when we cancel with picking an atom */
 void clear_delete_item_widget();
 void store_delete_item_widget_position();
@@ -5028,7 +5164,11 @@ int mutate_base(int imol, const char *chain_id, int res_no, const char *ins_code
 /* push the residues along a bit
 
 e.g. if nudge_by is 1, then the sidechain of residue 20 is moved up
-onto what is currently residue 21.  The mainchain numbering and atoms is not changed. */
+onto what is currently residue 21.  The mainchain numbering and atoms is not changed.
+
+@return 0 for failure to nudge (becauese not all the residues were in the range)
+        and 1 for success.
+*/
 int nudge_residue_sequence(int imol, char *chain_id, int res_no_range_start, int res_no_range_end, int nudge_by, short int nudge_residue_numbers_also);
 
 
@@ -5390,7 +5530,9 @@ void add_lsq_atom_pair_py(PyObject *atom_spec_ref, PyObject *atom_spec_moving);
 
 #ifdef __cplusplus	/* need this wrapper, else gmp.h problems in callback.c */
 #ifdef USE_GUILE
-/* Return an rtop pair (proper list) on good match, else #f */
+/*! \brief apply the LSQ matches
+
+@return an rtop pair (proper list) on good match, else false */
 SCM apply_lsq_matches(int imol_reference, int imol_moving);
 SCM get_lsq_matrix_scm(int imol_reference, int imol_moving);
 #endif
@@ -5464,6 +5606,8 @@ void set_raster3d_shadows_enabled(int state);
 /*! \brief set the flag to show waters as spheres for the Raster3D 
 representation. 1 show as spheres, 0 the usual stars. */
 void set_raster3d_water_sphere(int istate);
+/*! \brief set the font size (as a string) for raster3d*/
+void set_raster3d_font_size(const char *size_in);
 /*! \brief run raster3d and display the resulting image.  */
 void raster_screen_shot(); /* run raster3d or povray and guile */
                            /* script to render and display image */
@@ -5488,7 +5632,7 @@ void citation_notice_off();
 
 Superpose all residues of imol2 onto imol1.  imol1 is reference, we
 can either move imol2 or copy it to generate a new molecule depending
-on the vaule of move_imol2_flag (1 for move 0 for copy). */
+on the vaule of move_imol2_flag (1 for copy 0 for move). */
 void superpose(int imol1, int imol2, short int move_imol2_flag); 
 
 
@@ -5661,13 +5805,17 @@ PyObject *ncs_chain_ids_py(int imol);
 #endif  /* USE_PYTHON */
 
 #ifdef USE_GUILE
-/* return #f on bad imol or a list of ghosts on good imol.  Can
-   include NCS rtops if they are available, else the rtops are #f */
+/*! \brief get the NCS ghost description
+
+@return false on bad imol or a list of ghosts on good imol.  Can
+   include NCS rtops if they are available, else the rtops are False */
 SCM ncs_ghosts_scm(int imol);
 #endif	/* USE_GUILE */
 
 #ifdef USE_PYTHON
-/* return False on bad imol or a list of ghosts on good imol.  Can
+/*! \brief Get the NCS ghosts description
+
+@return False on bad imol or a list of ghosts on good imol.  Can
    include NCS rtops if they are available, else the rtops are False */
 PyObject *ncs_ghosts_py(int imol);
 #endif	/* USE_PYTHON */
@@ -5820,7 +5968,7 @@ int new_molecule_by_residue_specs_py(int imol, PyObject *residue_spec_list_py);
 /*! \brief create a new molecule that consists of only the atoms 
   of the specified list of residues
 @return the new molecule number, -1 means an error. */
-int new_molecule_by_residue_specs_scm(int imol, SCM *residue_spec_list_scm);
+int new_molecule_by_residue_specs_scm(int imol, SCM residue_spec_list_scm);
 #endif /* USE_GUILE */
 #endif /* __cplusplus */
 
@@ -5865,7 +6013,9 @@ int ideal_nucleic_acid(const char *RNA_or_DNA, const char *form,
 #ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
 #ifdef USE_GUILE
 
-/*! \brief return #f if residue not found,  otherwise
+/*! \brief get the pucker info for the specified residue
+
+ @return scheme false if residue not found,  otherwise
  (list (list phosphate-distance puckered-atom out-of-plane-distance plane-distortion) chain-id resno ins-code)
 
  (where plane-distortion is for the other 4 atoms in the plane (I think)).
@@ -6159,7 +6309,7 @@ void set_map_sharpening_scale_limit(float f);
 /*	Density Map Kurtosis							*/
 /* ----------------------------------------------------------------------------	*/
 float optimal_B_kurtosis(int imol);
-void set_b_factor_scale( double );
+void set_b_factor_graph_scale_factor( double );
 
 /*  ----------------------------------------------------------------------- */
 /*           Intermediate Atom Manipulation                                 */
@@ -6186,6 +6336,7 @@ PyObject *drag_intermediate_atom_py(PyObject *atom_spec, PyObject *position);
 #ifdef __cplusplus
 #ifdef USE_GUILE
 SCM mark_atom_as_fixed_scm(int imol, SCM atom_spec, int state);
+int mark_multiple_atoms_as_fixed_scm(int imol, SCM atom_spec_list, int state);
 #endif 
 #ifdef USE_PYTHON
 PyObject *mark_atom_as_fixed_py(int imol, PyObject *atom_spec, int state);
@@ -6253,6 +6404,11 @@ SCM ccp4i_projects_scm();
 PyObject *ccp4i_projects_py();
 #endif /* USE_PYTHON */
 #endif /* c++ */
+
+/*! \brief allow the user to not add ccp4i directories to the file choosers
+
+use state=0 to turn it off */
+void set_add_ccp4i_projects_to_file_dialogs(short int state);
 
 /*! \brief write a ccp4mg picture description file */
 void write_ccp4mg_picture_description(const char *filename);
@@ -6455,7 +6611,11 @@ float fit_to_map_by_random_jiggle(int imol, const char *chain_id, int resno, con
 				  int n_trials,
 				  float jiggle_scale_factor);
 
+/*!  \brief jiggle fit the molecule to the current refinment map.  return < -100 if
+  not possible, else return the new best fit for this molecule.  */
 float fit_molecule_to_map_by_random_jiggle(int imol, int n_trials, float jiggle_scale_factor);
+/*!  \brief jiggle fit the chain to the current refinment map.  return < -100 if
+  not possible, else return the new best fit for this chain.  */
 float fit_chain_to_map_by_random_jiggle(int imol, const char *chain_id, int n_trials, float jiggle_scale_factor); 
 /* \} */
 
@@ -6505,12 +6665,13 @@ int add_linked_residue(int imol, const char *chain_id, int resno, const char *in
 		       const char *new_residue_comp_id, const char *link_type, int n_trials);
 #ifdef __cplusplus
 #ifdef USE_GUILE
+// mode is either 1: add  2: add and fit  3: add, fit and refine
 SCM add_linked_residue_scm(int imol, const char *chain_id, int resno, const char *ins_code, 
-			   const char *new_residue_comp_id, const char *link_type);
+			   const char *new_residue_comp_id, const char *link_type, int mode);
 #endif 
 #ifdef USE_PYTHON
 PyObject *add_linked_residue_py(int imol, const char *chain_id, int resno, const char *ins_code, 
-				const char *new_residue_comp_id, const char *link_type);
+				const char *new_residue_comp_id, const char *link_type, int mode);
 #endif 
 #endif 		       
 void set_add_linked_residue_do_fit_and_refine(int state);
@@ -6640,7 +6801,6 @@ void run_update_self_maybe(); /* called when --update-self given at command line
 void show_go_to_residue_keyboarding_mode_window();
 void    handle_go_to_residue_keyboarding_mode(const gchar *text);
 
-
 /*  ----------------------------------------------------------------------- */
 /*                    graphics ligand view                                  */
 /*  ----------------------------------------------------------------------- */
@@ -6650,8 +6810,6 @@ void    handle_go_to_residue_keyboarding_mode(const gchar *text);
 
  (default is 1 (on)). */
 void set_show_graphics_ligand_view(int state);
-/* \} */
-
 /* \} */
 
 
@@ -6713,6 +6871,3 @@ void full_screen(int mode);
 
 #endif /* C_INTERFACE_H */
 END_C_DECLS
-
-
-

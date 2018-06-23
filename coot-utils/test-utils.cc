@@ -416,23 +416,74 @@ int test_all_atom_overlaps() {
    geom.try_dynamic_add("MBR", 1);
    geom.try_dynamic_add("CL", 1);
    geom.try_dynamic_add("NA", 1);
-   
 
    mmdb::Manager *mol = new mmdb::Manager;
    std::string file_name = "1x8b-all-H-no-water.pdb";
-   file_name = "5hcj-with-coot-Hs.pdb";
-   // file_name = "3-atoms.pdb";
-   coot::residue_spec_t spec("A", 901, "");
+
+   // file_name = "5hcj-with-coot-Hs.pdb";
 
    int read_status = mol->ReadCoorFile(file_name.c_str());
 
    if (read_status == mmdb::Error_NoError) {
-      coot::atom_overlaps_container_t overlaps(mol, &geom, 0.5, 0.5);
-      coot::atom_overlaps_dots_container_t c = overlaps.all_atom_contact_dots(0.5);
+      // spike length and probe radius (which are not used in overlaps)
+      coot::atom_overlaps_container_t overlaps(mol, &geom, 0.5, 0.25);
+      overlaps.make_all_atom_overlaps();
+      std::vector<coot::atom_overlap_t> olv = overlaps.overlaps;
+      std::cout << "Found " << olv.size() << " atom overlaps" << std::endl;
+      for (std::size_t ii=0; ii<olv.size(); ii++) {
+	 const coot::atom_overlap_t &o = olv[ii];
+	 std::cout << "Overlap " << ii << " "
+		   << coot::atom_spec_t(o.atom_1) << " "
+		   << coot::atom_spec_t(o.atom_2) << " overlap-vol "
+		   << o.overlap_volume << " r_1 "
+		   << o.r_1 << " r_2 " << o.r_2 << std::endl;
+      }
    }
 
    delete mol;
    return status;
+}
+
+// #include "cp.hh"
+
+int test_cp() {
+   mmdb::Manager *mol = new mmdb::Manager;
+   std::string file_name = "MAN.pdb";
+   mol->ReadCoorFile(file_name.c_str());
+   int imod = 1;
+   mmdb::Model *model_p = mol->GetModel(imod);
+   if (! model_p) {
+      std::cout << "Null model" << std::endl;
+   } else {
+      mmdb::Chain *chain_p;
+      int n_chains = model_p->GetNumberOfChains();
+      for (int ichain=0; ichain<n_chains; ichain++) {
+	 chain_p = model_p->GetChain(ichain);
+	 if (! chain_p) {
+	    std::cout << "Null chain" << std::endl;
+	 } else {
+	    int nres = chain_p->GetNumberOfResidues();
+	    mmdb::Residue *residue_p;
+	    mmdb::Atom *at;
+	    for (int ires=0; ires<nres; ires++) {
+	       residue_p = chain_p->GetResidue(ires);
+	       if (! residue_p) {
+		  std::cout << "Null residue" << std::endl;
+	       } else {
+		  /*
+		  coot::cp_t cp;
+		  double a = cp.amplitude(residue_p);
+		  std::vector<double> t(6);
+		  t[0] = -62.576; t[1] =  38.474; t[2] =  16.080;
+		  t[3] = -56.662; t[4] =  32.146; t[5] =  28.071;
+		  // cp.amplitude(t);
+		  */
+	       }
+	    }
+	 }
+      }
+   }
+   return 1;
 }
 
 #include "reduce.hh"
@@ -452,20 +503,44 @@ int test_reduce() {
    return 1;
 }
 
+int test_glyco_link_by_geometry() {
+
+   std::vector<std::string> file_names;
+   file_names.push_back("beta1-6-example.pdb");
+
+   for (std::size_t i=0; i<file_names.size(); i++) {
+      const std::string &file_name = file_names[i];
+      if (coot::file_exists(file_name)) {
+	 mmdb::Manager *mol = new mmdb::Manager;
+	 mol->ReadCoorFile(file_name.c_str());
+
+	 // find linked carbohydrates and test axial vsl equatorial
+      }
+   }
+
+   return 1;
+
+}
+
 
 int main(int argv, char **argc) {
 
+   if (1)
+      test_all_atom_overlaps();
+
+   if (0)
+      test_glyco_link_by_geometry();
 
    if (0)
       test_string_manipulation();
 
-   if (0) 
+   if (0)
       test_sort_chains();
 
-   if (0) 
+   if (0)
       test_euler_angles();
 
-   if (0) 
+   if (0)
       test_lsq_improve();
 
    if (0)
@@ -483,14 +558,16 @@ int main(int argv, char **argc) {
    if (0)
       test_atom_overlaps();
 
-   
-   if (1)
+   if (0)
       for (unsigned int i=0; i<2; i++) {
 	 test_all_atom_overlaps();
       }
    
    if (0)
       test_reduce();
+
+//    if (true)
+//       test_cp();
    
    return 0;
 }

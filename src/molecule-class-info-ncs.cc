@@ -173,6 +173,8 @@ coot::ghost_molecule_display_t::update_bonds(mmdb::Manager *mol) {
 //     std::cout << "updating ghost bonds...(which has " << bonds_box.num_colours
 // 	      << " colours and " << ilines << " lines)\n";
 
+   graphics_line_t::cylinder_class_t cc = graphics_line_t::SINGLE;
+   
    for (int i=0; i<bonds_box.num_colours; i++) {
       for (int j=0; j< bonds_box.bonds_[i].num_lines; j++) {
 
@@ -189,7 +191,7 @@ coot::ghost_molecule_display_t::update_bonds(mmdb::Manager *mol) {
 
 	 coot::CartesianPair p(Cartesian(at.x(), at.y(), at.z()),
 			       Cartesian(bt.x(), bt.y(), bt.z()));
-	 bonds_box.bonds_[i].pair_list[j] = graphics_line_t(p, false, false);
+	 bonds_box.bonds_[i].pair_list[j] = graphics_line_t(p, cc, false, false, -1, -1, -1);
       }
    }
 }
@@ -422,7 +424,7 @@ molecule_class_info_t::add_ncs_ghosts_no_explicit_master(const std::vector<std::
 	    }
 	 }
       }
-      catch (std::runtime_error rte) {
+      catch (const std::runtime_error &rte) {
 	 std::cout << rte.what() << std::endl;
       } 
    }
@@ -481,7 +483,7 @@ molecule_class_info_t::add_ncs_ghosts_using_ncs_master(const std::string &master
 	       }
 	    }
 	 }
-	 catch (std::runtime_error rte) {
+	 catch (const std::runtime_error &rte) {
 	    std::cout << rte.what() << std::endl;
 	 } 
       }
@@ -1256,7 +1258,7 @@ molecule_class_info_t::copy_residue_range(mmdb::Chain *from_chain, mmdb::Chain *
 	 old_seg_id_for_chain_atoms = coot::chain_atoms_segid(to_chain);
 	 use_old_seg_id = 1;
       }
-      catch (std::runtime_error mess) {
+      catch (const std::runtime_error &mess) {
       }
       
       // Don't do a selection here, we have the (from) chain already.
@@ -1357,7 +1359,16 @@ molecule_class_info_t::copy_residue_range(mmdb::Chain *from_chain, mmdb::Chain *
 
 	       std::pair<int, mmdb::Residue *> serial_number =
 		  find_serial_number_for_insert(to_residue->GetSeqNum(),
+						to_residue->GetInsCode(),
 						to_chain->GetChainID());
+
+	       if (false)
+		  std::cout << "debug:: found serial_number " << serial_number.first << " "
+			    << coot::residue_spec_t(serial_number.second)
+			    << " for residue " << coot::residue_spec_t(to_residue)
+			    << " with index " << to_residue->index
+			    << std::endl;
+
 	       if (serial_number.first != -1) {
 		  to_chain->InsResidue(to_residue, serial_number.first);
 		  coot::copy_segid(serial_number.second, to_residue);
@@ -1385,7 +1396,7 @@ molecule_class_info_t::copy_residue_range(mmdb::Chain *from_chain, mmdb::Chain *
 	       }
 	    } else {
 	       std::cout << "ERROR:: Null to_residue!!!!" << std::endl;
-	    } 
+	    }
 	 }
       }
       
@@ -1424,7 +1435,9 @@ void
 molecule_class_info_t::update_strict_ncs_symmetry(const coot::Cartesian &centre_point,
 						  const molecule_extents_t &extents) {
 
-   if (true)
+   bool debug = false;
+
+   if (debug)
       std::cout << "DEBUG:: Update ncs symmetry for " << strict_ncs_matrices.size()
 		<< " NCS matrices" << std::endl;
 
@@ -1442,7 +1455,7 @@ molecule_class_info_t::update_strict_ncs_symmetry(const coot::Cartesian &centre_
 
 
    // guarenteed to be at least one.
-   if (true)
+   if (debug)
       std::cout << "There were " << ncs_mat_indices.size() << " touching molecules\n";
 
    Bond_lines_container bonds;
@@ -2406,7 +2419,7 @@ molecule_class_info_t::ncs_master_chains() const {
 
 void
 molecule_class_info_t::add_strict_ncs_from_mtrix_from_file(const std::string &file_name) {
-   
+
    std::vector<clipper::RTop_orth> mv = coot::mtrix_info(file_name);
    for (unsigned int i=0; i<mv.size(); i++) {
       const clipper::RTop_orth &rt = mv[i];
@@ -2653,13 +2666,15 @@ molecule_class_info_t::add_molecular_symmetry_matrices() {
 	 }
       }
 
-      // std::cout << "made " << biomt_matrices.size() << " biomt matrices" << std::endl;
+      std::cout << "in add_molecular_symmetry_matrices() made "
+		<< biomt_matrices.size() << " biomt matrices" << std::endl;
 
       for (unsigned int jj=0; jj<biomt_chain_ids.size(); jj++) { 
 	 for (unsigned int ii=0; ii<biomt_matrices.size(); ii++) {
-	    add_strict_ncs_matrix(biomt_chain_ids[jj],
-				  biomt_chain_ids[jj],
-				  biomt_matrices[ii]);
+	    if (! biomt_matrices[ii].is_close_to_unit_matrix())
+	       add_strict_ncs_matrix(biomt_chain_ids[jj],
+				     biomt_chain_ids[jj],
+				     biomt_matrices[ii]);
 	 }
       }
    }

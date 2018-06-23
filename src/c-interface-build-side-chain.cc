@@ -124,7 +124,6 @@ void delete_residue_sidechain(int imol, const char *chain_id, int resno, const c
       mmdb::Residue *residue_p =
 	 graphics_info_t::molecules[imol].get_residue(chain_id, resno, ins_code);
       if (residue_p) {
-	 graphics_info_t g;
 	 coot::residue_spec_t spec(residue_p);
 	 g.delete_residue_from_geometry_graphs(imol, spec);
       }
@@ -697,6 +696,8 @@ int nudge_residue_sequence(int imol, char *chain_id, int res_no_range_start,
 								       res_no_range_end,
 								       nudge_by,
 								       nudge_residue_numbers_also);
+      if (status)
+	 graphics_draw();
    }
    return status;
 } 
@@ -894,28 +895,32 @@ void do_base_mutation(const char *type) {
       // save a residue spec in graphics-info-defines.cc not generate it here.
       // 
       int idx = g.mutate_residue_atom_index;
-      mmdb::Atom *at = graphics_info_t::molecules[imol].atom_sel.atom_selection[idx];
-      mmdb::Residue *r = at->residue;
-      if (r) {
-	 std::string cbn = "";
-	 if (coot::util::nucleotide_is_DNA(r)) {
-	    cbn = coot::util::canonical_base_name(type, coot::DNA);
-	 } else {
-	    cbn = coot::util::canonical_base_name(type, coot::RNA);
-	 } 
-	 if (cbn != "") {
-	    bool old = g.convert_to_v2_atom_names_flag;
-	    coot::residue_spec_t res_spec(r);
-	    int istat = graphics_info_t::molecules[imol].mutate_base(res_spec, cbn, old);
-	    if (istat)
-	       graphics_draw();
-	    // Is this the right function?
-	    update_go_to_atom_window_on_changed_mol(imol);
-	 } else {
-	    std::string s = "No canonical base name found";
-	    std::cout << "WARNING:: " << s << std::endl;
-	    add_status_bar_text(s.c_str());
-	 } 
+      if (idx > 0 && idx < g.molecules[imol].atom_sel.n_selected_atoms) {
+	 mmdb::Atom *at = graphics_info_t::molecules[imol].atom_sel.atom_selection[idx];
+	 mmdb::Residue *r = at->residue;
+	 if (r) {
+	    std::string cbn = "";
+	    if (coot::util::nucleotide_is_DNA(r)) {
+	       cbn = coot::util::canonical_base_name(type, coot::DNA);
+	    } else {
+	       cbn = coot::util::canonical_base_name(type, coot::RNA);
+	    }
+	    if (cbn != "") {
+	       bool old = g.convert_to_v2_atom_names_flag;
+	       coot::residue_spec_t res_spec(r);
+	       int istat = graphics_info_t::molecules[imol].mutate_base(res_spec, cbn, old);
+	       if (istat)
+		  graphics_draw();
+	       // Is this the right function?
+	       update_go_to_atom_window_on_changed_mol(imol);
+	    } else {
+	       std::string s = "No canonical base name found";
+	       std::cout << "WARNING:: " << s << std::endl;
+	       add_status_bar_text(s.c_str());
+	    } 
+	 }
+      } else {
+	 std::cout << "ERROR:: out of range atom index " << idx << std::endl;
       }
    }
 }

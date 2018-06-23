@@ -18,23 +18,23 @@
  * 02110-1301, USA.
  */
 
+#ifndef RESIDUE_BY_PHI_PSI_HH
+#define RESIDUE_BY_PHI_PSI_HH
+
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+#include <thread>
+#include <chrono>
+#include "utils/ctpl.h" // match that included in simple-restraint.hh
+#endif // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+
 #include "ligand.hh"
 #include "clipper/core/ramachandran.h"
 
+#include "ideal/phi-psi.hh"
 
 namespace coot { 
 
-   class phi_psi_pair { 
-   public:
-      phi_psi_pair(float a, float b) { 
-	 phi = a;
-	 psi = b;
-      }
-      float phi;
-      float psi;
-   }; 
-
-  class residue_by_phi_psi : public ligand { 
+  class residue_by_phi_psi : public ligand {
 
      int ires_terminus;
      std::string chain_id;
@@ -51,41 +51,77 @@ namespace coot {
      mmdb::Residue *residue_p; // the residue of the last atom (we
                           // clicked on an atom of it).
 
-     phi_psi_pair get_phi_psi_by_random() const;
+     phi_psi_t get_phi_psi_by_random() const;
      void init_phi_psi_plot(); 
 
      minimol::residue 
-     construct_next_res_from_rama_angles(float phi, float psi, int seqno,
-				const clipper::Coord_orth &previous_n,
-				const clipper::Coord_orth &previous_ca,
-				const clipper::Coord_orth &previous_c) const; 
+     construct_next_res_from_rama_angles(float phi, float psi, float tau,
+					 int seqno,
+					 const clipper::Coord_orth &previous_n,
+					 const clipper::Coord_orth &previous_ca,
+					 const clipper::Coord_orth &previous_c) const; 
      minimol::residue 
-     construct_prev_res_from_rama_angles(float phi, float psi, int seqno,
-				const clipper::Coord_orth &next_n,
-				const clipper::Coord_orth &next_ca,
-				const clipper::Coord_orth &next_c) const; 
+     construct_prev_res_from_rama_angles(float phi, float psi, float tau,
+					 int seqno,
+					 const clipper::Coord_orth &next_n,
+					 const clipper::Coord_orth &next_ca,
+					 const clipper::Coord_orth &next_c) const; 
 
-     
-     minimol::residue construct_joining_res(const phi_psi_pair &pp,
+     minimol::residue construct_joining_res(const phi_psi_t &pp,
 						  int seqno,
 						  const clipper::Coord_orth &next_n,
 						  const clipper::Coord_orth &next_ca,
 						  const clipper::Coord_orth &next_c) const;
 	
      std::vector<clipper::Coord_orth> get_connecting_residue_atoms() const; 
-     minimol::fragment fit_terminal_residue_generic(int n_trials,
-						    int offset, 
-						    bool do_rigid_body_refinement);
+     minimol::fragment fit_terminal_residue_generic(int n_trials, int offset,
+						    bool do_rigid_body_refinement,
+						    const clipper::Xmap<float> &xmap_in);
+
+     // should this be static?
+     std::pair<ligand_score_card, coot::minimol::fragment>
+     fit_terminal_residue_generic_trial_inner(int itrial,
+					      int offset,
+					      int next_residue_seq_num,
+					      const std::vector<clipper::Coord_orth> &pos,
+					      bool two_residues_flag,
+					      bool do_rigid_body_refinement,
+					      const clipper::Xmap<float> &xmap_in) const;
+
+     static
+     void fit_terminal_residue_generic_trial_inner_multithread(int ithread_idx,
+							       int itrial_start,
+							       int itrial_end,
+							       int offset,
+							       mmdb::Residue *res_p,
+							       int next_residue_seq_num,
+							       const std::string &terminus_type,
+							       const std::string &residue_type,
+							       float b_factor_in,
+							       const std::vector<clipper::Coord_orth> &pos,
+							       const clipper::Xmap<float> &xmap_in,
+							       float map_rms_in,
+							       std::vector<std::pair<ligand_score_card, minimol::fragment> > *results);
 
      minimol::fragment
      make_2_res_joining_frag(const std::string &chain_id,
-			     const phi_psi_pair &pp1,
-			     const phi_psi_pair &pp2,
+			     const phi_psi_t &pp1,
+			     const phi_psi_t &pp2,
 			     int seqnum,
 			     int offset, // + or - 1
 			     const clipper::Coord_orth &next_n,
 			     const clipper::Coord_orth &next_ca,
 			     const clipper::Coord_orth &next_c) const;
+
+     void
+     add_characteristic_low_points(coot::ligand_score_card *s,
+				   int itrial,
+				   const coot::phi_psi_t &p1,
+				   const coot::phi_psi_t &p2,
+				   mmdb::Residue *residue_p,
+				   const clipper::Coord_orth &next_n,
+				   const coot::minimol::fragment &frag,
+				   const clipper::Xmap<float> &xmap_in) const;
 
      void debug_compare_check(const coot::minimol::residue &mres,
 			      std::vector<minimol::atom *> atoms_p);
@@ -99,21 +135,35 @@ namespace coot {
 			float b_factor_in);
 
      minimol::molecule best_fit_phi_psi(int n_trials,
+					const clipper::Xmap<float> &xmap_in);
+
+     minimol::molecule best_fit_phi_psi(int n_trials,
 					bool do_rigid_body_refinement,
-					bool add_other_residue_flag);
+					bool add_other_residue_flag,
+					const clipper::Xmap<float> &xmap_in);
 
      // offset: N or C addition (-1 or 1).
      minimol::fragment best_fit_phi_psi(int n_trials, int offset); 
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+     ctpl::thread_pool *thread_pool_p;
+     unsigned int n_threads;
+     void thread_pool(ctpl::thread_pool *tp_in, int n_threads_in) {
+	thread_pool_p = tp_in;
+	n_threads = n_threads_in;
+     }
+   
+#endif // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+
   };
 
-  minimol::residue 
+  minimol::residue
   build_N_terminal_ALA(float phi, float psi, int seqno,
 		       const clipper::Coord_orth &previous_n,
 		       const clipper::Coord_orth &previous_ca,
 		       const clipper::Coord_orth &previous_c,
 		       float b_factor); 
-   minimol::residue 
+   minimol::residue
    build_C_terminal_ALA(float phi, float psi, int seqno,
 			const clipper::Coord_orth &next_n,
 			const clipper::Coord_orth &next_ca,
@@ -128,6 +178,6 @@ namespace coot {
 			      const std::string &res_type,
 			      float b_factor_in,
 			      int n_trials);
-
-
 } // namespace coot
+
+#endif // RESIDUE_BY_PHI_PSI_HH

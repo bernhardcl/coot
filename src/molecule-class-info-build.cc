@@ -271,11 +271,11 @@ molecule_class_info_t::make_link(const coot::atom_spec_t &spec_1, const coot::at
 	    local_link.Copy(link);
 	    std::vector<mmdb::Link> links(1);
 	    links[0] = local_link;
-	    
+	    clipper::Xmap<float> dummy_xmap;
 
 	    coot::restraints_container_t restraints(residues,
 						    links,
-						    geom, mol, dummy_fixed_atom_specs);
+						    geom, mol, dummy_fixed_atom_specs, dummy_xmap);
 	    coot::bonded_pair_container_t bpc = restraints.bonded_residues_from_res_vec(geom);
 	    bpc.apply_chem_mods(geom);
 	    atom_sel.mol->FinishStructEdit();
@@ -287,6 +287,67 @@ molecule_class_info_t::make_link(const coot::atom_spec_t &spec_1, const coot::at
 }
 
 void
+molecule_class_info_t::update_any_link_containing_residue(const coot::residue_spec_t &old_spec,
+							  const coot::residue_spec_t &new_spec) {
+
+   if (atom_sel.mol) {
+      int n_models = atom_sel.mol->GetNumberOfModels();
+      for (int imod=1; imod<=n_models; imod++) {
+	 mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
+	 if ((old_spec.model_number == imod) || (old_spec.model_number == mmdb::MinInt4)) {
+	    mmdb::LinkContainer *links = model_p->GetLinks();
+	    int n_links = model_p->GetNumberOfLinks();
+	    for (int ilink=1; ilink<=n_links; ilink++) {
+	       mmdb::Link *link_p = model_p->GetLink(ilink);
+	       // mmdb::Link *link = static_cast<mmdb::Link *>(links->GetContainerClass(ilink));
+
+	       if (link_p) {
+
+		  // must pass a valid link_p
+		  std::pair<coot::atom_spec_t, coot::atom_spec_t> link_atoms = coot::link_atoms(link_p, model_p);
+		  coot::residue_spec_t res_1(link_atoms.first);
+		  coot::residue_spec_t res_2(link_atoms.second);
+
+		  // the atom names and the alt confs will stay the same
+		  // (this function is invoked after renumber residues).
+
+		  if (res_1 == old_spec) {
+		     if (res_1.chain_id != new_spec.chain_id)
+			strncpy(link_p->chainID1, new_spec.chain_id.c_str(), 9);
+		     if (res_1.res_no != new_spec.res_no)
+			link_p->seqNum1 = new_spec.res_no;
+		     mmdb::Residue *new_res = get_residue(new_spec);
+		     if (new_res) {
+			std::string res_name_new(new_res->GetResName());
+			std::string current_name_1(link_p->resName1);
+			if (res_name_new != current_name_1) {
+			   strncpy(link_p->resName1, res_name_new.c_str(), 19);
+			}
+		     }
+		  }
+		  if (res_2 == old_spec) {
+		     if (res_2.chain_id != new_spec.chain_id)
+			strncpy(link_p->chainID2, new_spec.chain_id.c_str(), 9);
+		     if (res_2.res_no != new_spec.res_no)
+			link_p->seqNum2 = new_spec.res_no;
+		     mmdb::Residue *new_res = get_residue(new_spec);
+		     if (new_res) {
+			std::string res_name_new(new_res->GetResName());
+			std::string current_name_2(link_p->resName2);
+			if (res_name_new != current_name_2) {
+			   strncpy(link_p->resName1, res_name_new.c_str(), 19);
+			}
+		     }
+		  }
+	       }
+	    }
+	 }
+      }
+   }
+}
+
+
+void
 molecule_class_info_t::delete_any_link_containing_residue(const coot::residue_spec_t &res_spec) {
 
    if (atom_sel.mol) {
@@ -296,14 +357,14 @@ molecule_class_info_t::delete_any_link_containing_residue(const coot::residue_sp
 	 if ((res_spec.model_number == imod) || (res_spec.model_number == mmdb::MinInt4)) {
 	    mmdb::LinkContainer *links = model_p->GetLinks();
 	    int n_links = model_p->GetNumberOfLinks();
-	    for (int ilink=1; ilink<=n_links; ilink++) { 
+	    for (int ilink=1; ilink<=n_links; ilink++) {
 	       mmdb::Link *link_p = model_p->GetLink(ilink);
 	       // mmdb::Link *link = static_cast<mmdb::Link *>(links->GetContainerClass(ilink));
 
-	       if (link_p) { 
+	       if (link_p) {
 
 		  // must pass a valid link_p
-		  std::pair<coot::atom_spec_t, coot::atom_spec_t> link_atoms = coot::link_atoms(link_p);
+		  std::pair<coot::atom_spec_t, coot::atom_spec_t> link_atoms = coot::link_atoms(link_p, model_p);
 		  coot::residue_spec_t res_1(link_atoms.first);
 		  coot::residue_spec_t res_2(link_atoms.second);
 		  // std::cout << "found link " << res_1 << " to "  << res_2 << std::endl;
@@ -326,7 +387,7 @@ void
 molecule_class_info_t::delete_link(mmdb::Link *link, mmdb::Model *model_p) {
 
    // Copy out the links, delete all links and add the saved links back
-   
+
    std::vector<mmdb::Link *> saved_links;
    int n_links = model_p->GetNumberOfLinks();
    for (int ilink=1; ilink<=n_links; ilink++) {
@@ -336,6 +397,7 @@ molecule_class_info_t::delete_link(mmdb::Link *link, mmdb::Model *model_p) {
 	 saved_links.push_back(copy_link);
       }
    }
+
    model_p->RemoveLinks();
    for (unsigned int i=0; i<saved_links.size(); i++) { 
       model_p->AddLink(saved_links[i]);
@@ -471,5 +533,28 @@ molecule_class_info_t::switch_HIS_protonation(coot::residue_spec_t res_spec) {
 	 update_molecule_after_additions();
 	 update_symmetry();
       }
+   }
+}
+
+#include "ideal/crankshaft.hh"
+
+void
+molecule_class_info_t::crankshaft_peptide_rotation_optimization(const coot::residue_spec_t &rs,
+								unsigned int n_peptides,
+								const clipper::Xmap<float> &xmap,
+								float map_weight,
+								int n_samples) {
+   int n_solutions = 1;
+   std::vector<mmdb::Manager *> mols =
+      coot::crankshaft::crank_refine_and_score(rs, n_peptides, xmap, atom_sel.mol, map_weight,
+					       n_samples, n_solutions);
+
+   if (mols.size() == 1) {
+      make_backup();
+      std::cout << "DEBUG:: crankshaft updated " << std::endl;
+      atom_sel = make_asc(mols[0]);
+      have_unsaved_changes_flag = 1;
+      update_molecule_after_additions();
+      update_symmetry();
    }
 }

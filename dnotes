@@ -3987,9 +3987,10 @@ INFO::
    o Change the pixmaps/Makefile.am for the current splash screen image
    o git commit -a
    o git push [maybe here? not sure]
-   o git tag Release-0.x.y 
-   o git push origin Release-0.x.y
-   o Passes build (build-latest) on pc? 
+   o git tag Release-0.x.y
+   o git commit
+   o git push origin Release-0.x.y  # publish the tag
+   o Passes build (build-latest) on pc?
         OK, disable the build-latest cron-job 
    o clear out pre-releases
    o check for updates - needs consideration?
@@ -6709,13 +6710,13 @@ Wed Jun 27 10:29:54 BST 2012
 #include <functional>
 
 // for erase_if()
-class erasor {
+class eraser {
 public:
    std::string s;
    // the constructor, can be information that needs to be used
    // internally in the operator() function.  This is run once
    // 
-   erasor(const std::string &s_in) {
+   eraser(const std::string &s_in) {
       s = s_in;
    }
    // The passed object type is the <type> of the vector.
@@ -6739,7 +6740,7 @@ int main(int argc, char **argv) {
 
    // remove() and remove_if() generate a useful pointer used by erase()
    v.erase(std::remove(v.begin(), v.end(), "Two"), v.end());
-   v.erase(std::remove_if(v.begin(), v.end(), erasor(bad_boy)), v.end());
+   v.erase(std::remove_if(v.begin(), v.end(), eraser(bad_boy)), v.end());
    
    for (unsigned int i=0; i<v.size(); i++)
       std::cout << "   " << i << " " << v[i] << std::endl;
@@ -7250,6 +7251,8 @@ http://www.youtube.com/watch?v=aMSPwFvlICM
 
    o 4q8j many cis-peptides
 
+   o 4d72 real non-pro cis
+
 ---
 
    Read this paper: 
@@ -7364,9 +7367,22 @@ http://www.youtube.com/watch?v=aMSPwFvlICM
 
    https://www.guiguan.net/fix-python-graph-tool-couldnt-recognise-svg-problem/
 
- 
+later:
+Thu 28 Dec 2017 01:32:59 GMT
+
+On Debian 14.04
+$ coot
+Error loading icon: Couldn't recognize the image file format for file '/home/paule/autobuild/Linux-emsley-vm-ubuntu1404-enhanced-ligand-pre-release-gtk2-python/share/coot/pixmaps/05_Hotel_Icon_Hair_Salon.svg'
+Error loading icon: Couldn't recognize the image file format for file '/home/paule/autobuild/Linux-emsley-vm-ubuntu1404-enhanced-ligand-pre-release-gtk2-python/share/coot/pixmaps/3-c-new.svg'
+Error loading icon: Couldn't recognize the image file format for file '/home/paule/autobuild/Linux-emsley-vm-ubuntu1404-enhanced-ligand-pre-release-gtk2-python/share/coot/pixmaps/3-c-other.svg'
+Error loading icon: Couldn't recognize the image file format for file '/home/paule/autobuild/Linux-emsley-vm-ubuntu1404-enhanced-ligand-pre-release-gtk2-python/share/coot/pixmaps/3-c.svg'
+etc
+$ apt-get install librsvg2-dev
+
+(maybe it was not the dev package but the libs/common that solved it, librsvg2-common)
+
 ----
-   
+
    using lldb:
 
    lldb .libs/coot-bin 
@@ -7377,6 +7393,14 @@ http://www.youtube.com/watch?v=aMSPwFvlICM
     How to run lldb on a core:
 
    $ lldb .libs/coot-bin -c /cores/core.18439
+
+    How to set a break point in a function:
+
+   break set --name malloc_error_break
+
+    and a member function:
+
+   break set --name coot::restraints_container_t::bonded_flanking_residues_by_residue_vector
 
 ----
   
@@ -7648,7 +7672,6 @@ Thu Aug 18 12:03:32 BST 2016
    RNA building test: coot-download/5fw1.ent
 
 
-
 ---
 Wed 24 Aug 2016 00:54:22 BST
 
@@ -7716,4 +7739,506 @@ Thu 23 Mar 2017 12:04:12 GMT
     Gert Vriend contact map exploitation paper, 2017.
 
 
+----
+Tue 18 Apr 2017 16:33:00 BST
+
+    5jik is good/interesting for carbohydrate building - non-oligomannose
+
+
+----
+Sun 28 May 2017 17:09:21 CDT
+
+   Oleg Borbulevych's talk: ONIOM QM/MM DivCon improves clash score
+   after their refinement of Astex Diverse set.
+
+   2016 paper
+
+   What would you get (clash score deltas) if you tried coot for hydrogen
+   addition and refinement?
+
+----
+Sat  1 Jul 2017 17:36:03 BST
+
+   rdkit fragments:
+
+http://rdkit.org/docs_temp/Chem/Fragments.m.html
+
+
+----
+Sat  1 Jul 2017 18:27:09 BST
+
+   Makefile variables $@ $^ $<
+   $@ -> target,      $^ -> all dependences,   $< -> first dependency
+
+   https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
+
 ---
+Mon Jun 19 19:46:51 BST 2017
+
+   beta strand: phi=-110, psi=120 from link-restraint.cc
+
+   can you use that with add-terminal-residue-using-phi-psi to make an
+   extended polypetide strand?
+
+----
+Sun  9 Jul 2017 00:52:16 BST
+
+open drug discovery toolkit - what does it do?
+
+https://iwatobipen.wordpress.com/2017/06/04/open-drug-discovery-toolkit-for-python/
+
+http://www.blopig.com/blog/2016/11/how-to-calculate-plifs-using-rdkit-and-plip/
+
+---
+Wed 12 Jul 2017 21:55:28 BST
+
+look this up:
+
+Ho, B. K. & Gruswitz, F. HOLLOW: generating accurate representations
+of channel and interior surfaces in molecular structures. BMC
+Struct. Biol. 8, 49 (2008).
+
+---
+Sun 16 Jul 2017 14:57:51 BST
+
+http://www.boost.org/doc/libs/1_64_0/libs/python/doc/html/tutorial/tutorial/object.html
+
+   Creating boost::python::object from PyObject*
+
+   When you want a boost::python::object to manage a pointer to
+   PyObject* pyobj one does:
+
+   boost::python::object o(boost::python::handle<>(pyobj)); In this
+   case, the object, manages the pyobj, it won't increase the
+   reference count on construction.
+
+    Otherwise, to use a borrowed reference:
+
+    boost::python::object
+    boost::python::handle<>(boost::python::borrowed(pyobj)));
+    In this case, Py_INCREF is called, so pyobj is not destructed when
+    object goes out of scope.
+
+----
+Sun 16 Jul 2017 22:43:37 BST
+
+    convert an RDKit molecule to boost::python::object
+
+   	             std::pair<bool, coot::dictionary_residue_restraints_t> rp = 
+		     geom.get_monomer_restraints(res_name, imol);
+		     RDKit::RWMol rdkm = rdkit_mol(residue_p, rp.second);
+                     boost::python::list rdkit_mols_list;
+		     RDKit::ROMol *cm_p = new RDKit::ROMol(rdkm);
+		     boost::shared_ptr<RDKit::ROMol> xx(cm_p);
+		     // maybe I can append(xx) rather than needing this step:
+		     boost::python::object obj(xx);
+		     rdkit_mols_list.append(obj);
+
+---
+Wed 19 Jul 2017 23:41:43 BST
+
+what's this?
+
+   Dixon, S. L. et al.
+   PHASE: a new engine for pharmacophore perception, 3D QSAR model development,
+   and 3D database screening: 1. Methodology and preliminary results.
+   J. Comput. Aided Mol. Des. 20, 647-671,
+   doi: 10.1007/s10822-006-9087-6   (2006).
+
+---
+Thu Jul 27 19:48:52 BST 2017
+
+   To compile newest Python 2.7.x on Mac, use additional configure argument
+   MACOSX_DEPLOYMENT_TARGET=10.10
+   to get past
+   compile python configure: error cannot compute sizeof size_t
+
+---
+Thu Jul 27 20:07:08 BST 2017
+
+   to upgrade ipython using pip:
+
+   $ pip install ipython --upgrade
+
+
+---
+Sat 29 Jul 2017 15:37:06 BST
+
+  read this: https://autotools.io/index.html
+
+
+---
+Fri Aug 11 14:19:34 BST 2017
+
+https://stackoverflow.com/questions/21971449/how-do-i-increase-the-cell-width-of-the-jupyter-ipython-notebook-in-my-browser
+
+~/.ipython/profile_default/static/custom/custom.css (iPython) or ~/.jupyter/custom/custom.css (Jupyter) with content
+
+.container { width:100% !important; }
+
+
+---
+Fri  1 Sep 2017 05:52:26 BST
+
+   server threaded:
+
+   https://stackoverflow.com/questions/15074393/python-multithreading-xmlrpc-server
+
+
+---
+Fri  1 Sep 2017 17:51:38 BST
+
+   WebVR and Coot - I discover:
+
+   https://forums.oculus.com/community/discussion/4232/visualizing-protein-structures
+
+   unitymol, molvr
+
+   http://www.molvr.org/category/downloads/
+
+
+---
+Tue 12 Sep 2017 12:19:45 BST
+
+   Try deleting sidechains of a chain in a cryo em map (I was using chain J from 3771) then
+   Extensions -> All Molecule -> Fill partial
+
+   It takes forever (copying the map).
+
+----
+Mon Sep 11 13:06:17 BST 2017
+
+Thunderbird says this:
+
+(firefox:11665): Gdk-WARNING **: Native children wider or taller than 65535 pixels are not supported
+
+(firefox:11665): Gdk-WARNING **: Native children wider or taller than 65535 pixels are not supported
+
+----
+Fri 29 Sep 2017 06:03:42 BST
+
+ Use -Wl,-rpath (if passing to cc) or -rpath (if passing to ld) as more portable than 
+       -R. ephemient Mar 30 '09 at 17:35
+
+ also
+
+ https://www.eyrie.org/~eagle/notes/rpath.html
+
+----
+Tue  3 Oct 2017 11:49:21 BST
+
+   Tristan Croll mentions PyOpenCL
+
+   https://mathema.tician.de/software/pyopencl/
+
+----
+Wed  4 Oct 2017 06:36:53 BST
+
+   sounds
+
+   https://freesound.org/browse/tags/effect/?page=13#sound
+
+
+----
+Thu 16 Nov 2017 01:48:51 ART
+
+  ligand docking things to read
+
+  https://worldwidescience.org/topicpages/q/qm-polarized+ligand+docking.html
+
+----
+Thu 14 Dec 2017 14:45:13 GMT
+
+  o  configuring python with ssl - for pip:  --with-ensurepip=install
+     and LDFLAGS="-Wl,--rpath=${AUTOBUILD_INSTALLED}${build_type}/lib" of course
+
+  o apply the patch
+
+  Then copy Modules/Setup.dist Modules/Setup
+  Because - it gets overwritten...? Or something?
+
+--- Modules/Setup.dist.orig	2017-12-14 14:24:16.314852316 +0000
++++ Modules/Setup.dist	2017-12-14 14:30:02.601760197 +0000
+@@ -215,10 +215,10 @@
+ 
+ # Socket module helper for SSL support; you must comment out the other
+ # socket line above, and possibly edit the SSL variable:
+-#SSL=/usr/local/ssl
+-#_ssl _ssl.c \
+-#	-DUSE_SSL -I$(SSL)/include -I$(SSL)/include/openssl \
+-#	-L$(SSL)/lib -lssl -lcrypto
++SSL=/usr
++_ssl _ssl.c \
++	-DUSE_SSL -I$(SSL)/include -I$(SSL)/include/openssl \
++	-L$(SSL)/lib64 -lssl -lcrypto
+
+
+----
+Sun 17 Dec 2017 16:17:48 GMT
+
+   o Fix the documentation generation (coot-dox.cfg needs to be generated from coot-dox.cfg.in)
+     because the source header files are not in the build directory. Useful?
+
+     http://chris-miceli.blogspot.co.uk/2011/01/integrating-doxygen-with-autotools.html
+
+     ::: 2
+
+----
+Sat 30 Dec 2017 20:31:56 GMT
+
+   o Nice to have function: --emdb code which uses files if they are available or gets the
+     bundle first if not.
+
+----
+Sun 31 Dec 2017 04:54:00 GMT
+
+   o Non-bonded contacts are slow to generate on a big chain (say 400 residues or more) e.g. EMD-6698.
+
+     Make them faster.
+
+---
+Sun 31 Dec 2017 05:00:22 GMT
+
+   o put the refinement in a thread.
+
+
+----
+Sun 31 Dec 2017 14:35:22 GMT
+
+File to string;
+
+https://www.fluentcpp.com/2017/12/19/build-strings-from-plain-string-up-to-boost-karma/
+
+  std::ostringstream fileContentsStream;
+  fileContentsStream << std::ifstream("MyFile.txt").rdbuf();
+  std::string fileContents = fileContentsStream.str();
+
+---
+Sun 31 Dec 2017 14:39:12 GMT
+
+  interesting minimization:
+
+http://www.csm.ro/home/mmelsp_series/mmelsp_08_papers/nandrei_08.pdf
+
+
+---
+Sun 31 Dec 2017 20:15:08 GMT
+
+  pango-cairo:
+
+https://developer.gnome.org/pango/stable/pango-Cairo-Rendering.html
+
+  pango notes:
+
+https://www.gtk.org/api/2.6/pango/PangoMarkupFormat.html
+
+---
+Thu  4 Jan 2018 16:54:56 GMT
+
+   Have a look at 6aqf
+
+   Allosteric Coupling of Drug Binding and Intracellular Signaling in the A2A Adenosine Receptor
+
+---
+Wed 17 Jan 2018 05:07:31 FKST
+
+  jupyter interesting
+
+  import jupyter_client
+  k = jupyter_client.KernelManager()
+  k.start_kernel()
+
+---
+Sun 18 Feb 2018 15:24:11 EET
+
+   HTC Vive on Linux:
+
+   https://www.gamingonlinux.com/articles/first-steps-with-openvr-and-the-vive-on-linux.7229
+
+----
+Sun 18 Feb 2018 18:06:29 EET
+
+   For moving single atoms of the moving atoms (for vrcoot), look at
+   graphics_info_t::move_single_atom_of_moving_atoms(int screenx, int screeny)
+
+----
+Tue 20 Feb 2018 23:47:55 EET
+
+   MDFF example:
+ 
+   http://pubs.rsc.org/en/content/articlehtml/2014/fd/c4fd00005f
+
+   Actually, maybe not - needs close reading.
+
+---
+Sun 25 Feb 2018 07:28:36 EET
+
+   cryo-em tutorial:
+
+   o Note: 4m1m  model and 7325 for the map (Gaby)
+
+---
+Sun 25 Feb 2018 18:17:33 EET
+
+   o cryo-EM tutorial 6771 middle of J: 196 209 281
+
+     the middle of the pyrimidine ring of the ligand 401 J NDP
+
+
+---
+Mon 26 Feb 2018 10:43:18 EET
+
+   o 3wbm is a good example for RNA building - when RCrane works again :-/
+     It has some difference map features that need fixing (in the protein).
+
+---
+Fri  9 Mar 2018 14:57:25 GMT
+
+   o Note to self: covalently bonded ligands must be in the same chain as the
+     protein chain to which they are attached.
+
+
+---
+Fri  9 Mar 2018 15:03:18 GMT
+
+   o when merging a ligand, try to change the chain-id to that of the protein
+     to which it's close. Add checked button to gui: auto-chain-for-ligands
+
+
+---
+Fri  9 Mar 2018 15:12:44 GMT
+
+   o yesterday I installed 3 virtual machines:
+     centos 6.9, Fedora live latest, Ubunutu 17.10 (latest)
+     All compiled coot out of the box with build-it.
+     (I had to install a few system libraries with apt, yum, dnf)
+
+
+---
+Sat 24 Mar 2018 03:00:25 GMT
+
+   o Can you find some "negatively" scoring parts of a domain for jiggle fitting?
+     Make n test points inside the domain box and iterate moving them away from the
+     closest atom of the protein.  Make a chain of test points so that you can use
+     SeekContacts - use a distance that is more than the maximum distance a
+     test point will move (n_iter * step size). Atoms that move away from more than
+     one atom are interesting (probably). Test points will drift away on the outside.
+     So only keep those points that are within xA of any atom.
+
+     Use generic display objects.
+
+---
+Sat 24 Mar 2018 10:27:45 GMT
+
+   Stuart: Make a "extensions looker-upper" as a dropdown option in the Coot interface,
+           so that people don't have to find/download/run scripts.
+
+---
+Fri 20 Apr 2018 14:53:26 BST
+
+   3j3q hiv capsid
+
+   4whj - interesting fitting Alvarez et al, domain needs to be shifted - 4.6A
+
+----
+Sun 20 May 2018 12:54:32 BST
+
+   cute graphics: https://github.com/prideout/aobaker
+                  https://github.com/prideout/blog-source/blob/master/p61/Cylinder.glsl
+
+                  http://github.prideout.net/
+                  http://prideout.net/blog/
+
+    built them into coot :-)
+
+
+
+----
+Sun 20 May 2018 12:54:28 BST
+
+    OpenGL and gtk on gtkglext mailing list (last entries?)
+
+    https://mail.gnome.org/archives/gtkglext-list/2014-February/msg00016.html
+
+
+---
+Sun 20 May 2018 12:59:28 BST
+
+   sharpconstruct for drawing heads?
+
+
+---
+Sun 20 May 2018 13:22:00 BST
+
+    https://www.blendswap.com for heads
+
+----
+Tue 22 May 2018 15:12:04 BST
+
+   o re: a console: look at this:
+     http://www.cplusplus.com/reference/cstdio/freopen/
+     reopen std out as a static string stream?
+
+
+	
+---
+Mon 28 May 2018 12:33:02 BST
+
+    Indirect GLX is no longer supported by default.  You can enable it with:
+
+    defaults write org.macosforge.xquartz.X11 enable_iglx -bool true
+
+   Jeremy Huddleston Sequoia
+   https://bugs.freedesktop.org/show_bug.cgi?id=99146
+
+
+---
+Tue 29 May 2018 16:29:39 BST
+
+   investigate __FILE__ __LINE__ and __FUNCTION__ for debugging
+
+
+---
+Fri  1 Jun 2018 21:52:08 BST
+
+    graphics:
+
+    https://cesium.com/blog/2013/04/22/robust-polyline-rendering-with-webgl/
+
+---
+Sat  2 Jun 2018 17:26:41 BST
+
+
+  14.150 How can I make line or polygon antialiasing work?
+
+  https://www.opengl.org/archives/resources/faq/technical/rasterization.htm#rast0150
+
+
+
+---
+Thu  7 Jun 19:50:40 BST 2018
+
+	compiling on ubuntu 18.04:
+
+   https://stackoverflow.com/questions/39188919/different-exception-specifier-with-g-6-2
+   HACK_THROW_
+
+---
+Fri  8 Jun 2018 17:31:20 BST
+
+   Keele notes:
+
+   have a look at this:
+
+   3j3q hiv capsid
+
+   4whj - interesting fitting Alvarez et al, domain needs to be shifted - 4.6A
+
+
+----
+Tue 12 Jun 2018 17:35:48 BST
+
+  record the desktop
+
+ ffmpeg -f x11grab -r 30 -i :0.0 /tmp/recording.mp4
+

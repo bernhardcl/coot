@@ -232,7 +232,8 @@ void add_accept_reject_lights(GtkWidget *window, const coot::refinement_results_
              GdkColor color = colour_by_distortion(ref_results.lights[i_rest_type].value);
              set_colour_accept_reject_event_box(w, &color);
            } else {
-             GdkColor color = colour_by_rama_plot_distortion(ref_results.lights[i_rest_type].value);
+	      GdkColor color = colour_by_rama_plot_distortion(ref_results.lights[i_rest_type].value,
+							      ref_results.lights[i_rest_type].rama_type);
              set_colour_accept_reject_event_box(w, &color);
            }
            gtk_widget_show(p); // event boxes don't get coloured
@@ -375,8 +376,23 @@ GtkWidget *
 graphics_info_t::info_dialog(const std::string &s) {
    
    GtkWidget *w = NULL;
-   if (graphics_info_t::use_graphics_interface_flag) { 
+   if (graphics_info_t::use_graphics_interface_flag) {
       w = wrapped_nothing_bad_dialog(s);
+      bool warning = false;
+      if (s.find(std::string("WARNING")) != std::string::npos) warning = true;
+      if (s.find(std::string("warning")) != std::string::npos) warning = true;
+      if (s.find(std::string("Warning")) != std::string::npos) warning = true;
+      if (s.find(std::string("Oops!"))   != std::string::npos) warning = true;
+      if (warning) {
+	 GtkWidget *info_image = lookup_widget(GTK_WIDGET(w), "info_dialog_info_image");
+	 GtkWidget *warn_image = lookup_widget(GTK_WIDGET(w), "info_dialog_warning_image");
+	 if (info_image) {
+	    if (warn_image) {
+	       gtk_widget_hide(GTK_WIDGET(info_image));
+	       gtk_widget_show(GTK_WIDGET(warn_image));
+	    }
+	 }
+      }
       gtk_widget_show(w);
    }
    return w;
@@ -396,25 +412,7 @@ graphics_info_t::info_dialog_and_text(const std::string &s) {
 void
 graphics_info_t::info_dialog_alignment(coot::chain_mutation_info_container_t mutation_info) const {
 
-   std::string s;
-
-   s = "<tt>";
-   s += ": ";
-   s += mutation_info.alignedS_label;
-   if (mutation_info.chain_id != "") { 
-      s += " Chain ";
-      s += mutation_info.chain_id;
-   }
-   s += "\n";
-   s += mutation_info.alignedS;
-   s += "\n";
-   s += ": ";
-   s += mutation_info.alignedT_label;
-   s += "\n";
-   s += mutation_info.alignedT;
-   s += "\n";
-   // s += "something_here";
-   s += "</tt>";
+   std::string s = mutation_info.alignment_string;
 
    GtkWidget *dialog = info_dialog(s); // get trashed by markup text
    if (dialog) { 
@@ -431,7 +429,7 @@ graphics_info_t::info_dialog_alignment(coot::chain_mutation_info_container_t mut
 void
 graphics_info_t::info_dialog_refinement_non_matching_atoms(std::vector<std::pair<std::string, std::vector<std::string> > > nma) {
 
-   std::string s = "   Failed to match (to the dictionary) the following model atom names:\n";
+   std::string s = "WARNING:: Failed to match (to the dictionary) the following model atom names:\n";
    for (unsigned int i=0; i<nma.size(); i++) {
       s += "   ";
       s += nma[i].first;
@@ -1149,33 +1147,38 @@ graphics_info_t::handle_rama_plot_update(coot::rama_plot *plot) {
    if (plot) {
       // if it's a normal plot: update it
       if (plot->is_kleywegt_plot()) {
-	 // are the molecule numbers from which the kleywegt plot
-	 // was generated still valid?
-	 std::pair<int, int> p = plot->molecule_numbers();
-	 if (graphics_info_t::molecules[p.first].has_model() && 
-	     graphics_info_t::molecules[p.second].has_model()) { 
-	    std::pair<std::string, std::string> chain_ids = plot->chain_ids();
-	    std::cout << "updating kleywegt plot with chain ids :" << chain_ids.first
-		      << ": :" << chain_ids.second << ":" << std::endl;
-	    if (plot->kleywegt_plot_uses_chain_ids_p())
-	       plot->draw_it(p.first, p.second,
-			     graphics_info_t::molecules[p.first].atom_sel.mol,
-			     graphics_info_t::molecules[p.second].atom_sel.mol,
-			     chain_ids.first, chain_ids.second);
-	    else 
-	       plot->draw_it(p.first, p.second,
-			     graphics_info_t::molecules[p.first].atom_sel.mol,
-			     graphics_info_t::molecules[p.second].atom_sel.mol);
-	 } else {
-	    // close down the plot
-	    plot->destroy_yourself();
-	 }
+         // are the molecule numbers from which the kleywegt plot
+         // was generated still valid?
+         std::pair<int, int> p = plot->molecule_numbers();
+         if (graphics_info_t::molecules[p.first].has_model() &&
+             graphics_info_t::molecules[p.second].has_model()) {
+            std::pair<std::string, std::string> chain_ids = plot->chain_ids();
+            std::cout << "updating kleywegt plot with chain ids :" << chain_ids.first
+                      << ": :" << chain_ids.second << ":" << std::endl;
+            if (plot->kleywegt_plot_uses_chain_ids_p())
+               plot->draw_it(p.first, p.second,
+                             graphics_info_t::molecules[p.first].atom_sel.mol,
+                     graphics_info_t::molecules[p.second].atom_sel.mol,
+                     chain_ids.first, chain_ids.second);
+            else
+               plot->draw_it(p.first, p.second,
+                             graphics_info_t::molecules[p.first].atom_sel.mol,
+                     graphics_info_t::molecules[p.second].atom_sel.mol);
+         } else {
+            // close down the plot
+            plot->destroy_yourself();
+         }
       } else {
-	 plot->draw_it(molecules[imol_moving_atoms].atom_sel.mol);
-      } 
+         // check if selection is there
+         if (GTK_TOGGLE_BUTTON(plot->selection_checkbutton)->active) {
+            plot->apply_selection_from_widget();
+         } else {
+            plot->draw_it(molecules[imol_moving_atoms].atom_sel.mol);
+         }
+      }
    } else {
       std::cout << "ERROR:: (trapped) in handle_rama_plot_update() attempt to draw to null plot\n";
-   } 
+   }
 }
 #endif // HAVE_GNOME_CANVAS or HAVE_GTK_CANVAS
 
@@ -1211,8 +1214,11 @@ graphics_info_t::drag_refine_idle_function(GtkWidget *widget) {
       graphics_info_t g;
       g.check_and_warn_inverted_chirals_and_cis_peptides();
 
-      gtk_idle_remove(graphics_info_t::drag_refine_idle_function_token);
-      graphics_info_t::drag_refine_idle_function_token = -1; // magic "not in use" value
+      if (graphics_info_t::drag_refine_idle_function_token != -1) {
+	 std::cout << "Removing idle function " << graphics_info_t::drag_refine_idle_function_token << std::endl;
+	 gtk_idle_remove(graphics_info_t::drag_refine_idle_function_token);
+	 graphics_info_t::drag_refine_idle_function_token = -1; // magic "not in use" value
+      }
    } 
 
 
@@ -1231,6 +1237,8 @@ graphics_info_t::drag_refine_idle_function(GtkWidget *widget) {
 void
 graphics_info_t::add_drag_refine_idle_function() {
 
+   std::cout << "called add_drag_refine_idle_function() " << std::endl;
+
    // add a idle function if there isn't one in operation already.
    graphics_info_t g;
    if (g.drag_refine_idle_function_token == -1) {
@@ -1239,7 +1247,16 @@ graphics_info_t::add_drag_refine_idle_function() {
       T0 = glutGet(GLUT_ELAPSED_TIME);
       print_initial_chi_squareds_flag = 1;
    }
-} 
+}
+
+// static
+void
+graphics_info_t::remove_drag_refine_idle_function() {
+
+   gtk_idle_remove(graphics_info_t::drag_refine_idle_function_token);
+   graphics_info_t::drag_refine_idle_function_token = -1; // magic "not in use" value
+}
+
 
 
 // --------------------------------------------------------------------------------
@@ -1281,7 +1298,7 @@ void
 graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol, mmdb::PAtom atom,
 						      int iatom) {
 
-   GtkWidget *residue_info_dialog = lookup_widget(table, "residue_info_dialog");
+   GtkWidget *residue_info_dialog_local = lookup_widget(table, "residue_info_dialog");
    gint left_attach = 0;
    gint right_attach = 1;
    gint top_attach = iatom;
@@ -1320,7 +1337,7 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
 		    left_attach, right_attach, top_attach, bottom_attach,
 		    xopt, yopt, xpad, ypad);
    gtk_widget_ref (residue_info_atom_info_label);
-   gtk_object_set_data_full (GTK_OBJECT (residue_info_dialog),
+   gtk_object_set_data_full (GTK_OBJECT (residue_info_dialog_local),
 			     "residue_info_atom_info_label", residue_info_atom_info_label,
 			     (GtkDestroyNotify) gtk_widget_unref);
    gtk_widget_show (residue_info_atom_info_label);
@@ -1342,7 +1359,7 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
    // 
    GtkWidget *residue_info_occ_entry = gtk_entry_new ();
    gtk_widget_ref (residue_info_occ_entry);
-   gtk_object_set_data_full (GTK_OBJECT (residue_info_dialog),
+   gtk_object_set_data_full (GTK_OBJECT (residue_info_dialog_local),
 			     widget_name.c_str(), residue_info_occ_entry,
 			     (GtkDestroyNotify) gtk_widget_unref);
 #if (GTK_MAJOR_VERSION > 2 || (GTK_MAJOR_VERSION == 2 && GTK_MINOR_VERSION > 6))
@@ -1371,7 +1388,7 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
 
    GtkWidget *residue_info_b_factor_entry = gtk_entry_new ();
    gtk_widget_ref (residue_info_b_factor_entry);
-   gtk_object_set_data_full (GTK_OBJECT (residue_info_dialog),
+   gtk_object_set_data_full (GTK_OBJECT (residue_info_dialog_local),
 			     widget_name.c_str(), residue_info_b_factor_entry,
 			     (GtkDestroyNotify) gtk_widget_unref);
 #if (GTK_MAJOR_VERSION > 2 || (GTK_MAJOR_VERSION == 2 && GTK_MINOR_VERSION > 6))
@@ -1415,12 +1432,12 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
    // 
    GtkWidget *residue_info_altloc_entry = gtk_entry_new ();
    gtk_widget_ref (residue_info_altloc_entry);
-   gtk_object_set_data_full (GTK_OBJECT (residue_info_dialog),
+   gtk_object_set_data_full (GTK_OBJECT (residue_info_dialog_local),
 			     widget_name.c_str(), residue_info_altloc_entry,
 			     (GtkDestroyNotify) gtk_widget_unref);
 #if (GTK_MAJOR_VERSION > 2 || (GTK_MAJOR_VERSION == 2 && GTK_MINOR_VERSION > 6))
    gtk_widget_set_size_request(residue_info_altloc_entry, 60, -1);
-#endif   
+#endif
    gtk_widget_show (residue_info_altloc_entry);
    gtk_object_set_user_data(GTK_OBJECT(residue_info_altloc_entry), ai);
    gtk_entry_set_text(GTK_ENTRY(residue_info_altloc_entry), atom->altLoc);
@@ -2247,7 +2264,7 @@ graphics_info_t::on_change_current_chi_button_clicked(GtkButton *button,
 	     << " i_bond " << i_bond << std::endl;
 
    if (mode == RESIDUE_PARTIAL_ALT_LOCS) {
-      graphics_info_t g;
+
       // wag the dog: when true, split the large fragment, not the small one.
       bool wag_the_dog = false; // test for Ctrl pressed to set true
 
@@ -4035,12 +4052,12 @@ graphics_info_t::on_multi_residue_torsion_button_clicked(GtkButton *button,
 	 if (moving_atoms_asc->mol) {
 	    int index_1 = -1; // unset
 	    int index_2 = -1; // unset
-	    for (int i=0; i<g.moving_atoms_asc->n_selected_atoms; i++) { 
-	       coot::atom_spec_t moving_spec_1(moving_atoms_asc->atom_selection[i]);
+	    for (int ii=0; ii<g.moving_atoms_asc->n_selected_atoms; ii++) { 
+	       coot::atom_spec_t moving_spec_1(moving_atoms_asc->atom_selection[ii]);
 	       if (moving_spec_1 == atom_spec_pair->first)
-		  index_1 = i;
+		  index_1 = ii;
 	       if (moving_spec_1 == atom_spec_pair->second)
-		  index_2 = i;
+		  index_2 = ii;
 	       if (index_1 != -1)
 		  if (index_2 != -1)
 		     break;

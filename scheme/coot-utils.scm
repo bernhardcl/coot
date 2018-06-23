@@ -96,12 +96,13 @@
 	     (begin
 	       (add-status-bar-text "No residue found"))
 
-	     (let ((aa-imol      (list-ref active-atom 0))
-		   (aa-chain-id  (list-ref active-atom 1))
-		   (aa-res-no    (list-ref active-atom 2))
-		   (aa-ins-code  (list-ref active-atom 3))
-		   (aa-atom-name (list-ref active-atom 4))
-		   (aa-alt-conf  (list-ref active-atom 5)))
+	     (let* ((aa-imol      (list-ref active-atom 0))
+		    (aa-chain-id  (list-ref active-atom 1))
+		    (aa-res-no    (list-ref active-atom 2))
+		    (aa-ins-code  (list-ref active-atom 3))
+		    (aa-atom-name (list-ref active-atom 4))
+		    (aa-alt-conf  (list-ref active-atom 5))
+                    (aa-res-spec (list aa-chain-id aa-res-no aa-ins-code)))
 
 	       ,@funcs
 	       
@@ -219,6 +220,9 @@
 ;      (display "Something was deleted"))
 ;; 
 (define post-manipulation-hook #f)
+
+;; do something based on the active residue (presumably)
+(define post-set-rotation-centre-hook #f)
 
 ;; Return a boolean
 ;; 
@@ -382,6 +386,10 @@
       #f
       (car (cadr ra))))
 
+;; residue-info atom needs other parameters to make a spec for an atom
+(define (residue-atom->atom-spec ra chain-id res-no ins-code)
+  (list chain-id res-no ins-code (residue-atom->atom-name ra) (residue-atom->alt-conf ra)))
+
 ;; residue spec (e.g. from residue-near-residue)
 (define (residue-spec->chain-id rs)
   (if (not (list? rs))
@@ -400,7 +408,6 @@
 	  (if (= (length rs) 4)
 	      (list-ref rs 2)
 	      #f))))
-	  
 
 (define (residue-spec->ins-code rs)
   (if (not (list? rs))
@@ -461,6 +468,19 @@
 ;; 
 (define (shelx-molecule? imol)
   (= (is-shelx-molecule imol) 1))
+
+;; return an int. 0 means no, 1 means yes, -1 on error
+;;
+(define is-protein-chain? is-protein-chain-p)
+
+;; Is a nucleotide chain?
+;;
+;; Now return a boolean.
+;;
+(define (is-nucleotide-chain? imol chain-id)
+
+  (let ((result (is-nucleotide-chain-p imol chain-id)))
+    (= result 1)))
 
 
 ;;; No! don't define this.  It is misleading.  It can return 0, which
@@ -955,13 +975,22 @@
 ;; residue-atoms must be a list
 (define (get-atom-from-residue atom-name residue-atoms alt-conf)
   (let loop ((residue-atoms residue-atoms))
-    (cond 
+    (cond
      ((null? residue-atoms) #f)
      ((and (string=? atom-name (car (car (car residue-atoms))))
 	   (string=? alt-conf (car (cdr (car (car residue-atoms))))))
       (car residue-atoms))
      (else 
       (loop (cdr residue-atoms))))))
+
+;;
+(define (get-atom-from-spec imol atom-spec)
+  (get-atom imol
+	    (atom-spec->chain-id  atom-spec)
+	    (atom-spec->res-no    atom-spec)
+	    (atom-spec->ins-code  atom-spec)
+	    (atom-spec->atom-name atom-spec)
+	    (atom-spec->alt-loc   atom-spec)))
 
 ;; Return an atom info or #f (if atom not found).
 ;; 
@@ -1517,7 +1546,7 @@
       (format #t "arguments to transform-map incomprehensible: args: ~s~%" args)
       #f))))
 
-;; return then NCS master of the first molecule that has ncs.
+;; return the NCS master of the first molecule that has NCS.
 ;; 
 ;; return "" on fail to find an ncs chain
 ;; 
@@ -1527,10 +1556,12 @@
     (let loop ((mols (model-molecule-list)))
       (cond
        ((null? mols) "")
-       (else 
+       (else
 	(let ((ncs-masters (ncs-master-chains (car mols))))
 	  (if (not (null? ncs-masters))
-	      (car ncs-masters)
+	      (if (list? ncs-masters)
+		  (car ncs-masters)
+		  (loop (cdr mols)))
 	      (loop (cdr mols)))))))))
 		
 
@@ -1675,9 +1706,9 @@
 
 
 ;; Return a list of 3 float for the centre of mas of molecule number imol.
-;; 
+;;
 ;; on faiure return #f.
-;;  
+;;
 (define (centre-of-mass imol)
 
   (let ((centre (centre-of-mass-string imol)))
@@ -2054,14 +2085,67 @@
       ((null? atom-ls) alt-confs)
       ((not (list? atom-ls)) alt-confs) ;; might be #f
       (else
-       (let* ((atom (car atom-ls)) 
+       (let* ((atom (car atom-ls))
 	      (compound-name (car atom))
 	      (alt-conf-str (car (cdr compound-name))))
 	 (if (string-member? alt-conf-str alt-confs)
 	     (f (cdr atom-ls) alt-confs)
 	     (f (cdr atom-ls) (cons alt-conf-str alt-confs)))))))))
 
-;; simple extraction function 
+;; not to be confused with residue-atom->atom-name (which uses the output of residue-info
+;; (which is not atom specs)
+;;
+;; extraction function
+(define (atom-spec->chain-id atom-spec)
+  ;; atom-spec example (list "A" 7 "" " SG " "")
+  (cond
+   ((null? atom-spec) #f)
+   ((= (length atom-spec) 5)
+    (list-ref atom-spec 0))
+   (else
+    #f)))
+
+;; extraction function
+(define (atom-spec->res-no atom-spec)
+  ;; atom-spec example (list "A" 7 "" " SG " "")
+  (cond
+   ((null? atom-spec) #f)
+   ((= (length atom-spec) 5)
+    (list-ref atom-spec 1))
+   (else
+    #f)))
+
+;; extraction function
+(define (atom-spec->ins-code atom-spec)
+  ;; atom-spec example (list "A" 7 "" " SG " "")
+  (cond
+   ((null? atom-spec) #f)
+   ((= (length atom-spec) 5)
+    (list-ref atom-spec 2))
+   (else
+    #f)))
+
+;; extraction function
+(define (atom-spec->atom-name atom-spec)
+  ;; atom-spec example (list "A" 7 "" " SG " "")
+  (cond
+   ((null? atom-spec) #f)
+   ((= (length atom-spec) 5)
+    (list-ref atom-spec 3))
+   (else
+    #f)))
+
+;; extraction function
+(define (atom-spec->alt-loc atom-spec)
+  ;; atom-spec example (list "A" 7 "" " SG " "")
+  (cond
+   ((null? atom-spec) #f)
+   ((= (length atom-spec) 5)
+    (list-ref atom-spec 4))
+   (else
+    #f)))
+
+;; simple extraction function
 (define (res-spec->chain-id res-spec)
   (cond 
    ((null? res-spec) #f)
@@ -2241,7 +2325,6 @@
 	    (begin
 	      (format #t "we have dict and model for tlc already~%")
 	      have-tlc-molecule)))))
-      
 
   ;; 
   (define (mutate-it)
@@ -2259,9 +2342,17 @@
 		   (nov (format #t "new-chain-id-info: ~s~%" new-chain-id-info)))
 	      (let ((merge-status (car new-chain-id-info)))
 		(if (= merge-status 1)
-		    (let ((new-chain-id (car (car (cdr new-chain-id-info)))))
-		      (change-residue-number imol new-chain-id 1 "" resno "")
-		      (change-chain-id imol new-chain-id chain-id-in 1 resno resno)
+		    (let* ((new-res-spec (car (car (cdr new-chain-id-info))))
+			   (new-chain-id (residue-spec->chain-id new-res-spec)))
+		      (format #t "debug:: new-res-spec: ~s~%" new-res-spec)
+		      (format #t "debug:: change-residue-number to ~s~%" resno)
+		      (change-residue-number imol
+					     (residue-spec->chain-id new-res-spec)
+					     (residue-spec->res-no   new-res-spec)
+					     (residue-spec->ins-code new-res-spec)
+					     resno "")
+		      (if (not (string=? new-chain-id chain-id-in))
+			  (change-chain-id imol new-chain-id chain-id-in 1 resno resno))
 
 		      (let ((replacement-state (refinement-immediate-replacement-state))
 			    (imol-map (imol-refinement-map)))
@@ -2283,7 +2374,7 @@
 			      ))
 			(accept-regularizement)
 			(set-refinement-immediate-replacement replacement-state))
-		      
+
 		      (set-mol-displayed imol-ligand 0)
 		      (set-mol-active imol-ligand 0)))))))))
 
@@ -3374,15 +3465,15 @@
 	    (loop (cdr ls))))))))
 
   (define (drugbox->drugbank s)
-    (drugbox->drugitem "DrugBank * =" s))
+    (drugbox->drugitem "DrugBank *=" s))
 
   (define (drugbox->pubchem s)
-    (let ((i (drugbox->drugitem "PubChem  *=" s)))
+    (let ((i (drugbox->drugitem "PubChem *=" s)))
       (format #t "in drugbox->pubchem i: ~s~%" i)
       i))
 
   (define (drugbox->chemspider s)
-    (let ((i (drugbox->drugitem "ChemSpiderID  *=" s)))
+    (let ((i (drugbox->drugitem "ChemSpiderID *=" s)))
       (format #t "in drugbox->chemspider i: ~s~%" i)
       i))
 
@@ -3474,6 +3565,7 @@
 	#f))))
 
   (define (handle-rev-string-2016 rev-string)
+
     (let ((lines (string-split rev-string #\newline)))
 
       (cond 
@@ -3502,7 +3594,7 @@
 		    lines)
 
 	  (format #t "DEBUG:: handle-rev-string-2016: db-id: ~s~%" db-id)
-	  
+
 	  ;; check an association-list for the "DrugBank" entry
 	  ;; 
 	  (if (string? db-id)
@@ -3522,6 +3614,7 @@
 
 
   (define (handle-sxml-rev-value sxml)
+    ;; (format #t "handle-sxml-rev-value sxml: ~s~%" sxml)
     (let loop ((ls sxml))
       (cond 
        ((null? ls) #f)
@@ -3533,6 +3626,7 @@
 	      (loop (cdr ls))))))))
 
   (define (handle-sxml-revisions-value sxml)
+    ;; (format #t "handle-sxml-revisions-value sxml: ~s~%" sxml)
     (let loop ((ls sxml))
       (cond
        ((null? ls) #f)
@@ -3549,6 +3643,7 @@
 			    (handle-sxml-rev-value rev))))))))))))
 
   (define (handle-sxml-page-value sxml)
+    ;; (format #t "handle-sxml-page-value sxml: ~s~%" sxml)
     (let loop ((ls sxml))
       (cond
        ((null? ls) #f)
@@ -3565,6 +3660,7 @@
 			    (handle-sxml-revisions-value revisions))))))))))))
 	      
   (define (handle-sxml-pages-value sxml)
+    ;; (format #t "handle-sxml-pages-value sxml: ~s~%" sxml)
     (let loop ((ls sxml))
       (cond
        ((null? ls) #f)
@@ -3582,6 +3678,7 @@
 
 
   (define (handle-sxml-query-value sxml)
+    ;; (format #t "handle-sxml-query-value sxml: ~s~%" sxml)
     (let loop ((ls sxml))
       (cond
        ((null? ls) #f)
@@ -3599,6 +3696,7 @@
 			      
 
   (define (handle-sxml-api-value sxml)
+    ;; (format #t "handle-sxml-api-value sxml: ~s~%" sxml)
     (let loop ((ls sxml))
       (cond
        ((null? ls) #f)
@@ -3615,6 +3713,7 @@
 			    (handle-sxml-query-value query-value))))))))))))
 
   (define (handle-sxml sxml)
+    ;; (format #t "handle-sxml sxml: ~s~%" sxml)
     (let loop ((ls sxml))
       (cond
        ((null? ls) #f)
@@ -3660,8 +3759,10 @@
 			(display xml port)))
 
 		    ;;
+		    ;; (format #t "about to get captured ~%")
 		    (let ((captured (call-with-input-string
 				     xml (lambda (string-port)
+					   ;; (format #t "about to get sxml ~%") paracetamol.xml fails here
 					   (let ((sxml (xml->sxml string-port)))
 					     (handle-sxml sxml))))))
 		      captured))))))))
@@ -3761,10 +3862,14 @@
 						      pref-file
 						      " already exists.  Not overwritten.")))
 				(add-status-bar-text s)))
-			    (begin 
+			    (begin
+			      ;; check the directory first
+			      (if (not (file-exists? pref-dir))
+				  (make-directory-maybe pref-dir))
 			      (copy-file ref-scm pref-file)
 			      (if (file-exists? pref-file)
 				  (load pref-file))))))))))))))
+
 	
 ;; Americans...
 ;; (define chiral-center-inverter chiral-centre-inverter)

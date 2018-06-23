@@ -87,7 +87,7 @@ pick_atom(const atom_selection_container_t &SelAtom, int imol,
 		   (std::string(SelAtom.atom_selection[i]->name) == " P  ")) {
 		  
 		  std::string ele(SelAtom.atom_selection[i]->element);
-		  
+
 		  if (((pick_mode == PICK_ATOM_NON_HYDROGEN) && (ele != " H")) ||
 		      (pick_mode != PICK_ATOM_NON_HYDROGEN)) {
 
@@ -258,12 +258,17 @@ atom_pick(GdkEventButton *event) {
 		      << "\n";
 	 }
       }
-      
-      if (n_pickable == 0) {
-	 std::string s = "There were no pickable (\"Active\") molecules!";
-	 GtkWidget *w = graphics_info_t::wrapped_nothing_bad_dialog(s);
-	 gtk_widget_show(w);
-      } 
+
+      // we don't want to do this now that we have middle mouse panning
+      //
+      if (false) {
+	 if (n_pickable == 0) {
+	    std::string s = "There were no pickable (\"Active\") molecules!";
+	    GtkWidget *w = graphics_info_t::wrapped_nothing_bad_dialog(s);
+	    gtk_widget_show(w);
+	 }
+      }
+
       //cout << "There were " << i_outside_count << " atoms outside "
       //	<< "the limits" << endl;
 
@@ -328,6 +333,8 @@ pick_info
 pick_intermediate_atom(const atom_selection_container_t &SelAtom) {
    coot::Cartesian front = unproject(0.0);
    coot::Cartesian back  = unproject(1.0);
+
+   std::cout << "---- here in pick_intermediate_atom() " << front << " " << back << std::endl;
    short int pick_mode = PICK_ATOM_ALL_ATOM;
    return pick_atom(SelAtom, -1, front, back, pick_mode, 0);
 }

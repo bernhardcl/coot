@@ -369,7 +369,7 @@ specs=${specs:=$HOME/autobuild/build-scripts/${HOST}-specials}
 do_nightlies=${do_nightlies:=1}
 # if you do want to build them where should they go?
 # NIGHTLY_DEST_DIR=$AUTOBUILD_BUILD
-NIGHTLY_DEST_DIR=${NIGHTLY_DEST_DIR:=${HOME}/public_html/software/binaries/nightlies/pre-release}
+NIGHTLY_DEST_DIR=${NIGHTLY_DEST_DIR:=${HOME}/public_html/software/binaries/pre-release}
 # if we are not building a nightly/pre-release, i.e. this is a binary 
 # for a stable release, they go somewhere else:
 #
@@ -853,10 +853,13 @@ if test $OS = OSF1 ; then
    systype=${osversion}-OSF1
 fi
 
-if test "$OS" = MINGW* ; then
-   systype=`uname -m`
-   architecture=`uname -m`
-fi
+# maybe all can be case
+case "$OS" in
+   MINGW*) 
+     systype=`uname -m`
+     architecture=`uname -m`
+   ;;
+esac
 
 echo systype: $systype
 
@@ -1026,6 +1029,7 @@ echo which wget
 which wget
 WGET="wget -N -P ${AUTOBUILD_SOURCES}"
 WGETO="wget   -P ${AUTOBUILD_SOURCES}"
+WGETS="wget --no-check-certificate -N -P ${AUTOBUILD_SOURCES}"
 
 # latest version (without .tar.gz extension)
 coot_version=$fallback_coot_version
@@ -1043,7 +1047,7 @@ release_server_dir=http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/source/re
 release_server_dir=http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/source/releases/
 #
 extras_place=http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/dependencies
-win_extras_place=http://www.ysbl.york.ac.uk/~lohkamp/software/extras
+win_extras_place=http://bernhardcl.github.io/coot/software/extras
 
 
 ${WGETO} -O ${AUTOBUILD_SOURCES}/index.html -o ${AUTOBUILD_SOURCES}/wget-e.s.p.log $release_server_dir
@@ -1273,10 +1277,11 @@ else
          if test "$OS" = Darwin ; then
             ccp4_system_type=Darwin
 	 else
-	    if test "$OS" = "MINGW*" ; then
-	       # not sure if really needed later?!
-	       ccp4_system_type=MinGW
-	    fi
+	    case "$OS" in 
+               MINGW*) 
+	         # not sure if really needed later?!
+	         ccp4_system_type=MinGW
+            esac
          fi
       fi
    fi
@@ -2018,6 +2023,7 @@ mmdb_version=1.25.2
 mmdb_version=1.25.3
 mmdb_version=2.0.1
 mmdb_version=2.0.11
+mmdb_version=2.0.16
 #mmdb_server_dir=ftp://ftp.ccp4.ac.uk/opensource
 mmdb_server_dir=$extras_place
 echo ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
@@ -2133,7 +2139,8 @@ if test -n "$build_clipper" ; then
     #${WGET} $extras_place/clipper-$clipper_hack_version.tar.gz
 
     # fix mean and lean on windows, i.e. disable
-    ${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/clipper_win32.patch
+    # ${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/clipper_win32.patch
+    ${WGET} $win_extras_place/clipper_win32.patch
 
     # now clipper has all the bits.
     # ${WGET} $extras_place/clipper-$clipper_version.tar.gz
@@ -2234,9 +2241,9 @@ cp bin/freeglut.dll	$install_top_dir/bin/
 mkdir_maybe	$install_top_dir/lib
 cp lib/libfreeglut.a	$install_top_dir/lib/
 # and whilst we are here let's get the openGL extensions as well
-${WGET} --no-check-certificate http://www.opengl.org/registry/api/glext.h
-${WGET} --no-check-certificate http://www.opengl.org/registry/api/glxext.h
-${WGET} --no-check-certificate http://www.opengl.org/registry/api/wglext.h
+${WGET} --no-check-certificate https://khronos.org/registry/OpenGL/api/GL/glext.h
+${WGET} --no-check-certificate https://khronos.org/registry/OpenGL/api/GL/glxext.h
+${WGET} --no-check-certificate https://khronos.org/registry/OpenGL/api/GL/wglext.h
 cp ${AUTOBUILD_SOURCES}/glext.h  $install_top_dir/include/GL/
 cp ${AUTOBUILD_SOURCES}/glxext.h $install_top_dir/include/GL/
 cp ${AUTOBUILD_SOURCES}/wglext.h $install_top_dir/include/GL/
@@ -2589,7 +2596,8 @@ if test -n "$build_gtkglext" ; then
     gtkglext_version=1.2.0
     #${WGET} http://surfnet.dl.sourceforge.net/sourceforge/gtkglext/gtkglext-$gtkglext_version.tar.gz
     ${WGET} http://downloads.sourceforge.net/gtkglext/gtkglext-1.2.0.tar.gz
-    ${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/gtkglext_configure.patch
+    # ${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/gtkglext_configure.patch
+    ${WGET} $win_extras_place/gtkglext_configure.patch
     (date
      pwd
      gzip -dc ${AUTOBUILD_SOURCES}/gtkglext-$gtkglext_version.tar.gz | tar xf -
@@ -3044,7 +3052,8 @@ guile_version=1.8.3
 # not yet...
 # lets try...
 ${WGET} http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/guile/guile-${guile_version}.tar.gz
-${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/guile-${guile_version}.patch
+# ${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/guile-${guile_version}.patch
+${WGET} $win_extras_place/guile-${guile_version}.patch
 
 cd $build_dir
 ( 
@@ -3123,7 +3132,8 @@ if test -n "$build_guile_gtk" ; then
 #
 guile_gtk_version=2.1
 ${WGET} http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/guile-gtk/guile-gtk-$guile_gtk_version.tar.gz
-${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/guile-gtk-win32.patch
+#${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/guile-gtk-win32.patch
+${WGET} $win_extras_place/guile-gtk-win32.patch
 ( 
 date
 pwd
@@ -3237,20 +3247,24 @@ if test -n "$build_gsl" ; then
 gsl_version=1.8
 # not yet
 # gsl_version=1.12
-if [ -n "$shared_flag" ] ; then
-  gsl_version=1.16
-  ${WGET} http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/gsl/gsl-$gsl_version.tar.gz
-else
-  ${WGET} http://downloads.sourceforge.net/gnuwin32/gsl-$gsl_version-bin.zip
-  ${WGET} http://downloads.sourceforge.net/gnuwin32/gsl-$gsl_version-lib.zip
-  ${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/gsl-config
-  ${WGET} http://www.ysbl.york.ac.uk/~lohkamp/software/extras/gsl.m4
-fi
+# lets try 2.2.1 binaries shared for both!
+gsl_version=2.2.1
+#if [ -n "$shared_flag" ] ; then
+#  gsl_version=1.16
+#  ${WGET} http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/gsl/gsl-$gsl_version.tar.gz
+#else
+#  ${WGET} http://downloads.sourceforge.net/gnuwin32/gsl-$gsl_version-bin.zip
+#  ${WGET} http://downloads.sourceforge.net/gnuwin32/gsl-$gsl_version-lib.zip
+#  ${WGET} $win_extras_place/gsl-config
+#  ${WGET} $win_extras_place/gsl.m4
+  ${WGETS} http://sourceforge.net/projects/gnu-scientific-library-windows/files/gsl-2.2.1_mingw-6.2.0.zip
+#fi
 
 ( 
 date
 pwd
-if [ -n "$shared_flag" ] ; then
+#if [ -n "$shared_flag" ] ; then
+if [ 0 == 1 ] ; then
 gzip -dc ${AUTOBUILD_SOURCES}/gsl-$gsl_version.tar.gz | tar xf -
 cd gsl-$gsl_version
 ./configure $generic_prefix $shared_flag
@@ -3267,19 +3281,32 @@ else
 fi  
 else
 cd $install_top_dir
-7z x -y ${AUTOBUILD_SOURCES}/gsl-$gsl_version-bin.zip
-7z x -y ${AUTOBUILD_SOURCES}/gsl-$gsl_version-lib.zip
+#7z x -y ${AUTOBUILD_SOURCES}/gsl-$gsl_version-bin.zip
+#7z x -y ${AUTOBUILD_SOURCES}/gsl-$gsl_version-lib.zip
 # gsl binaries dont have gsl-config, so we have to make our own
-cp ${AUTOBUILD_SOURCES}/gsl-config bin/
-sed "s?^prefix=.*?prefix=$install_top_dir?" bin/gsl-config >gsl-config.tmp
-mv gsl-config.tmp bin/gsl-config
+#cp ${AUTOBUILD_SOURCES}/gsl-config bin/
+#sed "s?^prefix=.*?prefix=$install_top_dir?" bin/gsl-config >gsl-config.tmp
+#mv gsl-config.tmp bin/gsl-config
 # somehow need to 'remove' the dll libs as these cause access violations
 # i.e. use static linking
-mv lib/libgsl.dll.a lib/libgsl.dll.a.orig
-mv lib/libgslcblas.dll.a lib/libgslcblas.dll.a.orig
-status=$?
+#mv lib/libgsl.dll.a lib/libgsl.dll.a.orig
+#mv lib/libgslcblas.dll.a lib/libgslcblas.dll.a.orig
+#status=$?
 # and there is no gsl.m4, so copy that
-cp ${AUTOBUILD_SOURCES}/gsl.m4 $install_top_dir/share/aclocal/
+#cp ${AUTOBUILD_SOURCES}/gsl.m4 $install_top_dir/share/aclocal/
+# END OLD
+7z x -y ${AUTOBUILD_SOURCES}/gsl-2.2.1_mingw-6.2.0.zip -o${AUTOBUILD_SOURCES} gsl-2.2.1_mingw-6.2.0\\gsl-2.2.1-shared\\*
+# now copy to install_top_dir
+cp -r ${AUTOBUILD_SOURCES}/gsl-2.2.1_mingw-6.2.0/gsl-2.2.1-shared/* $install_top_dir/
+# now adjust the path for gsl-config and *la files
+sed "s?/home/Mesh/gsl_mingw/package/gsl-2.2.1-shared?$install_top_dir?" bin/gsl-config >gsl-config.tmp
+mv gsl-config.tmp bin/gsl-config
+
+sed "s?/home/Mesh/gsl_mingw/package/gsl-2.2.1-shared?$install_top_dir?" lib/libgsl.la >libgsl.la.tmp
+mv libgsl.la.tmp lib/libgsl.la
+
+sed "s?/home/Mesh/gsl_mingw/package/gsl-2.2.1-shared?$install_top_dir?" lib/libgslcblas.la >libgslcblas.la.tmp
+mv libgslcblas.la.tmp lib/libgslcblas.la
 if [ "$status" != 0 ] ; then 
     echo ERROR:: GSL make failed.
     exit 2
@@ -3360,7 +3387,8 @@ echo replacing syminfo.lib with windows version
 mv syminfo.lib syminfo.lib.orig
 cp windows/syminfo.lib syminfo.lib
 # get windows cootrc
-wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/cootrc
+#wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/cootrc
+wget -N -P ${HOME}/autobuild/extras $win_extras_place/cootrc
 
 if test -n "$glib_installed" ; then
     coot_extra_args="$coot_extra_args --with-glib-prefix=$install_top_dir"
@@ -3446,7 +3474,7 @@ date
 #
 # dont use -static-libgcc on windows otherwise we cannot throw exceptions.
 # means we need to supply libgcc_s_dw2-1.dll
-coot_optim_args="-g -O -static-libstdc++"
+export CXXFLAGS="-g -O -static-libstdc++"
 
 if [ $architecture = x86_64 ] ; then 
    # This could well be too general a test, certainly on 64 bit CentOS 5 we need this, 

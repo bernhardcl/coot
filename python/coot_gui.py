@@ -170,17 +170,20 @@ def coot_gui(own_gtk_main=False):
           except:
              return False
           if res is not None:
-             print "BL DEBUG:: result is", res
+             # silence is golden
+             # print "BL DEBUG:: result is", res
              insert_normal_text(str(res) + "\n")
              return True
        else:
-          print "This is not a guile command!"
+          # silence is golden
+          # print "This is not a guile command!"
           return False
 
    def do_function(widget, entry):
        global histpos
        entry_text = entry.get_text()
-       print "BL INFO:: command input is: ", entry_text
+       # enough of this debugging output
+       # print "BL INFO:: command input is: ", entry_text
        if (entry_text != None):
           insert_tag_text(textbuffer.create_tag(foreground="red"),
                           entry_text + "\n")
@@ -293,7 +296,7 @@ def coot_gui(own_gtk_main=False):
    hbox = gtk.HBox(False, 0)
    label = gtk.Label("Command: ")
    ifont = gtk.gdk.Font("fixed")
-   window.set_default_size(400,250)
+   window.set_default_size(550,250)
    window.add(vbox)
    vbox.set_border_width(5)
 
@@ -425,6 +428,7 @@ def generic_single_entry(function_label, entry_1_default_text, go_button_label, 
            delete_event()
 
     window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    window.set_title('Coot')
     vbox = gtk.VBox(False, 0)
     hbox1 = gtk.HBox(False, 0)
     hbox2 = gtk.HBox(False, 0)
@@ -496,6 +500,7 @@ def generic_double_entry(label_1, label_2,
            	delete_event()
 
     window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    window.set_title('Coot')
     vbox = gtk.VBox(False, 0)
     hbox1 = gtk.HBox(False, 0)
     hbox2 = gtk.HBox(False, 0)
@@ -510,12 +515,12 @@ def generic_double_entry(label_1, label_2,
 
     vbox.pack_start(hbox1, False, False, 0)
     vbox.pack_start(hbox2, False, False, 0)
-    hbox3.pack_start(go_button, True, False, 6)
+    hbox3.pack_start(go_button, False, False, 6)
     hbox3.pack_start(cancel_button, True, False, 6)
     hbox1.pack_start(tlc_label, False, False, 0)
     hbox1.pack_start(tlc_entry, False, False, 0)
     hbox2.pack_start(smiles_label, False, False, 0)
-    hbox2.pack_start(smiles_entry, False, False, 0)
+    hbox2.pack_start(smiles_entry, True, True, 0)
 
     if type(check_button_label) is StringType:
 
@@ -550,6 +555,7 @@ def generic_double_entry(label_1, label_2,
 
     smiles_entry.connect("key-press-event", key_press_event, tlc_entry, smiles_entry, check_button)
 
+    window.set_default_size(400, 100)
     window.show_all()
 
     # return the widget
@@ -585,6 +591,7 @@ def generic_multiple_entries_with_check_button(entry_info_list, check_button_inf
        delete_event()
 
     window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    window.set_title('Coot')
     vbox = gtk.VBox(False, 0)
     hbox3 = gtk.HBox(False, 0)
     h_sep = gtk.HSeparator()
@@ -1047,6 +1054,7 @@ def molecule_chooser_gui_generic(chooser_label, callback_function, option_menu_f
            print "Failed to get a (molecule) number"
 
     window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    window.set_title('Coot')
     label = gtk.Label(chooser_label)
     vbox = gtk.VBox(False,6)
     hbox_buttons = gtk.HBox(False,5)
@@ -1104,60 +1112,95 @@ def map_molecule_chooser_gui(chooser_label, callback_function):
 # A pair of widgets, a molecule chooser and an entry.  The
 # callback_function is a function that takes a molecule number and a
 # text string.
+# if always-dismiss-on-ok-clicked is false then the dialog is not dismissed if 
+# callback-function returns False
 #
 def generic_chooser_and_entry(chooser_label, entry_hint_text,
-                              default_entry_text, callback_function):
+                              default_entry_text, callback_function,
+                              always_dismiss_on_ok_clicked=True):
 
-    import operator
+   print "BL DEBUG:: --- deal with always_dissmiss...", always_dismiss_on_ok_clicked
+   # cf = lambda text, dummy: callback_function(text)
+   generic_chooser_and_entry_and_check_button(chooser_label, entry_hint_text,
+                                              default_entry_text, False,
+                                              callback_function,
+                                              always_dismiss_on_ok_clicked)
 
-    def delete_event(*args):
-       window.destroy()
-       return False
+# as above , plus we also have a check-button
+# [and an additional argument in the callback - actually not I think ]
+# If check-button-label is false, then don't create a check-button.
+def generic_chooser_and_entry_and_check_button(chooser_label, entry_hint_text,
+                                              default_entry_text, check_button_label,
+                                              callback_function,
+                                              always_dismiss_on_ok_clicked=True):
 
-    def on_ok_button_clicked(*args):
-        # what is the molecule number of the option menu?
-        active_mol_no = get_option_menu_active_molecule(option_menu,model_mol_list)
+   import operator
 
-        try:
-           active_mol_no = int(active_mol_no)
-           print "INFO: operating on molecule number ", active_mol_no
-           text = entry.get_text()
-           callback_function(active_mol_no,text)
-           delete_event()
-        except:
-           print "Failed to get a (molecule) number"
+   def delete_event(*args):
+      window.destroy()
+      return False
 
-    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-    label = gtk.Label(chooser_label)
-    vbox = gtk.VBox(False, 2)
-    hbox_for_entry = gtk.HBox(False, 0)
-    entry = gtk.Entry()
-    entry_label = gtk.Label(entry_hint_text)
-    hbox_buttons = gtk.HBox(True, 2)
-    option_menu = gtk.combo_box_new_text()
-    ok_button = gtk.Button("  OK  ")
-    cancel_button = gtk.Button(" Cancel ")
-    h_sep = gtk.HSeparator()
-    model_mol_list = fill_option_menu_with_coordinates_mol_options(option_menu)
+   def on_ok_button_clicked(*args):
+      # what is the molecule number of the option menu?
+      active_mol_no = get_option_menu_active_molecule(option_menu,model_mol_list)
+
+      try:
+         active_mol_no = int(active_mol_no)
+         print "INFO: operating on molecule number ", active_mol_no
+         text = entry.get_text()
+         if check_button:
+            check_button_state = check_button.get_active()
+            cbf_ret = callback_function(active_mol_no, text, check_button_state)
+         else:
+            cbf_ret = callback_function(active_mol_no, text)
+         if always_dismiss_on_ok_clicked:
+            delete_event()
+         else:
+            if cbf_ret:
+               delete_event()
+            else:
+               return True
+      except:
+         print "Failed to get a (molecule) number"
+
+   window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+   window.set_title('Coot')
+   label = gtk.Label(chooser_label)
+   vbox = gtk.VBox(False, 2)
+   hbox_for_entry = gtk.HBox(False, 0)
+   entry = gtk.Entry()
+   entry_label = gtk.Label(entry_hint_text)
+   hbox_buttons = gtk.HBox(True, 2)
+   option_menu = gtk.combo_box_new_text()
+   ok_button = gtk.Button("  OK  ")
+   cancel_button = gtk.Button(" Cancel ")
+   h_sep = gtk.HSeparator()
+   model_mol_list = fill_option_menu_with_coordinates_mol_options(option_menu)
     
-    window.set_default_size(400,100)
-    window.add(vbox)
-    vbox.pack_start(label, False, False, 5)
-    vbox.pack_start(option_menu, True, True, 0)
-    vbox.pack_start(hbox_for_entry, False, False, 5)
-    vbox.pack_start(h_sep, True, False, 2)
-    vbox.pack_start(hbox_buttons, False, False, 5)
-    hbox_buttons.pack_start(ok_button, True, False, 5)
-    hbox_buttons.pack_start(cancel_button, False, False, 5)
-    hbox_for_entry.pack_start(entry_label, False, False, 4)
-    hbox_for_entry.pack_start(entry, True, True, 4)
-    entry.set_text(default_entry_text)
+   window.set_default_size(400,100)
+   window.add(vbox)
+   vbox.pack_start(label, False, False, 5)
+   vbox.pack_start(option_menu, True, True, 0)
+   vbox.pack_start(hbox_for_entry, False, False, 5)
+   if check_button_label:
+      check_button = gtk.CheckButton(check_button_label)
+      vbox.pack_start(check_button, False, False, 2)
+   else:
+      check_button = False
+   vbox.pack_start(h_sep, True, False, 2)
+   vbox.pack_start(hbox_buttons, False, False, 5)
+   hbox_buttons.pack_start(ok_button, True, False, 5)
+   hbox_buttons.pack_start(cancel_button, False, False, 5)
+   hbox_for_entry.pack_start(entry_label, False, False, 4)
+   hbox_for_entry.pack_start(entry, True, True, 4)
+   entry.set_text(default_entry_text)
 
-    # button callbacks
-    ok_button.connect("clicked",on_ok_button_clicked, entry, option_menu, callback_function)
-    cancel_button.connect("clicked", delete_event)
+   # button callbacks
+   ok_button.connect("clicked", on_ok_button_clicked, entry,
+                     option_menu, callback_function, check_button)
+   cancel_button.connect("clicked", delete_event)
 
-    window.show_all()
+   window.show_all()
 
 # Create a window
 #
@@ -1353,7 +1396,7 @@ def coot_menubar_menu(menu_label):
 # 
 # activate_function is a thunk.
 #
-def add_simple_coot_menu_menuitem(menu,menu_item_label,activate_function):
+def add_simple_coot_menu_menuitem(menu, menu_item_label, activate_function):
 
     submenu = gtk.Menu()
     sub_menuitem = gtk.MenuItem(menu_item_label)
@@ -1405,7 +1448,7 @@ def interesting_residues_gui(imol, title, interesting_residues):
       residues = interesting_residues
       for spec in residues:
          if (type(spec) is ListType):
-            centre_atoms.append(residue_spec2atom_for_centre(imol, *spec))
+            centre_atoms.append(residue_spec_to_atom_for_centre(imol, *spec))
          else:
             centre_atoms.append([False])
 
@@ -1415,6 +1458,7 @@ def interesting_residues_gui(imol, title, interesting_residues):
              [residue_cpmd[0] + " " +
               str(residue_cpmd[1]) + " " +
               residue_cpmd[2] + " " +
+              residue_name(imol, *residue_cpmd[0:3]) + " " +
               centre_atom[0] + " " + centre_atom[1],
               imol, residue_cpmd[0], residue_cpmd[1], residue_cpmd[2],
               centre_atom[0], centre_atom[1]] if centre_atom else
@@ -2926,6 +2970,80 @@ def ncs_ligand_gui():
    window.show_all()
 
 
+# NCS jumping GUI
+global ncs_jumping_time_step
+ncs_jumping_time_step = 500
+
+def ncs_jumping_gui():
+
+   global ncs_jumping_time_step
+   global timeout_function_token
+   timeout_function_token = False
+
+   def delete_event(*args):
+      # first stop the jumping (if necessary)
+      global timeout_function_token
+      timeout_function_token = False
+      
+      window.destroy()
+      return False
+
+   # FIXME chekc this. Not sure if we can get a number from timeout_add or
+   # if we better make a new function which returns True/False to continue/stop
+
+   # need to return True to be called again. I return False if stop (bug in
+   # gobject.source_remove prevents me from using this.
+   def skip_ncs_timeout_func():
+      global timeout_function_token
+      skip_to_next_ncs_chain("forward")
+      if timeout_function_token:
+         return True
+      else:
+         return False
+      
+   def start_function_event(*args):
+      global timeout_function_token
+      if not isNumber(timeout_function_token):
+         timeout_function_token = gobject.timeout_add(ms_step,
+                                                      skip_ncs_timeout_func)
+      else:
+         timeout_function_token = False
+
+         
+   def stop_function_event(*args):
+      global timeout_function_token
+      timeout_function_token = False      
+
+   # main body
+   window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+   outside_vbox = gtk.VBox(False, 2)
+   inside_hbox = gtk.HBox(False, 2)
+   cancel_hbox = gtk.HBox(False, 2) # paul says VBox?!?!
+   h_sep = gtk.HSeparator()
+   jump_start_button = gtk.Button("NCS Jump Start")
+   jump_stop_button = gtk.Button("Stop")
+   cancel_button = gtk.Button("Cancel")
+   ms_step = ncs_jumping_time_step
+   timeout_function_token = False
+
+   window.set_title("Auto NCS Jumping")
+   window.add(outside_vbox)
+   outside_vbox.pack_start(inside_hbox, False, False, 2)
+   outside_vbox.pack_start(h_sep, False, False, 2)
+   outside_vbox.pack_start(cancel_hbox, False, False, 2)
+   inside_hbox.pack_start(jump_start_button, False, False, 2)
+   inside_hbox.pack_start(jump_stop_button, False, False, 2)
+   cancel_hbox.pack_start(cancel_button, False, False, 2)
+
+   jump_start_button.connect("clicked", start_function_event)
+
+   jump_stop_button.connect("clicked", stop_function_event)
+   
+   cancel_button.connect("clicked", delete_event)
+
+   window.show_all()
+
+   
 # GUI for ligand superpositioning by graph matching
 #
 def superpose_ligand_gui():
@@ -3402,7 +3520,7 @@ def cootaneer_gui_bl():
             res_no = seqnum_from_serial_number(imol, chain_id, 0)
             ins_code = insertion_code_from_serial_number(imol, chain_id, 0)
             alt_conf = ""
-            at_name = residue_spec2atom_for_centre(imol, chain_id, res_no, ins_code)[0]
+            at_name = residue_spec_to_atom_for_centre(imol, chain_id, res_no, ins_code)[0]
             cootaneer_result = cootaneer(imol_map, imol, [chain_id, res_no, ins_code, 
                                                           at_name, alt_conf])
             if (cootaneer_result == 0):
@@ -4422,7 +4540,7 @@ def solvent_ligand_list():
    global additional_solvent_ligands
    return (additional_solvent_ligands +
            ["EDO", "GOL", "DMS", "ACT", "MPD", "CIT", "SO4", "PO4", "TRS",
-            "TAM", "PG4"])
+            "TAM", "PG4", "EBE", "BTB"])
 
 # add solvent molecules
 #
@@ -4541,7 +4659,7 @@ def solvent_ligands_gui():
 def user_mods_gui(imol, pdb_file_name):
 
    # no alt conf, no inscode
-   def atom_spec2string(atom_spec):
+   def atom_spec_to_string(atom_spec):
       chain_id  = atom_spec[1]
       res_no    = atom_spec[2]
       ins_code  = atom_spec[3]
@@ -4581,7 +4699,7 @@ def user_mods_gui(imol, pdb_file_name):
          specs = no_flip_item[0]
          info_string = no_flip_item[1]
          label = "No Adjustment " + \
-                 " ".join(map(atom_spec2string, specs)) + \
+                 " ".join(map(atom_spec_to_string, specs)) + \
                  " " + \
                  info_string
          atom_spec = specs[0]
@@ -4855,7 +4973,7 @@ def water_coordination_gui():
          if d:
             update_water_results(imol, n, d)
       
-   def atom_spec2text(atom_spec):
+   def atom_spec_to_text(atom_spec):
       return " ".join(map(str, atom_spec))
 
    def get_ele(imol, atom_spec):
@@ -4948,7 +5066,7 @@ def water_coordination_gui():
             # a water spec is a central-atom spec and a list
             # of its neighbours.
             atom_spec = water_info[0]
-            t = atom_spec2text(atom_spec)
+            t = atom_spec_to_text(atom_spec)
             bump_text = make_bump_text(imol, water_info)
             button = gtk.Button(t + bump_text)
             if not is_a_metal_site_too_qm(atom_spec, metal_results):
@@ -4966,7 +5084,7 @@ def water_coordination_gui():
          # now handle metal results
          for metal_site in metal_results:
             metal_text = metal_site[1]
-            t = atom_spec2text(metal_site[0])
+            t = atom_spec_to_text(metal_site[0])
             button_text = t + " Potential " + metal_text
             button = gtk.Button(button_text)
             metal_results_vbox.pack_start(button, False, False, 1)
@@ -5075,7 +5193,7 @@ def click_protein_db_loop_gui():
    global db_loop_preserve_residue_names
    def pick_loop_func(n):
       def pick_func(*atom_specs):
-         residue_specs = map(atom_spec2residue_spec, atom_specs)
+         residue_specs = map(atom_spec_to_residue_spec, atom_specs)
          imol = atom_specs[0][1]
          min_max_and_chain_id = min_max_residues_from_atom_specs(atom_specs)
 
@@ -5128,6 +5246,148 @@ def click_protein_db_loop_gui():
 
                           lambda n: pick_loop_func(n))
 
+
+def refmac_multi_sharpen_gui():
+
+   def delete_event(*args):
+      window.destroy()
+      return False
+
+   def sharpen_cb(widget, *args):
+
+      # get max_band n_levels and map file name
+      max_b = int(get_option_menu_active_item(option_menu_b_factor,
+                                              b_factor_list))
+      n_levels = int(get_option_menu_active_item(option_menu_n_levels,
+                                                 n_levels_list))
+      active_item_imol = get_option_menu_active_molecule(option_menu_map,
+                                                         map_molecule_list)
+      # There is no function to get a map file name from a molecule
+      # It is not stored. So we make/guess it...
+      map_file_name = molecule_name(active_item_imol)
+      if (map_file_name.find(" ") > 0):
+         # we have map ceoffs - but then sharpen as here wont work anyway
+         map_file_name = map_file_name[:map_file_name.find(" ")]
+      map_file_name_stub = strip_path(file_name_sans_extension(map_file_name))
+      refmac_output_mtz_file_name = "starting-map-" + map_file_name_stub + ".mtz"
+      log_file_name = "refmac-sharp" + map_file_name_stub + ".log"
+      if not os.path.isfile(map_file_name):
+         info_dialog("WARNING:: file not found %s" %map_file_name)
+      else:
+         print "active_item_imol", active_item_imol
+         step_size = max_b/n_levels
+         numbers_string = ' '.join(str(i+1) for i in range(n_levels))
+         blur_string = "SFCALC BLUR  " + numbers_string
+         sharp_string = "SFCALC SHARP " + numbers_string
+
+         cmd_line_args = ["MAPIN", map_file_name]
+         data_lines = ["MODE SFCALC",
+                       blur_string,
+                       sharp_string,
+                       "END"]
+         refmac_execfile = find_exe("refmac5", "CBIN", "CCP4_BIN", "PATH")
+         s = popen_command(refmac_execfile,
+                           cmd_line_args,
+                           data_lines,
+                           log_file_name)
+         
+         try:
+            if (s == 0):
+               # all good
+               print "BL DEBUG:: s", s
+               if os.path.isfile("starting-map.mtz"):
+                  os.rename("starting-map.mtz", refmac_output_mtz_file_name)
+                  # maybe offer a dialog?! Or read automatically?
+         except:
+            pass
+         delete_event(widget)
+
+   print "BL DEBUG:: now make a windwo"
+   window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+   # boxes
+   vbox = gtk.VBox(False, 0)
+   hbox_1 = gtk.HBox(False, 0)
+   hbox_2 = gtk.HBox(False, 0)
+   hbox_3 = gtk.HBox(False, 0)
+   # menus
+   option_menu_map = gtk.combo_box_new_text()
+   option_menu_b_factor = gtk.combo_box_new_text()
+   option_menu_n_levels = gtk.combo_box_new_text()
+   #labels
+   map_label = gtk.Label("Map ")
+   sb_label = gtk.Label("Sharpen & Blur in ")
+   levels_label = gtk.Label(" levels up to ")
+   A_label = gtk.Label(" A*A")
+   # separate
+   h_sep = gtk.HSeparator()
+   # buttons
+   ok_button = gtk.Button("   OK   ")
+   cancel_button = gtk.Button(" Cancel ")
+   n_levels_list = [1, 2, 3, 4, 5, 6]
+   b_factor_list = [50, 100, 200, 400, 800, 2000]
+
+   map_molecule_list = fill_option_menu_with_map_mol_options(option_menu_map)
+   fill_option_menu_with_number_options(option_menu_n_levels, n_levels_list, 4)
+   fill_option_menu_with_number_options(option_menu_b_factor, b_factor_list, 200)
+
+   window.set_title("Refmac for Sharpening & Blurring")
+   hbox_1.pack_start(map_label, False, False, 2)
+   hbox_1.pack_start(option_menu_map, False, False, 2)
+   hbox_2.pack_start(sb_label, False, False, 2)
+   hbox_2.pack_start(option_menu_n_levels, False, False, 2)
+   hbox_2.pack_start(levels_label, False, False, 2)
+   hbox_3.pack_end(cancel_button, False, False, 12)
+   hbox_3.pack_end(ok_button, False, False, 12)
+   
+   vbox.pack_start(hbox_1)
+   vbox.pack_start(hbox_2)
+   vbox.pack_start(h_sep)
+   vbox.pack_start(hbox_3)
+   
+   cancel_button.connect("clicked", delete_event)
+
+   ok_button.connect("clicked", sharpen_cb, option_menu_b_factor, b_factor_list,
+                     option_menu_n_levels, n_levels_list,
+                     option_menu_map, map_molecule_list)
+
+   window.add(vbox)
+   window.show_all()
+
+
+def add_module_cryo_em():
+   if coot_python.main_menubar():
+      add_module_cryo_em_gui()
+
+def add_module_ccp4():
+   if coot_python.main_menubar():
+      add_module_ccp4_gui()
+
+def add_module_cryo_em_gui():
+   if coot_python.main_menubar():
+      menu = coot_menubar_menu("Cryo-EM")
+
+      add_simple_coot_menu_menuitem(menu, "Multi-sharpen...",
+                                    lambda func: refmac_multi_sharpen_gui())
+
+      def interactive_nudge_func():
+         with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no,
+                                        aa_ins_code, aa_atom_name,
+                                        aa_alt_conf, aa_res_spec]:
+            nudge_residues_gui(aa_imol, aa_res_spec)
+      add_simple_coot_menu_menuitem(menu, "Interactive Nudge Residues...",
+                                    lambda func: interactive_nudge_func())
+
+
+def add_module_ccp4_gui():
+   if coot_python.main_menubar():
+      menu = coot_menubar_menu("CCP4")
+
+      add_simple_coot_menu_menuitem(menu, "Make LINK via Acedrg",
+                                    lambda func: acedrg_link_generation_control_window())
+
+   
+#### BL stuff
+   
 def scale_alt_conf_occ_gui(imol, chain_id, res_no, ins_code):
 
     alt_confs = residue_alt_confs(imol, chain_id, res_no, ins_code)
@@ -5340,7 +5600,7 @@ def duplicate_range_by_atom_pick():
 
    def pick_range_func(*atom_specs):
 
-      residue_specs = map(atom_spec2residue_spec, atom_specs)
+      residue_specs = map(atom_spec_to_residue_spec, atom_specs)
       imol_1 = atom_specs[0][1]
       imol_2 = atom_specs[1][1]
       chain_id1 = atom_specs[0][2]
@@ -5429,6 +5689,68 @@ def yes_no_dialog(label_text, title_text=None):
    
    return ret
 
+# A gui to list Ramachandran outliers etc.
+# May become more sophisticated at some point
+#
+def rama_outlier_gui():
+   """
+   A gui to list Ramachandran outliers etc.
+   A first draft, may become more sophisticated at some point
+   """
+
+   def list_rama_outliers(imol):
+
+      r = all_molecule_ramachandran_region(imol)
+      outliers = []
+      allowed = []
+      for res in r:
+         if res[1] == 0:
+            outliers.append(res[0])
+         if res[1] == 1:
+            allowed.append(res[0])
+
+      def make_buttons(res_list, label_string):
+         ret = []
+         for res_spec in res_list:
+            chain_id = res_spec[1]
+            res_no = res_spec[2]
+            label = label_string + ": " + \
+                    chain_id + " " + str(res_no)
+            func = [cmd2str(set_go_to_atom_molecule, imol),
+                    cmd2str(set_go_to_atom_from_res_spec, res_spec)]
+            ret.append([label, func])
+
+         return ret
+
+      outlier_buttons = make_buttons(outliers, "Outlier")
+      allowed_buttons = make_buttons(allowed, "Allowed")
+      all_buttons = outlier_buttons + allowed_buttons
+
+      def clear_and_add_back(vbox, outliers_list, allowed_list, filter_flag):
+         # clear
+         children = vbox.get_children()
+         map(lambda c: c.destroy(), children)
+         # add back
+         if not filter_flag:
+            buttons = outliers_list + allowed_list
+         else:
+            # filter
+            buttons = outliers_list
+         map(lambda button_info: add_button_info_to_box_of_buttons_vbox(button_info, vbox),
+             buttons)
+
+      dialog_box_of_buttons_with_check_button(
+          " Ramachandran issues ", [300, 300], [], "  Close  ",
+          "Outliers only",
+          lambda check_button, vbox: clear_and_add_back(vbox, outlier_buttons, allowed_buttons, True)
+          if check_button.get_active() else
+          clear_and_add_back(vbox, outlier_buttons, allowed_buttons, False),
+          False)
+
+   molecule_chooser_gui(
+     "List Rama outliers for which molecule?",
+          lambda imol: list_rama_outliers(imol))
+   
    
 # let the c++ part of mapview know that this file was loaded:
 

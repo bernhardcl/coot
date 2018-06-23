@@ -27,11 +27,13 @@ import traceback
 # define some globals
 
 # This is full pathname of molprobity's probe program
+# we will try to pick it up automatically in group settings.
 # deftexi probe_command
 global probe_command
 probe_command = 'probe'
 
 # This is full pathname of molprobity's reduce program
+# we will try to pick it up automatically in the group settings.
 # deftexi reduce_command
 global reduce_command
 reduce_command = 'reduce'
@@ -74,12 +76,13 @@ pre_list = ["redefine_functions.py",
             "tips.py",
             "3d_generator_import.py",
             "dictionary_generators.py",
+            "cho_restraints_from_models.py",
+            "add_linked_cho.py",
             "jligand.py",
             "americanisms.py",
             "group_settings.py"]
 post_list = ["coot_gui.py",
             "tips_gui.py",
-#            "check_for_updates.py",
             "gui_hole.py",
             "gui_prosmart.py",
             "gui_add_linked_cho.py",
@@ -88,14 +91,16 @@ post_list = ["coot_gui.py",
             "get_recent_pdbe.py",
             "extensions.py",
             "shelx_extensions.py",
-            "ligand_check.py",
             "enhanced_ligand.py",
+            "ligand_check.py",
+            "acedrg_link.py",
+            "interactive_nudge_residues.py",
             "gui_ligand_sliders.py",
             "coot_toolbuttons.py",
-	        "pdbe_validation_data.py",
+            "pdbe_validation_data.py",
             "contact_score_isolated_ligand.py",
             "ligand_validation_sliders.py",
-	    "rcrane_loader.py" # calls set_found_coot_gui()
+            "rcrane_loader.py" # calls set_found_coot_gui()
 ]
 
 # list of modules not available on Windows
@@ -191,6 +196,7 @@ for coot_python_file in python_list:
                 coot_real_exit(1)
     else:
         print "ERROR: cannot find", coot_python_file
+
 
 
 

@@ -20,10 +20,13 @@
  * 02110-1301, USA
  */
 
+#include "Python.h"
+
 #include "compat/coot-sysdep.h"
 #include <GraphMol/GraphMol.h>
 
 #include <boost/python.hpp>
+
 using namespace boost::python;
 
 #define HAVE_GSL
@@ -50,23 +53,29 @@ namespace coot {
    RDKit::ROMol *hydrogen_transformations(const RDKit::ROMol &r);
    RDKit::ROMol *mogulify(const RDKit::ROMol &r);
 
-   // delete 
-   // mmff_b_a_restraints_container_t *mmff_bonds_and_angles(RDKit::ROMol &mol_in);
-
    // fiddle with mol
    void delocalize_guanidinos(RDKit::RWMol *mol);
-   
+
+   // compiling/linking problems - give up for now.
+   // PyObject *convert_rdkit_mol_to_pyobject(RDKit::ROMol *mol);
 }
 
 
 
 BOOST_PYTHON_MODULE(pyrogen_boost) {
+
+   // def("convert_rdkit_mol_to_pyobject", coot::convert_rdkit_mol_to_pyobject,
+   // return_value_policy<manage_new_object>());
+
    def("regularize",               coot::regularize,               return_value_policy<manage_new_object>());
    def("regularize_with_dict",     coot::regularize_with_dict,     return_value_policy<manage_new_object>());
    def("rdkit_mol_chem_comp_pdbx", coot::rdkit_mol_chem_comp_pdbx, return_value_policy<manage_new_object>());
    def("hydrogen_transformations", coot::hydrogen_transformations, return_value_policy<manage_new_object>());
    def("mogulify",                 coot::mogulify,                 return_value_policy<manage_new_object>());
    def("mmff_bonds_and_angles",    coot::mmff_bonds_and_angles,    return_value_policy<manage_new_object>());
+   // rdkit-like function name
+   def("MolFromPDBXr", coot::rdkit_mol_chem_comp_pdbx, return_value_policy<manage_new_object>());
+
 
    class_<coot::mmff_bond_restraint_info_t>("mmff_bond_restraint_info_t")
       .def("get_idx_1",         &coot::mmff_bond_restraint_info_t::get_idx_1)
@@ -106,7 +115,7 @@ BOOST_PYTHON_MODULE(pyrogen_boost) {
 
 RDKit::ROMol*
 coot::mogulify(const RDKit::ROMol &mol) {
-   
+
    RDKit::RWMol rw(mol);
    coot::mogulify_mol(rw);
    RDKit::ROMol *ro = new RDKit::ROMol(rw);
@@ -241,14 +250,16 @@ coot::rdkit_mol_chem_comp_pdbx(const std::string &chem_comp_dict_file_name,
 
 	    // debug.  OK, so the bond orders are undelocalized here.
 	    // debug_rdkit_molecule(&mol_rw);
-      
+
+	    // Happy Path return
+
 	    return m;
 	 }
 
 	 catch (const std::runtime_error &rte) {
 	    std::cout << "ERROR:: " << rte.what() << std::endl;
 	 }
-	 
+
       } else {
 
 	 // Are you here unexpectedly?  That's because the input cif dictionary doesn't have
@@ -270,7 +281,9 @@ coot::rdkit_mol_chem_comp_pdbx(const std::string &chem_comp_dict_file_name,
 	 delete mol;
 	 return m;
       }
-   } 
+   }
+
+   // this is not the normal (happy path) return
    return mol;
 }
      
@@ -278,7 +291,7 @@ RDKit::ROMol *
 coot::hydrogen_transformations(const RDKit::ROMol &mol) {
 
 
-   debug_rdkit_molecule(&mol);
+   // debug_rdkit_molecule(&mol);
    RDKit::RWMol *r = new RDKit::RWMol(mol);
 
    RDKit::ROMol *query_cooh = RDKit::SmartsToMol("[C^2](=O)O[H]");
@@ -326,9 +339,9 @@ coot::hydrogen_transformations(const RDKit::ROMol &mol) {
 
       std::string at_c_name, at_o1_name, at_o2_name, at_h_name;
 
-      at_c->setProp( "atom_type", "C");
-      at_o1->setProp("atom_type", "OC");
-      at_o2->setProp("atom_type", "OC");
+      at_c->setProp( "type_energy", "C");
+      at_o1->setProp("type_energy", "OC");
+      at_o2->setProp("type_energy", "OC");
 
       RDKit::Bond *bond_1 = r->getBondBetweenAtoms(at_c.get()->getIdx(), at_o1.get()->getIdx());
       RDKit::Bond *bond_2 = r->getBondBetweenAtoms(at_c.get()->getIdx(), at_o2.get()->getIdx());
@@ -370,13 +383,13 @@ coot::hydrogen_transformations(const RDKit::ROMol &mol) {
 
       if (degree == 4) { 
          // it has its 2 hydrogens already
-         at_n->setProp("atom_type", "NT2"); // also set to NT3 by SMARTS match in pyrogen.py
+         at_n->setProp("type_energy", "NT2"); // also set to NT3 by SMARTS match in pyrogen.py
       }
 
       if (degree == 3) { 
-         at_n->setProp("atom_type", "NT3"); // also set to NT3 by SMARTS match in pyrogen.py
+         at_n->setProp("type_energy", "NT3"); // also set to NT3 by SMARTS match in pyrogen.py
          // add a hydrogen atom and a bond to the nitrogen.
-         // 
+         //
          RDKit::Atom *new_h_at = new RDKit::Atom(1);
          // we want to find the idx of this added H, so we do that by
          // keeping hold of the pointer (otherwise the atom gets copied
@@ -397,8 +410,11 @@ coot::hydrogen_transformations(const RDKit::ROMol &mol) {
    for(unsigned int idel=0; idel<atoms_to_be_deleted.size(); idel++)
       r->removeAtom(atoms_to_be_deleted[idel]);
 
-   remove_phosphate_hydrogens(r, true);
-   remove_sulphate_hydrogens (r, true);
+   // Here do_deloc_bonds should be false when we deal with PDBe input
+   //
+   bool do_deloc_bonds = false;
+   remove_phosphate_hydrogens(r, do_deloc_bonds);
+   remove_sulphate_hydrogens (r, do_deloc_bonds);
 
    // debug
    if (false)

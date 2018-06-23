@@ -49,11 +49,13 @@
 #ifdef HAVE_GOOCANVAS
 #include <goocanvas.h>
 #endif
+
 #include <cairo.h>
 #if CAIRO_HAS_PDF_SURFACE
 #include <cairo-pdf.h>
 #endif
 #include <cairo-svg.h>
+
 
 #include "interface.h"
 #ifndef HAVE_SUPPORT_H
@@ -66,7 +68,6 @@
 
 #include "c-interface.h"
 #include "c-interface-gtk-widgets.h"
-
 
 void
 coot::rama_plot::init(int imol_in, const std::string &mol_name_in, float level_prefered, float level_allowed,
@@ -127,11 +128,14 @@ coot::rama_plot::init(const std::string &type, short int psi_axis) {
          plot_type = BACKBONE_EDIT;
       }
    }
+#ifdef HAVE_GOOCANVAS
    green_box_item = NULL;
+#endif
 }
 
+
 void
-coot::rama_plot::resize_rama_canvas_internal(GtkWidget *widget, 
+coot::rama_plot::resize_rama_canvas_internal(GtkWidget *widget,
                                              GdkEventConfigure *event) {
 
    if (resize_canvas_with_window) {
@@ -165,7 +169,9 @@ coot::rama_plot::resize_rama_canvas_internal(GtkWidget *widget,
          zoom = 0.8;
          g_print("BL INFO:: already smallest size to fit the window, wont make canvas smaller.\n");
       }
+#ifdef HAVE_GOOCANVAS
       goo_canvas_set_scale(GOO_CANVAS(canvas), zoom);
+#endif
 
       // save the size for the next round
       oldw = event->width;
@@ -323,10 +329,12 @@ void my_getsize(GtkWidget *widget, GtkAllocation *allocation, gpointer *data) {
 // hide_buttons is optional arg
 void
 coot::rama_plot::init_internal(const std::string &mol_name,
-			       float level_prefered, float level_allowed,
-			       float step_in, 
-			       short int hide_buttons,
-			       short int is_kleywegt_plot_flag_local) {
+                               float level_prefered, float level_allowed,
+                               float step_in,
+                               short int hide_buttons,
+                               short int is_kleywegt_plot_flag_local) {
+
+#ifdef HAVE_GOOCANVAS
 
    // or just use?!
    // fixed_font_str = "Sans 9"
@@ -361,10 +369,9 @@ coot::rama_plot::init_internal(const std::string &mol_name,
    if (dynarama_label)
       gtk_label_set_text(GTK_LABEL(dynarama_label), mol_name.c_str());
 
-   int ysize = 560; // 20170202 was 500: without this the viewport is too short
-                    // for the rama canvas (how has this happened?)
+   int ysize = 500;
    if (! is_kleywegt_plot_flag_local) // extra space needed
-      ysize += 35;
+      ysize = 535;
 
    GtkAllocation alloc = { 0, 0, 400, ysize };
    gtk_widget_size_allocate(dynawin, &alloc);
@@ -469,6 +476,8 @@ coot::rama_plot::init_internal(const std::string &mol_name,
       accel_grp_ls = accel_grp_ls->next;
    }
 
+#endif
+
 }
 
 void
@@ -493,7 +502,9 @@ coot::rama_plot::reinitialise() {
       init_internal("Ramachandran Plot (Phi/Psi Edit Mode)", 0.02, 0.002, 1);
       hide_stats_frame();
       gtk_widget_set_sensitive(rama_view_menu, FALSE);
+#ifdef HAVE_GOOCANVAS
       green_box_item = NULL;
+#endif
    }
    if (plot_type == BACKBONE_EDIT) {
       phipsi_edit_flag = 0;
@@ -503,7 +514,9 @@ coot::rama_plot::reinitialise() {
       init_internal("Ramachandran Plot (Backbone Edit Mode)", 0.02, 0.002, 1, hide_buttons);
       hide_stats_frame();
       gtk_widget_set_sensitive(rama_view_menu, FALSE);
+#ifdef HAVE_GOOCANVAS
       green_box_item = NULL;
+#endif
    }
    if (plot_type == RAMA) {
       // normal plot
@@ -520,7 +533,6 @@ coot::rama_plot::setup_internal(float level_prefered, float level_allowed) {
 
    n_diffs = 50; // default value.
    drawing_differences = 0; 
-
 
    rama.init(clipper::Ramachandran::All5);
    displayed_rama_type = clipper::Ramachandran::All5;
@@ -568,9 +580,10 @@ coot::rama_plot::set_n_diffs(int nd) {
    n_diffs = nd;
 }
 
-void 
+void
 coot::rama_plot::setup_canvas() {
 
+#ifdef HAVE_GOOCANVAS
    goo_canvas_set_scale(GOO_CANVAS(canvas), zoom);
 
    if (psi_axis_mode == PSI_CLASSIC) {
@@ -581,22 +594,25 @@ coot::rama_plot::setup_canvas() {
    }
    g_signal_connect (G_OBJECT(canvas), "button_press_event",
                        G_CALLBACK(rama_button_press), NULL);
-   
+
    g_signal_connect (G_OBJECT(canvas), "motion_notify_event",
                        G_CALLBACK(rama_motion_notify), NULL);
 
    // also need expose_event, configure_event, realise
-   
+
    g_signal_connect(G_OBJECT(canvas), "key_release_event",
                       G_CALLBACK(rama_key_release_event), NULL);
 
    /* set focus to canvas - we need this to get key presses. */
    gtk_widget_set_can_focus(canvas, TRUE);
    gtk_widget_grab_focus(GTK_WIDGET(canvas));
+#endif
 }
 
 void
 coot::rama_plot::draw_rect() {
+
+#ifdef HAVE_GOOCANVAS
 
       GooCanvasItem *item;
       item = goo_canvas_rect_new(root,
@@ -607,7 +623,8 @@ coot::rama_plot::draw_rect() {
             "fill-color", "grey20",
             "stroke-color", "black",
             NULL);
-   }
+#endif
+}
 
 void
 coot::rama_plot::draw_it(mmdb::Manager *mol) {
@@ -642,6 +659,8 @@ coot::rama_plot::setup_background(bool blocks, bool isolines) {
 
    int take_bg_image = 0;
 
+#ifdef HAVE_GOOCANVAS
+
    bg_all = goo_canvas_group_new(root, NULL);
    bg_gly = goo_canvas_group_new(root, NULL);
    bg_pro = goo_canvas_group_new(root, NULL);
@@ -651,8 +670,8 @@ coot::rama_plot::setup_background(bool blocks, bool isolines) {
 
    // use a pre-made rama picture if we have standard settings,
    // otherwise make a block background to specifications
-   if (abs(rama_threshold_preferred - 0.02) < 0.000001 &&
-       abs(rama_threshold_allowed - 0.002) < 0.000001 &&
+   if (fabs(rama_threshold_preferred - 0.02) < 0.000001 &&
+       fabs(rama_threshold_allowed - 0.002) < 0.000001 &&
        psi_axis_mode == PSI_CLASSIC)
    {
       take_bg_image = make_background_from_image(rama, bg_all, "rama_all.png");
@@ -685,9 +704,11 @@ coot::rama_plot::setup_background(bool blocks, bool isolines) {
    hide_all_background();
    // upon init show all
    show_background(bg_all);
+#endif
 
 }
 
+#ifdef HAVE_GOOCANVAS
 // pass Ramachandran by type, e.g. r_gly...
 void
 coot::rama_plot::make_background(const clipper::Ramachandran rama_type,
@@ -726,6 +747,7 @@ coot::rama_plot::make_background(const clipper::Ramachandran rama_type,
             colour = "Red";
             colour = "Coral";
             colour = "LightSalmon";
+            colour = "MistyRose";
 
             item = goo_canvas_rect_new(bg_group,
                                        i+0.0,
@@ -762,6 +784,10 @@ coot::rama_plot::make_background(const clipper::Ramachandran rama_type,
       }
    }
 }
+#endif
+
+
+#ifdef HAVE_GOOCANVAS
 
 int
 coot::rama_plot::make_background_from_image(const clipper::Ramachandran rama_type,
@@ -792,8 +818,10 @@ coot::rama_plot::make_background_from_image(const clipper::Ramachandran rama_typ
 
    return ret;
 }
+#endif
 
 
+#ifdef HAVE_GOOCANVAS
 void
 coot::rama_plot::show_background(GooCanvasItem *new_bg) {
 
@@ -809,7 +837,10 @@ coot::rama_plot::show_background(GooCanvasItem *new_bg) {
       current_bg = new_bg;
    }
 }
+#endif
 
+
+#ifdef HAVE_GOOCANVAS
 void
 coot::rama_plot::hide_all_background() {
    // maybe have a vector?
@@ -826,15 +857,18 @@ coot::rama_plot::hide_all_background() {
                  "visibility", GOO_CANVAS_ITEM_INVISIBLE,
                  NULL);
 }
+#endif
 
 void
 coot::rama_plot::display_background() {
+
+#ifdef HAVE_GOOCANVAS
 
    GooCanvasItem *item;
    GooCanvasItem *bg_non_gly_pro;
 
    // std::cout << "new underlay background" << std::endl;
-   // 
+   //
    basic_white_underlay();
 
    bg_non_gly_pro = goo_canvas_group_new(root, NULL);
@@ -848,17 +882,17 @@ coot::rama_plot::display_background() {
    for (float i= -180.0; i<180.0; i += step) {
       for (float j= -180.0; j<180.0; j += step) {
 
-	 x = clipper::Util::d2rad(i+((float) step)/2.0);
-	 y = clipper::Util::d2rad(-(j+((float) step)/2.0)); 
+         x =  clipper::Util::d2rad(i+((float) step)/2.0);
+         y =  clipper::Util::d2rad(-(j+((float) step)/2.0));
          d2step = clipper::Util::d2rad(step);
-	 doit = 0; 
 
-	 if ( rama.favored(x,y) ) {
-	    colour = "grey";
-	    colour = "red";
-	    colour = "pink";
-	    colour = "HotPink";
-	    colour = "LightPink";
+         doit = 0;
+
+         if ( rama.favored(x,y) ) {
+            colour = "grey";
+            colour = "red";
+            colour = "pink";
+            colour = "HotPink";
 
             item = goo_canvas_rect_new(bg_non_gly_pro,
                                        i+0.0,
@@ -867,7 +901,7 @@ coot::rama_plot::display_background() {
                                        step+0.0,
                                        "fill-color", colour.c_str(),
                                        "line-width", 0,
-					 NULL);
+                                       NULL);
          } else {
             if ( rama.allowed(x,y) ) {
                colour = "grey50";
@@ -888,10 +922,11 @@ coot::rama_plot::display_background() {
 
             }
 
-	 }
+         }
       }
    }
 
+#endif // HAVE_GOOCANVAS
 }
 
 // returns an int to make line and a vector of (x1,y1,x2,y2) to make_isolines between
@@ -920,7 +955,7 @@ coot::rama_plot::make_isolines_internal(const clipper::Ramachandran rama_type, d
 
    if (config > 7) {
       config = 15 - config;
-}
+   }
 
    switch(config) {
    case 0:
@@ -981,6 +1016,8 @@ coot::rama_plot::make_isolines_internal(const clipper::Ramachandran rama_type, d
    return ret;
 
 }
+
+#ifdef HAVE_GOOCANVAS
 void
 coot::rama_plot::make_isolines(const clipper::Ramachandran rama_type, GooCanvasItem *bg_group) {
 
@@ -1031,8 +1068,8 @@ coot::rama_plot::make_isolines(const clipper::Ramachandran rama_type, GooCanvasI
          }
       }
    }
-
 }
+#endif
 
 
 // draw a big square after everything else for residue i:
@@ -1045,7 +1082,7 @@ coot::rama_plot::big_square(const std::string &chain_id,
    big_square(1, chain_id, resno, ins_code);
 
 }
-   
+
 void
 coot::rama_plot::big_square(int model_number,
                             const std::string &chain_id,
@@ -1066,6 +1103,8 @@ coot::rama_plot::big_square(int model_number,
 void
 coot::rama_plot::clear_canvas_items(int all) {
 
+#ifdef HAVE_GOOCANVAS
+
    if (all) {
       gint no_children = goo_canvas_item_get_n_children(root);
       for (int i=no_children-1; i>0; i--) {
@@ -1085,8 +1124,10 @@ coot::rama_plot::clear_canvas_items(int all) {
    // and make new ones
    residues_grp = goo_canvas_group_new(root, NULL);
    arrow_grp = goo_canvas_group_new(root, NULL);
+#endif
 
 }
+
 
 void
 coot::rama_plot::destroy_yourself() {
@@ -1098,10 +1139,14 @@ coot::rama_plot::destroy_yourself() {
       std::cout << "ERROR:: could not get dialog from canvas in rama_plot::destroy_yourself"
                 << std::endl;
 }
+
+
 // not const because we modify canvas_item_vec
 // 
 void
 coot::rama_plot::basic_white_underlay() {
+
+#ifdef HAVE_GOOCANVAS
 
    GooCanvasItem *item;
 
@@ -1122,7 +1167,11 @@ coot::rama_plot::basic_white_underlay() {
             NULL);  
    // orig grey 90; grey 100 is white; 95 was good
 
+#endif
+
 } 
+
+
 
 gint
 coot::rama_plot::key_release_event(GtkWidget *widget, GdkEventKey *event) {
@@ -1153,7 +1202,8 @@ coot::rama_plot::key_release_event(GtkWidget *widget, GdkEventKey *event) {
 void
 coot::rama_plot::black_border() {
 
-   
+#ifdef HAVE_GOOCANVAS
+
    GooCanvasPoints *points = goo_canvas_points_new(4);
    GooCanvasItem *item;
    GooCanvasItem *border_group;
@@ -1187,20 +1237,23 @@ coot::rama_plot::black_border() {
                                      "points", points,
                                      "stroke-color", "black",
                                      "line-width", 2.0,
-				NULL);
+            NULL);
       goo_canvas_points_unref (points);
 
+#endif
 }
 
 
 void
-coot::rama_plot::cell_border(int i, int j, int step) {
+coot::rama_plot::cell_border(int i, int j, int step_in) {
+
+#ifdef HAVE_GOOCANVAS
 
    // FIXME; used?
    GooCanvasItem *item;
    GooCanvasPoints *points;
    points = goo_canvas_points_new(4);
-   
+
    points->coords[0] = i+1;
    points->coords[1] = j+1;
 
@@ -1222,6 +1275,7 @@ coot::rama_plot::cell_border(int i, int j, int step) {
 
    goo_canvas_points_unref (points);
 
+#endif
    
 } 
 
@@ -1230,7 +1284,7 @@ int
 coot::rama_plot::draw_phi_psi_point(const coot::util::phi_psi_t &phi_psi,
 				    bool as_white_flag) {
 
-   return draw_phi_psi_point_internal(phi_psi, as_white_flag, 2); 
+   return draw_phi_psi_point_internal(phi_psi, as_white_flag, 2);
 }
 
 int 
@@ -1238,12 +1292,16 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
                                              bool as_white_flag,
                                              int box_size) {
 
+   int region = coot::rama_plot::RAMA_UNKNOWN; // initially unset
+
+#ifdef HAVE_GOOCANVAS
+
    if (false)
       std::cout << "draw_phi_psi_point_internal() called with draw_outliers_only "
                 << draw_outliers_only << std::endl;
 
    GooCanvasItem *item;
-   int region = coot::rama_plot::RAMA_UNKNOWN; // initially unset
+
    
    std::string outline_color("DimGray");
 
@@ -1341,11 +1399,11 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
          }
       }
    }
-
-
+#endif
    return region;
 }
 
+#ifdef HAVE_GOOCANVAS
 void
 coot::rama_plot::set_data_for_phi_psi_point_item(const std::string &label,
                                                  const coot::util::phi_psi_t &phi_psi,
@@ -1374,15 +1432,49 @@ coot::rama_plot::set_data_for_phi_psi_point_item(const std::string &label,
    g_object_set_data (G_OBJECT (item), "rama_plot", (gpointer) this);
 
 }
+#endif
+
+
+#ifdef HAVE_GOOCANVAS
+
+// is this the real one?
+void
+coot::rama_plot::set_data_for_phi_psi_point_item_other(const std::string &label,
+                                                 const coot::util::phi_psi_t &phi_psi,
+                                                 GooCanvasItem *item) {
+
+   std::string::size_type l_label    = label.length();
+   std::string::size_type l_res_name = phi_psi.residue_name().length();
+   std::string::size_type l_chain_id = phi_psi.chain_id.length();
+   gchar *c_label    = new gchar[l_label+1];
+   gchar *c_res_name = new gchar[l_res_name+1];
+   gchar *c_chain_id = new gchar[l_chain_id+1];
+
+   // init new char []s
+   for (unsigned int jj=0; jj<=l_label;    jj++)    c_label[jj] = 0;
+   for (unsigned int jj=0; jj<=l_res_name; jj++) c_res_name[jj] = 0;
+   for (unsigned int jj=0; jj<=l_chain_id; jj++) c_chain_id[jj] = 0;
+
+   strncpy(c_label,                     label.c_str(),    l_label+1);
+   strncpy(c_res_name, phi_psi.residue_name().c_str(), l_res_name+1);
+   strncpy(c_chain_id,       phi_psi.chain_id.c_str(), l_chain_id+1);
+
+   g_object_set_data (G_OBJECT (item), "id",       c_label);
+   g_object_set_data (G_OBJECT (item), "res_name", c_res_name);
+   g_object_set_data (G_OBJECT (item), "chain",    c_chain_id);
+   g_object_set_data (G_OBJECT (item), "res_no", GINT_TO_POINTER(phi_psi.residue_number));
+   g_object_set_data (G_OBJECT (item), "rama_plot", (gpointer) this);
+
+}
+#endif
 
 // move the green box
 void
 coot::rama_plot::draw_green_box(double phi, double psi, std::string label) {
 
+#ifdef HAVE_GOOCANVAS
 
-   // std::cout << "============ adding green box at " << phi << " " << psi << std::endl;
-   std::string colour = "green";
-   std::string outline_color = "black";
+
    int box_size = 4;
    
    g_object_set(green_box_item,
@@ -1396,18 +1488,20 @@ coot::rama_plot::draw_green_box(double phi, double psi, std::string label) {
    // put on top of everything
    goo_canvas_item_raise(green_box_item, NULL);
 
+#endif
+
 }
-
-
-
 
 int // return region
 coot::rama_plot::draw_phi_psi_as_gly(const coot::util::phi_psi_t &phi_psi) {
 
-   GooCanvasItem *item;
+   int region = 0;
+
+#ifdef HAVE_GOOCANVAS
+
+   GooCanvasItem *item = 0;
 
    std::string colour;
-   int region;
 
    double phi = phi_psi.phi();
    double psi = phi_psi.psi();
@@ -1428,11 +1522,14 @@ coot::rama_plot::draw_phi_psi_as_gly(const coot::util::phi_psi_t &phi_psi) {
    GooCanvasPoints *points;
    points = goo_canvas_points_new(3);
 
-   points->coords[0] =  phi;
-   points->coords[1] = -psi-3;
+      points->coords[0] =  phi;
+      points->coords[1] = -psi-3;
 
-   points->coords[2] =  phi-3;
-   points->coords[3] = -psi+3;
+      points->coords[2] =  phi-3;
+      points->coords[3] = -psi+3;
+
+      points->coords[4] =  phi+3;
+      points->coords[5] = -psi+3;
 
    points->coords[4] =  phi+3;
    points->coords[5] = -psi+3;
@@ -1459,6 +1556,7 @@ coot::rama_plot::draw_phi_psi_as_gly(const coot::util::phi_psi_t &phi_psi) {
    }
    goo_canvas_points_unref (points);
 
+#endif
    return region;
 }
 
@@ -1483,7 +1581,7 @@ coot::rama_plot::draw_phi_psi_points_for_model(const coot::phi_psis_for_model_t 
    coot::rama_stats_container_t counts;
    bool as_white_flag = 0;
 
-   std::map<coot::residue_spec_t, coot::util::phi_psi_t>::const_iterator it;
+   std::map<coot::residue_spec_t, coot::util::phi_psi_with_residues_t>::const_iterator it;
    
    for (it=pp_set.phi_psi.begin(); it!=pp_set.phi_psi.end(); it++) {
       int type = draw_phi_psi_point(it->second, as_white_flag);
@@ -1529,7 +1627,7 @@ coot::rama_plot::generate_phi_psis(mmdb::Manager *mol_in, bool is_primary) {
    coot::phi_psis_for_model_t empty(0);
    if (is_primary) {
       phi_psi_model_sets.clear();
-   phi_psi_model_sets.push_back(empty);
+      phi_psi_model_sets.push_back(empty);
    }
    else {
       secondary_phi_psi_model_sets.clear();
@@ -1545,7 +1643,7 @@ coot::rama_plot::generate_phi_psis(mmdb::Manager *mol_in, bool is_primary) {
 	    chain_p = model_p->GetChain(ichain);
 	    int nres = chain_p->GetNumberOfResidues();
 	    mmdb::Residue *residue_p;
-	    if (nres > 2) {
+	    if (nres > 2) { 
 	       for (int ires=1; ires<(nres-1); ires++) { 
 		  residue_p = chain_p->GetResidue(ires);
 
@@ -1558,7 +1656,7 @@ coot::rama_plot::generate_phi_psis(mmdb::Manager *mol_in, bool is_primary) {
 			// coot::phi_psi_t constructor can throw an error
 			// (e.g. bonding atoms too far apart).
 			coot::residue_spec_t spec(residue_p);
-			coot::util::phi_psi_t pp(res_prev, residue_p, res_next);
+			coot::util::phi_psi_with_residues_t pp(res_prev, residue_p, res_next);
 			model_phi_psis.add_phi_psi(spec, pp);
 		     }
 		     catch (const std::runtime_error &rte) {
@@ -1582,7 +1680,7 @@ coot::rama_plot::generate_phi_psis_by_selection(mmdb::Manager *mol,
 						bool is_primary,
 						int SelectionHandle) {
 
-   if (is_primary) { 
+   if (is_primary) {
       phi_psi_model_sets.clear();
       coot::phi_psis_for_model_t empty(0);
       phi_psi_model_sets.push_back(empty);
@@ -1595,6 +1693,7 @@ coot::rama_plot::generate_phi_psis_by_selection(mmdb::Manager *mol,
    int n_residues;
    mol->GetSelIndex(SelectionHandle, residues, n_residues);
    coot::phi_psis_for_model_t model_phi_psis(1); // model 1.
+
    for (int ires=1; ires<(n_residues-1); ires++) {
       mmdb::Residue *res_prev = residues[ires-1];
       mmdb::Residue *res_this = residues[ires];
@@ -1603,21 +1702,22 @@ coot::rama_plot::generate_phi_psis_by_selection(mmdb::Manager *mol,
       std::string chain_id_2 = res_this->GetChainID();
       std::string chain_id_3 = res_next->GetChainID();
       if (chain_id_1 == chain_id_2) {
-	 if (chain_id_2 == chain_id_3) {
-	    try { 
-	       coot::util::phi_psi_t pp(res_prev, res_this, res_next);
-	       coot::residue_spec_t spec(res_this);
-	       model_phi_psis.add_phi_psi(spec, pp);
-	    }
-	    catch (std::runtime_error rte) {
-	       // nothing bad.
-	    }
-	 }
+         if (chain_id_2 == chain_id_3) {
+            try {
+               coot::util::phi_psi_t pp(res_prev, res_this, res_next);
+               coot::residue_spec_t spec(res_this);
+               model_phi_psis.add_phi_psi(spec, pp);
+            }
+            catch (const std::runtime_error &rte) {
+               // nothing bad.
+            }
+         }
       }
    }
-   if (is_primary) 
+
+   if (is_primary)
       phi_psi_model_sets.push_back(model_phi_psis);
-   else 
+   else
       secondary_phi_psi_model_sets.push_back(model_phi_psis);
 }
 
@@ -1638,6 +1738,8 @@ coot::rama_plot::button_press (GtkWidget *Widget, GdkEventButton *event) {
    return button_press_conventional(Widget, event);
 }
 
+#ifdef HAVE_GOOCANVAS
+
 gint
 coot::rama_plot::button_item_release (GooCanvasItem *item, GdkEventButton *event) {
 
@@ -1652,11 +1754,15 @@ coot::rama_plot::button_item_release (GooCanvasItem *item, GdkEventButton *event
 //      chain_id = (gchar*)g_object_get_data(G_OBJECT(item), "chain");
 //      res_no = (gint)g_object_get_data(G_OBJECT(item), "res_no");
       dragging = FALSE;
-	 } 
+   }
 
    // return what? for what?
    return 0;
 }
+#endif
+
+
+#ifdef HAVE_GOOCANVAS
 
 gint
 coot::rama_plot::button_item_press (GooCanvasItem *item, GdkEventButton *event) {
@@ -1669,8 +1775,10 @@ coot::rama_plot::button_item_press (GooCanvasItem *item, GdkEventButton *event) 
       else
          return button_item_press_conventional(item, event);
 
-	 }
+}
+#endif
 
+#ifdef HAVE_GOOCANVAS
 gint
 coot::rama_plot::button_press_backbone_edit (GooCanvasItem *item, GdkEventButton *event) {
 
@@ -1678,7 +1786,9 @@ coot::rama_plot::button_press_backbone_edit (GooCanvasItem *item, GdkEventButton
 
    return 0;
 }
+#endif
 
+#ifdef HAVE_GOOCANVAS
 gint
 coot::rama_plot::button_press_editphipsi (GooCanvasItem *item, GdkEventButton *event) {
 
@@ -1704,16 +1814,19 @@ coot::rama_plot::button_press_editphipsi (GooCanvasItem *item, GdkEventButton *e
       gdk_cursor_unref (fleur);
       dragging = TRUE;
    }
-      
+
    return 0;
-} 
+}
+#endif
+
+#ifdef HAVE_GOOCANVAS
 
 gint
 coot::rama_plot::button_item_press_conventional (GooCanvasItem *item, GdkEventButton *event) {
 
    // FIXME:: this slightly shifts the residue on the plot,
    // maybe change x and y accordingly as well
-      
+
    if (is_stand_alone()) {
       // This is clever but only works with stand alone.
       // a different approach is needed in case we update the ramachandran plot.
@@ -1755,7 +1868,7 @@ coot::rama_plot::button_item_press_conventional (GooCanvasItem *item, GdkEventBu
                     "width", width,
                     "height", height,
                     NULL);
-   
+
       current_residue = item;
 
    }
@@ -1766,6 +1879,7 @@ coot::rama_plot::button_item_press_conventional (GooCanvasItem *item, GdkEventBu
    return 1;
 
 }
+#endif
 
 gint
 coot::rama_plot::button_press_conventional (GtkWidget *widget, GdkEventButton *event) {
@@ -1777,8 +1891,12 @@ coot::rama_plot::button_press_conventional (GtkWidget *widget, GdkEventButton *e
    if (event->button == 2) {
       zoom_out();
    }
+
    return 1; // Handled this, right?
 }
+
+
+#ifdef HAVE_GOOCANVAS
 
 void
 coot::rama_plot::recentre_graphics_maybe(GooCanvasItem *item) {
@@ -1794,22 +1912,25 @@ coot::rama_plot::recentre_graphics_maybe(GooCanvasItem *item) {
       set_go_to_atom_chain_residue_atom_name(chain, resno, " CA ");
    }
 }
+#endif
 
 
 void
 coot::rama_plot::recentre_graphics_maybe(mouse_util_t t) {
 
    if (t.model_number != coot::mouse_util_t::MODEL_NUMBER_UNSET) {
-      if (t.mouse_over_secondary_set) { 
-	 set_go_to_atom_molecule(molecule_numbers_.second);
+      if (t.mouse_over_secondary_set) {
+         set_go_to_atom_molecule(molecule_numbers_.second);
       } else {
-	 set_go_to_atom_molecule(molecule_numbers_.first);
+         set_go_to_atom_molecule(molecule_numbers_.first);
       }
       set_go_to_atom_chain_residue_atom_name(t.spec.chain_id.c_str(), t.spec.res_no, " CA ");
    }
 
 }
 
+
+#ifdef HAVE_GOOCANVAS
 
 gint
 coot::rama_plot::item_enter_event(GooCanvasItem *item, GdkEventCrossing *event) {
@@ -1828,7 +1949,9 @@ coot::rama_plot::item_enter_event(GooCanvasItem *item, GdkEventCrossing *event) 
    }
    return 0;
 }
+#endif
 
+#ifdef HAVE_GOOCANVAS
 gint
 coot::rama_plot::item_motion_event(GooCanvasItem *item, GdkEventMotion *event) {
 
@@ -1841,6 +1964,7 @@ coot::rama_plot::item_motion_event(GooCanvasItem *item, GdkEventMotion *event) {
    }
    return 0;
 } 
+#endif
 
 bool
 coot::rama_plot::is_outlier(const coot::util::phi_psi_t &phi_psi) const {
@@ -1921,8 +2045,6 @@ coot::rama_plot::all_plot(clipper::Ramachandran::TYPE type) {
    }
 
 }
-
-
 
 
 // The helper type contains a flag the signals validity (this residue
@@ -2248,7 +2370,8 @@ coot::rama_plot::counts_to_canvas(cairo_t *cr) {
       cairo_show_text(cr, outlr_str.c_str());
 
    }
-} 
+
+}
 
 
 void
@@ -2259,7 +2382,9 @@ coot::rama_plot::draw_it(const coot::util::phi_psi_t &phipsi) {
    coot::residue_spec_t spec("", 0, "");
    phi_psi_set.add_phi_psi(spec, phipsi);
    phi_psi_model_sets.push_back(phi_psi_set);
+
    draw_phi_psi_points();
+
 }
 
 
@@ -2279,12 +2404,12 @@ coot::rama_plot::draw_it(const std::vector<coot::util::phi_psi_t> &phi_psi_s) {
    }
    phi_psi_model_sets.push_back(phi_psi_set);
    draw_phi_psi_points();
-   
+
 }
 
 void 
 coot::rama_plot::draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1, 
-                                               mmdb::Manager *mol2) {
+					       mmdb::Manager *mol2) { 
 
 
    // Are you sure that you want to edit this function? (not the one below?)
@@ -2294,13 +2419,12 @@ coot::rama_plot::draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1,
       bool primary = 1;
       generate_phi_psis(mol1,  primary);
       generate_phi_psis(mol2, !primary);
-      
-      // all_plot_background_and_bits(clipper::Ramachandran::All);
+
       // std::cout << "finding differences..." << std::endl;
-      find_phi_psi_differences(); 
+      find_phi_psi_differences();
       // std::cout << "drawing differences..." << std::endl;
       draw_phi_psi_differences();
-      
+
       // do we need to do something like this?
       //    for (int ich=0; ich<phi_psi_sets.size(); ich++) 
       //       draw_phi_psi_points(ich);
@@ -2388,7 +2512,7 @@ coot::rama_plot::draw_2_phi_psi_sets_on_canvas(mmdb::Manager *mol1,
    // all_plot_background_and_bits(clipper::Ramachandran::All);
    // std::cout << "finding differences..." << std::endl;
    std::cout << "finding differences... for chains " <<chainid1 <<chainid2<< std::endl;
-   find_phi_psi_differences(chainid1, chainid2); 
+   find_phi_psi_differences(chainid1, chainid2);
    std::cout << "drawing differences..." << std::endl;
    // std::cout << "drawing differences..." << std::endl;
    draw_phi_psi_differences();
@@ -2417,20 +2541,19 @@ coot::rama_plot::find_phi_psi_differences_internal(const std::string &chain_id1,
 
    double d1, d2;
 
-   std::map<coot::residue_spec_t, coot::util::phi_psi_t>::const_iterator it;
+   std::map<coot::residue_spec_t, coot::util::phi_psi_with_residues_t>::const_iterator it;
 
    diff_sq.clear();
    for (unsigned int imod=1; imod<phi_psi_model_sets.size(); imod++) {
-	 std::cout << "in find_phi_psi_differences_internal with model number " << imod
-		   << " primary size " << phi_psi_model_sets[imod].size() << std::endl;
+      std::cout << "in find_phi_psi_differences_internal with model number " << imod
+		<< " primary size " << phi_psi_model_sets[imod].size() << std::endl;
       for (it=phi_psi_model_sets[imod].phi_psi.begin();
 	   it!=phi_psi_model_sets[imod].phi_psi.end(); it++) {
 	 coot::residue_spec_t spec_1 = it->first;
 	 coot::residue_spec_t spec_2 = it->first;
 	 // now (re)set chain_id of spec_2
-	 // FIXME ???
 	 if (use_chain_ids) {
-	    spec_2.chain_id = chain_id2;
+            spec_2.chain_id = chain_id2;
 	 }
 	 coot::util::phi_psi_t pp_1 = it->second;
 	 coot::util::phi_psi_t pp_2 = secondary_phi_psi_model_sets[imod][spec_2];
@@ -2444,8 +2567,8 @@ coot::rama_plot::find_phi_psi_differences_internal(const std::string &chain_id1,
 	    diff_sq_t ds(pp_1, pp_2, spec_1, spec_2, v); // something
 	    diff_sq.push_back(ds);
 	 } else {
-	    std::cout << "WARNING:: Not found " << spec_2 << " from ref spec "
-		      << spec_1 << " in " << secondary_phi_psi_model_sets[imod].size()
+	    std::cout << "Not found " << spec_2 << " from ref spec " << spec_1
+		      << " in " << secondary_phi_psi_model_sets[imod].size()
 		      << " residue in secondary set" << std::endl;
 	 } 
       }
@@ -2469,6 +2592,7 @@ bool coot::compare_phi_psi_diffs(const diff_sq_t &d1, const diff_sq_t d2) {
 void
 coot::rama_plot::draw_phi_psi_differences() {
 
+#ifdef HAVE_GOOCANVAS
 
    // First calculate the differences
    //
@@ -2512,8 +2636,11 @@ coot::rama_plot::draw_phi_psi_differences() {
          draw_kleywegt_arrow(pp1, pp2, points);
       }
    }
+#endif
 }
 
+
+#ifdef HAVE_GOOCANVAS
 
 void
 coot::rama_plot::draw_kleywegt_arrow(const coot::util::phi_psi_t &phi_psi_primary,
@@ -2532,7 +2659,7 @@ coot::rama_plot::draw_kleywegt_arrow(const coot::util::phi_psi_t &phi_psi_primar
    }
 
    coot::rama_kleywegt_wrap_info wi = test_kleywegt_wrap(phi_psi_primary,
-							 phi_psi_secondary);
+                                                         phi_psi_secondary);
    
 
    GooCanvasItem *item;
@@ -2610,6 +2737,7 @@ coot::rama_plot::draw_kleywegt_arrow(const coot::util::phi_psi_t &phi_psi_primar
       }
    }
 }
+#endif
 
 coot::rama_kleywegt_wrap_info
 coot::rama_plot::test_kleywegt_wrap(const coot::util::phi_psi_t &phi_psi_primary,
@@ -2673,6 +2801,8 @@ coot::rama_plot::test_kleywegt_wrap(const coot::util::phi_psi_t &phi_psi_primary
 void
 coot::rama_plot::draw_zero_lines() {
 
+#ifdef HAVE_GOOCANVAS
+
    GooCanvasItem *item;
    GooCanvasItem *zero_grp;
    zero_grp = goo_canvas_group_new(root, NULL);
@@ -2690,15 +2820,16 @@ coot::rama_plot::draw_zero_lines() {
                                        0.0, end,
                                        "stroke-color", "grey",
                                        "line-width", 1.0,
-			    NULL);
+                                       NULL);
 
    item = goo_canvas_polyline_new_line(zero_grp,
                                        -180.0, 0.0,
                                        180.0, 0.0,
                                        "line-width", 1.0,
                                        "stroke-color", "grey",
-				NULL);
+                                       NULL);
 
+#endif
 }
 
 // Tick marks and text labels for phi and phi axes.
@@ -2706,13 +2837,15 @@ coot::rama_plot::draw_zero_lines() {
 void
 coot::rama_plot::draw_axes() {
 
+#ifdef HAVE_GOOCANVAS
+
    // First do the text for the axes labels.
    //
 
    GooCanvasItem *item;
    GooCanvasItem *axis_grp;
 
-   float shift, shift_label;
+   float shift = 0, shift_label = 0;
    if (psi_axis_mode == PSI_CLASSIC) {
       shift = 0.0;
    } else {
@@ -2740,7 +2873,9 @@ coot::rama_plot::draw_axes() {
                               "fill-color", "black",
                               NULL);
 
-   // Ticks
+
+
+//   // Ticks
    std::vector<canvas_tick_t> pnts;
 
    // x axis
@@ -2783,9 +2918,9 @@ coot::rama_plot::draw_axes() {
                                           NULL);
    }
 
-   // Ticks text
+   //   // Ticks text
 
-   // x axis
+//   // x axis
 
    std::vector<int> tick_text_phi;
    std::vector<int> tick_text_psi;
@@ -2822,13 +2957,13 @@ coot::rama_plot::draw_axes() {
                                  -tick_text_psi[i] +0.0,
                                  -1,
                                  GTK_ANCHOR_WEST,
-				 "font", fixed_font_str.c_str(),
+                                 "font", fixed_font_str.c_str(),
                                  "fill-color", "black",
-				   NULL);
+                                 NULL);
 
 
       
-//    // y axis
+////    // y axis
 
       snprintf(text,19,"%d",tick_text_phi[i]);
 
@@ -2838,12 +2973,14 @@ coot::rama_plot::draw_axes() {
                                  200.0 + shift,
                                  -1,
                                  GTK_ANCHOR_WEST,
-				   "font", fixed_font_str.c_str(),
+                                 "font", fixed_font_str.c_str(),
                                  "fill-color", "black",
-				   NULL);
+                                 NULL);
 
    }
-} 
+
+#endif
+}
 
 
 
@@ -2910,22 +3047,28 @@ coot::rama_plot::rama_get_mmdb_manager(std::string pdb_name) {
 void
 coot::rama_plot::zoom_out() {
 
+#ifdef HAVE_GOOCANVAS
+
    // make sure it doesnt get smaller than the window
    if (zoom-0.2 < 0.8) {
       zoom = 0.8;
       g_print("BL INFO:: already smallest size to fit the window, wont make it smaller\n");
    } else {
-   zoom -= 0.2;
+      zoom -= 0.2;
    }
    goo_canvas_set_scale(GOO_CANVAS(canvas), zoom);
 
+#endif 
 
 }
+
+
 void
 coot::rama_plot::zoom_in() {
-
+#ifdef HAVE_GOOCANVAS
    zoom += 0.2;
    goo_canvas_set_scale(GOO_CANVAS(canvas), zoom);
+#endif
 }
 
 void
@@ -2938,6 +3081,7 @@ coot::rama_plot::allow_seqnum_offset() {
 void
 coot::rama_plot::write_pdf(std::string &file_name) {
 #if CAIRO_HAS_PDF_SURFACE
+#ifdef HAVE_GOOCANVAS
 
    gdouble x1, y1, x2, y2;
    g_object_get(GOO_CANVAS(canvas),
@@ -2987,10 +3131,14 @@ coot::rama_plot::write_pdf(std::string &file_name) {
 #endif
 
 
+#endif // GOOCANVAS
+
 }
 
 void
 coot::rama_plot::write_png(std::string &file_name) {
+
+#ifdef HAVE_GOOCANVAS
 
    gdouble x1, y1, x2, y2;
    g_object_get(GOO_CANVAS(canvas),
@@ -3036,12 +3184,16 @@ coot::rama_plot::write_png(std::string &file_name) {
    cairo_destroy (cr);
    //goo_canvas_item_remove(tmp);
 
+#endif
+
 }
 
 // helper functions to create background images
 
 void
 coot::rama_plot::make_bg_images() {
+
+#ifdef HAVE_GOOCANVAS
 
    std::string fn;
    clear_canvas_items(1);
@@ -3064,7 +3216,11 @@ coot::rama_plot::make_bg_images() {
    show_background(bg_pro);
    fn = "rama_pro.png";
    write_png_simple(fn, bg_pro);
+
+#endif
 }
+
+#ifdef HAVE_GOOCANVAS
 
 void
 coot::rama_plot::write_png_simple(std::string &file_name, GooCanvasItem *item) {
@@ -3109,7 +3265,9 @@ coot::rama_plot::write_png_simple(std::string &file_name, GooCanvasItem *item) {
    //goo_canvas_item_remove(tmp);
 
 }
+#endif
 
+#ifdef HAVE_GOOCANVAS
 // BL says:: we dont use SVG. Too large files and not nice.
 void
 coot::rama_plot::write_svg(std::string &file_name, GooCanvasItem *item) {
@@ -3155,6 +3313,7 @@ coot::rama_plot::write_svg(std::string &file_name, GooCanvasItem *item) {
 
 #endif
 }
+#endif
 
 void
 coot::rama_plot::open_pdb_file(const std::string &file_name) {
@@ -3399,6 +3558,8 @@ coot::rama_plot::update_kleywegt_plot() {
 void
 coot::rama_plot::debug() const { 
 
+#ifdef HAVE_GOOCANVAS
+
    std::cout << std::endl;
    std::cout << "ramadebug: imol is " << imol << std::endl;
    std::cout << "ramadebug: canvas is " << canvas << std::endl;
@@ -3408,6 +3569,7 @@ coot::rama_plot::debug() const {
    std::cout << "ramadebug: is phi_psi_sets.size " << phi_psi_model_sets.size() << std::endl;
    std::cout << "ramadebug: allow_seqnum_offset_flag " << allow_seqnum_offset_flag << std::endl;
    //    std::cout << "ramadebug: is " << << std::endl;
+#endif
 }
 
 void

@@ -1529,8 +1529,8 @@ int do_ramachandran_plot_differences_by_widget(GtkWidget *w) {
       } else {
 	 std::cout << "INFO:: incomprehensible molecule/chain selection" << std::endl;
 	 std::string s = "Can't make sense of chain selection.  Try again?";
-	 GtkWidget *w = wrapped_nothing_bad_dialog(s);
-	 gtk_widget_show(w);
+	 GtkWidget *nbd = wrapped_nothing_bad_dialog(s);
+	 gtk_widget_show(nbd);
       }
    }
    return istat;
@@ -2461,8 +2461,34 @@ SCM all_molecule_ramachandran_score(int imol) {
       SCM c_scm = scm_double2num(rs.score_non_sec_str);
       SCM d_scm = SCM_MAKINUM(rs.n_residues_non_sec_str());
       SCM e_scm = SCM_MAKINUM(rs.n_zeros);
-      r = SCM_LIST5(a_scm, b_scm, c_scm, d_scm, e_scm);
-   } 
+      SCM by_residue_scm = SCM_EOL;
+      for (std::size_t ii=0; ii<rs.scores.size(); ii++) {
+	 SCM residue_spec_scm = residue_spec_to_scm(rs.scores[ii].res_spec);
+	 SCM d_scm = scm_double2num(rs.scores[ii].score);
+	 SCM phi_scm = scm_double2num(rs.scores[ii].phi_psi.phi());
+	 SCM psi_scm = scm_double2num(rs.scores[ii].phi_psi.psi());
+	 SCM phi_psi_scm = SCM_LIST2(phi_scm, psi_scm);
+	 if (false)
+	    std::cout << "here with residue pointers "
+		      << rs.scores[ii].residue_prev << " "
+		      << rs.scores[ii].residue_this << " "
+		      << rs.scores[ii].residue_next << " "
+		      << std::endl;
+	 if (rs.scores[ii].residue_prev &&
+	     rs.scores[ii].residue_this &&
+	     rs.scores[ii].residue_next) {
+	    SCM res_names_scm = SCM_LIST3(scm_makfrom0str(rs.scores[ii].residue_prev->GetResName()),
+					  scm_makfrom0str(rs.scores[ii].residue_this->GetResName()),
+					  scm_makfrom0str(rs.scores[ii].residue_next->GetResName()));
+	    SCM residue_results_scm = SCM_LIST4(phi_psi_scm, residue_spec_scm, d_scm, res_names_scm);
+	    by_residue_scm = scm_cons(residue_results_scm, by_residue_scm);
+	 } else {
+	    SCM residue_results_scm = SCM_LIST3(phi_psi_scm, residue_spec_scm, d_scm);
+	    by_residue_scm = scm_cons(residue_results_scm, by_residue_scm);
+	 }
+      }
+      r = SCM_LIST6(a_scm, b_scm, c_scm, d_scm, e_scm, by_residue_scm);
+   }
 
    return r;
 } 
@@ -2476,18 +2502,49 @@ PyObject *all_molecule_ramachandran_score_py(int imol) {
       coot::rama_score_t rs = graphics_info_t::molecules[imol].get_all_molecule_rama_score();
       PyObject *a_py = PyFloat_FromDouble(rs.score);
       PyObject *b_py = PyInt_FromLong(rs.n_residues());
-      PyObject *c_py = PyInt_FromLong(rs.n_zeros);
-      r = PyList_New(3);
+      PyObject *c_py = PyFloat_FromDouble(rs.score_non_sec_str);
+      PyObject *d_py = PyInt_FromLong(rs.n_residues_non_sec_str());
+      PyObject *e_py = PyInt_FromLong(rs.n_zeros);
+      PyObject *info_by_residue_py = PyList_New(rs.scores.size());
+      for (std::size_t ii=0; ii<rs.scores.size(); ii++) {
+	 PyObject *info_for_residue_py = PyList_New(4);
+	 PyObject *residue_spec_py = residue_spec_to_py(rs.scores[ii].res_spec);
+	 if (rs.scores[ii].residue_prev &&
+	     rs.scores[ii].residue_this &&
+	     rs.scores[ii].residue_next) {
+	    PyObject *phi_py = PyFloat_FromDouble(rs.scores[ii].phi_psi.phi());
+	    PyObject *psi_py = PyFloat_FromDouble(rs.scores[ii].phi_psi.psi());
+	    PyObject *phi_psi_py = PyList_New(2);
+	    PyObject *res_names_py = PyList_New(3);
+	    PyList_SetItem(phi_psi_py, 0, phi_py);
+	    PyList_SetItem(phi_psi_py, 1, psi_py);
+	    PyList_SetItem(res_names_py, 0, PyString_FromString(rs.scores[ii].residue_prev->GetResName()));
+	    PyList_SetItem(res_names_py, 1, PyString_FromString(rs.scores[ii].residue_this->GetResName()));
+	    PyList_SetItem(res_names_py, 2, PyString_FromString(rs.scores[ii].residue_next->GetResName()));
+	    PyList_SetItem(info_for_residue_py, 0, phi_psi_py);
+	    PyList_SetItem(info_for_residue_py, 1, residue_spec_py);
+	    PyList_SetItem(info_for_residue_py, 2, a_py);
+	    PyList_SetItem(info_for_residue_py, 3, res_names_py);
+	    PyList_SetItem(info_by_residue_py, ii, info_for_residue_py);
+	 } else {
+	    PyList_SetItem(info_by_residue_py, ii, PyInt_FromLong(-1)); // shouldn't happen
+	 }
+      }
+      r = PyList_New(6);
       PyList_SetItem(r, 0, a_py);
       PyList_SetItem(r, 1, b_py);
       PyList_SetItem(r, 2, c_py);
-   } 
+      PyList_SetItem(r, 3, d_py);
+      PyList_SetItem(r, 4, e_py);
+      PyList_SetItem(r, 5, info_by_residue_py);
+   }
 
    if (PyBool_Check(r)) {
      Py_INCREF(r);
    }
+
    return r;
-} 
+}
 
 PyObject *all_molecule_ramachandran_region_py(int imol) {
 

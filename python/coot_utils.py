@@ -116,7 +116,10 @@ def using_active_atom(*funcs):
                        "aa_res_no":    active_atom[2],
                        "aa_ins_code":  active_atom[3],
                        "aa_atom_name": active_atom[4],
-                       "aa_alt_conf":  active_atom[5]}
+                       "aa_alt_conf":  active_atom[5],
+                       "aa_res_spec":  [active_atom[1],  # chain_id
+                                        active_atom[2],  # res_no
+                                        active_atom[3]]} # ins_code
             
             if isinstance(item, list):
                 arg_ls = []
@@ -166,7 +169,7 @@ def using_active_atom(*funcs):
 #
 class NoBackups:
     """'Macro' to tidy up a a setup of functions to be run with no backup
-    for a particular molecule.
+    for a particular molecule (default imol=0).
 
     use with 'with', e.g.:
     
@@ -175,7 +178,7 @@ class NoBackups:
         accept_regularizement()
     """
     
-    def __init__(self, imol):
+    def __init__(self, imol=0):
         self.imol = imol
     def __enter__(self):
         self.b_state = backup_state(self.imol)
@@ -224,10 +227,17 @@ class UsingActiveAtom:
     
     > with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code, aa_atom_name, aa_alt_conf]:
           refine_zone(aa_imol, aa_chain_id, aa_res_no-2, aa_res_no+2, aa_ins_code)
+
+    alternative usage to get res_spec as well
+
+    > with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code, aa_atom_name, aa_alt_conf, aa_res_spec]:
+          refine_zone(aa_imol, aa_chain_id, aa_res_no-2, aa_res_no+2, aa_ins_code)
+
     """
     
-    def __init__(self):
+    def __init__(self, with_res_spec=False):
         self.no_residue = False
+        self.res_spec = with_res_spec
         pass
     def __enter__(self):
         self.active_atom = active_residue()
@@ -242,7 +252,13 @@ class UsingActiveAtom:
             ins_code  = self.active_atom[3]
             atom_name = self.active_atom[4]
             alt_conf  = self.active_atom[5]
-            return [imol, chain_id, res_no, ins_code, atom_name, alt_conf]
+            res_spec  = [self.active_atom[1],  # chain_id
+                         self.active_atom[2],  # res_no
+                         self.active_atom[3]] # ins_code
+            if self.res_spec:
+                return [imol, chain_id, res_no, ins_code, atom_name, alt_conf, res_spec]
+            else:
+                return [imol, chain_id, res_no, ins_code, atom_name, alt_conf]
     def __exit__(self, type, value, traceback):
         if (self.no_residue):
             # internal calling of exit, ignore errors
@@ -353,7 +369,16 @@ def add_hydrogens_using_refmac_inner(imol, in_file_name, out_file_name):
 # if (mode == DELETED):
 #      display/print "Something was deleted"
 #
+# This is a global variable now, so that it can be used within other functions
+#
+global post_manipulation_script
 post_manipulation_script = False
+
+# similar for the active residue
+# do something based on the active residue (presumably)
+#
+global post_set_rotation_centre_script
+post_set_rotation_centre_script = False
 
 # return a boolean
 #
@@ -434,7 +459,7 @@ def most_recently_created_file(glob_str, dir):
 # Convert a residue_spec to an mmdb atom selection string.
 # FIXME:: to be tested
 #
-def residue_spec2atom_selection_string(centre_residue_spec):
+def residue_spec_to_atom_selection_string(centre_residue_spec):
     ret = "//" + centre_residue_spec[0] + \
           "/" + str(centre_residue_spec[1])
     return ret
@@ -463,7 +488,19 @@ def residue_atom2position(ra):
     else:
         return ra[2]
 
-def residue_spec2chain_id(rs):
+# start using new convention, maybe. could do some tests if atom name and
+# alt conf is not False
+# residue_info atom needs other parameters to make a spec for an atom
+def residue_atom_to_atom_spec(ra, chain_id, res_no, ins_code):
+    if not isinstance(ra, list):
+        return False
+    else:
+        return [chain_id, res_no, ins_code,
+                residue_atom2atom_name(ra),
+                residue_atom2alt_conf(ra)]
+
+
+def residue_spec_to_chain_id(rs):
     if not isinstance(rs, list):
         return False
     else:
@@ -475,7 +512,7 @@ def residue_spec2chain_id(rs):
             else:
                 return False
 
-def residue_spec2res_no(rs):
+def residue_spec_to_res_no(rs):
     if not isinstance(rs, list):
         return False
     else:
@@ -486,7 +523,7 @@ def residue_spec2res_no(rs):
                 return rs[2]
         return False
             
-def residue_spec2ins_code(rs):
+def residue_spec_to_ins_code(rs):
     if not isinstance(rs, list):
         return False
     else:
@@ -497,7 +534,7 @@ def residue_spec2ins_code(rs):
                 return rs[3]
         return False
 
-def atom_spec2imol(atom_spec):
+def atom_spec_to_imol(atom_spec):
     import types
     if not (isinstance(atom_spec, types.ListType)):
         return False
@@ -508,11 +545,12 @@ def atom_spec2imol(atom_spec):
             return atom_spec[1]
         return False
 
-def residue_spec2residue_name(imol, spec):
+def residue_spec_to_residue_name(imol, spec):
     return residue_name(imol,
                         spec[1],
                         spec[2],
                         spec[3])
+
 
 # Return a list of molecules that are maps
 # 
@@ -542,6 +580,17 @@ def shelx_molecule_qm(imol):
     else:
         return False
 
+# return an int. 0 means no, 1 means yes, -1 on error
+#
+is_protein_chain_qm = is_protein_chain_p
+
+# Is a nucleotide chain?
+# Now return a boolean
+#
+def is_nucleotide_chain_qm(imol, chain_id):
+    return is_nucleotide_chain_p(imol, chain_id) == 1
+
+    
 # Set the virtual trackball behaviour.
 #
 # trackball @var{type} is a string: either 'flat' or 'spherical-surface'
@@ -729,12 +778,15 @@ gtk_thread_return_value = None
 #       data_list is ["HEAD","END"]
 #       log_file_name is "refmac.log"      
 #       screen_flag True/False to display or not in shell window
+#       local_env can be set to change the environment variables the
+#                 command is run in.
 # 
 # Return the exist status e.g. 0 or 1. Or False if cmd not found.
 #
 # uses os.popen if python version < 2.4 otherwise subprocess
 # 
-def popen_command(cmd, args, data_list, log_file, screen_flag=False):
+def popen_command(cmd, args, data_list, log_file, screen_flag=False,
+                  local_env=None):
 
     import sys, string, os
     
@@ -756,9 +808,12 @@ def popen_command(cmd, args, data_list, log_file, screen_flag=False):
             log = open(log_file, 'w')
             cmd_args = [cmd_execfile] + args
             if (screen_flag):
-                process = subprocess.Popen(cmd_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                process = subprocess.Popen(cmd_args, stdin=subprocess.PIPE,
+                                           stdout=subprocess.PIPE,
+                                           env=local_env)
             else:
-                process = subprocess.Popen(cmd_args, stdin=subprocess.PIPE, stdout=log)
+                process = subprocess.Popen(cmd_args, stdin=subprocess.PIPE,
+                                           stdout=log, env=local_env)
 
             for data in data_list:
                 process.stdin.write(data + "\n")
@@ -912,7 +967,7 @@ def every_nth(ls, n):
 #
 def get_atom_from_residue(atom_name, residue_atoms, alt_conf):
 
-    """Get atom_info fomr a residue.
+    """Get atom_info from a residue.
     residue_atoms must be a list
     """
     
@@ -925,6 +980,14 @@ def get_atom_from_residue(atom_name, residue_atoms, alt_conf):
     # print "BL WARNING:: no atom name %s found in residue" %atom_name
     return False # no residue name found fail save
     
+#
+def get_atom_from_spec(imol, atom_spec):
+    return get_atom(imol,
+                    atom_spec_to_chain_id(atom_spec),
+                    atom_spec_to_res_no(atom_spec),
+                    atom_spec_to_ins_code(atom_spec),
+                    atom_spec_to_atom_name(atom_spec),
+                    atom_spec_to_alt_loc(atom_spec))
 
 # return atom info or False (if atom not found).
 #
@@ -938,6 +1001,65 @@ def get_atom(imol, chain_id, resno, ins_code, atom_name, alt_conf_internal=""):
         ret = get_atom_from_residue(atom_name, res_info, alt_conf_internal)
         return ret
 
+# not to be confused with residue_atom_to_atom_name
+# (which uses the output of residue_info)
+#
+# extraction function
+def atom_spec_to_chain_id(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[0]
+    else:
+        return False
+
+# extraction function
+def atom_spec_to_res_no(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[1]
+    else:
+        return False
+
+# extraction function
+def atom_spec_to_ins_code(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[2]
+    else:
+        return False
+    
+# extraction function
+def atom_spec_to_atom_name(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[3]
+    else:
+        return False
+    
+# extraction function
+def atom_spec_to_alt_loc(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[4]
+    else:
+        return False
+    
+    
 #
 def residue_info_dialog_displayed_qm():
     if (residue_info_dialog_is_displayed == 1):
@@ -1206,8 +1328,9 @@ def toggle_active_mol(imol):
 
 # return a python (list) representation of molecule imol, or False if we can't
 # do it (imol is a map, say)
+# optional arg: chain
 #
-def python_representation(imol):
+def python_representation(imol, chains=[]):
 
     if (not valid_model_molecule_qm(imol)):
         return False
@@ -1219,7 +1342,10 @@ def python_representation(imol):
             ins_code = insertion_code_from_serial_number(imol, chain_id, n)
             return [res_no, ins_code, res_name, residue_info(imol, chain_id, res_no, ins_code)]
 
-        ls = [map(lambda chain_id: [chain_id, map(lambda serial_number: r_info(imol, chain_id, serial_number), range(chain_n_residues(chain_id, imol)))], chain_ids(imol))]
+        if not chains:
+            # use all
+            chains = chain_ids(imol)
+        ls = [map(lambda chain_id: [chain_id, map(lambda serial_number: r_info(imol, chain_id, serial_number), range(chain_n_residues(chain_id, imol)))], chains)]
         return ls
 
 # reorder chains
@@ -1302,9 +1428,9 @@ def transform_map(*args):
     return ret
 
 
-# return then NCS master of the first molecule that has ncs.
+# return the NCS master of the first molecule that has NCS.
 # 
-# return "" on fail to find an ncs chain
+# return "" on fail to find an NCS chain
 #
 def get_first_ncs_master_chain():
 
@@ -1489,8 +1615,19 @@ def atom_specs(imol, chain_id, resno, ins_code, atom_name, alt_conf):
 
     return atom_info_string(imol, chain_id, resno, ins_code, atom_name, alt_conf)
 
-def atom_spec2residue_spec(atom_spec):
+# I don't like this function name
+def atom_spec_to_residue_spec(atom_spec):
     return atom_spec[2:][0:3]
+
+def atom_spec_to_residue_spec(atom_spec):
+    l = len(atom_spec)
+    if l == 5:
+        return atom_spec[:3]
+    else:
+       if l == 6: # active_residue give an atom-spec prepended by the imol
+          return atom_spec[1:][:3]
+       else:
+          return None
 
 # return a guess at the map to be refined (usually called after
 # imol_refinement_map returns -1)
@@ -1897,9 +2034,68 @@ def atoms_with_zero_occ(imol):
 
     return r
 
+# not to be confused with residue_atom_to_atom_name
+# (which uses the output of residue_info)
+#
+# extraction function
+#
+def atom_spec_to_chain_id(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[0]
+    else:
+        return False
+
+# extraction function
+def atom_spec_to_res_no(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[1]
+    else:
+        return False
+
+# extraction function
+def atom_spec_to_ins_code(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[2]
+    else:
+        return False
+    
+# extraction function
+def atom_spec_to_atom_name(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[3]
+    else:
+        return False
+    
+# extraction function
+def atom_spec_to_alt_loc(atom_spec):
+    # atom_spec example ["A", 7, "", " SG ", ""]
+    ret = False
+    if not atom_spec:
+        return False
+    if (len(atom_spec) == 5):
+        return atom_spec[4]
+    else:
+        return False    
 
 # simple extraction function
-def res_spec2chain_id(res_spec):
+#
+def res_spec_to_chain_id(res_spec):
 
     """simple extraction function"""
 
@@ -1912,7 +2108,7 @@ def res_spec2chain_id(res_spec):
     return False
 
 # simple extraction function
-def res_spec2res_no(res_spec):
+def res_spec_to_res_no(res_spec):
 
     """simple extraction function"""
 
@@ -1925,7 +2121,7 @@ def res_spec2res_no(res_spec):
     return False
 
 # simple extraction function
-def res_spec2ins_code(res_spec):
+def res_spec_to_ins_code(res_spec):
 
     """simple extraction function"""
 
@@ -1944,7 +2140,7 @@ def res_spec2ins_code(res_spec):
 # Choose an atom that is called " CA ".  Failing that choose the
 # first atom.
 # 
-def residue_spec2atom_for_centre(imol, chain_id, res_no, ins_code):
+def residue_spec_to_atom_for_centre(imol, chain_id, res_no, ins_code):
 
     from types import ListType
     # residue-info can return False
@@ -1968,8 +2164,8 @@ def residue_spec2atom_for_centre(imol, chain_id, res_no, ins_code):
 
 def set_go_to_atom(res_spec):
     set_go_to_atom_chain_residue_atom_name(
-        res_spec2chain_id(res_spec),
-        res_spec2res_no(res_spec),
+        res_spec_to_chain_id(res_spec),
+        res_spec_to_res_no(res_spec),
         " CA ")
 
     
@@ -2051,7 +2247,7 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
         else:
             print "we have dict and model for tlc already"
             return have_tlc_molecule
-    
+
     #
     def mutate_it():
         imol_ligand = get_monomer_and_dictionary(tlc)
@@ -2068,15 +2264,23 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
             print "INFO:: new_chain_id_info: ", new_chain_id_info
             merge_status = new_chain_id_info[0]
             if merge_status == 1:
-                new_chain_id = new_chain_id_info[1]
-                change_residue_number(imol, new_chain_id, 1, "", resno, "")
-                change_chain_id(imol, new_chain_id, chain_id_in, 1, resno, resno)
+                new_res_spec = new_chain_id_info[1]
+                new_chain_id = residue_spec_to_chain_id(new_res_spec)
+                print "BL DEBUG:: new res spec", new_res_spec
+                print "BL DEBUG:: change_residue_number to", resno
+                change_residue_number(imol, new_chain_id,
+                                      residue_spec_to_res_no(new_res_spec),
+                                      residue_spec_to_ins_code(new_res_spec),
+                                      resno, "")
+                if not (new_chain_id == chain_id_in):
+                    change_chain_id(imol, new_chain_id, chain_id_in, 1, resno,
+                                    resno)
 
                 replacement_state = refinement_immediate_replacement_state()
                 imol_map = imol_refinement_map()
                 set_refinement_immediate_replacement(1)
                 if imol_map == -1:
-                    regularize_zone(imol, chain_id_in, resno, resno, "")	
+                    regularize_zone(imol, chain_id_in, resno, resno, "")
                 else:
                     spin_atoms = [" P  ", " O1P", " O2P", " O3P"]
                     phos_dir = {
@@ -2109,18 +2313,10 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
     imol_map = imol_refinement_map()
     if (imol_map == -1):
         map_mols = map_molecule_list()
-        if not map_mols:
-            print "BL WARNING:: no valid maps around! Cannot mutate."
+        if len(map_mols) > 1:
+            show_select_map_dialog()
+            mutate_it()
         else:
-            # BL says:: I dunno how to wait for the input from map selection since there is no return
-            # waiting for mouse/keyboard input may be an option but no curses on windows, maybe
-            # fix later, for now we use the first map
-            #			show_select_map_dialog()
-            if len(map_mols) > 1:
-                print "BL INFO:: we use the first map! If you wanna use another one, please select from Model/Fit/Refine"
-            else:
-                print "BL INFO:: no refinement map set, will set first one for you!"
-            set_imol_refinement_map(map_mols[0])
             mutate_it()
     else:
         mutate_it()
@@ -2137,7 +2333,7 @@ def phosphorylate_active_residue():
             return n
 
 	active_atom = active_residue()
-        try: 
+        try:
 	    imol       = active_atom[0]
 	    chain_id   = active_atom[1]
 	    resno      = active_atom[2]
@@ -2458,7 +2654,7 @@ def hilight_binding_site(imol, centre_residue_spec, hilight_colour, radius):
     if (valid_model_molecule_qm(imol)):
 
         other_residues = residues_near_residue(imol, centre_residue_spec, radius)
-        atom_sel_str = residue_spec2atom_selection_string(centre_residue_spec)
+        atom_sel_str = residue_spec_to_atom_selection_string(centre_residue_spec)
 
         imol_new = new_molecule_by_atom_selection(imol, atom_sel_str)
         bb_type = 1
@@ -2714,6 +2910,27 @@ def load_annotations(file_name):
                 place_text(*(ann + [0]))
             graphics_draw()
 
+def remove_annotation_here(rad=1.5):
+    args = rotation_centre() + [rad]
+    handle = text_index_near_position(*args)
+    if handle > -1:
+        remove_text(handle)
+    else:
+        txt = "BL WARNING:: no annotation found near here (%s A radius)\n" %rad
+        txt += "Not removing anything!"
+        info_dialog(txt)
+
+def remove_annotation_at_click(rad=1.5):
+    def remove_here(*args):
+        # atom_specs for user_defined_clicks have 7 args!
+        # includes model number now too!
+        # maybe there should be a atom_spec including model no!?
+        atom_spec = atom_specs(*args[0][1:7])
+        coords = atom_spec[3:]
+        handle = text_index_near_position(*(coords + [rad]))
+        if handle > -1:
+            remove_text(handle)
+    user_defined_click(1, remove_here)
 
 # ---------- updating ---------------------
 
@@ -3367,6 +3584,9 @@ def file_to_preferences(filename):
                             " already exists. Not overwritten."
                         add_status_bar_text(s)
                     else:
+                        # check the directory first
+                        if not os.path.isdir(pref_dir):
+                            make_directory_maybe(pref_dir)
                         shutil.copyfile(ref_py, pref_file)
                         if os.path.isfile(pref_file):
                             execfile(pref_file, globals())
@@ -3475,7 +3695,8 @@ def find_exe(program_name, *args, **kwargs):
 
     global search_disk
     search_disk = None
-    info = True
+    info = True  # Yeah... no.
+    info = False
 
     # we shall check for full path names first
     if (os.path.isfile(program_name)):
@@ -3566,7 +3787,10 @@ def find_exe(program_name, *args, **kwargs):
         no_search = False
     search_disk = False
     if (use_gui_qm and not no_search):
-        search_disk = search_disk_dialog(program_name, path_ls)
+        try:
+            search_disk = search_disk_dialog(program_name, path_ls)
+        except NameError as e:
+            pass
     if search_disk:
         # search everywhere
         for drive in drives_ls:
@@ -3783,7 +4007,11 @@ def isNumber(num):
     returns True if number, otherwise False
     """
     import numbers
-    return isinstance(num, numbers.Number)
+    if isinstance(num, bool):
+        # bool are numbers and give "False" results
+        return False
+    else:
+        return isinstance(num, numbers.Number)
 
 
 # function to merge multiple solvent chains
@@ -3798,7 +4026,24 @@ def merge_solvent_chains(imol):
         if (is_solvent_chain_qm(imol, chain_id)):
             solvent_chains.append(chain_id)
 
-    # now renumber
+    # now check for overlapping waters and remove
+    # maybe this should rather be done in general when merging molecules
+    # as well.
+    for chain_id in solvent_chains:
+        residue_ls = python_representation(imol, [chain_id])[0][0][1]
+        for res in residue_ls:
+            res_spec = [chain_id, res[0], res[1]]
+            if residue_exists_qm(imol, *res_spec):
+                near_residues = residues_near_residue(imol, res_spec, 0.05)
+                if near_residues:
+                    # delete
+                    for del_res in near_residues:
+                        delete_residue_by_spec(imol, del_res)
+
+    # renumber chains after removal:
+    renumber_waters(imol)
+
+    # now merge and renumber
     if (len(solvent_chains) > 1):
         master_chain = solvent_chains[0]
         last_prev_water = chain_n_residues(master_chain, imol)
@@ -3811,7 +4056,9 @@ def merge_solvent_chains(imol):
             change_chain_id(imol, chain_id, master_chain, 1,
                             new_start, new_end)
             last_prev_water = new_end
-            
+
+          
+    
 
 # helper to comvert functions to strings
 def cmd2str(*args):
@@ -4024,31 +4271,31 @@ def setup_ccp4():
             CCP4_MASTER = os.path.abspath(os.path.join(ccp4_dir, os.pardir))
             # not all required I guess!? They should be set anyway
             ccp4_env_vars = {
-                "CCP4_SCR": ["C:\ccp4temp"],
-                "CCP4I_TCLTK": [CCP4_MASTER, "TclTk84\bin"],
-                "CBIN": [CCP4, "\bin"],
-                "CLIB": [CCP4, "\lib"],
-                "CLIBD": [CCP4, "\lib\data"],
-                "CEXAM": [CCP4, "\examples"],
-                "CHTML": [CCP4, "\html"],
-                "CINCL": [CCP4, "\include"],
-                "CCP4I_TOP": [CCP4, "\share\ccp4i"],
-                "CLIBD_MON": [CCP4, "\lib\data\monomers\\"],
-                "MMCIFDIC": [CCP4, "\lib\ccp4\cif_mmdic.lib"],
-                "CRANK": [CCP4, "\share\ccp4i\crank"],
+                "CCP4_SCR": ["C:\\ccp4temp"],
+                "CCP4I_TCLTK": [CCP4_MASTER, "TclTk84", "bin"],
+                "CBIN": [CCP4, "bin"],
+                "CLIB": [CCP4, "lib"],
+                "CLIBD": [CCP4, "lib", "data"],
+                "CEXAM": [CCP4, "examples"],
+                "CHTML": [CCP4, "html"],
+                "CINCL": [CCP4, "include"],
+                "CCP4I_TOP": [CCP4, "share", "ccp4i"],
+                "CLIBD_MON": [CCP4, "lib", "data", "monomers"],
+                "MMCIFDIC": [CCP4, "lib", "ccp4", "cif_mmdic.lib"],
+                "CRANK": [CCP4, "share", "ccp4i", "crank"],
                 "CCP4_OPEN": ["unknown"],
                 "GFORTRAN_UNBUFFERED_PRECONNECTED": ["Y"]
                 }
             for env_var in ccp4_env_vars:
                 env_dir = os.getenv(env_var)
                 if not env_dir:
-                    # variable not set, so let do so if exists
+                    # variable not set or empty, so let do so if exists
+                    key = ccp4_env_vars[env_var]
                     if len(key) > 1:
-                        if os.path.isdir(env_dir):
-                            # have dir so set variable
-                            key = ccp4_env_vars[env_var]
-                            value = os.path.join(key)
+                        # dir should be:
+                        value = os.path.join(*key)
                             #print "BL DEBUG:: set env variable to", env_var, value
+                        if os.path.isdir(value):
                             os.environ[env_var] = value
                     else:
                         value = key[0]
@@ -4064,9 +4311,21 @@ def setup_ccp4():
             os.environ["PATH"] = os.pathsep.join(path_list)
             #print "BL DEBUG:: PATH set to", os.environ["PATH"]
 
+# Moved from gui_add_linked_cho.py to make a global function.
+#
+def delete_residue_by_spec(imol, spec):
+    delete_residue(imol,
+                   residue_spec_to_chain_id(spec),
+                   residue_spec_to_res_no(spec),
+                   residue_spec_to_ins_code(spec))
+
+
+
 # Required if there is no ccp4 in PATH otherwise, e.g. wont find libcheck
 # for jligand
-setup_ccp4()
+#
+# 20180603-PE No. This should not be here. Put it it JLigand setup.
+# setup_ccp4()
 
 # we work with globals here as to use the function later and not have to bother
 # with globals there any more
@@ -4143,6 +4402,61 @@ def rename_alt_confs_active_residue():
         inscode  = active_atom[3]
 
         rename_alt_confs(imol, chain_id, resno, inscode)
+
+# Moved from gui_add_linked_cho.py to make a global function.
+def delete_residue_by_spec(imol, spec):
+    delete_residue(imol,
+                   residue_spec_to_chain_id(spec),
+                   residue_spec_to_res_no(spec),
+                   residue_spec_to_ins_code(spec))
+# Util function to pipe Coot C stdout to a file (Note: python stdout doesnt
+# touch C stdout, therefore this is needed. Of course could just tee out
+# all output, but that may not always be required).
+#
+# based on https://stackoverflow.com/questions/4675728/redirect-stdout-to-a-file-in-python
+#
+# use either e.g. with open file fn (fn= open(...)):
+#
+# with stdout_redirected(fn):
+#   do some coot things
+#
+# or:
+# with open('output.txt', 'w') as f, stdout_redirected(f):
+#  some coot commands
+#
+
+import os
+import sys
+from contextlib import contextmanager
+
+def fileno(file_or_fd):
+    fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
+    if not isinstance(fd, int):
+        raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
+    return fd
+
+@contextmanager
+def stdout_redirected(to=os.devnull, stdout=None):
+    if stdout is None:
+       stdout = sys.stdout
+
+    stdout_fd = fileno(stdout)
+    # copy stdout_fd before it is overwritten
+    #NOTE: `copied` is inheritable on Windows when duplicating a standard stream
+    with os.fdopen(os.dup(stdout_fd), 'wb') as copied: 
+        stdout.flush()  # flush library buffers that dup2 knows nothing about
+        try:
+            os.dup2(fileno(to), stdout_fd)  # $ exec >&to
+        except ValueError:  # filename
+            with open(to, 'wb') as to_file:
+                os.dup2(to_file.fileno(), stdout_fd)  # $ exec > to
+        try:
+            yield stdout # allow code to be run with the redirected stdout
+        finally:
+            # restore stdout to its previous value
+            #NOTE: dup2 makes stdout_fd inheritable unconditionally
+            stdout.flush()
+            os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
 
 
 ####### Back to Paul's scripting.

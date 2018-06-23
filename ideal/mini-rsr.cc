@@ -61,12 +61,14 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
 #include <mmdb2/mmdb_manager.h>
+
+#include "utils/coot-utils.hh"
 #include "coords/mmdb-extras.h"
 #include "coords/mmdb.h"
 
 #include "simple-restraint.hh"
+#include "crankshaft.hh"
 
 // for debugging (the density_around_point function)
 #include "coot-utils/coot-map-utils.hh"
@@ -98,6 +100,8 @@ public:
       use_torsion_targets = false;
       tabulate_distortions_flag = false;
       correlations = false;
+      do_crankshaft = false;
+      crankshaft_n_peptides = 7;
    }
    bool is_good;
    bool is_debug_mode; 
@@ -108,9 +112,11 @@ public:
    bool use_trans_peptide_restraints;
    bool tabulate_distortions_flag;
    bool correlations;
+   bool do_crankshaft;
    int resno_start;
    int resno_end;
    int residues_around;
+   int crankshaft_n_peptides;
    float map_weight; 
    float radius; 
    std::string chain_id;
@@ -120,6 +126,8 @@ public:
    std::string map_file_name;
    std::string  input_pdb_file_name;
    std::string output_pdb_file_name;
+   std::vector<std::string> dictionary_file_names;
+   std::vector<std::string> extra_restraints_file_names;
    std::vector<coot::residue_spec_t> single_residue_specs; // not used as yet.
 };
 
@@ -171,6 +179,7 @@ void show_usage() {
    std::cout << "Usage: " << prog_name << "\n"
 	     << "       --pdbin pdb-in-filename\n"
 	     << "       --hklin mtz-filename\n"
+	     << "       --dictin cif-dictionary-filename\n"
 	     << "       --f f_col_label\n"
 	     << "       --phi phi_col_label\n"
 	     << "       --pdbout output-filename\n"
@@ -178,6 +187,7 @@ void show_usage() {
 	     << "         --resno-end   resno_high] \n"
 	     << "       or [ --residues-around res_no ]\n"
 	     << "       or [ --residue-number resno ]\n"
+	     << "       or [ --res-no resno ]\n"
 	     << "       --chain-id chain-id\n"
 	     << "       --weight w (weight of map gradients, default 60)\n"
 	     << "       --radius (default 4.2)\n"
@@ -186,7 +196,9 @@ void show_usage() {
 	     << "       --no-planar-peptide-restraints\n"
 	     << "       --no-trans-peptide-restraints\n"
 	     << "       --tabulate-distortions\n"
+	     << "       --extra-restraints extra-restraints-file-name\n"
 	     << "       --correlations\n"
+	     << "       --crankshaft\n"
 	     << "       --version\n"
 	     << "       --debug\n"
 	     << "\n"
@@ -195,6 +207,25 @@ void show_usage() {
 	     << std::endl;
 }
 
+void
+execute_crankshaft(const coot::residue_spec_t &rs, int n_peptides, const clipper::Xmap<float> &xmap,
+	   mmdb::Manager *mol, float map_weight, int n_samples, const std::string &pdb_out_file_name) {
+
+   int n_solutions = 1; // just the best
+
+   std::vector<mmdb::Manager *> v =
+      coot::crankshaft::crank_refine_and_score(rs, n_peptides, xmap, mol, map_weight, n_samples,
+					       n_solutions);
+
+   if (v.size() == 1) {
+      int err = v[0]->WritePDBASCII(pdb_out_file_name.c_str());
+      if (! err)
+	 std::cout << "INFO:: wrote " << pdb_out_file_name << std::endl;
+   } else {
+      std::cout << "WARNING:: No crankshaft solutions" << std::endl;
+   }
+
+}
 
 int
 main(int argc, char **argv) {
@@ -241,8 +272,8 @@ main(int argc, char **argv) {
 
       if (inputs.is_good) { 
 
-	 string pdb_file_name(inputs.input_pdb_file_name);
-	 bool map_is_good = 0;
+	 std::string pdb_file_name(inputs.input_pdb_file_name);
+	 bool map_is_good = false; // currently
 
 	 // if pdb_file_name does not exist -> crash?
 	 atom_selection_container_t asc = get_atom_selection(pdb_file_name, true, true);
@@ -288,8 +319,25 @@ main(int argc, char **argv) {
 	    std::cout << "INFO:: using weight " << map_weight << std::endl;
 	 }
 
-	 if (map_is_good) { 
+	 if (map_is_good) {
 	    std::string altloc("");
+
+	    // load up the protein_geometry with user-supplied dictionaries
+	    int read_number = 55;
+	    for (std::size_t i=0; i<inputs.dictionary_file_names.size(); i++) {
+	       coot::read_refmac_mon_lib_info_t mli = geom.init_refmac_mon_lib(inputs.dictionary_file_names[i],
+									       read_number++,
+									       coot::protein_geometry::IMOL_ENC_ANY);
+	    }
+
+
+	    coot::extra_restraints_t extra_restraints;
+	    for (unsigned int jj=0; jj<inputs.extra_restraints_file_names.size(); jj++) {
+	       const std::string &file_name = inputs.extra_restraints_file_names[jj];
+	       coot::extra_restraints_t r;
+	       r.read_refmac_extra_restraints(file_name);
+	       extra_restraints.add_restraints(r);
+	    }
 
 	    // the bool is to annotate for "fixed" residue - here nothing is fixed.
 	    // 
@@ -305,9 +353,9 @@ main(int argc, char **argv) {
 	       if (res_ref) { 
 		  std::vector<mmdb::Residue *> residues =
 		     coot::residues_near_residue(res_ref, asc.mol, inputs.radius);
-		  local_residues.push_back(std::pair<bool,mmdb::Residue *>(true, res_ref));
+		  local_residues.push_back(std::pair<bool,mmdb::Residue *>(false, res_ref));
 		  for (unsigned int i=0; i<residues.size(); i++) {
-		     std::pair<bool, mmdb::Residue *> p(true, residues[i]);
+		     std::pair<bool, mmdb::Residue *> p(false, residues[i]);
 		     local_residues.push_back(p);
 		  }
 	       }
@@ -344,97 +392,108 @@ main(int argc, char **argv) {
 	    if (inputs.use_planar_peptide_restraints)
 	       geom.add_planar_peptide_restraint();
 
-	    std::vector<mmdb::Link> links;
-	    coot::restraints_container_t restraints(local_residues,
-						    links,
-						    geom,
-						    asc.mol,
-						    fixed_atom_specs);
+	    if (inputs.do_crankshaft) {
+	       coot::residue_spec_t res_spec(inputs.chain_id, inputs.resno_start);
+	       execute_crankshaft(res_spec, inputs.crankshaft_n_peptides, xmap, asc.mol,
+			  inputs.map_weight, -1, inputs.output_pdb_file_name);
+	    } else {
+
+	       std::vector<mmdb::Link> links;
+	       coot::restraints_container_t restraints(local_residues,
+						       links,
+						       geom,
+						       asc.mol,
+						       fixed_atom_specs, xmap);
       
-	    restraints.add_map(xmap, map_weight);
+	       restraints.add_map(map_weight);
 
-	    // coot::restraint_usage_Flags flags = coot::NO_GEOMETRY_RESTRAINTS;
-	    // coot::restraint_usage_Flags flags = coot::BONDS;
-	    // coot::restraint_usage_Flags flags = coot::BONDS_AND_ANGLES;
-	    // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_AND_PLANES;
-	    // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_TORSIONS_AND_PLANES; 
-	    // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_PLANES_AND_NON_BONDED;
-	    // flags = coot::NON_BONDED;
-	    coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
-	    flags = coot::TYPICAL_RESTRAINTS;
-	    
-	    if (inputs.use_torsion_targets) {
-	       flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_AND_CHIRALS;
+	       // coot::restraint_usage_Flags flags = coot::NO_GEOMETRY_RESTRAINTS;
+	       // coot::restraint_usage_Flags flags = coot::BONDS;
+	       // coot::restraint_usage_Flags flags = coot::BONDS_AND_ANGLES;
+	       // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_AND_PLANES;
+	       // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_TORSIONS_AND_PLANES;
+	       // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_PLANES_AND_NON_BONDED;
+	       // flags = coot::NON_BONDED;
+	       coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
+	       flags = coot::TYPICAL_RESTRAINTS;
+
+	       if (inputs.use_torsion_targets) {
+		  flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_AND_CHIRALS;
+		  if (inputs.use_rama_targets)
+		     flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_RAMA;
+	       } else {
+		  if (inputs.use_rama_targets)
+		     flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_RAMA;
+	       }
+
+	       coot::pseudo_restraint_bond_type pseudos = coot::NO_PSEUDO_BONDS;
+	       bool do_rama_plot_restraints = 0;
 	       if (inputs.use_rama_targets)
-		  flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_RAMA;
-	    } else { 
-	       if (inputs.use_rama_targets)
-		  flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_RAMA;
-	    }
+		  do_rama_plot_restraints = 1;
+	       // this should be a user-settable parameter.
+	       bool make_trans_peptide_restraints = false;
 
-	    coot::pseudo_restraint_bond_type pseudos = coot::NO_PSEUDO_BONDS;
-	    bool do_rama_plot_restraints = 0;
-	    if (inputs.use_rama_targets)
-	       do_rama_plot_restraints = 1;
-	    // this should be a user-settable parameter. 
-	    bool make_trans_peptide_restraints = false;
+	       if (inputs.use_trans_peptide_restraints)
+		  make_trans_peptide_restraints = true;
 
-	    if (inputs.use_trans_peptide_restraints)
-	       make_trans_peptide_restraints = true;
+	       int imol = 0; // dummy
+	       restraints.make_restraints(imol, geom, flags, 1, make_trans_peptide_restraints,
+					  1.0, do_rama_plot_restraints, pseudos);
 
-	    int imol = 0; // dummy
-	    restraints.make_restraints(imol, geom, flags, 1, make_trans_peptide_restraints,
-				       1.0, do_rama_plot_restraints, pseudos);
+	       if (inputs.extra_restraints_file_names.size() > 0) {
+		  restraints.add_extra_restraints(imol, extra_restraints, geom);
+	       }
 
-	    int nsteps_max = 4000;
-	    short int print_chi_sq_flag = 1;
-	    restraints.minimize(flags, nsteps_max, print_chi_sq_flag);
-	    restraints.write_new_atoms(inputs.output_pdb_file_name);
+	       int nsteps_max = 4000;
+	       short int print_chi_sq_flag = 1;
+	       restraints.minimize(flags, nsteps_max, print_chi_sq_flag);
+	       restraints.write_new_atoms(inputs.output_pdb_file_name);
 
-	    if (inputs.tabulate_distortions_flag) {
-	       coot::geometry_distortion_info_container_t gd =
-		  restraints.geometric_distortions(flags);
-	       gd.print();
-	    }
+	       if (inputs.tabulate_distortions_flag) {
+		  coot::geometry_distortion_info_container_t gd =
+		     restraints.geometric_distortions(flags);
+		  gd.print();
+	       }
 
-	    if (inputs.correlations) {
+	       if (inputs.correlations) {
 
-	       std::vector<coot::residue_spec_t> neighbours;
-	       int ATOM_MASK_MAINCHAIN           =  1; // hideous hack
-	       int ATOM_MASK_NOT_MAINCHAIN       =  2;
-	       int ATOM_MASK_NOT_MAINCHAIN_OR_CB =  3;
-	       int ATOM_MASK_ALL_ATOM_B_FACTOR   = 10;
-	       unsigned short int atom_mask_mode = ATOM_MASK_ALL_ATOM_B_FACTOR;
-	       coot::map_stats_t map_stats_flag = coot::SIMPLE;
+		  std::vector<coot::residue_spec_t> neighbours;
+		  int ATOM_MASK_MAINCHAIN           =  1; // hideous hack
+		  int ATOM_MASK_NOT_MAINCHAIN       =  2;
+		  int ATOM_MASK_NOT_MAINCHAIN_OR_CB =  3;
+		  int ATOM_MASK_ALL_ATOM_B_FACTOR   = 10;
+		  unsigned short int atom_mask_mode = ATOM_MASK_ALL_ATOM_B_FACTOR;
+		  coot::map_stats_t map_stats_flag = coot::SIMPLE;
 	       
-	       coot::util::density_correlation_stats_info_t stats =
-		  coot::util::map_to_model_correlation_stats(asc.mol,
-							     residue_specs,
-							     neighbours,
-							     atom_mask_mode,
-							     2.5, // dummy for this mode
-							     xmap,
-							     map_stats_flag);
+		  coot::util::density_correlation_stats_info_t stats =
+		     coot::util::map_to_model_correlation_stats(asc.mol,
+								residue_specs,
+								neighbours,
+								atom_mask_mode,
+								2.5, // dummy for this mode
+								xmap,
+								map_stats_flag);
 
-	       std::vector<std::pair<coot::residue_spec_t, float> > correls = 
-		  coot::util::map_to_model_correlation_per_residue(asc.mol,
-								   residue_specs,
-								   atom_mask_mode,
-								   2.5, // dummy
-								   xmap);
+		  std::vector<std::pair<coot::residue_spec_t, float> > correls =
+		     coot::util::map_to_model_correlation_per_residue(asc.mol,
+								      residue_specs,
+								      atom_mask_mode,
+								      2.5, // dummy
+								      xmap);
 
 
-	       std::cout << " Residue Correlation Table: " << std::endl;
-	       for (unsigned int j=0; j<correls.size(); j++) {
-		  std::string res_name;
-		  mmdb::Residue *r = coot::util::get_residue(correls[j].first, asc.mol);
-		  if (r) res_name = r->GetResName();
-		  std::cout << "     "
-			    << correls[j].first.chain_id << " "
-			    << correls[j].first.res_no   << " "
-			    << correls[j].first.ins_code << " "
-			    << res_name 
-			    << "  " << correls[j].second << std::endl;
+		  std::cout << " Residue Correlation Table: " << std::endl;
+		  for (unsigned int j=0; j<correls.size(); j++) {
+		     std::string res_name;
+		     mmdb::Residue *r = coot::util::get_residue(correls[j].first, asc.mol);
+		     if (r) res_name = r->GetResName();
+		     std::cout << "     "
+			       << correls[j].first.chain_id << " "
+			       << correls[j].first.res_no   << " "
+			       << correls[j].first.ins_code << " "
+			       << res_name
+			       << "  " << correls[j].second << std::endl;
+		  }
 	       }
 	    } 
 	 }
@@ -443,7 +502,8 @@ main(int argc, char **argv) {
 
 #endif // HAVE_GSL
    return 0; 
-} 
+}
+
 
 std::pair<bool, clipper::Xmap<float> > 
 map_from_mtz(std::string mtz_file_name,
@@ -463,7 +523,7 @@ map_from_mtz(std::string mtz_file_name,
    clipper::Xmap<float> xmap;
 
    try { 
-      cout << "reading mtz file..." << endl; 
+      std::cout << "reading mtz file..." << std::endl;
       clipper::CCP4MTZfile mtzin; 
       mtzin.open_read( mtz_file_name );       // open new file 
       mtzin.import_hkl_info( myhkl );         // read sg, cell, reso, hkls
@@ -489,7 +549,7 @@ map_from_mtz(std::string mtz_file_name,
 	 std::cout << dataname << "\n";
 	 mtzin.import_hkl_data( phi_fom_data, myset, myxtl, dataname );
 	 mtzin.close_read(); 
-	 cout << "We should use the weights: " << weight_col << endl;
+	 std::cout << "We should use the weights: " << weight_col << std::endl;
 	 // it seems to me that we should make 2 data types, an F_sigF and a phi fom
 	 // and then combine them using a Convert_fsigf_phifom_to_fphi();
 
@@ -506,8 +566,8 @@ map_from_mtz(std::string mtz_file_name,
 		 clipper::Grid_sampling( myhkl.spacegroup(),
 					 myhkl.cell(),
 					 myhkl.resolution()) );
-      cout << "Grid..." << xmap.grid_sampling().format() << "\n";
-      cout << "doing fft..." << endl;
+      std::cout << "Grid..." << xmap.grid_sampling().format() << "\n";
+      std::cout << "doing fft..." << std::endl;
 
       if (is_debug_mode) { 
 	 int count = 0; 
@@ -526,7 +586,7 @@ map_from_mtz(std::string mtz_file_name,
   
   
       xmap.fft_from( fphidata );                  // generate map
-      cout << "done fft..." << endl;
+      std::cout << "done fft..." << std::endl;
       status = 1;
    }
    catch (const clipper::Message_base &exc) {  // "exception" is a protected word, it seems.
@@ -560,16 +620,22 @@ get_input_details(int argc, char **argv) {
 
    struct option long_options[] = {
       {"version",0, 0, 0},
-      {"pdbin",  1, 0, 0}, 
-      {"hklin",  1, 0, 0}, 
-      {"f",      1, 0, 0}, 
-      {"phi",    1, 0, 0}, 
-      {"pdbout", 1, 0, 0}, 
-      {"mapin",  1, 0, 0}, 
-      {"resno-start", 1, 0, 0}, 
-      {"resno-end",   1, 0, 0}, 
+      {"pdbin",  1, 0, 0},
+      {"hklin",  1, 0, 0},
+      {"f",      1, 0, 0},
+      {"phi",    1, 0, 0},
+      {"pdbout", 1, 0, 0},
+      {"dictin", 1, 0, 0},
+      {"dictionary", 1, 0, 0},
+      {"mapin",  1, 0, 0},
+      {"extra-restraints",  1, 0, 0},
+      {"resno-start", 1, 0, 0},
+      {"resno-end",   1, 0, 0},
+      {"residue-number",    1, 0, 0}, // for a single residue refinement of crankshafting
+      {"resno",             1, 0, 0}, // same
+      {"res-no",            1, 0, 0}, // same
       // {"residue",     2, 0, 0}, // can't give 2 args to one keyword, it seems?
-      {"residues-around",   1, 0, 0}, 
+      {"residues-around",   1, 0, 0},
       {"chain-id",    1, 0, 0},
       {"weight",    1, 0, 0},
       {"radius",    1, 0, 0},
@@ -580,6 +646,9 @@ get_input_details(int argc, char **argv) {
       {"no-trans-peptide-restraints",  0, 0, 0},
       {"tabulate-distortions", 0, 0, 0},
       {"correlations", 0, 0, 0},
+      {"crankshaft", 0, 0, 0},
+      {"n-peptides", 1, 0, 0},
+      {"crank", 0, 0, 0},
       {"help", 0, 0, 0},
       {"debug",     0, 0, 0},  // developer option
       {0, 0, 0, 0}
@@ -608,30 +677,61 @@ get_input_details(int argc, char **argv) {
 	    if (arg_str == "phi") { 
 	       d.phi_col = optarg;
 	    } 
-	    if (arg_str == "mapin") { 
+	    if (arg_str == "mapin") {
 	       d.map_file_name = optarg;
                d.given_map_flag = 1;
 	    }
-	    if (arg_str == "chain-id") { 
+	    if (arg_str == "dictin") {
+	       d.dictionary_file_names.push_back(optarg);
+	    }
+	    if (arg_str == "dictionary") {
+	       d.dictionary_file_names.push_back(optarg);
+	    }
+	    if (arg_str == "extra-restraints") {
+	       d.extra_restraints_file_names.push_back(optarg);
+	    }
+	    if (arg_str == "chain-id") {
 	       d.chain_id = optarg;
 	    }
-	    if (arg_str == "chain") { 
+	    if (arg_str == "chain") {
 	       d.chain_id = optarg;
 	    }
-	    if (arg_str == "resno-start") { 
-	       d.resno_start = atoi(optarg);
+	    if (arg_str == "resno-start") {
+	       d.resno_start = coot::util::string_to_int(optarg);
 	    }
-	    if (arg_str == "resno-end") { 
-	       d.resno_end = atoi(optarg);
+	    if (arg_str == "resno-end") {
+	       d.resno_end = coot::util::string_to_int(optarg);
 	    }
-	    if (arg_str == "residues-around") { 
-	       d.residues_around = atoi(optarg);
+	    if (arg_str == "resno" || arg_str == "residue-number" || arg_str == "res-no") {
+	       try {
+		  d.resno_start = coot::util::string_to_int(optarg);
+		  d.resno_end = d.resno_start;
+	       }
+	       catch (const std::runtime_error &rte) {
+		  std::cout << "WARNING::" << rte.what() << std::endl;
+	       }
 	    }
-	    if (arg_str == "weight") { 
-	       d.map_weight = atof(optarg);
+	    if (arg_str == "n-peptides") {
+	       try {
+		  d.crankshaft_n_peptides = coot::util::string_to_int(optarg);
+	       }
+	       catch (const std::runtime_error &rte) {
+		  std::cout << "WARNING::" << rte.what() << std::endl;
+	       }
 	    }
-	    if (arg_str == "radius") { 
-	       d.radius = atof(optarg);
+	    if (arg_str == "residues-around") {
+	       try {
+		  d.residues_around = coot::util::string_to_int(optarg);
+	       }
+	       catch (const std::runtime_error &rte) {
+		  std::cout << "WARNING::" << rte.what() << std::endl;
+	       }
+	    }
+	    if (arg_str == "weight") {
+	       d.map_weight = coot::util::string_to_float(optarg);
+	    }
+	    if (arg_str == "radius") {
+	       d.radius = coot::util::string_to_float(optarg);
 	    }
 	 } else {
 	    // long argument without parameter:
@@ -647,6 +747,12 @@ get_input_details(int argc, char **argv) {
 	    }
 	    if (arg_str == "rama") {
 	       d.use_rama_targets = 1;
+	    }
+	    if (arg_str == "crank") {
+	       d.do_crankshaft = 1;
+	    }
+	    if (arg_str == "crankshaft") {
+	       d.do_crankshaft = 1;
 	    }
 	    if (arg_str == "torsions") {
 	       d.use_torsion_targets = 1;
@@ -720,23 +826,27 @@ get_input_details(int argc, char **argv) {
       }
    }
 
-   if (!d.input_pdb_file_name.empty()  && !d.output_pdb_file_name.empty()) { 
-      if ((d.resno_start != UNSET && d.resno_end != UNSET) || (d.residues_around != mmdb::MinInt4)) { 
-	 if (d.chain_id != "") { 
-	    if ( (d.map_file_name != "") || (d.mtz_file_name != "" && d.f_col != "" && d.phi_col != "") ) { 
-	       d.is_good = 1;
+   if (!d.input_pdb_file_name.empty()){
+      if (!d.output_pdb_file_name.empty()) {
+	 if ((d.resno_start != UNSET && d.resno_end != UNSET) || (d.residues_around != mmdb::MinInt4)) {
+	    if (d.chain_id != "") {
+	       if ( (d.map_file_name != "") || (d.mtz_file_name != "" && d.f_col != "" && d.phi_col != "") ) {
+		  d.is_good = 1;
+	       } else {
+		  std::cout << "error in input map or [HKLIN, f, or phi]" << std::endl;
+	       }
 	    } else {
-	       std::cout << "error in input map or [HKLIN, f, or phi]" << std::endl;
+	       std::cout << "error in input chain-id" << std::endl;
 	    }
 	 } else {
-	    std::cout << "error in input chain-id" << std::endl;
+	    std::cout << "error in input resno start and end" << std::endl;
 	 }
       } else {
-	 std::cout << "error in input resno start and end" << std::endl;
+	 std::cout << "error in output pdb file name" << std::endl;
       }
    } else {
-      std::cout << "error in input pdb or out put pdb file names" << std::endl;
-   } 
+      std::cout << "error in input pdb file name" << std::endl;
+   }
 	    
    return d;
 }

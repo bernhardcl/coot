@@ -80,7 +80,7 @@
 #include <ccp4srs/ccp4srs_defs.h>
 #endif
 
-#include "lbg/pi-stacking.hh"
+#include "pli/pi-stacking.hh"
 
 
 bool close_float_p(float f1, float f2) {
@@ -217,6 +217,7 @@ int greg_internal_tests() {
    functions.push_back(named_func(test_COO_mod, "test COO modification"));
    functions.push_back(named_func(test_remove_whitespace, "remove whitespace"));
    functions.push_back(named_func(test_new_comp_id, "New comp_ids are sane"));
+   functions.push_back(named_func(test_trailing_slash, "Remove Trailing Slash"));
 
    // restore this at some stage
    // functions.push_back(named_func(test_copy_cell_symm_orig_scale_headers, "test copy cell, symm, orig, scale cards"));
@@ -262,7 +263,7 @@ int test_phi_psi_values() {
 	       coot::util::phi_psi_t pp(prev_res, this_res, next_res);
 	       n_phi_psi++;
 	    }
-	    catch (std::runtime_error rte) {
+	    catch (const std::runtime_error &rte) {
 	       std::cout << rte.what() << std::endl;
 	    } 
 	 }
@@ -336,7 +337,7 @@ run_internal_tests(std::vector<named_func> functions) {
 	    break;
 	 }
       }
-      catch (std::runtime_error mess) {
+      catch (const std::runtime_error &mess) {
 	 std::cout << "FAIL: " << functions[i_func].second << " " << mess.what() << std::endl;
 	 status = 0;
 	 break;
@@ -442,7 +443,7 @@ int test_output_link_distances_are_correct() {
 	    filename = "pdb4rqd-with-moved-CA.pdb";
 	    coot::write_coords_pdb(atom_sel.mol, filename);
 	    if (coot::file_exists(filename)) {
-	       atom_selection_container_t atom_sel = get_atom_selection(filename, true, true);
+	       atom_sel = get_atom_selection(filename, true, true);
 	       if (atom_sel.mol) {
 		  mmdb::Model *model_p = atom_sel.mol->GetModel(1);
 		  int n_links = model_p->GetNumberOfLinks();
@@ -450,7 +451,7 @@ int test_output_link_distances_are_correct() {
 		     status = 1; // all OK so far
 		     for (int i_link=1; i_link<=n_links; i_link++) {
 			mmdb::Link *link = model_p->GetLink(i_link);
-			std::pair<coot::atom_spec_t, coot::atom_spec_t> lp = coot::link_atoms(link);
+			std::pair<coot::atom_spec_t, coot::atom_spec_t> lp = coot::link_atoms(link, model_p);
 			mmdb::Atom *at_1 = coot::util::get_atom(lp.first,  atom_sel.mol);
 			mmdb::Atom *at_2 = coot::util::get_atom(lp.second, atom_sel.mol);
 			if (at_1) {
@@ -679,6 +680,7 @@ testing_func_probabilities_refine_fragment(atom_selection_container_t atom_sel,
 							chain_id,
 							in_alt_conf_split_flag);
    
+   clipper::Xmap<float> dummy_xmap;
    coot::restraints_container_t restraints(resno_mid-side_step,
 					   resno_mid+side_step,
 					   have_flanking_residue_at_start,
@@ -687,7 +689,7 @@ testing_func_probabilities_refine_fragment(atom_selection_container_t atom_sel,
 					   altconf,
 					   chn,
 					   residues_mol_pair.first,
-					   fixed_atom_specs);
+					   fixed_atom_specs, dummy_xmap);
 
    short int do_rama_restraints = 0;
    short int do_residue_internal_torsions = 1;
@@ -707,6 +709,7 @@ testing_func_probabilities_refine_fragment(atom_selection_container_t atom_sel,
       //flags = coot::BONDS_AND_NON_BONDED;
       //flags = coot::RAMA;
    } 
+
 
    coot::pseudo_restraint_bond_type pseudos = coot::NO_PSEUDO_BONDS;
    bool do_trans_peptide_restraints = false;
@@ -1049,15 +1052,16 @@ int test_peptide_link() {
    try {
       std::string comp_id_1 = "MAN";
       std::string comp_id_2 = "MAN";
-      std::string group_1 = "D-pyranose";
+      std::string group_1 = "D-pyranose"; // CCD and acedrg dictionaries now use D-SACCHARIDE
       std::string group_2 = "D-pyranose";
 
-      clipper::Xmap<float> xmap;
       float weight = 1.0;
       std::vector<coot::atom_spec_t> fixed_atom_specs;
       std::vector<mmdb::Link> links;
-      coot::restraints_container_t restraints(residues, links, geom, mol, fixed_atom_specs);
-      restraints.add_map(xmap, weight);
+      clipper::Xmap<float> dummy_xmap;
+
+      coot::restraints_container_t restraints(residues, links, geom, mol, fixed_atom_specs, dummy_xmap);
+      restraints.add_map(weight);
       std::string link_type = "";
       // restraints.find_link_type(residues[0].second,
       // 		residues[1].second,
@@ -1134,8 +1138,8 @@ restr_res_vector() {
       geom.init_standard();
       std::vector<mmdb::Link> links;
       coot::restraints_container_t
-	 restraints(residues, links, geom, mol, fixed_atom_specs);
-      restraints.add_map(xmap, weight);
+	 restraints(residues, links, geom, mol, fixed_atom_specs, xmap);
+      restraints.add_map(weight);
       bool do_trans_peptide_restraints = true;
       int imol = 0;
       restraints.make_restraints(imol, geom, flags, 0, do_trans_peptide_restraints, 0.0, 0, coot::NO_PSEUDO_BONDS);
@@ -1644,7 +1648,7 @@ int test_coot_atom_tree() {
    try { 
       coot::atom_tree_t tree(rest, res, "");
    }
-   catch (std::runtime_error rte) {
+   catch (const std::runtime_error &rte) {
       std::cout << rte.what() << std::endl;
       b = 1;
    } 
@@ -1661,7 +1665,7 @@ int test_coot_atom_tree() {
    try { 
       coot::atom_tree_t tree(rest, res, "");
    }
-   catch (std::runtime_error rte) {
+   catch (const std::runtime_error &rte) {
       std::cout << rte.what() << std::endl;
       b = 1;
    } 
@@ -1699,10 +1703,10 @@ int test_coot_atom_tree() {
    if (0) {
       try {
 	 r = test_tree_rotation(p.second, res, " CB ", " CG ", 0);
-	 if (r) 
+	 if (r)
 	    r = test_tree_rotation(p.second, res, " CB ", " CG ", 1);
       }
-      catch (std::runtime_error rte) {
+      catch (const std::runtime_error &rte) {
 	 std::cout << rte.what() << std::endl;
       }
    }
@@ -1729,13 +1733,13 @@ int test_coot_atom_tree() {
 		     r = 1;
 	       } else { 
 		  std::cout << "Getting restraints for 3GP failed" << std::endl;
-	       } 
+	       }
 	    }
 	 }
       }
       catch (const std::runtime_error &rte) {
 	 std::cout << rte.what() << std::endl;
-	 r = 0; 
+	 r = 0;
       }
    }
 
@@ -1888,7 +1892,6 @@ mmdb::Residue *test_get_residue(mmdb::Manager *mol, const std::string &chain_id_
       std::string chain_id = chain_p->GetChainID();
       if (chain_id == chain_id_ref) {
 	 int nres = chain_p->GetNumberOfResidues();
-	 mmdb::PResidue res;
 	 for (int ires=0; ires<nres; ires++) { 
 	    res = chain_p->GetResidue(ires);
 	    int resno = res->GetSeqNum();
@@ -2404,7 +2407,7 @@ int test_geometry_distortion_info_type() {
 	       int x = 2; 
 	    cont = 0;
 	 }
-	 catch (std::runtime_error rte) { 
+	 catch (const std::runtime_error &rte) {
 	    std::cout << "    Good gdi < exception thrown" << std::endl;
 	 }
 	 if (cont) { 
@@ -2413,7 +2416,7 @@ int test_geometry_distortion_info_type() {
 		  int x = 2;
 	       cont = 0;
 	    }
-	    catch (std::runtime_error rte) { 
+	    catch (const std::runtime_error &rte) {
 	       std::cout << "    Good gdi > exception thrown" << std::endl;
 	       status = 1;
 	    }
@@ -2508,7 +2511,7 @@ int test_map_segmentation() {
       mapout.export_xmap(segmented_map.second);
       mapout.close_write();
    }
-   catch (clipper::Message_base exc) {
+   catch (const clipper::Message_base &exc) {
       std::cout <<  "WARNING:: failed to open " << filename << std::endl;
    }
 
@@ -2769,31 +2772,55 @@ int test_COO_mod() {
    return status;
 }
 
-// I'm not going to fight the tab key
-// 
- int test_new_comp_id() {
+int test_new_comp_id() {
 
-    int status = 1;
+   int status = 1;
 
-    std::vector<std::pair<std::string, std::string> > comp_ids;
-    comp_ids.push_back(std::pair<std::string, std::string> ("L19", "L20"));
-    comp_ids.push_back(std::pair<std::string, std::string> ("LIG", "LI2"));
-    comp_ids.push_back(std::pair<std::string, std::string> ("L01", "L02"));
-    comp_ids.push_back(std::pair<std::string, std::string> ("119", "120"));
-    comp_ids.push_back(std::pair<std::string, std::string> ("120", "121"));
-    comp_ids.push_back(std::pair<std::string, std::string> ("D99", "")); // failure case
+   std::vector<std::pair<std::string, std::string> > comp_ids;
+   comp_ids.push_back(std::pair<std::string, std::string> ("L19", "L20"));
+   comp_ids.push_back(std::pair<std::string, std::string> ("LIG", "LI2"));
+   comp_ids.push_back(std::pair<std::string, std::string> ("L01", "L02"));
+   comp_ids.push_back(std::pair<std::string, std::string> ("119", "120"));
+   comp_ids.push_back(std::pair<std::string, std::string> ("120", "121"));
+   comp_ids.push_back(std::pair<std::string, std::string> ("D99", "")); // failure case
 
-    for (unsigned int i=0; i<comp_ids.size(); i++) {
-       std::string n = coot::suggest_new_comp_id(comp_ids[i].first);
-       if (n != comp_ids[i].second) {
-	  std::cout << "New comp_id fail on " << comp_ids[i].first << " wanted " << comp_ids[i].second
-	  << " but got \"" << n << "\"" << std::endl;
-	  status = 0; // fail
-	  break;
-       }
-    }
-    return status;
- } 
+   for (unsigned int i=0; i<comp_ids.size(); i++) {
+      std::string n = coot::suggest_new_comp_id(comp_ids[i].first);
+      if (n != comp_ids[i].second) {
+	 std::cout << "New comp_id fail on " << comp_ids[i].first << " wanted " << comp_ids[i].second
+		   << " but got \"" << n << "\"" << std::endl;
+	 status = 0; // fail
+	 break;
+      }
+   }
+   return status;
+}
+
+int test_trailing_slash() {
+
+   int status = 1; // OK
+   std::string s = "x/";
+   if (coot::util::remove_trailing_slash(s) != "x") {
+      status = 0;
+   }
+   s = "/";
+   if (coot::util::remove_trailing_slash(s) != "") {
+      status = 0;
+   }
+   s = "ss";
+   if (coot::util::remove_trailing_slash(s) != "ss") {
+      status = 0;
+   }
+   s = "\\"; // single
+   if (coot::util::remove_trailing_slash(s) != "") {
+      status = 0;
+   }
+   s = "";
+   if (coot::util::remove_trailing_slash(s) != "") {
+      status = 0;
+   }
+   return status;
+}
 
  
 

@@ -40,6 +40,8 @@
 void
 coot::restraints_container_t::add_fixed_atoms_from_flanking_residues(const coot::bonded_pair_container_t &bpc) {
 
+   // std::cout << "debug:: add_fixed_atoms_from_flanking_residues() called " << bpc.size() << std::endl;
+
    std::vector<mmdb::Residue *> residues_for_fixed_atoms;
    
    for (unsigned int i=0; i<bpc.size(); i++) { 
@@ -62,6 +64,44 @@ coot::restraints_container_t::add_fixed_atoms_from_flanking_residues(const coot:
 	    if (std::find(fixed_atom_indices.begin(),
 			  fixed_atom_indices.end(), idx) == fixed_atom_indices.end())
 	       fixed_atom_indices.push_back(idx);
+	 }
+      }
+   }
+}
+
+
+void
+coot::restraints_container_t::add_fixed_atoms_from_flanking_residues(bool have_flanking_residue_at_start,
+								     bool have_flanking_residue_at_end,
+								     int iselection_start_res,
+								     int iselection_end_res) {
+
+   if (false)
+      std::cout << "debug:: in add_fixed_atoms_from_flanking_residues() "
+		<< have_flanking_residue_at_start << " "
+		<< have_flanking_residue_at_end << " "
+		<< std::endl;
+
+   if (have_flanking_residue_at_start || have_flanking_residue_at_end) {
+      for (int iat=0; iat<n_atoms; iat++) {
+	 mmdb::Atom *at = atom[iat];
+	 if (have_flanking_residue_at_start) {
+	    if (at->residue->GetSeqNum() == iselection_start_res) {
+	       // perhaps this should be a set
+	       if (std::find(fixed_atom_indices.begin(),
+			     fixed_atom_indices.end(), iat) == fixed_atom_indices.end()) {
+		  fixed_atom_indices.push_back(iat);
+	       }
+	    }
+	 }
+	 if (have_flanking_residue_at_end) {
+	    if (at->residue->GetSeqNum() == iselection_end_res) {
+	       // perhaps this should be a set
+	       if (std::find(fixed_atom_indices.begin(),
+			     fixed_atom_indices.end(), iat) == fixed_atom_indices.end()) {
+		  fixed_atom_indices.push_back(iat);
+	       }
+	    }
 	 }
       }
    }
@@ -178,7 +218,7 @@ coot::restraints_container_t::bonded_flanking_residues(const coot::protein_geome
       bpc = bonded_flanking_residues_by_residue_vector(geom);
    else
       bpc = bonded_flanking_residues_by_linear(geom);
-   
+
    return bpc;
 }
 
@@ -242,11 +282,24 @@ coot::restraints_container_t::bonded_flanking_residues_by_linear(const coot::pro
    return bpc;
 }
 
+
+
 coot::bonded_pair_container_t
-coot::restraints_container_t::bonded_flanking_residues_by_residue_vector(const coot::protein_geometry &geom) const {
+coot::restraints_container_t::bonded_flanking_residues_by_residue_vector(const std::map<mmdb::Residue *, std::set<mmdb::Residue *> > &neighbour_set,
+									 const coot::protein_geometry &geom) const {
 
    coot::bonded_pair_container_t bpc;
-   float dist_crit = 3.0;
+
+   std::map<mmdb::Residue *, std::set<mmdb::Residue *> >::const_iterator it;
+
+   // 20180104 2.0 is a terrible distance.  Sometimes it will find a disulfide bond
+   //              and the next it will not.  Use 2.3
+   float dist_crit = 2.3; // 20170924-PE was 3.0 but this made a horrible link in a tight turn
+                          // (which I suspect is not uncommon) crazy-neighbour-refine-519.pdb
+                          // for EMDB 6224.
+                          // 520 was bonded to 522 in a neighb (3-residue) refine on 519.
+                          // This function is called by init (and (I think) make_restraints)
+                          // init doesn't set bonded_pairs_container (make_restraints does that).
 
    // Don't forget to consider the case were we refine one residue,
    // and that is the ASN for a glycosylation.  So the neighbouring
@@ -255,48 +308,155 @@ coot::restraints_container_t::bonded_flanking_residues_by_residue_vector(const c
    // But that is a really hard thing - isn't it? To find a GLC that
    // is connected to this residue?
 
-   
-   for (unsigned int ir=0; ir<residues_vec.size(); ir++) {
+   if (false)
+      std::cout << "DEBUG:: here in bonded_flanking_residues_by_residue_vector() bonded_pairs_container has size "
+		<< bonded_pairs_container.size() << std::endl;
 
-      std::vector<mmdb::Residue *> neighbours = coot::residues_near_residue(residues_vec[ir].second,
-								       mol, dist_crit);
-//       std::cout << " DEBUG:: bonded_flanking_residues_by_residue_vector using reference res "
-//  		<< ir << " of " << residues_vec.size() << " " 
-//  		<< residues_vec[ir].second << " with " << neighbours.size() << " neighbours"
-// 		<< std::endl;
-      
-      for (unsigned int ineighb=0; ineighb<neighbours.size(); ineighb++) {
+   if (false) { // debug
+      for (it=neighbour_set.begin(); it != neighbour_set.end(); it++) {
+	 std::cout << "Residue " << residue_spec_t(it->first) << " has neighbours ";
+	 const std::set<mmdb::Residue *> &neighbours = it->second;
+	 std::set<mmdb::Residue *>::const_iterator it_set;
+	 for (it_set=neighbours.begin(); it_set!=neighbours.end(); it_set++) {
+	    std::cout << " " << residue_spec_t(*it_set);
+	 }
+	 std::cout << std::endl;
+      }
+   }
 
-	 bool found = 0;
+   // 20180220 no longer iterate on the residue_vec. Elinor Breiner
+   //
+   // Use this instead:
+   for (it=neighbour_set.begin(); it != neighbour_set.end(); it++) {
+
+      const std::set<mmdb::Residue *> &neighbours = it->second;
+      std::set<mmdb::Residue *>::const_iterator it_set;
+      for (it_set=neighbours.begin(); it_set!=neighbours.end(); it_set++) {
+
+	 if (false) {
+	    std::cout << "base residue " << it->first << " " << residue_spec_t(it->first) << std::endl;
+	    std::cout << "checking for set member " << *it_set << " " << residue_spec_t(*it_set) << " in "
+		      << residues_vec.size() << " residue_vec residues " << std::endl;
+	 }
+
+	 bool found = false;
 	 for (unsigned int ires=0; ires<residues_vec.size(); ires++) {
 	    // pointer comparison
-	    if (neighbours[ineighb] == residues_vec[ires].second) {
-	       found = 1;
+	    if (*it_set == residues_vec[ires].second) {
+	       found = true;
 	       break;
-	    } 
+	    }
 	 }
 
 	 if (! found) {
 	    // OK, so this neighbour was not in the passed set of
 	    // moving residues, it can be a flanking residue then...
-	    std::pair<bool, float> d = closest_approach(neighbours[ineighb], residues_vec[ir].second);
-// 	    std::cout << " not in residue vec... " << d.first << " " << d.second
-// 		      << " for " << coot::residue_spec_t(neighbours[ineighb]) << " to "
-// 		      << coot::residue_spec_t(residues_vec[ir].second) << std::endl;
+	    std::pair<bool, float> d = closest_approach(*it_set, it->first);
+
 	    if (d.first) {
 	       if (d.second < dist_crit) {
 
-		  std::pair<std::string, bool> l =
-		     find_link_type_complicado(neighbours[ineighb], residues_vec[ir].second, geom);
-		  std::string link_type = l.first;
-		  if (link_type != "") {
-		     bool order_switch_flag = l.second;
+		  std::pair<std::string, bool> l = find_link_type_complicado(*it_set, it->first, geom);
+		  const std::string &link_type = l.first;
+		  if (! link_type.empty()) {
+		     const bool &order_switch_flag = l.second;
 		     if (! order_switch_flag) {
-			coot::bonded_pair_t bp(neighbours[ineighb], residues_vec[ir].second, 1, 0, link_type);
+			coot::bonded_pair_t bp(*it_set, it->first, 1, 0, link_type);
 			bpc.try_add(bp);
 		     } else {
-			coot::bonded_pair_t bp(residues_vec[ir].second, neighbours[ineighb], 0, 1, link_type);
+			coot::bonded_pair_t bp(it->first, *it_set, 0, 1, link_type);
+			bpc.try_add(bp);
+		     }
+		  }
+	       }
+	    }
+	 }
+      }
+   }
+   return bpc;
+}
 
+
+// old (pre-Weizmann)
+coot::bonded_pair_container_t
+coot::restraints_container_t::bonded_flanking_residues_by_residue_vector(const coot::protein_geometry &geom) const {
+
+   coot::bonded_pair_container_t bpc;
+
+   // 20180104 2.0 is a terrible distance.  Sometimes it will find a disulfide bond
+   //              and the next it will not.  Use 2.3
+   float dist_crit = 2.3; // 20170924-PE was 3.0 but this made a horrible link in a tight turn
+                          // (which I suspect is not uncommon) crazy-neighbour-refine-519.pdb
+                          // for EMDB 6224.
+                          // 520 was bonded to 522 in a neighb (3-residue) refine on 519.
+                          // This function is called by init (and (I think) make_restraints)
+                          // init doesn't set bonded_pairs_container (make_restraints does that).
+
+   // Don't forget to consider the case were we refine one residue,
+   // and that is the ASN for a glycosylation.  So the neighbouring
+   // residues and the GLC/NAG (say) will be flanking residues.
+   //
+   // But that is a really hard thing - isn't it? To find a GLC that
+   // is connected to this residue?
+
+   if (false)
+      std::cout << "DEBUG:: here in bonded_flanking_residues_by_residue_vector() bonded_pairs_container has size "
+		<< bonded_pairs_container.size() << std::endl;
+
+   std::map<mmdb::Residue *, std::set<mmdb::Residue *> > neighbour_set = residues_near_residues(residues_vec, mol, dist_crit);
+   std::map<mmdb::Residue *, std::set<mmdb::Residue *> >::const_iterator it;
+
+   if (false) { // debug
+      for (it=neighbour_set.begin(); it != neighbour_set.end(); it++) {
+	 std::cout << "Residue " << residue_spec_t(it->first) << " has neighbours ";
+	 const std::set<mmdb::Residue *> &neighbours = it->second;
+	 std::set<mmdb::Residue *>::const_iterator it_set;
+	 for (it_set=neighbours.begin(); it_set!=neighbours.end(); it_set++) {
+	    std::cout << " " << residue_spec_t(*it_set);
+	 }
+	 std::cout << std::endl;
+      }
+   }
+
+   // 20180220 no longer iterate on the residue_vec. Elinor Breiner
+   //
+   // Use this instead:
+   for (it=neighbour_set.begin(); it != neighbour_set.end(); it++) {
+
+      const std::set<mmdb::Residue *> &neighbours = it->second;
+      std::set<mmdb::Residue *>::const_iterator it_set;
+      for (it_set=neighbours.begin(); it_set!=neighbours.end(); it_set++) {
+
+	 // std::cout << "base residue " << it->first << " " << residue_spec_t(it->first) << std::endl;
+	 // std::cout << "checking for set member " << *it_set << " " << residue_spec_t(*it_set) << " in "
+	 // << residues_vec.size() << " residue_vec residues " << std::endl;
+
+	 bool found = false;
+	 for (unsigned int ires=0; ires<residues_vec.size(); ires++) {
+	    // pointer comparison
+	    if (*it_set == residues_vec[ires].second) {
+	       found = true;
+	       break;
+	    }
+	 }
+
+	 if (! found) {
+	    // OK, so this neighbour was not in the passed set of
+	    // moving residues, it can be a flanking residue then...
+	    std::pair<bool, float> d = closest_approach(*it_set, it->first);
+
+	    if (d.first) {
+	       if (d.second < dist_crit) {
+
+		  std::pair<std::string, bool> l = find_link_type_complicado(*it_set, it->first, geom);
+		  const std::string &link_type = l.first;
+		  if (! link_type.empty()) {
+		     const bool &order_switch_flag = l.second;
+		     if (! order_switch_flag) {
+			coot::bonded_pair_t bp(*it_set, it->first, 1, 0, link_type);
+			bpc.try_add(bp);
+		     } else {
+			coot::bonded_pair_t bp(it->first, *it_set, 0, 1, link_type);
 			bpc.try_add(bp);
 		     }
 		  }
@@ -304,7 +464,7 @@ coot::restraints_container_t::bonded_flanking_residues_by_residue_vector(const c
 	    }
 	 }
       } 
-   } 
+   }
    return bpc;
 }
 

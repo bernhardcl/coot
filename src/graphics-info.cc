@@ -87,9 +87,9 @@
 #include "manipulation-modes.hh"
 #include "guile-fixups.h"
 
+#include "cc-interface.hh" // needed for display_all_model_molecules()
+
 #ifdef USE_PYTHON
-// #include "Python.h" included above now.
-#include "cc-interface.hh"
 #include "cc-interface-scripting.hh"
 #endif
 
@@ -187,7 +187,20 @@ GdkColor colour_by_distortion(float dist) {
    return col;
 }
 
-GdkColor colour_by_rama_plot_distortion(float plot_value) {
+GdkColor colour_by_rama_plot_distortion(float plot_value, int rama_type) {
+
+   if (false)
+      std::cout << "in colour_by_rama_plot_distortion plot_value "
+		<< plot_value << " rama_type " << rama_type
+		<< " c.f. coot::RAMA_TYPE_LOGRAMA " << coot::RAMA_TYPE_LOGRAMA
+		<< " coot::RAMA_TYPE_ZO " << coot::RAMA_TYPE_ZO
+		<< std::endl;
+
+   // ZO type data need to scaled to match
+   // 20*zo_type_data-80 = log_rama_type_data
+   //
+   if (rama_type == coot::RAMA_TYPE_ZO)
+      plot_value = 20*plot_value -80;
 
    GdkColor col;
    float scale = 10.0; 
@@ -195,23 +208,32 @@ GdkColor colour_by_rama_plot_distortion(float plot_value) {
    col.pixel = 1;
    col.blue  = 0;
 
-   if (plot_value < -15.0*scale) { 
-      col.red   = 0;
-      col.green = 55535;
-   } else {
-      if (plot_value < -13.0*scale) {
-	 col.red   = 55000;
-	 col.green = 55000;
-	 // col.blue  = 22000;
+   // if (rama_type == coot::RAMA_TYPE_LOGRAMA) {
+   if (true) { // now that RAMA_TYPE_ZO are on the same scale this colour
+               // scheme will do for both
+      if (plot_value < -15.0*scale) {
+	 col.red   = 0;
+	 col.green = 55535;
       } else {
-	 if (plot_value < -10.0*scale) {
-	    col.red   = 64000;
-	    col.green = 32000;
+	 if (plot_value < -13.0*scale) {
+	    col.red   = 55000;
+	    col.green = 55000;
+	    // col.blue  = 22000;
 	 } else {
-	    col.red   = 65535;
-	    col.green = 0;
+	    if (plot_value < -10.0*scale) {
+	       col.red   = 64000;
+	       col.green = 32000;
+	    } else {
+	       col.red   = 65535;
+	       col.green = 0;
+	    }
 	 }
       }
+   } else {
+      // RAMA_TYPE_ZO
+      col.red   = 33000;
+      col.green = 33000;
+      col.blue = 33000;
    }
    return col;
 } 
@@ -237,9 +259,11 @@ GtkWidget *graphics_info_t::wrapped_nothing_bad_dialog(const std::string &label)
    if (use_graphics_interface_flag) { 
       w = create_nothing_bad_dialog();
       GtkWidget *label_widget = lookup_widget(w, "nothing_bad_label");
+      gtk_label_set_use_markup(GTK_LABEL(label_widget), TRUE); // needed?
       gtk_label_set_text(GTK_LABEL(label_widget), label.c_str());
+      gtk_window_set_transient_for(GTK_WINDOW(w), GTK_WINDOW(lookup_widget(graphics_info_t::glarea, "window1")));
    }
-      return w;
+   return w;
 }
 
 void
@@ -256,9 +280,9 @@ bool
 graphics_info_t::background_is_black_p() const {
 
    bool v = 0;
-   if (background_colour[0] < 0.1)
-      if (background_colour[1] < 0.1)
-	 if (background_colour[2] < 0.1)
+   if (background_colour[0] < 0.3)
+      if (background_colour[1] < 0.3)
+	 if (background_colour[2] < 0.3)
 	    v = 1;
 
    return v;
@@ -320,11 +344,26 @@ graphics_info_t::draw_anti_aliasing() {
 // imol_enc can be a specific model molecule number or
 // IMOL_ENC_AUTO, IMOL_ENC_ANY are the interesting values
 // otherwise mol number.
-// 
-int
+//
+// if imol_enc_in is IMOL_ENC_AUTO, then try to find to which
+// molecule this dictionary refers.
+// If the residue type is on the non-auto load list, simply go through
+// the molecule list backwards, starting from the hightest molecule number looking for
+// a molecule that is a valid model molecule - that's the one.
+// If the residue type is not in the non-auto list, then
+// it is a dictionary for all molecules, i.e. IMOL_ENC_ANY.
+//
+// return the index of the monomer in the geometry store. Return -1 on failure
+//
+coot::read_refmac_mon_lib_info_t
 graphics_info_t::add_cif_dictionary(std::string cif_dictionary_filename,
 				    int imol_enc_in,
 				    short int show_no_bonds_dialog_maybe_flag) {
+
+   if (false)
+      std::cout << "::: add_cif_dictionary() called with "
+		<< cif_dictionary_filename << " " << imol_enc_in << " "
+		<< show_no_bonds_dialog_maybe_flag << std::endl;
 
    int imol_enc = imol_enc_in;
 
@@ -354,9 +393,9 @@ graphics_info_t::add_cif_dictionary(std::string cif_dictionary_filename,
    geom_p->init_refmac_mon_lib(cif_dictionary_filename,
 			       cif_dictionary_read_number,
 			       imol_enc);
-   
-   cif_dictionary_read_number++; 
-   if (rmit.success > 0) { 
+
+   cif_dictionary_read_number++;
+   if (rmit.success > 0) {
       cif_dictionary_filename_vec->push_back(cif_dictionary_filename);
       if (show_no_bonds_dialog_maybe_flag) {
 	 display_density_level_this_image = 1;
@@ -373,7 +412,7 @@ graphics_info_t::add_cif_dictionary(std::string cif_dictionary_filename,
    } else {
       std::cout << "init_refmac_mon_lib "  << cif_dictionary_filename
 		<< " had no bond restraints\n";
-      if (use_graphics_interface_flag) { 
+      if (use_graphics_interface_flag) {
 	 if (show_no_bonds_dialog_maybe_flag) {
 	    GtkWidget *widget = create_no_cif_dictionary_bonds_dialog();
 	    gtk_widget_show(widget);
@@ -381,20 +420,21 @@ graphics_info_t::add_cif_dictionary(std::string cif_dictionary_filename,
       }
 
       std::string s;
-      for (unsigned int i=0; i<rmit.error_messages.size(); i++) { 
+      for (unsigned int i=0; i<rmit.error_messages.size(); i++) {
 	 s += rmit.error_messages[i];
 	 s += "\n";
       }
       info_dialog(s);
    }
 
+   // Redraw all molecules! Yikes!
    for (unsigned int i=0; i<molecules.size(); i++) {
       if (is_valid_model_molecule(i)) {
 	 molecules[i].make_bonds_type_checked();
       }
    }
    // return rmit.n_atoms;
-   return rmit.monomer_idx;
+   return rmit;
 }
 
 
@@ -574,6 +614,7 @@ graphics_info_t::setRotationCentre(int index, int imol) {
 	 molecules[imol].add_to_labelled_atom_list(index);
       }
    }
+   run_post_set_rotation_centre_hook();
 }
 
 // update the green square, where we are.
@@ -594,8 +635,40 @@ graphics_info_t::update_ramachandran_plot_point_maybe(int imol, const coot::resi
 	 (gtk_object_get_user_data(GTK_OBJECT(w)));
 
       plot->big_square(res_spec.chain_id, res_spec.res_no, res_spec.ins_code);
+      // need to put show appropriate background here. Make a function to show
+      // background by passing residue spec.
+      update_ramachandran_plot_background_from_res_spec(plot, imol, res_spec);
    } 
 #endif // HAVE_GTK_CANVAS      
+
+}
+
+void
+graphics_info_t::update_ramachandran_plot_background_from_res_spec(coot::rama_plot *plot, int imol,
+                                                                   const coot::residue_spec_t &res_spec) {
+
+# if defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
+
+   std::string res_name = residue_name(imol, res_spec.chain_id, res_spec.res_no,
+                                       res_spec.ins_code);
+   if (res_name == "GLY") {
+
+#ifdef HAVE_GOOCANVAS
+      plot->show_background(plot->bg_gly);
+#endif // HAVE_GOOCANVAS
+   } else {
+      if (res_name == "PRO") {
+#ifdef HAVE_GOOCANVAS
+         plot->show_background(plot->bg_pro);
+#endif // HAVE_GOOCANVAS
+      } else {
+#ifdef HAVE_GOOCANVAS
+         plot->show_background(plot->bg_non_gly_pro);
+#endif // HAVE_GOOCANVAS
+      }
+   }
+
+#endif // HAVE_GTK_CANVAS
 
 }
 
@@ -684,8 +757,7 @@ graphics_info_t::setRotationCentre(const symm_atom_info_t &symm_atom_info) {
       rotation_centre_z = z;
    } else { 
       std::cout << "ERROR:: NULL atom in setRotationCentre(symm_atom_info_t)\n";
-   } 
-
+   }
 }
 
 void
@@ -726,6 +798,10 @@ graphics_info_t::smooth_scroll_maybe_sinusoidal_acceleration(float x, float y, f
    //
    // v   = -cos(istep/nsteps * pi)
 
+   // for theta (0->2pi) for frac (0,1)
+   // how about acc = sin(theta) + pi * 0.032 * sin(3 * theta)
+   // so v  = ? -cos(theta) + pi * 0.032 * 3 * -cos(3*theta)
+   
    float xd = x - rotation_centre_x;
    float yd = y - rotation_centre_y;
    float zd = z - rotation_centre_z;
@@ -950,6 +1026,7 @@ graphics_info_t::setRotationCentre(coot::Cartesian centre) {
    rotation_centre_x = centre.get_x();
    rotation_centre_y = centre.get_y();
    rotation_centre_z = centre.get_z();
+   run_post_set_rotation_centre_hook();
 }
 
 void
@@ -968,6 +1045,7 @@ graphics_info_t::setRotationCentreAndZoom(coot::Cartesian centre,
    rotation_centre_y = centre.get_y();
    rotation_centre_z = centre.get_z();
    zoom = target_zoom;
+   run_post_set_rotation_centre_hook();
 }
 
 
@@ -1279,6 +1357,8 @@ graphics_info_t::accept_moving_atoms() {
       } else {
 	 if (moving_atoms_asc_type == coot::NEW_COORDS_REPLACE) {
 	    molecules[imol_moving_atoms].replace_coords(*moving_atoms_asc, 0, mzo);
+	    // debug
+	    // molecules[imol_moving_atoms].atom_sel.mol->WritePDBASCII("post-accept_moving_atoms.pdb");
 	    update_geometry_graphs(*moving_atoms_asc, imol_moving_atoms);
 	 } else {
 	    if (moving_atoms_asc_type == coot::NEW_COORDS_INSERT) {
@@ -1415,18 +1495,86 @@ graphics_info_t::run_post_manipulation_hook_py(int imol, int mode) {
 
 
 void
-graphics_info_t::update_environment_distances_by_rotation_centre_maybe(int imol_moving_atoms) {
+graphics_info_t::run_post_set_rotation_centre_hook() {
+
+#if defined USE_GUILE
+   run_post_set_rotation_centre_hook_scm();
+#endif // GUILE
+
+#ifdef USE_PYTHON
+   run_post_set_rotation_centre_hook_py();
+#endif
+
+}
+
+#ifdef USE_GUILE
+void
+graphics_info_t::run_post_set_rotation_centre_hook_scm() {
+   std::string s = "post-set-rotation-centre-hook";
+   SCM v = safe_scheme_command(s);
+
+   if (scm_is_true(scm_procedure_p(v))) {
+      std::string ss = "(";
+      ss += s;
+      ss += ")";
+      SCM res = safe_scheme_command(ss);
+      if (false) {  // too noisy
+	 SCM dest = SCM_BOOL_F;
+	 SCM mess = scm_makfrom0str("result: ~s\n");
+	 SCM p = scm_simple_format(dest, mess, scm_list_1(res));
+	 std::cout << scm_to_locale_string(p);
+      }
+   }
+}
+#endif
+
+#ifdef USE_PYTHON
+void
+graphics_info_t::run_post_set_rotation_centre_hook_py() {
+
+      // Same as for the post manipulation "hook", i.e. script (maybe
+      // could become an extra function then...
+      // BL says:: we can do it all in python API or use the 'lazy' method
+      // and check in the python layer (which we will do...)
+      PyObject *v;
+      int ret;
+      std::string ps = "post_set_rotation_centre_script";
+      std::string check_ps = "callable(";
+      check_ps += ps;
+      check_ps += ")";
+      v = safe_python_command_with_return(check_ps);
+      ret = PyInt_AsLong(v);
+      if (ret == 1) {
+        std::string ss = ps;
+        ss += "()";
+        PyObject *res = safe_python_command_with_return(ss);
+        PyObject *fmt =  PyString_FromString("result: \%s");
+        PyObject *tuple = PyTuple_New(1);
+        PyTuple_SetItem(tuple, 0, res);
+        PyObject *msg = PyString_Format(fmt, tuple);
+
+        std::cout << PyString_AsString(msg)<<std::endl;;
+        Py_DECREF(msg);
+      }
+      Py_XDECREF(v);
+}
+#endif
+
+
+
+void
+graphics_info_t::update_environment_distances_by_rotation_centre_maybe(int imol_in) {
    
    // Oh this is grimly "long hand".
    graphics_info_t g;
    if (g.environment_show_distances) {
-      coot::at_dist_info_t at_d_i = g.molecules[imol_moving_atoms].closest_atom(RotationCentre());
+      coot::at_dist_info_t at_d_i = g.molecules[imol_in].closest_atom(RotationCentre());
       if (at_d_i.atom) {
 	 int atom_index;
-	 if (at_d_i.atom->GetUDData(g.molecules[imol_moving_atoms].atom_sel.UDDAtomIndexHandle,
+	 if (at_d_i.atom->GetUDData(g.molecules[imol_in].atom_sel.UDDAtomIndexHandle,
 				    atom_index) == mmdb::UDDATA_Ok) {
-	    g.mol_no_for_environment_distances = imol_moving_atoms;
-	    g.update_environment_distances_maybe(atom_index, imol_moving_atoms);
+	    g.mol_no_for_environment_distances = imol_in;
+	    g.update_environment_distances_maybe(atom_index, imol_in);
 	 }
       }
    }
@@ -1481,9 +1629,30 @@ graphics_info_t::clear_up_moving_atoms() {
 
 #ifdef HAVE_GSL
    // last_restraints = coot::restraints_container_t(); // last_restraints.size() = 0;
-   last_restraints.clear();
+   if (last_restraints) {
+      last_restraints->clear();
+      delete last_restraints;
+      last_restraints = 0;
+   }
 #endif // HAVE_GSL
 }
+
+
+// if the imol for moving atoms is imol, delete the moving atoms (called from close_molecule)
+void
+graphics_info_t::clear_up_moving_atoms_maybe(int imol) {
+
+   // clear up moving atoms for this molecule if they exist for this given molecule
+
+   if (imol_moving_atoms == imol) {
+      if (moving_atoms_asc->n_selected_atoms > 0){
+	 clear_up_moving_atoms();
+	 clear_moving_atoms_object();
+      }
+   }
+}
+
+
 
 
 // static 
@@ -1494,6 +1663,11 @@ graphics_info_t::drag_refine_refine_intermediate_atoms() {
 #ifdef HAVE_GSL
 
    graphics_info_t g;
+
+   if (! g.last_restraints) {
+      std::cout << "Null last restraints " << std::endl;
+      return retprog;
+   }
 
    // While the results of the refinement are a conventional result
    // (unrefined), let's continue.  However, there are return values
@@ -1521,7 +1695,7 @@ graphics_info_t::drag_refine_refine_intermediate_atoms() {
       // flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_RAMA;
       // flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_RAMA_AND_PARALLEL_PLANES;
       flags = coot::ALL_RESTRAINTS;
-   
+
    
    if (do_torsion_restraints && do_rama_restraints) {
 
@@ -1538,15 +1712,14 @@ graphics_info_t::drag_refine_refine_intermediate_atoms() {
 
       flags = coot::ALL_RESTRAINTS;
    }
-	    
 
    // print_initial_chi_squareds_flag is 1 the first time then we turn it off.
    int steps_per_frame = dragged_refinement_steps_per_frame;
-   if (! g.last_restraints.include_map_terms())
+   if (! g.last_restraints->include_map_terms())
       steps_per_frame *= 6;
 
-   graphics_info_t::saved_dragged_refinement_results =
-      g.last_restraints.minimize(flags, steps_per_frame, print_initial_chi_squareds_flag);
+   g.saved_dragged_refinement_results =
+      g.last_restraints->minimize(flags, steps_per_frame, print_initial_chi_squareds_flag);
 
 
    retprog = graphics_info_t::saved_dragged_refinement_results.progress;
@@ -1565,8 +1738,10 @@ graphics_info_t::drag_refine_refine_intermediate_atoms() {
       g.do_interactive_coot_probe();
 
    char *env = getenv("COOT_DEBUG_REFINEMENT");
-   if (env)
-      g.tabulate_geometric_distortions(last_restraints);
+   if (moving_atoms_asc)
+      if (moving_atoms_asc->mol)
+         if (env)
+            g.tabulate_geometric_distortions(*last_restraints, flags);
 
    // Update the Accept/Reject Dialog if it exists (and it should do,
    // if we are doing dragged refinement).
@@ -1711,15 +1886,20 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
 
 // Display the graphical object of the regularization.
 // static
+// moving atoms are intermediate atoms
 void 
-graphics_info_t::moving_atoms_graphics_object() { 
+graphics_info_t::draw_moving_atoms_graphics_object(bool against_a_dark_background) { 
    
    // very much most of the time, this will be zero
    // 
-   if (graphics_info_t::regularize_object_bonds_box.num_colours > 0) { 
+   if (graphics_info_t::regularize_object_bonds_box.num_colours > 0) {
 
-      // now we want to draw out our bonds in white, 
-      glColor3f (0.9, 0.9, 0.9);
+      if (against_a_dark_background) {
+	 // now we want to draw out our bonds in white, 
+	 glColor3f (0.9, 0.9, 0.9);
+      } else {
+	 glColor3f (0.4, 0.4, 0.4);
+      }
       
       glLineWidth(graphics_info_t::bond_thickness_intermediate_atoms);
       for (int i=0; i< graphics_info_t::regularize_object_bonds_box.num_colours; i++) {
@@ -1732,10 +1912,13 @@ graphics_info_t::moving_atoms_graphics_object() {
 	    glColor3f (0.95, 0.65, 0.65);
 	    break;
 	 default:
-	    glColor3f (0.8, 0.8, 0.8);
+	    if (against_a_dark_background)
+	       glColor3f (0.8, 0.8, 0.8);
+	    else
+	       glColor3f (0.5, 0.5, 0.5);
 	 }
 
-	 graphical_bonds_lines_list &ll = graphics_info_t::regularize_object_bonds_box.bonds_[i];
+	 graphical_bonds_lines_list<graphics_line_t> &ll = graphics_info_t::regularize_object_bonds_box.bonds_[i];
 
 	 glBegin(GL_LINES); 
 	 for (int j=0; j< graphics_info_t::regularize_object_bonds_box.bonds_[i].num_lines; j++) {
@@ -1752,12 +1935,13 @@ graphics_info_t::moving_atoms_graphics_object() {
 	 glEnd();
       }
 
-      if (regularize_object_bonds_box.n_ramachandran_goodness_spots) {
-	 for (int i=0; i<graphics_info_t::regularize_object_bonds_box.n_ramachandran_goodness_spots; i++) {
-	    const coot::Cartesian &pos = regularize_object_bonds_box.ramachandran_goodness_spots_ptr[i].first;
-	    const float &size          = regularize_object_bonds_box.ramachandran_goodness_spots_ptr[i].second;
+      // we don't want disks any more
+      if (false) { 
+	 if (regularize_object_bonds_box.n_ramachandran_goodness_spots) {
+	    for (int i=0; i<graphics_info_t::regularize_object_bonds_box.n_ramachandran_goodness_spots; i++) {
+	       const coot::Cartesian &pos = regularize_object_bonds_box.ramachandran_goodness_spots_ptr[i].first;
+	       const float &size          = regularize_object_bonds_box.ramachandran_goodness_spots_ptr[i].second;
 
-	    if (false) { 
 	       double base = size * 0.3;
 	       int slices = 10;
 	       GLUquadric* quad = gluNewQuadric();
@@ -1775,11 +1959,11 @@ graphics_info_t::moving_atoms_graphics_object() {
 // 
 // static
 void
-graphics_info_t::environment_graphics_object() {
+graphics_info_t::draw_environment_graphics_object() {
 
    graphics_info_t g;
    if (is_valid_model_molecule(mol_no_for_environment_distances)) {
-      if (g.molecules[mol_no_for_environment_distances].is_displayed_p()) { 
+      if (g.molecules[mol_no_for_environment_distances].is_displayed_p()) {
 	 g.environment_graphics_object_internal(environment_object_bonds_box);
 	 if (g.show_symmetry)
 	    g.environment_graphics_object_internal(symmetry_environment_object_bonds_box);
@@ -1831,7 +2015,7 @@ graphics_info_t::environment_graphics_object_internal_lines(const graphical_bond
 
       if (env_bonds_box.num_colours > 0) {
 
-	 graphical_bonds_lines_list ll;
+	 graphical_bonds_lines_list<graphics_line_t> ll;
 	 coot::Cartesian text_pos;
 	 float dist;
 
@@ -1905,7 +2089,7 @@ graphics_info_t::environment_graphics_object_internal_tubes(const graphical_bond
 	 float dark_bg_cor = 0.0;
 	 if (! background_is_black_p())
 	    dark_bg_cor = 0.29;
-	 
+
 	 glEnable(GL_COLOR_MATERIAL);
 
 	 for (int i=0; i< env_bonds_box.num_colours; i++) {
@@ -1919,7 +2103,7 @@ graphics_info_t::environment_graphics_object_internal_tubes(const graphical_bond
 		  display_these_distances_flag = 0;
 
 	    if (display_these_distances_flag) { 
-	       graphical_bonds_lines_list ll = env_bonds_box.bonds_[i]; // lightweight
+	       graphical_bonds_lines_list<graphics_line_t> ll = env_bonds_box.bonds_[i]; // lightweight
 	       float it = float(i);
 	       if (it > 1.0) 
 		  it = 1.0;
@@ -2016,7 +2200,7 @@ graphics_info_t::printString_internal(const std::string &s,
 
       glLineWidth(1.0);
       glPointSize(1.0);
-      
+
       glPushMatrix();
       glTranslated(x,y,z);
 
@@ -2573,10 +2757,13 @@ graphics_info_t::set_density_level_string(int imol, float dlevel) {
    display_density_level_screen_string = "map " + int_to_string(imol);
    display_density_level_screen_string += " level = ";
    display_density_level_screen_string += float_to_string_using_dec_pl(dlevel, 3);
-   display_density_level_screen_string += "e/A^3 (";
+   // std::string units = "e/A^3";
+   std::string units = molecules[imol].map_units();
+   display_density_level_screen_string += units;
+   display_density_level_screen_string += " (";
    display_density_level_screen_string += float_to_string(dlevel/map_sigma);
    display_density_level_screen_string += "rmsd)";
-   
+
 }
 
 // ------------------------------------------------------------------
@@ -2613,7 +2800,7 @@ graphics_info_t::display_geometry_distance() {
    distance_object_vec->push_back(p);
    graphics_draw();
 
-   std::cout << "        distance: " << dist << " Angstroems" << std::endl;
+   std::cout << "INFO:: distance: " << dist << " Angstroems" << std::endl;
    std::string s = "Distance: ";
    s += float_to_string(dist);
    s += " A";
@@ -3160,7 +3347,7 @@ graphics_info_t::start_baton_here() {
 // 
 void
 graphics_info_t::baton_next_directions(int imol_for_skel, mmdb::Atom *latest_atom,
-				       const coot::Cartesian &baton_root,
+				       const coot::Cartesian &baton_root_in,
 				       const clipper::Coord_grid &cg_start,
 				       short int use_cg_start) {
 
@@ -3171,14 +3358,14 @@ graphics_info_t::baton_next_directions(int imol_for_skel, mmdb::Atom *latest_ato
    std::vector<clipper::Coord_orth> previous_ca_positions;
    // store the position of the just accepted atom as a previous atom
    // 
-   // previous_ca_positions.push_back(to_coord_orth(baton_root));
+   // previous_ca_positions.push_back(to_coord_orth(baton_root_in));
    int imol_baton_atoms = baton_build_atoms_molecule();
 
 
    // std::cout << "DEBUG INFO:::::: latest_atom is " << latest_atom << std::endl;
 
    if (latest_atom == NULL) {
-      previous_ca_positions.push_back(to_coord_orth(baton_root));
+      previous_ca_positions.push_back(to_coord_orth(baton_root_in));
    } else {
       previous_ca_positions = molecules[imol_baton_atoms].previous_baton_atom(latest_atom, 
 									      baton_build_direction_flag);
@@ -5050,8 +5237,8 @@ graphics_info_t::check_chiral_volumes(int imol) {
 	 if (w) 
 	    gtk_widget_show(w);
 	 if (v.first.size() != 0) { // bad, there was at least one residue not found in dic.
-	    GtkWidget *w = wrapped_create_chiral_restraints_problem_dialog(v.first);
-	    gtk_widget_show(w);
+	    GtkWidget *wcc = wrapped_create_chiral_restraints_problem_dialog(v.first);
+	    gtk_widget_show(wcc);
 	 }
       }
    }
@@ -5593,3 +5780,43 @@ graphics_info_t::remove_last_lsq_plane_atom() {
    return 0;
 }
 
+
+
+// molecule_info_class_t draw_bonds() function use this to see if the point is within the 
+// distance from the screen centre.
+// Maybe this is not the best place for this function?
+// static
+bool
+graphics_info_t::is_within_display_radius(const coot::CartesianPair &p) {
+
+   coot::Cartesian c(graphics_info_t::RotationCentre_x(),
+		     graphics_info_t::RotationCentre_y(),
+		     graphics_info_t::RotationCentre_z());
+   float d_sqrd = graphics_info_t::model_display_radius.second * graphics_info_t::model_display_radius.second;
+
+   coot::Cartesian delta_1 = p.getStart() - c;
+   if (delta_1.amplitude_squared() > d_sqrd) {
+      return false;
+   } else {
+      coot::Cartesian delta_2 = p.getFinish() - c;
+      return (delta_2.amplitude_squared() <= d_sqrd);
+   }
+
+}
+
+// molecule_info_class_t draw_bonds() function use this to see if the point is within the 
+// distance from the screen centre.
+// Maybe this is not the best place for this function?
+// static
+bool
+graphics_info_t::is_within_display_radius(const coot::Cartesian &p) {
+
+   coot::Cartesian c(graphics_info_t::RotationCentre_x(),
+		     graphics_info_t::RotationCentre_y(),
+		     graphics_info_t::RotationCentre_z());
+   float d_sqrd = graphics_info_t::model_display_radius.second * graphics_info_t::model_display_radius.second;
+
+   coot::Cartesian delta = p - c;
+   return (delta.amplitude_squared() <= d_sqrd);
+
+}

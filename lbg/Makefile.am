@@ -38,8 +38,8 @@ AM_CXXFLAGS = \
 bin_PROGRAMS = lidia
 
 libcoot_lidia_la_SOURCES = lbg.cc lbg-flev.cc wmolecule.cc  \
-    lbg-search.cc  residue-circles.cc pi-stacking.cc \
-    flev-annotations.cc lbg-drag-and-drop.cc qed-interface.cc alerts.cc alerts-list.cc \
+    lbg-search.cc  residue-circles.cc  \
+    lbg-drag-and-drop.cc qed-interface.cc alerts.cc alerts-list.cc \
     qed-properties.cc
 
 # qed-interface.cc uses a boost::python function directly, so add L_BOOST_PYTHON
@@ -50,7 +50,7 @@ libcoot_lidia_la_LIBADD = \
 	$(top_builddir)/lidia-core/libcoot-lidia-core.la \
 	$(top_builddir)/utils/libcoot-utils.la \
 	$(CLIPPER_LIBS) $(CCP4SRS_LIBS) \
-	$(MMDB_LIBS) $(GSL_LIBS) $(RDKIT_LIBS) $(L_BOOST_PYTHON) $(GOOCANVAS_LIBS) $(GTK_LIBS) $(PYTHON_LIBS)
+	$(MMDB_LIBS) $(GSL_LIBS) $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(L_BOOST_PYTHON) $(GOOCANVAS_LIBS) $(GTK_LIBS) $(PYTHON_LIBS)
 
 # Bernie-mode: libcoot_lidia_la_LDFLAGS = $(SHARED_LDFLAGS)  -Wl,--no-undefined
 # 
@@ -59,8 +59,8 @@ libcoot_lidia_la_LDFLAGS = $(SHARED_LDFLAGS)
 lidia_SOURCES = lidia-main.cc lbg-callbacks-outer.cc 
 
 pkginclude_HEADERS = lbg.hh w-atom.hh w-bond.hh wmolecule.hh topological-equivalence.hh \
-        flev-annotations.hh graphics-c-interface-functions.hh \
-	lbg-drag-and-drop.hh qed-interface.hh alerts.hh pi-stacking.hh solvent-exposure-difference.hh
+        graphics-c-interface-functions.hh \
+	lbg-drag-and-drop.hh qed-interface.hh alerts.hh solvent-exposure-difference.hh
 pkgincludedir = $(includedir)/coot/lbg
 
 # 20140521
@@ -80,13 +80,11 @@ lidia_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
 # (if that is annoying, then remove it and expand it by hand)
 #
 lidia_LDADD = \
-	./libcoot-lidia.la \
-	$(top_builddir)/geometry/libcoot-geometry.la \
-	$(top_builddir)/mini-mol/libcoot-mini-mol.la \
-	$(top_builddir)/utils/libcoot-utils.la \
-	$(top_builddir)/lidia-core/libcoot-lidia-core.la \
-	$(GLOB_LIBS) $(CLIPPER_LIBS) $(MMDB_LIBS) $(GSL_LIBS) \
-	$(RDKIT_LIBS) $(L_BOOST_PYTHON) $(GOOCANVAS_LIBS) $(GTK_LIBS) $(PYTHON_LIBS)
+	./libcoot-lidia.la $(GLOB_LIBS) $(RDKIT_LIBS) $(L_BOOST_PYTHON)
+
+# not needed: linked by dependency libs
+# $(CLIPPER_LIBS) $(MMDB_LIBS) $(GSL_LIBS)
+#	# $(GOOCANVAS_LIBS) $(GTK_LIBS) $(PYTHON_LIBS)
 
 EXTRA_DIST=lbg.glade $(appicon_DATA) lbg-callbacks.cc
 

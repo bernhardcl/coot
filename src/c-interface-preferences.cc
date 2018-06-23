@@ -458,17 +458,13 @@ void update_preference_gui() {
 	bg_colour.blue = 65535;
       } else {
 	// other colour
-#if (GTK_MAJOR_VERSION > 1)
 	w = lookup_widget(dialog, "preferences_bg_colour_own_radiobutton");
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), TRUE);
 	bg_colour.red = (guint)(fval1 * 65535);
 	bg_colour.green = (guint)(fval2 * 65535);
 	bg_colour.blue = (guint)(fval3 * 65535);
-#endif
       }
-#if (GTK_MAJOR_VERSION > 1)
       gtk_color_button_set_color(GTK_COLOR_BUTTON(colour_button), &bg_colour);
-#endif
       break;
 
     case PREFERENCES_ANTIALIAS:
@@ -1114,13 +1110,13 @@ parse_ccp4i_defs(const std::string &filename) {
      return v;
    } 
 
-   std::ifstream cin(filename.c_str());
+   std::ifstream c_in(filename.c_str());
 
    // Let's also add ccp4_scratch to the list if the environment
    // variable is declared and if directory exists
    char *scratch = getenv("CCP4_SCR");
    if (scratch) {
-      struct stat buf;
+      // struct stat buf; no shadow
       // in Windows stat needs to have a last / or \ removed, if existent
 #ifdef WINDOWS_MINGW
       if (scratch[strlen(scratch) - 1] == '/') {
@@ -1139,7 +1135,7 @@ parse_ccp4i_defs(const std::string &filename) {
       }
    }
 
-   if (! cin) {
+   if (! c_in) {
       std::cout << "WARNING:: failed to open " << filename << std::endl;
    } else {
       // std::string s;
@@ -1153,8 +1149,8 @@ parse_ccp4i_defs(const std::string &filename) {
       short int path_coming = 0;
       short int alias_coming = 0;
       bool alias_flag = 0;
-      while (! cin.eof()) {
-	 cin >> s;
+      while (! c_in.eof()) {
+	 c_in >> s;
 	 std::string ss(s);
 	 // std::cout << "parsing:" << ss << std::endl;
 	 if (path_coming == 2) {
@@ -1242,8 +1238,8 @@ parse_ccp4i_defs(const std::string &filename) {
 		  // widget, we go into the directory, rather than being in the
 		  // directory above with the tail as the selected file.
 		  //
-		  struct stat buf;
-		  int status = stat(path_str.c_str(), &buf);
+		  struct stat buf_l;
+		  int status = stat(path_str.c_str(), &buf_l);
 	       
 		  // valgrind says that buf.st_mode is uninitialised here
 		  // strangely.  Perhaps we should first test for status?
@@ -1254,7 +1250,7 @@ parse_ccp4i_defs(const std::string &filename) {
 		  // std::cout << "stating "<< path_str << std::endl;
 
 		  if (status == 0) { 
-		     if (S_ISDIR(buf.st_mode)) {
+		     if (S_ISDIR(buf_l.st_mode)) {
 			path_str += "/";
 
 			if (alias_str == "\"\"") {

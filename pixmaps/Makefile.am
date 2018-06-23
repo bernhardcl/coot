@@ -28,7 +28,7 @@ cootpixmapdir = $(pkgdatadir)/pixmaps
 # no longer use xpms.
 
 dist_cootpixmap_DATA = \
-coot-0.8.9-pre.png     \
+coot-0.8.9.1.png     \
 add-alt-conf.png      dna.svg			   probe-clash.svg                \
 add-alt-conf.svg      edit-backbone.svg		   radacina_handcuffs-small.svg   \
 add-peptide-1.png     edit-chi.png		   ramachandran.png               \
@@ -47,8 +47,8 @@ azerbaijan.svg	      gln-asn-b-factors.svg	   rigid-body.png                 \
 calculate-ghosts.svg  gln-asn-b-factorssvg.svg	   rigid-body.svg                 \
 cell+symm.png	      glyco-structures.svg	   rotamers.png                   \
 cell+symm.svg	      gnome-run.png		   rotamers.svg                   \
-change-chain-id.svg   go-to-atom.svg		   rtz.png                        \
-chiral.png	      go-to-ligand.svg		   rtz.svg                        \
+change-chain-id.svg   go-to-atom.svg		   rtz.png  rrz.png               \
+chiral.png	      go-to-ligand.svg		   rtz.svg  rrz.svg               \
 chiral.svg	      gtk-connect-16.png	   scroll-wheel.svg               \
 connect-to-ccp4.svg   gtk-font.png		   secondary-structure.svg        \
 connect-to-oca.svg    gtk-open-16.png		   sequence-view.png              \
@@ -74,9 +74,11 @@ display-manager.svg   pointer-distances.svg \
 koppi-green-tick-64.png rygle-red-cross-64.png forest51690-dwcheckno-incomplete-64.png \
   go-to-ligand.png go-to-atom.png azerbaijan.png add-water.png mutate.png \
   mutate-auto-fit.png edit-backbone.png torsion-general.png anchor.png regularize-1.png \
-  refine-1.png stock-zoom-follow-window-12.svg \
-  rama_all.png rama_gly.png rama_pro.png rama_non_gly_pro.png
+  refine-1.png stock-zoom-follow-window-12.svg stock-zoom-follow-window-12.png \
+  rama_all.png rama_gly.png rama_pro.png rama_non_gly_pro.png \
+  curlew-long.png
 
+# removed the svg version of curlew for now because of non anti-aliasing
 
 
 # This is done by the Makefile in icons now.

@@ -18,39 +18,15 @@ import unittest
 import os
 
 class LigandTestFunctions(unittest.TestCase):
-    
+
     def test01_0(self):
         """Get monomer test"""
 
-        if (not have_ccp4_qm):
-            print "No CCP4 - Copying in test files"
-            for file_name in ["monomer-3GP.pdb", "libcheck_3GP.cif"]:
-                f_full = os.path.join(unittest_data_dir, file_name)
-                t_file = os.path.join("coot-ccp4", file_name)
-                if (os.path.isfile(f_full)):
-                    import shutil
-                    make_directory_maybe("coot-ccp4")
-                    print "   copy-file", f_full, t_file
-                    shutil.copyfile(f_full, t_file)
-                else:
-                    if self.skip_test(True, "Cannot find file %s, skipping test" %f_full):
-                        return
-                
-	imol = monomer_molecule_from_3_let_code("3GP", "")
+	imol = get_monomer("3GP")
 	if (valid_model_molecule_qm(imol)):
-            global imol_ligand
-            imol_ligand = imol 
             delete_residue_hydrogens(imol, "A", 1, "", "")
-
-
-    def test02_0(self):
-	"""Set Bond thickness test"""
-
-        if self.skip_test(not valid_model_molecule_qm(imol_ligand),
-                          "   No ligand molecule - Skipping bond thickness test"):
-            return
-            
-	set_bond_thickness(imol_ligand, 5)
+        self.failIf(not valid_model_molecule_qm(imol),
+                    "   No ligand molecule - monomer test failed")
 
 
     def test03_0(self):
@@ -82,7 +58,7 @@ class LigandTestFunctions(unittest.TestCase):
                 v = get_ccp4_version()
                 # will always be string
                 return v < "6.2"
-            
+
         r_1 = monomer_restraints("LIG")
         o = old_ccp4_restraints_qm()
         unittest_pdb("test-LIG.pdb")
@@ -107,39 +83,6 @@ class LigandTestFunctions(unittest.TestCase):
                              isinstance(r_3, dict)]))
 
 
-    def test05_0(self):
-	"""Move and Refine Ligand test"""
-        
-	new_rc = [55.3, 9.1, 20.6]
-        if self.skip_test(not valid_model_molecule_qm(imol_ligand),
-                          "no ligand - skipping test"):
-            return
-
-	# set the view
-	view_number = add_view([54.5698,8.7148,20.5308],
-				[0.046229,-0.157139,-0.805581,0.569395],
-				19.8858,
-				"ligand_view")
-	go_to_view_number(view_number, 1)
-
-	# update the map:
-	set_rotation_centre(*new_rc)
-	move_molecule_here(imol_ligand)
-	backup_mode = backup_state(imol_ligand)
-	alt_conf = ""
-	replacement_state = refinement_immediate_replacement_state()
-        
-	turn_off_backup(imol_ligand)
-	set_refinement_immediate_replacement(1)
-	refine_zone(imol_ligand, "A", 1, 1, alt_conf)
-	accept_regularizement()
-	rotate_y_scene(rotate_n_frames(600), 0.1)
-	if (replacement_state == 0):
-		set_refinement_immediate_replacement(0)
-	if (backup_mode == 1):
-		turn_on_backup(imol_ligand)
-
-        # testing what?
 
     def test06_0(self):
         """Many Molecules - Ligand Fitting"""
@@ -173,44 +116,39 @@ class LigandTestFunctions(unittest.TestCase):
         set_mol_displayed(imol_npo, 0)
         # checked for non crash
 
-        
+
     def test07_0(self):
-        """Flip residue (around eigen vectors)"""
+        """flip residue (around eigen vectors)"""
 
-        mon_file = os.path.join("coot-ccp4", "monomer-3GP.pdb")
-	e = os.path.isfile(mon_file)
-	if self.skip_test(not e, "  Oops! file not found! coot-ccp4/monomer-3GP.pdb, skip."):
-            return
-
-        imol_orig = read_pdb(mon_file)
+        # new version
+        imol_orig = unittest_pdb("monomer-3GP.pdb")
         imol_copy = copy_molecule(imol_orig)
 
-        self.failIf(not valid_model_molecule_qm(imol_orig), "not valid molecule for monomer-3GP.pdb")
+        self.failIf(not valid_model_molecule_qm(imol_orig),
+                    "not valid molecule for monomer-3GP.pdb")
 
-        self.failIf(not valid_model_molecule_qm(imol_copy), "not valid molecule for copy of monomer-3GP.pdb")
-
-        set_go_to_atom_molecule(imol_orig)
+        # we need this, otherwise active-atom is (accidentally) the wrong
+        # molecule
+        set_go_to_atom_molecule(imol_copy)
         set_go_to_atom_chain_residue_atom_name("A", 1, " C8 ")
 
         active_atom = active_residue()
-        if self.skip_test(not active_atom, "No active atom found - skipping flip residue test"):
-            return
+        self.failUnless(active_atom, "No active atom")
         imol      = active_atom[0]
         chain_id  = active_atom[1]
         res_no    = active_atom[2]
         ins_code  = active_atom[3]
         atom_name = active_atom[4]
         alt_conf  = active_atom[5]
-        self.failIf(imol == imol_orig, "oops - didn't pick the copy for active res")
+        self.failIf(imol == imol_orig,
+                    "oops - didn't pick the copy for active res")
         flip_ligand(imol, chain_id, res_no)
         atom_orig_1 = get_atom(imol_orig, "A", 1, "", " C8 ")
         atom_move_1 = get_atom(imol     , "A", 1, "", " C8 ")
 
-        from types import ListType
+        self.failUnless(isinstance(atom_orig_1, list), "atom_orig_1 not found")
 
-        self.failUnless(type(atom_orig_1) is ListType, "atom_orig_1 not found")
-
-        self.failUnless(type(atom_move_1) is ListType, "atom_move_1 not found")
+        self.failUnless(isinstance(atom_move_1, list), "atom_move_1 not found")
 
         d = bond_length(atom_orig_1[2], atom_move_1[2])
         print "distance: ", d
@@ -218,7 +156,7 @@ class LigandTestFunctions(unittest.TestCase):
         flip_ligand(imol, chain_id, res_no)
         flip_ligand(imol, chain_id, res_no)
         flip_ligand(imol, chain_id, res_no)
-        #  having flipped it round the axes 4
+        # having flipped it round the axes 4
         # times, we should be back where we
         # started.
         atom_orig_1 = get_atom(imol_orig, "A", 1, "", " C8 ")
@@ -248,15 +186,15 @@ class LigandTestFunctions(unittest.TestCase):
         dip_x = dip[0]
         dip_y = dip[1]
         dip_z = dip[2]
-        
+
         print "info:: dipole components", dip
 
-        self.failUnlessAlmostEqual(dip_y, 0.0, 2, "bad dipole y component %s" %dip_y) 
+        self.failUnlessAlmostEqual(dip_y, 0.0, 2, "bad dipole y component %s" %dip_y)
         self.failUnlessAlmostEqual(dip_z, 0.0, 2, "bad dipole z component %s" %dip_z)
 
         self.failUnless(dip_x < 0 and dip_x > -20)
 
-        
+
     def test09_0(self):
         """Reading new dictionary restraints replaces"""
 
@@ -275,15 +213,19 @@ class LigandTestFunctions(unittest.TestCase):
         self.failUnless(len(t) < 26, "torsions: %s %s" %(len(t), t))
         # 22 in new dictionary, it seems
 
-        
+
     def test10_0(self):
         """Pyrogen Runs OK?"""
 
+        if self.skip_test(not enhanced_ligand_coot_p(),
+                          "No ligand enhaced version, skipping Pyrogen test"):
+            return
+
         # bad things may well happen if we run the wrong version of pyrogen.
-        # so force pyrogen to be the one that is installed alongside this version of coot 
+        # so force pyrogen to be the one that is installed alongside this version of coot
         # that we are running. We do that by looking and manipulating sys.argv[0]
         import os, sys
-        
+
         coot_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
         prefix_dir = os.path.normpath(os.path.join(coot_dir, ".."))
         pyrogen_exe = "pyrogen"
@@ -299,7 +241,8 @@ class LigandTestFunctions(unittest.TestCase):
         # do we have pass now?
         if not enhanced_ligand_coot_p():
             # dont test pyrogen
-            pass
+            # not needed any more. Tested above.
+            return
         else:
             global use_mogul
 
@@ -316,7 +259,41 @@ class LigandTestFunctions(unittest.TestCase):
                              "WARNING:: pyrogen exited with status %i\n" %popen_status)
             pdb_file_name = tlc_text + "-pyrogen.pdb"
             cif_file_name = tlc_text + "-pyrogen.cif"
-            print "INFO:: pyrogen will try to read pdb file %s" %pdb_file_name
             imol = handle_read_draw_molecule_with_recentre(pdb_file_name, 0)
+            print "INFO:: pyrogen will try to read pdb file %s" %pdb_file_name
             # add test for chirality in the dictionary here
             self.assertTrue(valid_model_molecule_qm(imol))
+
+    def test11_0(self):
+        """pyrogen dictionary does not make double-quoted atom names"""
+
+        # untested - no mogul
+
+        # make sure that you are running the correct pyrogen
+
+        if self.skip_test(not enhanced_ligand_coot_p(),
+                          "No ligand enhaced version, skipping Pyrogen test"):
+            return
+
+        import os
+        if os.path.isfile("UVP-pyrogen.cif"):
+            os.remove("UVP-pyrogen.cif")
+
+        popen_status = popen_command("pyrogen",
+                                     ["-nM", "-r", "UVP",
+                                      "CO[C@@H]1[C@H](O)[C@H](O[C@H]1[n+]1ccc(O)nc1O)\\C=C\\P(O)(O)=O"],
+                                     [], "pyrogen.log", False)
+        self.assertEqual(popen_status, 0,
+                         "Fail to correctly run pyrogen\n")
+        read_cif_dictionary("UVP-pyrogen.cif")
+        imol = get_monomer("UVP")
+        self.failUnless(valid_model_molecule_qm(imol),
+                        "Fail to load molecule from pyrogen dictionary\n")
+        atom_info = residue_info(imol, "A", 1, "")
+        # ok
+        for atom in atom_info:
+            atom_name = residue_atom2atom_name(atom)
+            self.failIf("\"" in atom_name,
+                        "Atom name quote fail %s" %atom_name)
+
+

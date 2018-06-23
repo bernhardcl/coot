@@ -25,6 +25,7 @@
 // 
 
 #include <iostream>
+#include <algorithm>
 
 #include <stdexcept> // for string_to_int.
 #include <sstream>   // ditto.
@@ -196,12 +197,32 @@ coot::util::intelligent_debackslash(const std::string &s) {
 std::string
 coot::util::remove_trailing_slash(const std::string &s) {
 
+   // BL says:: On Windows the null termination doesnt seem to work
+   //    by subsituting null.
+   // That was ugly anyway, let's erase the last character.
    std::string scratch = s;
-   if (scratch.substr(scratch.length()-1) == "/")
-      scratch.replace(scratch.end()-1, scratch.end(), '/', '\0');
-   if (scratch.substr(scratch.length()-1) == "\\")
-      scratch.replace(scratch.end()-1, scratch.end(), '\\', '\0');   
 
+   if (s.length() > 0) {
+#ifdef HAVE_CXX11
+      if (s.back() == '/')
+         scratch.erase(scratch.end()-1);
+      if (s.back() == '\\')
+         scratch.erase(scratch.end()-1);
+#else
+      std::string g = scratch.substr(scratch.length()-1);
+      if (scratch.substr(scratch.length()-1) == "/") {
+	 std::string::iterator it = scratch.end();
+         // scratch.erase(it-1);
+	 std::string::size_type l = scratch.length();
+	 scratch=scratch.substr(0,l-1);
+      } else {
+	 // we need an else, because above makes "/" -> ""
+	 // so scratch.length would be 0
+	 if (scratch.substr(scratch.length()-1) == "\\")
+	    scratch.erase(scratch.end()-1);
+      }
+#endif
+   }
    return scratch;
 }
 
@@ -804,7 +825,7 @@ coot::util::extension_is_for_scripts(const std::string &ext) {
    bool r = false;
 #ifdef USE_PYTHON
    if (ext == ".py")
-       r = true;
+      r = true;
 #endif // USE_PYTHON
 #ifdef USE_GUILE
    if (ext == ".scm")
@@ -1186,7 +1207,65 @@ coot::util::is_standard_amino_acid_name(const std::string &residue_name) {
       return 1;
 
    return 0;
-} 
+}
+
+bool
+coot::util::is_standard_nucleotide_name(const std::string &residue_name) {
+
+   if (residue_name == "G")
+      return 1;
+   if (residue_name == "A")
+      return 1;
+   if (residue_name == "T")
+      return 1;
+   if (residue_name == "C")
+      return 1;
+   if (residue_name == "U")
+      return 1;
+   if (residue_name == "DG")
+      return 1;
+   if (residue_name == "DA")
+      return 1;
+   if (residue_name == "DT")
+      return 1;
+   if (residue_name == "DC")
+      return 1;
+   if (residue_name == "DU")
+      return 1;
+   if (residue_name == "GR")
+      return 1;
+   if (residue_name == "AR")
+      return 1;
+   if (residue_name == "UR")
+      return 1;
+   if (residue_name == "TR")
+      return 1;
+   if (residue_name == "UR")
+      return 1;
+   if (residue_name == "Gr")
+      return 1;
+   if (residue_name == "Ar")
+      return 1;
+   if (residue_name == "Ur")
+      return 1;
+   if (residue_name == "Tr")
+      return 1;
+   if (residue_name == "Ur")
+      return 1;
+   if (residue_name == "Gd")
+      return 1;
+   if (residue_name == "Ad")
+      return 1;
+   if (residue_name == "Ud")
+      return 1;
+   if (residue_name == "Td")
+      return 1;
+   if (residue_name == "Ud")
+      return 1;
+   return 0;
+}
+
+
 
 
 bool
@@ -1361,3 +1440,16 @@ coot::util::extract_number_string(const std::string &s) {
    } 
    return r;
 } 
+
+int
+coot::util::round_up_by_hundreds(int num) {
+
+   // 123 should return 200
+   // 100 should return 100
+
+   float a = static_cast<float>(num+99) * 0.01;
+   float f = floorf(a);
+   int ii = static_cast<int>(f) * 100;
+
+   return ii;
+}

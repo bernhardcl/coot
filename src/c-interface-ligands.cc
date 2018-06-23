@@ -77,10 +77,23 @@
 #include "lbg/wmolecule.hh"
 #endif // HAVE_GOOCANVAS
 
+#include "c-interface-bonds.hh"
 
-/*! \brief centre on the ligand of the "active molecule", if we are
-  already there, centre on the next hetgroup (etc) */
-void go_to_ligand() {
+#ifdef USE_PYTHON
+PyObject *go_to_ligand_py() {
+
+   clipper::Coord_orth new_pos = go_to_ligand_inner();
+   PyObject *r = PyList_New(3);
+   for (std::size_t i=0; i<3; i++)
+      PyList_SetItem(r, i, PyFloat_FromDouble(new_pos[i]));
+   return r;
+}
+#endif
+
+clipper::Coord_orth
+go_to_ligand_inner() {
+
+   clipper::Coord_orth new_rotation_centre;
 
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
    if (pp.first) {
@@ -91,6 +104,7 @@ void go_to_ligand() {
 				graphics_info_t::RotationCentre_z());
 	 coot::new_centre_info_t new_centre =
 	    graphics_info_t::molecules[pp.second.first].new_ligand_centre(rc, graphics_info_t::go_to_ligand_n_atoms_limit);
+	 new_rotation_centre = new_centre.position;
 	 if (new_centre.type == coot::NORMAL_CASE) {
 	    // g.setRotationCentre(new_centre.position);
 	    g.perpendicular_ligand_view(pp.second.first, new_centre.residue_spec);
@@ -128,6 +142,15 @@ void go_to_ligand() {
 	 }
       }
    }
+   return new_rotation_centre;
+}
+
+
+/*! \brief centre on the ligand of the "active molecule", if we are
+  already there, centre on the next hetgroup (etc) */
+void go_to_ligand() {
+
+   go_to_ligand_inner();
 }
 
 void set_go_to_ligand_n_atoms_limit(int n_atoms_min) {
@@ -973,6 +996,7 @@ execute_ligand_search_internal(coot::wligand *wlig_p) {
 	    g.molecules[g_mol].assign_hetatms();
 #ifdef HAVE_GSL
 	    if (g.find_ligand_do_real_space_refine_state()) {
+	       set_imol_refinement_map(g.find_ligand_map_mol());
  	       int previous_state = refinement_immediate_replacement_state();
  	       g.refinement_immediate_replacement_flag = 1;
  	       g.refine_residue_range(g_mol, "A", "A", 1, "", 1, "", "", 0);
@@ -2621,6 +2645,29 @@ double kolmogorov_smirnov_scm(SCM l1, SCM l2) {
 }
 #endif
 
+#include "analysis/stats.hh"
+
+#ifdef USE_GUILE
+double kolmogorov_smirnov_vs_normal_scm(SCM l1, double mean, double std_dev) {
+
+   double result = -1;
+   SCM result_scm = SCM_BOOL_F;
+   if (scm_is_true(scm_list_p(l1))) {
+      SCM length_scm_1 = scm_length(l1);
+      unsigned int len_l1 = scm_to_int(length_scm_1);
+      std::vector<double> v1;
+      for (unsigned int i=0; i<len_l1; i++) {
+	 SCM item = scm_list_ref(l1, SCM_MAKINUM(i));
+	 if (scm_is_true(scm_number_p(item)))
+	    v1.push_back(scm_to_double(item));
+      }
+      result = coot::stats::get_kolmogorov_smirnov_vs_normal(v1, mean, std_dev);
+   }
+   return result;
+}
+#endif // USE_GUILE
+
+
 #ifdef USE_GUILE
 SCM kullback_liebler_scm(SCM l1, SCM l2) {
 
@@ -2676,6 +2723,26 @@ double kolmogorov_smirnov_py(PyObject *l1, PyObject *l2) {
 #endif
 
 #ifdef USE_PYTHON
+double kolmogorov_smirnov_vs_normal_py(PyObject *l1, double mean, double std_dev) {
+
+   double result = -1;
+
+   if (PyList_Check(l1)) {
+      unsigned int len_l1 = PyList_Size(l1);
+      std::vector<double> v1;
+      for (unsigned int i=0; i<len_l1; i++) {
+         PyObject *item = PyList_GetItem(l1, i);
+         if (PyFloat_Check(item))
+            v1.push_back(PyFloat_AsDouble(item));
+      }
+      result = coot::stats::get_kolmogorov_smirnov_vs_normal(v1, mean, std_dev);
+   }
+   return result;
+}
+#endif // USE_PYTHON
+
+
+#ifdef USE_PYTHON
 PyObject *kullback_liebler_py(PyObject *l1, PyObject *l2) {
 
    PyObject *result_py = Py_False;
@@ -2695,7 +2762,7 @@ PyObject *kullback_liebler_py(PyObject *l1, PyObject *l2) {
             v2.push_back(PyFloat_AsDouble(item));
       }
       std::pair<double, double> result = nicholls::get_KL(v1, v2);
-      PyObject *result_py = PyList_New(2);
+      result_py = PyList_New(2);
       PyList_SetItem(result_py, 0, PyFloat_FromDouble(result.first));
       PyList_SetItem(result_py, 1, PyFloat_FromDouble(result.second));
    }
@@ -2711,7 +2778,7 @@ PyObject *kullback_liebler_py(PyObject *l1, PyObject *l2) {
 // stage. Perhaps a coot::geometry_distortion_info_container_t?
 //
 double
-print_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code) {
+print_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code, bool with_torsions) {
 
    double total_distortion = 0.0;
    
@@ -2725,7 +2792,7 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 		   << coot::residue_spec_t(chain_id, res_no, ins_code) << std::endl;
       } else {
 	 bool with_nbcs = true;
-	 coot::geometry_distortion_info_container_t gdc = g.geometric_distortions(imol, residue_p, with_nbcs);
+    coot::geometry_distortion_info_container_t gdc = g.geometric_distortions(imol, residue_p, with_nbcs, with_torsions);
 	 int n_restraints_bonds    = 0;
 	 int n_restraints_angles   = 0;
 	 int n_restraints_torsions = 0;
@@ -2740,12 +2807,13 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 	 double sum_penalties_nbcs     = 0;
 	 std::vector<std::pair<std::string,double> > penalty_string_bonds;
 	 std::vector<std::pair<std::string,double> > penalty_string_nbcs;
-	 std::vector<std::pair<std::string,double> > penalty_string_angles;
-	 std::cout << "Residue Distortion List: \n";
+    std::vector<std::pair<std::string,double> > penalty_string_angles;
+    std::vector<std::pair<std::string,double> > penalty_string_torsions;
+    std::cout << "Residue Distortion List: \n";
 	 for (unsigned int i=0; i<gdc.geometry_distortion.size(); i++) { 
 	    const coot::simple_restraint &rest = gdc.geometry_distortion[i].restraint;
 	    if (rest.restraint_type == coot::BOND_RESTRAINT) {
-	       n_restraints_bonds++;
+          n_restraints_bonds++;
 	       mmdb::Atom *at_1 = residue_p->GetAtom(rest.atom_index_1);
 	       mmdb::Atom *at_2 = residue_p->GetAtom(rest.atom_index_2);
 	       if (at_1 && at_2) {
@@ -2830,23 +2898,44 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 		  clipper::Coord_orth p1(at_1->x, at_1->y, at_1->z);
 		  clipper::Coord_orth p2(at_2->x, at_2->y, at_2->z);
 		  clipper::Coord_orth p3(at_3->x, at_3->y, at_3->z);
-		  clipper::Coord_orth p4(at_3->x, at_3->y, at_3->z);
+        clipper::Coord_orth p4(at_4->x, at_4->y, at_4->z);
 		  double torsion_rad = clipper::Coord_orth::torsion(p1, p2, p3, p4);
 		  double torsion = clipper::Util::rad2d(torsion_rad);
-		  double distortion = rest.torsion_distortion(torsion);
-		  double pen_score = distortion*distortion/(rest.sigma*rest.sigma);
+        double actual_torsion;
+        if (torsion < 0) {
+           actual_torsion = torsion + 360.;
+        } else {
+           actual_torsion = torsion;
+        }
+
+        double pos_angle;
+        double diff;
+        double distorsion = 9999.;
+        double target_value_corrected = 9999.;
+        for (unsigned int i=0; i<rest.periodicity; i++) {
+           pos_angle = rest.target_value + (double)i*360./(double)rest.periodicity;
+           if (pos_angle > 360.)
+              pos_angle -= 360.;
+           diff = 180. - fabs(180.- fabs(pos_angle - torsion));
+           if (fabs(diff) < fabs(distorsion)) {
+              distorsion = diff;
+              target_value_corrected = pos_angle;
+           }
+        }
+
+        double pen_score = rest.torsion_distortion(torsion);
 		  std::string s = std::string("torsion ")
 		     + std::string(at_1->name) + std::string(" - ")
 		     + std::string(at_2->name) + std::string(" - ")
 		     + std::string(at_3->name) + std::string(" - ")
 		     + std::string(at_4->name)
-		     + std::string("  target: ") + coot::util::float_to_string(rest.target_value)
+           + std::string("  target: ") + coot::util::float_to_string(target_value_corrected)
 		     + std::string(" model_torsion: ") + coot::util::float_to_string(torsion)
 		     + std::string(" sigma: ") + coot::util::float_to_string(rest.sigma)
-		     + std::string(" torsion-devi ") + coot::util::float_to_string(distortion)
+           + std::string(" torsion-devi ") + coot::util::float_to_string(distorsion)
 		     + std::string(" penalty-score:  ") + coot::util::float_to_string(pen_score);
-		  penalty_string_angles.push_back(std::pair<std::string,double> (s, pen_score));
-		  sum_penalties_angles += pen_score;
+        penalty_string_torsions.push_back(std::pair<std::string,double> (s, pen_score));
+        sum_penalties_torsions += pen_score;
 	       }
 	    }
 	    
@@ -2895,28 +2984,36 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 	 }
 	 
 	 std::sort(penalty_string_bonds.begin(),  penalty_string_bonds.end(),  coot::util::sd_compare);
-	 std::sort(penalty_string_angles.begin(), penalty_string_angles.end(), coot::util::sd_compare);
+    std::sort(penalty_string_angles.begin(), penalty_string_angles.end(), coot::util::sd_compare);
+    std::sort(penalty_string_torsions.begin(), penalty_string_torsions.end(), coot::util::sd_compare);
 
 	 std::reverse(penalty_string_bonds.begin(),  penalty_string_bonds.end());
-	 std::reverse(penalty_string_angles.begin(), penalty_string_angles.end());
+    std::reverse(penalty_string_angles.begin(), penalty_string_angles.end());
+    std::reverse(penalty_string_torsions.begin(), penalty_string_torsions.end());
 
 	 // sorted list, line by line
 	 for (unsigned int i=0; i<penalty_string_bonds.size(); i++)
 	    std::cout << "   " << penalty_string_bonds[i].first << std::endl;
-	 for (unsigned int i=0; i<penalty_string_angles.size(); i++)
-	    std::cout << "   " << penalty_string_angles[i].first << std::endl;
+    for (unsigned int i=0; i<penalty_string_angles.size(); i++)
+       std::cout << "   " << penalty_string_angles[i].first << std::endl;
+    for (unsigned int i=0; i<penalty_string_torsions.size(); i++)
+       std::cout << "   " << penalty_string_torsions[i].first << std::endl;
 
 	 
 	 // Summary:
 	 double av_penalty_bond = 0;
 	 double av_penalty_angle = 0;
+    double av_penalty_torsion = 0;
 	 double av_penalty_total = 0;
 	 if (n_restraints_bonds > 0)
 	    av_penalty_bond = sum_penalties_bonds/double(n_restraints_bonds);
-	 if (n_restraints_angles > 0)
-	    av_penalty_angle = sum_penalties_angles/double(n_restraints_angles);
-	 if ((n_restraints_bonds+n_restraints_angles) > 0) { 
-	    av_penalty_total = (sum_penalties_bonds+sum_penalties_angles)/(n_restraints_bonds+n_restraints_angles);
+    if (n_restraints_angles > 0)
+       av_penalty_angle = sum_penalties_angles/double(n_restraints_angles);
+    if (n_restraints_torsions > 0)
+       av_penalty_torsion = sum_penalties_torsions/double(n_restraints_torsions);
+    if ((n_restraints_bonds+n_restraints_angles) > 0) {
+       av_penalty_total = (sum_penalties_bonds+sum_penalties_angles)/
+             (n_restraints_bonds+n_restraints_angles);
 	 }
 	 total_distortion =
 	    sum_penalties_bonds  +
@@ -2928,13 +3025,22 @@ print_residue_distortions(int imol, std::string chain_id, int res_no, std::strin
 	 std::cout << "Residue Distortion Summary: \n   "
 		   << n_restraints_bonds  << " bond restraints\n   "
 		   << n_restraints_angles << " angle restraints\n"
-		   << "   sum of bond  distortions penalties:  " << sum_penalties_bonds  << "\n"
-		   << "   sum of angle distortions penalties:  " << sum_penalties_angles << "\n"
-		   << "   average bond  distortion penalty:    " << av_penalty_bond  << "\n"
-		   << "   average angle distortion penalty:    " << av_penalty_angle << "\n"
-		   << "   total distortion penalty:            " << total_distortion
+         << ((with_torsions) ? "   " : "")
+         << ((with_torsions) ? coot::util::int_to_string(n_restraints_torsions) : "")
+         << ((with_torsions) ? " torsion restraints\n" : "")
+         << "   sum of bond  distortions penalties:  " << sum_penalties_bonds  << "\n"
+         << "   sum of angle distortions penalties:  " << sum_penalties_angles << "\n"
+         << ((with_torsions) ? "   sum of torsion distortions penalties:" : "")
+         << ((with_torsions) ? coot::util::float_to_string(sum_penalties_torsions) : "")
+         << ((with_torsions) ? "\n" : "")
+         << "   average bond  distortion penalty:    " << av_penalty_bond  << "\n"
+         << "   average angle distortion penalty:    " << av_penalty_angle << "\n"
+         << ((with_torsions) ? "   average torsion distortion penalty:  " : "")
+         << ((with_torsions) ? coot::util::float_to_string(av_penalty_torsion) : "")
+         << ((with_torsions) ? "\n" : "")
+         << "   total distortion penalty:            " << total_distortion
 		   << "\n"
-		   << "   average distortion penalty:          " << av_penalty_total
+         << "   average distortion penalty (b&a):    " << av_penalty_total
 		   << std::endl;
       }
    }
@@ -2958,7 +3064,8 @@ display_residue_distortions(int imol, std::string chain_id, int res_no, std::str
 		   << coot::residue_spec_t(chain_id, res_no, ins_code) << std::endl;
       } else {
 	 bool with_nbcs = true;
-	 coot::geometry_distortion_info_container_t gdc = g.geometric_distortions(imol, residue_p, with_nbcs);
+    bool with_torsions = true;
+    coot::geometry_distortion_info_container_t gdc = g.geometric_distortions(imol, residue_p, with_nbcs, with_torsions);
 	 if (gdc.geometry_distortion.size()) {
 
 	    std::string name = std::string("Ligand Distortion of ");
@@ -3050,6 +3157,7 @@ display_residue_distortions(int imol, std::string chain_id, int res_no, std::str
 		     // at_c that is not at_1, at_2 or at_3.
 		     mmdb::Atom *at_4th = coot::chiral_4th_atom(residue_p, at_c, at_1, at_2, at_3);
 		     if (at_4th) {
+			std::cout << "    " << coot::atom_spec_t(at_4th) << std::endl;
 			clipper::Coord_orth p4(at_4th->x, at_4th->y, at_4th->z);
 			clipper::Coord_orth bl_4 = 0.6 * pc + 0.4 * p4;
 			to_generic_object_add_line(new_obj, ch.hex().c_str(), 2,
@@ -3061,8 +3169,23 @@ display_residue_distortions(int imol, std::string chain_id, int res_no, std::str
 			to_generic_object_add_line(new_obj, ch.hex().c_str(), 2,
 						   bl_3.x(), bl_3.y(), bl_3.z(),
 						   bl_4.x(), bl_4.y(), bl_4.z());
-			   
-		     } 
+		     } else {
+			// make 4th tetrahedron point from the others
+			clipper::Coord_orth neighb_sum = p1 + p2 + p3;
+			clipper::Coord_orth neighb_average = 0.33333333 * neighb_sum;
+			clipper::Coord_orth dir_unit(clipper::Coord_orth(pc - neighb_average).unit());
+			clipper::Coord_orth p4(pc + 1.2 * dir_unit);
+			clipper::Coord_orth bl_4 = 0.6 * pc + 0.4 * p4;
+			to_generic_object_add_line(new_obj, ch.hex().c_str(), 2,
+						   bl_1.x(), bl_1.y(), bl_1.z(),
+						   bl_4.x(), bl_4.y(), bl_4.z());
+			to_generic_object_add_line(new_obj, ch.hex().c_str(), 2,
+						   bl_2.x(), bl_2.y(), bl_2.z(),
+						   bl_4.x(), bl_4.y(), bl_4.z());
+			to_generic_object_add_line(new_obj, ch.hex().c_str(), 2,
+						   bl_3.x(), bl_3.y(), bl_3.z(),
+						   bl_4.x(), bl_4.y(), bl_4.z());
+		     }
 		  }
 	       }
 	    }
@@ -3345,7 +3468,8 @@ coot_contact_dots_for_ligand_internal(int imol, coot::residue_spec_t &res_spec) 
       for (it=c.dots.begin(); it!=c.dots.end(); it++) {
 	 const std::string &type = it->first;
 	 const std::vector<coot::atom_overlaps_dots_container_t::dot_t> &v = it->second;
-	 std::string obj_name = type;
+	 std::string obj_name = "Molecule ";
+	 obj_name += coot::util::int_to_string(imol) + ": " + type;
 	 int obj = new_generic_object_number(obj_name.c_str());
 	 int point_size = 2;
 	 if (type == "vdw-surface") point_size = 1;
@@ -3356,7 +3480,9 @@ coot_contact_dots_for_ligand_internal(int imol, coot::residue_spec_t &res_spec) 
 	 if (type != "vdw-surface")
 	    set_display_generic_object(obj, 1); // should be a function with no redraw
       }
-      int clashes_obj = new_generic_object_number("clashes");
+      std::string clashes_name = "Molecule " + coot::util::int_to_string(imol) + ":";
+      clashes_name += " clashes";
+      int clashes_obj = new_generic_object_number(clashes_name.c_str()); // change this func to use std::string arg
       for (unsigned int i=0; i<c.clashes.size(); i++) {
 	 to_generic_object_add_line(clashes_obj, "#ff59b4", 2,
 				    c.clashes[i].first.x(),  c.clashes[i].first.y(),  c.clashes[i].first.z(),
@@ -3433,7 +3559,8 @@ void coot_all_atom_contact_dots(int imol) {
       graphics_info_t g;
       mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
       // spike-length ball-radius
-      coot::atom_overlaps_container_t overlaps(mol, g.Geom_p(), 0.5, 0.25);
+      bool ignore_waters = true;
+      coot::atom_overlaps_container_t overlaps(mol, g.Geom_p(), ignore_waters, 0.5, 0.25);
       // dot density
       coot::atom_overlaps_dots_container_t c = overlaps.all_atom_contact_dots(0.95, true);
 
@@ -3455,23 +3582,26 @@ void coot_all_atom_contact_dots(int imol) {
       colour_map["hotpink"   ] = coot::generic_display_object_t::colour_values_from_colour_name("hotpink");
       colour_map["grey"      ] = coot::generic_display_object_t::colour_values_from_colour_name("grey");
       colour_map["magenta"   ] = coot::generic_display_object_t::colour_values_from_colour_name("magenta");
-      
+
       for (it=c.dots.begin(); it!=c.dots.end(); it++) {
 	 const std::string &type = it->first;
 	 const std::vector<coot::atom_overlaps_dots_container_t::dot_t> &v = it->second;
-	 std::string obj_name = type;
+	 std::string obj_name = "Molecule ";
+	 obj_name += coot::util::int_to_string(imol) + ": " + type;
 	 int obj = new_generic_object_number(obj_name.c_str());
 	 std::string col = "#445566";
 	 int point_size = 2;
 	 if (type == "vdw-surface") point_size = 1;
 	 for (unsigned int i=0; i<v.size(); i++) {
-	    const std::string &col = v[i].col;
-	    to_generic_object_add_point_internal(obj, col, colour_map[col], point_size, v[i].pos);
+	    const std::string &col_inner = v[i].col;
+	    to_generic_object_add_point_internal(obj, col_inner, colour_map[col_inner], point_size, v[i].pos);
 	 }
 	 if (type != "vdw-surface")
 	    set_display_generic_object_simple(obj, 1); // should be a function with no redraw
       }
-      int clashes_obj = new_generic_object_number("clashes");
+      std::string clashes_name = "Molecule " + coot::util::int_to_string(imol) + ":";
+      clashes_name += " clashes";
+      int clashes_obj = new_generic_object_number(clashes_name.c_str());
       for (unsigned int i=0; i<c.clashes.size(); i++) {
 	 to_generic_object_add_line(clashes_obj, "#ff59b4", 2,
 				    c.clashes[i].first.x(),  c.clashes[i].first.y(),  c.clashes[i].first.z(),

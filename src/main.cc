@@ -189,7 +189,7 @@ main (int argc, char *argv[]) {
 
   
    if (graphics_info_t::use_graphics_interface_flag) {
-      gtk_set_locale ();    // gtk stuff
+      gtk_set_locale(); // gtk stuff
       load_gtk_resources();
       gtk_init (&argc, &argv);
       // activate to force icons in menus; cannot get it to work with 
@@ -203,8 +203,8 @@ main (int argc, char *argv[]) {
    } else {
 
       // not needed from 2.36
-#if (GTK_MAJOR_VERSION == 2)
-#if (GTK_MINOR_VERSION < 36)
+#if (GLIB_MAJOR_VERSION == 2)
+#if (GLIB_MINOR_VERSION < 36)
       g_type_init(); // for lbg command-line mode, so that
                      // goo_canvas_new() works cleanly.
 #endif
@@ -220,7 +220,6 @@ main (int argc, char *argv[]) {
    // 
    setup_splash_screen();
 
-  
    GtkWidget *splash = NULL;
 
    if (graphics_info_t::use_graphics_interface_flag) {

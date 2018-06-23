@@ -201,8 +201,42 @@ GtkWidget *wrapped_create_delete_item_dialog() {
 							"delete_item_water_radiobutton");
 	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(water_toggle_button), TRUE);
       } else { 
-	 set_delete_residue_mode(); // The widget default radio button
+	 if (delete_item_mode_is_sidechain_p()) {
+	 GtkWidget *sidechain_toggle_button = lookup_widget(widget,
+							"delete_item_sidechain_radiobutton");
+	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sidechain_toggle_button), TRUE);
+
+	 set_delete_sidechain_mode();
 	 std::cout << "Click on an atom in the residue that you wish to delete\n";
+	 } else {
+	    if (delete_item_mode_is_chain_p()) {
+	       GtkWidget *chain_toggle_button = lookup_widget(widget,
+								  "delete_item_chain_radiobutton");
+	       set_delete_chain_mode();
+	       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chain_toggle_button), TRUE);
+	       std::cout << "Click on an atom in the chain that you wish to delete\n";
+	    } else {
+
+	       if (delete_item_mode_is_sidechain_range_p()) {
+
+		  GtkWidget *sidechain_range_toggle_button = lookup_widget(widget,
+									   "delete_item_sidechain_range_radiobutton");
+		  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sidechain_range_toggle_button), TRUE);
+
+		  set_delete_sidechain_range_mode();
+	       } else {
+
+		  // if (delete_item_mode_is_residue_p()) {
+		  // if nothing else, let's choose delete residue mode
+		  if (true) {
+		     GtkWidget *chain_toggle_button = lookup_widget(widget,
+								    "delete_item_residue_radiobutton");
+		     set_delete_residue_mode();
+		     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chain_toggle_button), TRUE);
+		  }
+	       }
+	    }
+	 }
       }
    }
    graphics_info_t::pick_pending_flag = 1;
@@ -343,17 +377,35 @@ void fill_place_atom_molecule_option_menu(GtkWidget *optionmenu) {
 }
 
 /* Now the refinement weight can be set from an entry in the refine_params_dialog. */
-void set_refinemenent_weight_from_entry(GtkWidget *entry) {
+void set_refinement_weight_from_entry(GtkWidget *entry) {
 
    const char *text = gtk_entry_get_text(GTK_ENTRY(entry));
    try {
       float f = coot::util::string_to_float(text);
       graphics_info_t::geometry_vs_map_weight = f;
    }
-   catch (std::runtime_error rte) {
+   catch (const std::runtime_error &rte) {
       std::cout << "in set_refinemenent_weight_from_entry " << rte.what() << std::endl;
    } 
-} 
+}
+
+void estimate_map_weight(GtkWidget *entry) {
+
+   int imol_map = imol_refinement_map();
+   if (is_valid_map_molecule(imol_map)) {
+      float mean = graphics_info_t::molecules[imol_map].map_mean();
+      float sd   = graphics_info_t::molecules[imol_map].map_sigma();
+
+      float v = 50*0.3/sd;
+      if (graphics_info_t::molecules[imol_map].is_EM_map())
+	 v *= 0.35;
+      graphics_info_t::geometry_vs_map_weight = v;
+      std::string t = coot::util::float_to_string(v);
+      gtk_entry_set_text(GTK_ENTRY(entry), t.c_str());
+   }
+
+}
+
 
 void place_atom_at_pointer_by_window() { 
 
@@ -519,10 +571,10 @@ void apply_add_OXT_from_widget(GtkWidget *w) {
 
    if (resno > -9999) { 
       if (is_valid_model_molecule(imol)) { 
-	 if (graphics_info_t::molecules[imol].has_model()) { 
-	    std::cout << "DEBUG:: adding OXT to " << imol << " "
-		      << chain_id << " " << resno << std::endl;
-	    
+	 if (graphics_info_t::molecules[imol].has_model()) {
+	    if (false)
+	       std::cout << "DEBUG:: adding OXT to " << imol << " "
+			 << chain_id << " " << resno << std::endl;
 	    add_OXT_to_residue(imol, resno, "", chain_id.c_str());
 	 }
       }
@@ -768,8 +820,9 @@ void do_merge_molecules(GtkWidget *dialog) {
 
    std::vector<int> add_molecules = *graphics_info_t::merge_molecules_merging_molecules;
    if (add_molecules.size() > 0) { 
-      std::pair<int, std::vector<std::string> > stat =
-	 merge_molecules_by_vector(add_molecules, graphics_info_t::merge_molecules_master_molecule);
+      std::pair<int, std::vector<merge_molecule_results_info_t> > stat =
+	 merge_molecules_by_vector(add_molecules,
+				   graphics_info_t::merge_molecules_master_molecule);
       if (stat.first)
 	 graphics_draw();
    }
@@ -903,8 +956,8 @@ void do_mutate_sequence(GtkWidget *dialog) {
    if ((t > -999) && (t < 9999))
       res2 = t;
 
-// BL says: we should set a flag tha we swapped the direction and swap back
-// before we call fit-gap to actually build backwards!!
+// BL says: we should set a flag that we swapped the direction and swap back
+// before we call fit-gap to actually build backwards
    int swap_flag = 0;
    if (res2 < res1) {
       t = res1;
@@ -925,7 +978,6 @@ void do_mutate_sequence(GtkWidget *dialog) {
 
    if (GTK_TOGGLE_BUTTON(checkbutton)->active)
       autofit_flag = 1;
-      
 
    if (imol>= 0) { // redundant
       if (is_valid_model_molecule(imol)) { 
@@ -934,9 +986,6 @@ void do_mutate_sequence(GtkWidget *dialog) {
 	 GtkWidget *text = lookup_widget(dialog, "mutate_molecule_sequence_text");
 	 char *txt = NULL;
 
-
-	 // std::cout << "Gtk2 text view code... " << std::endl;
-	 // text is a GtkTextView in GTK2
 	 GtkTextView *tv = GTK_TEXT_VIEW(text);
 	 GtkTextBuffer* tb = gtk_text_view_get_buffer(tv);
 	 GtkTextIter startiter;
@@ -944,6 +993,10 @@ void do_mutate_sequence(GtkWidget *dialog) {
 	 gtk_text_buffer_get_iter_at_offset(tb, &startiter, 0);
 	 gtk_text_buffer_get_iter_at_offset(tb, &enditer, -1);
 	 txt = gtk_text_buffer_get_text(tb, &startiter, &enditer, 0);
+
+	 std::string mutate_scripting_function = "mutate-and-autofit-residue-range";
+	 if (! autofit_flag)
+	    mutate_scripting_function = "mutate-residue-range";
 
 	 if (txt) {
 	    std::string sequence(txt);
@@ -963,7 +1016,8 @@ void do_mutate_sequence(GtkWidget *dialog) {
 	       cmd_strings.push_back(single_quote(sequence));
 	       std::string cmd = g.state_command(cmd_strings, state_lang);
 	       
-// BL says: I believe we should distinguish between python and guile here!?
+// BL says: I believe we should distinguish between python and guile here
+
 #ifdef USE_GUILE
 	       if (state_lang == coot::STATE_SCM) {
 		  safe_scheme_command(cmd);
@@ -975,6 +1029,7 @@ void do_mutate_sequence(GtkWidget *dialog) {
               }
 #endif // PYTHON
 #endif // GUILE
+
 	      update_go_to_atom_window_on_changed_mol(imol);
 	      g.update_geometry_graphs(g.molecules[imol].atom_sel, imol);
 
@@ -1012,10 +1067,8 @@ GtkWidget *wrapped_fit_loop_rama_search_dialog() {
    gtk_widget_hide(mutate_ok_button);
    gtk_widget_hide(checkbutton);
    gtk_widget_show(fit_loop_ok_button);
-#if (GTK_MAJOR_VERSION > 1)
    gtk_widget_show(rama_checkbutton);
    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rama_checkbutton), TRUE);
-#endif
 
    gtk_widget_show(method_frame);
 
@@ -1102,11 +1155,9 @@ void fit_loop_from_widget(GtkWidget *dialog) {
 
    // use Ramachandran restraints?
    int use_rama_restraints = 0;
-#if (GTK_MAJOR_VERSION > 1)   
    GtkWidget *rama_checkbutton   = lookup_widget(dialog, "mutate_sequence_use_ramachandran_restraints_checkbutton");
    if (GTK_TOGGLE_BUTTON(rama_checkbutton)->active) 
       use_rama_restraints = 1;
-#endif   
 
    if (imol>= 0) { // redundant
       if (is_valid_model_molecule(imol)) {
@@ -1115,14 +1166,6 @@ void fit_loop_from_widget(GtkWidget *dialog) {
 	 GtkWidget *text = lookup_widget(dialog, "mutate_molecule_sequence_text");
 	 char *txt = NULL;
 
-
-#if (GTK_MAJOR_VERSION == 1) 
-	 gint start_pos = 0;
-	 gint end_pos = -1;
-	 txt = gtk_editable_get_chars(GTK_EDITABLE(text), start_pos, end_pos);
-#else
-	 // std::cout << "Gtk2 text view code... " << std::endl;
-	 // text is a GtkTextView in GTK2
 	 GtkTextView *tv = GTK_TEXT_VIEW(text);
 	 GtkTextBuffer* tb = gtk_text_view_get_buffer(tv);
 	 GtkTextIter startiter;
@@ -1130,7 +1173,6 @@ void fit_loop_from_widget(GtkWidget *dialog) {
 	 gtk_text_buffer_get_iter_at_offset(tb, &startiter, 0);
 	 gtk_text_buffer_get_iter_at_offset(tb, &enditer, -1);
 	 txt = gtk_text_buffer_get_text(tb, &startiter, &enditer, 0);
-#endif
 	 
 	 if (txt) {
 	    std::string sequence(txt);
@@ -1275,7 +1317,6 @@ int do_align_mutate_sequence(GtkWidget *w) {
 	    std::string sequence(txt);
 
 	    if (is_valid_model_molecule(imol)) {
-	       graphics_info_t g;
 	       g.mutate_chain(imol, chain_id, sequence, do_auto_fit, renumber_residues_flag);
 	       g.update_geometry_graphs(g.molecules[imol].atom_sel, imol);
 	       graphics_draw();
@@ -1473,13 +1514,14 @@ show_fix_nomenclature_errors_gui(int imol,
 
 	 if (box) {
 	    // fill box
+
 	    for (unsigned int i=0; i<nomenclature_errors.size(); i++) {
 	       s = nomenclature_errors[i].first; // the residue type
 	       s += " ";
 	       s += nomenclature_errors[i].second.format();
-	       GtkWidget *label = gtk_label_new(s.c_str());
-	       gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(label), FALSE, FALSE, 2);
-	       gtk_widget_show(GTK_WIDGET(label));
+	       GtkWidget *l = gtk_label_new(s.c_str());
+	       gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(l), FALSE, FALSE, 2);
+	       gtk_widget_show(GTK_WIDGET(l));
 	    }
 	 }
 	 gtk_widget_show(w);
@@ -1611,7 +1653,6 @@ void   place_strand_here_dialog() {
 GtkWidget *
 wrapped_create_fast_ss_search_dialog() {
 
-#if (GTK_MAJOR_VERSION > 1)
   GtkWidget *dialog;
   GtkWidget *helix_temp_combobox;
   GtkWidget *strand_temp_combobox;
@@ -1635,8 +1676,154 @@ wrapped_create_fast_ss_search_dialog() {
   gtk_combo_box_set_active(GTK_COMBO_BOX(radius_combobox),1);
 
   return dialog;
+}
+
+
+/* ------------------------------------------------------------------------ */
+/* ------------------------------------------------------------------------ */
+// Edit Functions that have been promoted from Extensions -> Modelling
+/* ------------------------------------------------------------------------ */
+/* ------------------------------------------------------------------------ */
+void  do_edit_copy_molecule() {
+
+#ifdef USE_PYTHON
+#ifdef USE_GUILE
+   short int state_lang = coot::STATE_SCM;
+#else    
+   short int state_lang = coot::STATE_PYTHON;
+#endif
+#else // python not used
+#ifdef USE_GUILE
+   short int state_lang = coot::STATE_SCM;
+#else    
+   short int state_lang = 0;
+#endif
+#endif   
+
+#ifdef USE_GUILE
+   std::string cmd = "(molecule-chooser-gui \"Molecule to Copy...\" (lambda (imol) (copy-molecule imol)))";
+   
+   if (state_lang == coot::STATE_SCM) {
+      safe_scheme_command(cmd);
+   }
 #else
-  GtkWidget *w = 0;
-  return w;
-#endif // GTK_MAJOR_VERSION
+#ifdef USE_PYTHON
+   if (state_lang == coot::STATE_PYTHON) {
+
+      std::string cmd = "molecule_chooser_gui(\"Molecule to Copy...\", lambda imol: copy_molecule(imol))";
+      safe_python_command(cmd);
+   }
+#endif // PYTHON
+#endif // GUILE
+
+}
+
+void  do_edit_copy_fragment() {
+
+#ifdef USE_PYTHON
+#ifdef USE_GUILE
+   short int state_lang = coot::STATE_SCM;
+#else    
+   short int state_lang = coot::STATE_PYTHON;
+#endif
+#else // python not used
+#ifdef USE_GUILE
+   short int state_lang = coot::STATE_SCM;
+#else    
+   short int state_lang = 0;
+#endif
+#endif   
+
+#ifdef USE_GUILE
+   std::string cmd = "(generic-chooser-and-entry-and-checkbutton \"From which molecule shall we copy the fragment?\" \"Atom selection for fragment\" \"//A/1-10\" \"Move new molecule here?\" (lambda (imol text button-state) (let ((imol (new-molecule-by-atom-selection imol text))) (if button-state (move-molecule-to-screen-centre imol)) (valid-model-molecule? imol))) #f)";
+
+   if (state_lang == coot::STATE_SCM) {
+      std::ofstream f("debug.scm");
+      f.write(cmd.c_str(), cmd.size());
+      f.write("\n", 1);
+      f.close();
+      safe_scheme_command(cmd);
+   }
+#else
+#ifdef USE_PYTHON
+   if (state_lang == coot::STATE_PYTHON) {
+
+      // This is a tricky, long winded one. We first make a function which is
+      // then executed and all has to reside within exec as we cannot have
+      // multiple line statements in python... lets try
+      std::string cmd = "exec(\'def atom_selection_from_fragment_func(imol, text, button_state): \\n \\t jmol = new_molecule_by_atom_selection(imol, text) \\n \\t if button_state: move_molecule_to_screen_centre(jmol) \\n \\t return valid_model_molecule_qm(jmol) \\ngeneric_chooser_and_entry_and_check_button(\"From which molecule shall we copy the fragment?\", \"Atom selection for fragment\", \"//A/1-10\", \"Move new molecule here?\", lambda imol, text, button_state: atom_selection_from_fragment_func(imol, text, button_state), False)\')";
+//                         exec('def atom_selection_from_fragment_func(imol, text, button_state): \n \t jmol = new_molecule_by_atom_selection(imol, text) \n \t if button_state: move_molecule_to_screen_centre(jmol) \n \t return valid_model_molecule_qm(jmol) \ngeneric_chooser_and_entry_and_check_button("From which molecule shall we copy the fragment?", "Atom selection for fragment", "//A/1-10", "Move new molecule here?", lambda imol, text, button_state: atom_selection_from_fragment_func(imol, text, button_state), False)')
+      safe_python_command(cmd);
+   }
+#endif // PYTHON
+#endif // GUILE
+
+}
+
+void  do_edit_replace_residue() {
+
+#ifdef USE_PYTHON
+#ifdef USE_GUILE
+   short int state_lang = coot::STATE_SCM;
+#else    
+   short int state_lang = coot::STATE_PYTHON;
+#endif
+#else // python not used
+#ifdef USE_GUILE
+   short int state_lang = coot::STATE_SCM;
+#else    
+   short int state_lang = 0;
+#endif
+#endif   
+
+#ifdef USE_GUILE
+   std::string cmd = "(generic-single-entry \"Replace this residue with residue of type:\" \"ALA\" \"Mutate\" (lambda (text) (using-active-atom (mutate-by-overlap aa-imol aa-chain-id aa-res-no text))))";
+   if (state_lang == coot::STATE_SCM) {
+      safe_scheme_command(cmd);
+   }
+#else
+#ifdef USE_PYTHON
+   if (state_lang == coot::STATE_PYTHON) {
+
+      std::string cmd = "generic_single_entry(\"Replace this residue with residue of type:\", \"ALA\", \"Mutate\", lambda text: using_active_atom(mutate_by_overlap, \"aa_imol\", \"aa_chain_id\", \"aa_res_no\", text))";
+      safe_python_command(cmd);
+   }
+#endif // PYTHON
+#endif // GUILE
+
+}
+
+void  do_edit_replace_fragment() {
+
+
+#ifdef USE_PYTHON
+#ifdef USE_GUILE
+   short int state_lang = coot::STATE_SCM;
+#else    
+   short int state_lang = coot::STATE_PYTHON;
+#endif
+#else // python not used
+#ifdef USE_GUILE
+   short int state_lang = coot::STATE_SCM;
+#else    
+   short int state_lang = 0;
+#endif
+#endif   
+
+#ifdef USE_GUILE
+   std::string cmd =
+      "(molecule-chooser-gui \"Define the molecule that needs updating\" (lambda (imol-base) (generic-chooser-and-entry \"Molecule that contains the new fragment:\" \"Atom Selection\" \"//\" (lambda (imol-fragment atom-selection-str) (replace-fragment imol-base imol-fragment atom-selection-str)))))";
+   if (state_lang == coot::STATE_SCM) {
+      safe_scheme_command(cmd);
+   }
+#else
+#ifdef USE_PYTHON
+   if (state_lang == coot::STATE_PYTHON) {
+
+      std::string cmd =
+         "molecule_chooser_gui(\"Define the molecule that needs updating\", lambda imol_base: generic_chooser_and_entry(\"Molecule that contains the new fragment:\", \"Atom Selection\", \"//\", lambda imol_fragment, atom_selection_str: replace_fragment(imol_base, imol_fragment, atom_selection_str)))";
+      safe_python_command(cmd);
+   }
+#endif // PYTHON
+#endif // GUILE
 }

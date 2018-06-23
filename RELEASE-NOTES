@@ -1,4 +1,150 @@
 
+  Pre-Release 0.8.9.2
+
+  o FEATURE: LINK info added to header browser
+
+  o FEATURE: External angle restraints are now available (corresponding to REFMAC type
+	     0 restraints) - mini-rsr included [Robbie Joosten]
+
+  o FEATURE: raster3d output now includes labels [Vito Calderone]
+
+  o FEATURE: API for user-defined unimodal torsion restraints (for pyranoses) [Juan Hermoso]
+
+  o FEATURE: "Variable" bond widths i.e. as you zoom out, the bond lines get thinner
+             [Erec Stebbins]
+             (set-use-variable-bond-thickness 1)
+
+  o CHANGE:  Iron-Sulfur clusters are now bonded using the dictionary (and so appear "cubic")
+             [Hannah Bridges]
+
+  o CHANGE:  Edit -> Copy Fragment now has a "Move it Here" check-button
+
+  o CHANGE:  Old interface to PRODRG removed [Elinor Breiner]
+
+  o CHANGE:  Jiggle-fit speed up by using backbone mode if possible
+
+  o CHANGE:  Forwards-fitting a terminal residue now correctly positions the O atom
+             of the current residue that corresponds to the new residue
+
+  o CHANGE:  Planar peptide restraints now apply to PTRANS restraints as well as TRANS
+             restraints
+
+  o CHANGE:  RCrane restored
+
+  o BUG-FIX: the H atom in a peptide is now moved along with the other peptide atoms
+             on a cis->trans conversion (and vice versa)
+
+  O BUG-FIX: Using PDB-REDO now loads an anomalous map also (if possible) [Robbie Joosten]
+
+  o BUG-FIX: Fix typo in template-keybindings-to-preferences that causes initial
+             installation of key-bindings to fail sometimes [Colin Palmer].
+
+  o BUG-FIX: The slow update on deleting deviant extra distance restraints has been
+             been replaced with a fasater version [JED]
+
+-----
+
+  Release 0.8.9.1
+
+  o FEATURE: Auto-NCS Jumping menu item added to the NCS submenu
+
+  o FEATURE: Tool-tips for residues in Sequence View
+
+  o FEATURE: Added a function to limit the display radius for models
+
+  o FEATURE: New button to display only the the last model molecule
+
+  o FEATURE: Acedrg Link generation GUI (in the CCP4 Module)
+
+  o FEATURE: "Jiggle-fit Ligand" menu item added to the Ligand menu
+
+  o FEATURE: GUI to use Refmac to generate structure factors from an EM map
+             (in the Cryo-EM module)
+
+  o FEATURE: Interactive "Nudge Residue" dialog added to Cryo-EM module
+
+  o CHANGE:  The refinement map is now set before refinement of solutions
+             in ligand fitting [Keith Wilson]
+
+  o CHANGE:  The Mutate Residue Range can now mutate RNA and has a
+             check for numbering consistency [Donna Matzov]
+
+  o CHANGE:  Map density histogram is cached for speedier display
+             of Map Properties dialog for Cryo-EM maps
+
+  o CHANGE:  RCrane removed from the interface (for now)
+
+  o CHANGE:  Carbohydrate fitting weighting scheme improved (should work
+             better for cryo-EM maps)
+
+  o BUG-FIX: cif-reading in Classic dialogs no longer causes a crash
+
+  o BUG-FIX: Phosphorus atoms are now orange in Colour by Chain mode
+
+  o BUG-FIX: Molecule information extraction from wikipedia made more robust
+
+  o BUG-FIX: N-terminal Hydrogen atoms now refined correctly
+
+  o BUG-FIX: Fix crash on Replace Residue with a nucleotide [Elinor Breiner]
+
+  o BUG-FIX: Fix crash on invalid SMILES input for LIDIA
+
+  o BUG-FIX: Fix crash on wrong molecule index for some cif data function [JED]
+
+----
+
+  Release 0.8.9
+
+  o FEATURE: Improved Ramachandran Plot, now with residue selection
+
+  o FEATURE: Use of threads and accumulation in map contouring
+
+  o FEATURE: secondary structure interface added to the the API
+
+  o FEATURE: delete-chain and delete-sidechains-for-chain added to the API
+
+  o FEATURE: Added a user-defined modelling toolbar button to refine tandem residues
+
+  o FEATURE: experimental peptide orientation optimisation function added (also in mini-rsr)
+
+  o CHANGE:  Refinement speed-up
+
+  o CHANGE:  Add-terminal-residue speed-up
+
+  o CHANGE:  Glyo module improved with distance restraints and better GUI
+
+  o CHANGE:  Better density fit graph scaling
+
+  o CHANGE:  Use ETKDG for embedding in pyrogen
+
+  o CHANGE:  Use less precision on writing the aniso ADPs for SHELX ins
+
+  o CHANGE:  Optional Fourier Transform-based Ramachandran Plot target function added
+
+  o CHANGE:  Bond-thicknesses improved in colour-by-chain.
+
+  o CHANGE:  Robust MOL-file parsing added to lidia
+
+  o CHANGE:  A density value histogram has been added to the map properties dialog
+
+  o CHANGE:  Pepflip residue indexing improved
+
+  o CHANGE:  Updated Ligand fitting in the tutorial
+
+  o BUG-FIX: Hydrogen atoms are no longer used in rotamer clash score
+
+  o BUG-FIX: Geman-McClure distance restraints activation bug fix
+
+  o BUG-FIX: delete-atom no longer crashes when given an invalid model molecule number
+
+  o BUG-FIX: Adding a terminal OXT no longer causes a crash
+
+  o BUG-FIX: Ramachandran plot is updated on "Undo"
+
+  o BUG-FIX: Chiral centre distortion representation fixed
+
+
+
 ------
 
   Release 0.8.8

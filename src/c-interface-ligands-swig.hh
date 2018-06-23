@@ -32,6 +32,12 @@ PyObject *new_molecule_sans_biggest_ligand_py(int imol);
 void gui_ligand_metrics_py(PyObject *ligand_spec, PyObject *ligand_metrics, double percentile_limit);
 #endif
 
+#ifdef USE_PYTHON
+// this is not a ligands function (although it can be used for ligands)
+// it doesn't belong here
+PyObject *residues_distortions_py(int imol, PyObject *residue_spec_list);
+PyObject *get_intermediate_atoms_distortions_py();
+#endif
 
 // This don't call graphics_draw(), so the caller needs to do so.
 //
@@ -66,6 +72,7 @@ residues_torsions_match_py(int imol_1, PyObject *res_1,
 
 #ifdef USE_GUILE
 double kolmogorov_smirnov_scm(SCM l1, SCM l2);
+double kolmogorov_smirnov_vs_normal_scm(SCM l1, double mean, double std_dev);
 #endif
 
 #ifdef USE_GUILE
@@ -74,6 +81,7 @@ SCM kullback_liebler_scm(SCM l1, SCM l2);
 
 #ifdef USE_PYTHON
 double kolmogorov_smirnov_py(PyObject *l1, PyObject *l2);
+double kolmogorov_smirnov_vs_normal_py(PyObject *l1, double mean, double std_dev);
 #endif
 
 #ifdef USE_PYTHON
@@ -84,7 +92,7 @@ PyObject *kullback_liebler_py(PyObject *l1, PyObject *l2);
 // stage. Perhaps a coot::geometry_distortion_info_container_t?
 //
 double
-print_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code);
+print_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code, bool with_torsions=0);
 void
 display_residue_distortions(int imol, std::string chain_id, int res_no, std::string ins_code);
 
@@ -126,6 +134,10 @@ match_this_residue_and_dictionary(int imol, std::string chain_id, int res_no, st
 bool comprised_of_organic_set_p(const std::string &rn);
 
 // all-atom contact dots.  This is not the place for this declaration (not a ligand function)
+//
+//! \brief calculate all-atom contact dots
+//!
+//! remove contact dots objects using the Generic Display Objects dialog
 void coot_all_atom_contact_dots(int imol);
 
 #ifdef USE_PYTHON

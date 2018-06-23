@@ -60,8 +60,8 @@ n * This program is distributed in the hope that it will be useful, but
 #include "wmolecule.hh"
 
 #include "solvent-exposure-difference.hh"
-#include "flev-annotations.hh"
-#include "pi-stacking.hh"
+#include "pli/flev-annotations.hh"
+#include "pli/pi-stacking.hh"
 
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS
 #include "graphics-c-interface-functions.hh"
@@ -747,6 +747,7 @@ private:
       use_graphics_interface_flag = 1; // default: show gui windows and widgets.
       mdl_file_name = "coot.mol";
       atom_X = "H";
+      comp_id = "LIG";
       lbg_atom_x_dialog = NULL;
       lbg_atom_x_entry = NULL;
       get_url_func_ptr_flag = false;
@@ -1306,6 +1307,11 @@ public:
       }
    }
 
+   // instead of hardwiring "DRG" into on_lbg_apply_button_clicked(), allow the user to set the
+   // three-letter-code (we call that variable comp_id)
+   std::string comp_id; // make private?
+   std::string get_comp_id() const { return comp_id; }
+
    // handle the net transfer of drug (to mdl file)
    //
    std::string (*get_drug_mdl_file_function_pointer) (std::string drug_name);
@@ -1363,11 +1369,11 @@ public:
    void scale_canvas(double sf);
 
    // -- actually run the functions if they were set:
-   void orient_view(int imol,
+   void orient_view(int imol_in,
 		    const coot::residue_spec_t &central_residue_spec,
 		    const coot::residue_spec_t &neighbour_residue_spec) {
       if (orient_view_func) {
-	 (*orient_view_func)(imol, central_residue_spec, neighbour_residue_spec);
+	 (*orient_view_func)(imol_in, central_residue_spec, neighbour_residue_spec);
       } 
    } 
    void set_rotation_centre(const clipper::Coord_orth &pos) {
@@ -1375,15 +1381,15 @@ public:
 	 (*set_rotation_centre_func)(pos);
       } 
    } 
-   void set_show_additional_representation(int imol, int representation_number, int on_off_flag) {
+   void set_show_additional_representation(int imol_in, int representation_number, int on_off_flag) {
       if (set_show_additional_representation_func) {
-	 (*set_show_additional_representation_func)(imol, representation_number, on_off_flag);
+	 (*set_show_additional_representation_func)(imol_in, representation_number, on_off_flag);
       }
    } 
-   void all_additional_representations_off_except(int imol, int representation_number,
+   void all_additional_representations_off_except(int imol_in, int representation_number,
 						  short int ball_and_sticks_off_too_flag) {
       if (all_additional_representations_off_except_func) {
-	 (*all_additional_representations_off_except_func) (imol, representation_number, ball_and_sticks_off_too_flag);
+	 (*all_additional_representations_off_except_func) (imol_in, representation_number, ball_and_sticks_off_too_flag);
       }
    }
 

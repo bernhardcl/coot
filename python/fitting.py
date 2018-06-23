@@ -16,6 +16,17 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+def add_module_carbohydrate():
+
+    # add_linked_residue_tree_correlation_cut_off = 0.45
+
+    set_refinement_geman_mcclure_alpha(4.2)
+    read_acedrg_pyranose_dictionaries()
+
+    if (have_coot_python):
+        if coot_python.main_menubar():
+            add_module_carbohydrate_gui()
+    
 
 # For each residue in the protein (molecule number @var{imol}), do a
 # rotamer fit and real-space refinement.  Update the graphics and
@@ -792,10 +803,33 @@ def sphere_regularize_plus(radius=4.5):
     sphere_regularize(radius, True)
 
 
+def refine_tandem_residues():
+    active_atom = closest_atom_simple_py() # active_atom returns the CA if it can
+    if not active_atom:
+       print "No active atom"
+    else:
+       imol       = active_atom[0]
+       chain_id   = active_atom[1]
+       res_no     = active_atom[2]
+       ins_code   = active_atom[3]
+       atom_name  = active_atom[4]
+       alt_conf   = active_atom[5]
+       specs = []
+       for ires in range(res_no-3, res_no+4):
+           try:
+              # test if the residue exists by looking for a residue name
+              rn = residue_name(imol, chain_id, ires, ins_code)
+              if len(rn) > 0:
+                  specs.append([chain_id, ires, ins_code])
+           except TypeError as e:
+               pass # no need to tell us
+       refine_residues(imol, specs)
+
+
 # Pepflip the active residue - needs a key binding
 #
 def pepflip_active_residue():
-    active_atom = active_residue()
+    active_atom = closest_atom_simple_py() # active_atom returns the CA if it can
     if not active_atom:
        print "No active atom"
     else:
@@ -809,6 +843,7 @@ def pepflip_active_residue():
        if (atom_name == " N  "): # PDBv3 fixme
 	   res_no -= 1;
        pepflip(imol, chain_id, res_no, ins_code, alt_conf)
+
     
 
 # Another cool function that needs a key binding
@@ -850,16 +885,16 @@ def add_extra_restraints_to_other_molecule(imol, chain_id,
 def add_extra_start_pos_restraints(imol, residue_spec, esd):
 
     ri = residue_info(imol,
-                      residue_spec2chain_id(residue_spec),
-                      residue_spec2res_no(residue_spec),
-                      residue_spec2ins_code(residue_spec))
+                      residue_spec_to_chain_id(residue_spec),
+                      residue_spec_to_res_no(residue_spec),
+                      residue_spec_to_ins_code(residue_spec))
     for atom_info in ri:
         atom_name = residue_atom2atom_name(atom_info)
         alt_conf  = residue_atom2alt_conf(atom_info)
         add_extra_start_pos_restraint(imol,
-                                      residue_spec2chain_id(residue_spec),
-                                      residue_spec2res_no(residue_spec),
-                                      residue_spec2ins_code(residue_spec),
+                                      residue_spec_to_chain_id(residue_spec),
+                                      residue_spec_to_res_no(residue_spec),
+                                      residue_spec_to_ins_code(residue_spec),
                                       atom_name, alt_conf, esd)
 
         

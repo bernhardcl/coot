@@ -66,7 +66,7 @@ int pisa_interaction(int imol_1, int imol_2) {
 	 
 	 if (res_pair.first.size() > 0) { 
 	    std::pair<bool, mmdb::Manager *> nm =
-	       coot::util::create_mmdbmanager_from_residue_vector(res_pair.first);
+	       coot::util::create_mmdbmanager_from_residue_vector(res_pair.first, mol1);
 	    if (nm.second) {
 	       int imol = graphics_info_t::create_molecule();
 	       atom_selection_container_t asc = make_asc(nm.second);
@@ -82,7 +82,7 @@ int pisa_interaction(int imol_1, int imol_2) {
 	 
 	 if (res_pair.second.size() > 0) { 
 	    std::pair<bool, mmdb::Manager *> nm =
-	       coot::util::create_mmdbmanager_from_residue_vector(res_pair.second);
+	       coot::util::create_mmdbmanager_from_residue_vector(res_pair.second, mol1);
 	    if (nm.second) {
 	       int imol = graphics_info_t::create_molecule();
 	       atom_selection_container_t asc = make_asc(nm.second);
@@ -270,7 +270,7 @@ SCM handle_pisa_interfaces_scm(SCM interfaces_description_scm) {
 	       pisa_treeview_info.push_back(pisa_interface_attribs);
 	       
 	    }
-	    catch (std::runtime_error rte)  {
+	    catch (const std::runtime_error &rte)  {
 	       std::cout << "WARNING:: " << rte.what() << std::endl;
 	    }
 	 }
@@ -453,7 +453,7 @@ PyObject *handle_pisa_interfaces_py(PyObject *interfaces_description_py) {
                   pisa_treeview_info.push_back(pisa_interface_attribs);
 	       
               }
-              catch (std::runtime_error rte)  {
+              catch (const std::runtime_error &rte)  {
                   std::cout << "WARNING:: " << rte.what() << std::endl;
               }
           }
@@ -584,7 +584,7 @@ residue_records_list_scm_to_residue_specs(SCM mol_1_residues, const std::string 
 	    coot::residue_spec_t rs(chain_id, seq_num, ins_code);
 	    r.push_back(rs);
 	 }
-	 catch (std::runtime_error rte) {
+	 catch (const std::runtime_error &rte) {
 	    std::cout << "WARNING bad seq-num from pisa interfaces xml "
 		      << scm_to_locale_string(display_scm(seq_num_scm)) << std::endl;
 	 }
@@ -616,7 +616,7 @@ residue_records_list_py_to_residue_specs(PyObject *mol_1_residues, const std::st
 	    coot::residue_spec_t rs(chain_id, seq_num, ins_code);
 	    r.push_back(rs);
 	 }
-	 catch (std::runtime_error rte) {
+	 catch (const std::runtime_error &rte) {
 	    std::cout << "WARNING bad seq-num from pisa interfaces xml "
 		      << PyString_AsString(display_python(seq_num_py)) << std::endl;
 	 }

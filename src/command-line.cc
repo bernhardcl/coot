@@ -254,13 +254,14 @@ parse_command_line(int argc, char ** argv ) {
 		  } else {
 		     
 		     if (arg_str == "version") {
-			std::cout << VERSION << " " << coot_version_extra_info() << std::endl;
+			std::cout << VERSION << " " << coot_version_extra_info();
 			exit(0);
 		     } else {
 			
 			if (arg_str == "version-full") {
-			   std::cout  << VERSION << " " << coot_version_extra_info() << std::endl;
-			   std::cout << "Binary type: " << COOT_SYS_BUILD_TYPE << std::endl;
+			   std::cout  << VERSION << " " << coot_version_extra_info();
+			   // this is in coot_version_extra_info() now
+			   // std::cout << "Binary type: " << COOT_SYS_BUILD_TYPE << std::endl;
 			   std::vector<std::string> enableds;
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS
 			   enableds.push_back("Enhanced-ligand-tools");
@@ -273,6 +274,21 @@ parse_command_line(int argc, char ** argv ) {
 #endif
 #ifdef USE_MOLECULES_TO_TRIANGLES
 			   enableds.push_back("Molecular-triangles");
+#endif
+#ifdef HAVE_GOOCANVAS
+			   enableds.push_back("Goocanvas");
+#endif
+#ifdef HAVE_GSL
+			   enableds.push_back("GSL");
+#endif
+#ifdef USE_SQLITE3
+			   enableds.push_back("SQLite3");
+#endif
+#ifdef HAVE_CCP4SRS
+			   enableds.push_back("CCP4SRS");
+#endif
+#ifdef USE_LIBCURL
+			   enableds.push_back("LibCurl");
 #endif
 			   if (enableds.size()) {
 			      std::cout << "Enabled: ";

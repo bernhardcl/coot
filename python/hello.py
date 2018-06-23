@@ -52,12 +52,13 @@ def coot_says_hello():
    if hour < 12: time_str = "Morning"
    elif hour < 18: time_str = "Afternoon"
    else : time_str = "Evening"
-   name_strings = []
    try:
+
       import pwd
       user = getpass.getuser()
       name_string = pwd.getpwnam(user).pw_gecos
       name_strings = name_string.split()
+
    except:
       name_string = getpass.getuser()
       name_strings = name_string.split()

@@ -69,7 +69,7 @@
 #include "ligand/dunbrack.hh"
 #else 
 #include "ligand/richardson-rotamer.hh"
-#endif 
+#endif
 
 #include "clipper/core/map_utils.h" // Map_stats
 #include "skeleton/graphical_skel.h"
@@ -140,6 +140,7 @@ graphics_info_t::copy_mol_and_refine(int imol_for_atoms,
 				     std::string altconf,// use this (e.g. "A") or "".
 				     std::string chain_id_1) {
 
+   // This now wraps refine_residues_vec
 
 //    std::cout << "DEBUG:: In copy_mol_and_refine() refine range: "
 // 	     << "chain  :" << chain_id_1 << ": "
@@ -207,6 +208,7 @@ graphics_info_t::copy_mol_and_refine(int imol_for_atoms,
 //       int status =
 // 	 geom_p->have_dictionary_for_residue_type(residue_type_first,
 // 						  cif_dictionary_read_number);
+
       std::pair<short int, coot::dictionary_residue_restraints_t> p =
 	 geom_p->get_monomer_restraints(residue_type_first, imol_for_atoms);
       if (p.first) {
@@ -236,26 +238,13 @@ graphics_info_t::copy_mol_and_refine(int imol_for_atoms,
       mol->DeleteSelection(SelHnd_ends);
    }
 
-
-   // Consider as the altconf the altconf of one of the residues (we
-   // must test that the altlocs of the selected atoms to be either
-   // the same as each other (A = A) or one of them is "".  We need to
-   // know the mmdb syntax for "either".
-   // 
-   // 
-   // 
-   int iselection_resno_start = resno_1;
-   int iselection_resno_end   = resno_2;
-   if (have_flanking_residue_at_start) iselection_resno_start--;
-   if (have_flanking_residue_at_end)   iselection_resno_end++;
-   //
-   int selHnd = mol->NewSelection();
+   int selHnd = mol->NewSelection();  // d
    int nSelResidues; 
    mmdb::PResidue *SelResidues = NULL;
    mol->Select(selHnd, mmdb::STYPE_RESIDUE, 0,
 	       chain_id_1.c_str(),
-	       iselection_resno_start, "*",
-	       iselection_resno_end, "*",
+	       resno_1, inscode_1.c_str(),
+	       resno_2, inscode_2.c_str(),
 	       "*",  // residue name
 	       "*",  // Residue must contain this atom name?
 	       "*",  // Residue must contain this Element?
@@ -264,66 +253,48 @@ graphics_info_t::copy_mol_and_refine(int imol_for_atoms,
 	       );
    molecules[imol].atom_sel.mol->GetSelIndex(selHnd, SelResidues, nSelResidues);
 
-   // Return 0 (first) if any of the residues don't have a dictionary
-   // entry and a list of the residue type that don't have restraints.
-   std::pair<int, std::vector<std::string> > icheck = 
-      check_dictionary_for_residue_restraints(imol_for_atoms, SelResidues, nSelResidues);
+   // 20100201 - Happy Path
 
-
-   if (0) {  // debugging.
-      std::cout << "Selecting from chain id " << chain_id_1 << std::endl;
-      std::cout << "selecting from residue " << iselection_resno_start
-		<< " to " << iselection_resno_end << " selects "
-		<< nSelResidues << " residues" << std::endl;
-      std::cout << "=============== icheck: " << icheck.first << std::endl;
+   bool check_hydrogens_too_flag = false;
+   // convert to mmdb::Residues vector
+   std::vector<mmdb::Residue *> residues;
+   for (int ires=0; ires<nSelResidues; ires++) {
+      residues.push_back(SelResidues[ires]);
    }
 
-   if (icheck.first == 0) { 
+   mol->DeleteSelection(selHnd);
 
-      std::cout << "INFO:: check_dictionary_for_residues - problem..." << std::endl;
-      std::string problem_residues = "Refinement setup failure.\nFailed to find restraints for:\n";
-      for (unsigned int icheck_res=0; icheck_res<icheck.second.size(); icheck_res++) { 
-	 std::cout << "WARNING:: Failed to find restraints for :" 
-		   << icheck.second[icheck_res] << ":" << std::endl;
-	 problem_residues+= " ";
-	 problem_residues+= icheck.second[icheck_res];
-      }
-      info_dialog(problem_residues);
+   std::pair<bool, std::vector<std::pair<std::string, std::vector<std::string> > > >
+      icheck_atoms = Geom_p()->atoms_match_dictionary(imol_for_atoms, residues, check_hydrogens_too_flag, false);
+
+   if (! icheck_atoms.first) {
+      std::cout << "WARNING:: Fail atom check" << std::endl;
+      info_dialog_refinement_non_matching_atoms(icheck_atoms.second);
       return rr; // fail
    } else {
 
-      // 20100201
-      
-      bool check_hydrogens_too_flag = false;
-      // convert to mmdb::Residues vector
-      std::vector<mmdb::Residue *> residues;
-      for (int ires=0; ires<nSelResidues; ires++)
-	 residues.push_back(SelResidues[ires]);
-      std::pair<bool, std::vector<std::pair<std::string, std::vector<std::string> > > >
-	 icheck_atoms = Geom_p()->atoms_match_dictionary(imol_for_atoms, residues, check_hydrogens_too_flag, false);
+      // 	 return copy_mol_and_refine_inner(imol_for_atoms,
+      // 					  resno_1, resno_2,
+      // 					  nSelResidues, SelResidues,
+      // 					  chain_id_1, altconf,
+      // 					  have_flanking_residue_at_start,
+      // 					  have_flanking_residue_at_end,
+      // 					  imol_for_map);
 
-      if (! icheck_atoms.first) {
-	 std::cout << "WARNING:: Fail atom check" << std::endl;
-	 info_dialog_refinement_non_matching_atoms(icheck_atoms.second);
-	 return rr; // fail
-      } else { 
-
-	 return copy_mol_and_refine_inner(imol_for_atoms,
-					  resno_1, resno_2,
-					  nSelResidues, SelResidues,
-					  chain_id_1, altconf,
-					  have_flanking_residue_at_start,
-					  have_flanking_residue_at_end,
-					  imol_for_map);
-      }
+      if (imol_for_map == -1)
+	 rr = regularize_residues_vec(imol_for_atoms, residues, altconf, mol);
+      else
+	 rr = refine_residues_vec(imol_for_atoms, residues, altconf, mol);
    }
+
+   return rr;
 }
 
 // static
 void
 graphics_info_t::info_dialog_missing_refinement_residues(const std::vector<std::string> &res_names) {
 
-   std::string problem_residues = "Refinement setup failure.\nFailed to find restraints for:\n";
+   std::string problem_residues = "Warning: Refinement setup failure.\nFailed to find restraints for:\n";
    for (unsigned int icheck_res=0; icheck_res<res_names.size(); icheck_res++) { 
       problem_residues+= " ";
       problem_residues+= res_names[icheck_res];
@@ -353,6 +324,13 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 
    coot::refinement_results_t rr(0, GSL_CONTINUE, "");
    short int have_disulfide_residues = 0; // of course not in linear mode.
+
+   // It's OK to come here with imol_for_map = -1 - that means "regularize"
+   //
+   // if (! is_valid_map_molecule(imol_for_map)) {
+   // std::cout << "WARNING:: invalid map " << imol_for_map << std::endl;
+   // return rr;
+   // }
 
    if (nSelResidues > 0) {
 
@@ -389,7 +367,8 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 	 short int in_alt_conf_split_flag = 0;
 	 if (altconf != "")
 	    in_alt_conf_split_flag = 1;
-	    
+
+
 	 mmdb::Manager *residues_mol = 
 	    create_mmdbmanager_from_res_selection(SelResidues, nSelResidues, 
 						  have_flanking_residue_at_start,
@@ -400,20 +379,56 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 						  in_alt_conf_split_flag, 
 						  imol_for_atoms);
 
-	 coot::restraints_container_t restraints(resno_1,
-						 resno_2,
-						 have_flanking_residue_at_start,
-						 have_flanking_residue_at_end,
-						 have_disulfide_residues,
-						 altconf,
-						 chn,
-						 residues_mol,
-						 fixed_atom_specs);
+// 	 coot::restraints_container_t restraints(resno_1,
+// 						 resno_2,
+// 						 have_flanking_residue_at_start,
+// 						 have_flanking_residue_at_end,
+// 						 have_disulfide_residues,
+// 						 altconf,
+// 						 chn,
+// 						 residues_mol,
+// 						 fixed_atom_specs,
+// 						 molecules[imol_for_map].xmap);
+
+	 if (last_restraints) {
+	    std::cout << "----------------------------------------------" << std::endl;
+	    std::cout << "----------------------------------------------" << std::endl;
+	    std::cout << "     ERROR:: B: last_restraints no cleared up " << std::endl;
+	    std::cout << "----------------------------------------------" << std::endl;
+	    std::cout << "----------------------------------------------" << std::endl;
+	 }
+
+	 // xmap in the restraints_container_t is a const ref, so the constructor for a
+	 // restraints_container_t needs to contain a reference to a real map (which can
+	 // be a dummy ;-)).
+
+	 clipper::Xmap<float> &xmap_ref = *dummy_xmap;
+
+	 if (is_valid_map_molecule(imol_for_map))
+	    xmap_ref = molecules[imol_for_map].xmap;
+
+	 last_restraints = new coot::restraints_container_t(resno_1,
+							    resno_2,
+							    have_flanking_residue_at_start,
+							    have_flanking_residue_at_end,
+							    have_disulfide_residues,
+							    altconf,
+							    chn,
+							    residues_mol,
+							    fixed_atom_specs,
+							    xmap_ref);
 
 	 // this is where regularize and refine differ:
-	 if (imol_for_map != -1)
-	    restraints.add_map(molecules[imol_for_map].xmap,
-			       geometry_vs_map_weight);
+	 if (is_valid_map_molecule(imol_for_map))
+	    last_restraints->add_map(geometry_vs_map_weight);
+
+	 // this really means "moving_atoms_don't_have_hydrogens_undisplayed"
+	 // which means that it gets set to false when there are hydrogen atoms
+	 // and the hydrogen atoms are not displayed.
+	 //
+	 moving_atoms_have_hydrogens_displayed = true;
+	 if (! molecules[imol_for_atoms].draw_hydrogens())
+	    moving_atoms_have_hydrogens_displayed = false;
 
 	 atom_selection_container_t local_moving_atoms_asc =
 	    make_moving_atoms_asc(residues_mol, resno_1, resno_2);
@@ -421,16 +436,13 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 	 // coot::restraint_usage_Flags flags = coot::BONDS;
 	 // coot::restraint_usage_Flags flags = coot::BONDS_AND_ANGLES;
 	 // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_AND_PLANES;
-	 // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_TORSIONS_AND_PLANES; 
 	 // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_PLANES_AND_NON_BONDED;
-	 // flags = coot::BONDS_ANGLES_PLANES_AND_NON_BONDED; 20071124
-	 // flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
-	 // flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_CHIRALS_AND_PARALLEL_PLANES;
+	 // 
 	 coot::restraint_usage_Flags flags = coot::TYPICAL_RESTRAINTS;
 
 	 short int do_residue_internal_torsions = 0;
 
-	 if (do_torsion_restraints) { 
+	 if (do_torsion_restraints) {
 	    do_residue_internal_torsions = 1;
 	    // flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_AND_CHIRALS; // fail
 	    // flags = coot::BONDS_ANGLES_AND_TORSIONS; // OK
@@ -441,11 +453,10 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 	    flags = coot::TYPICAL_RESTRAINTS_WITH_TORSIONS;
 	 }
 
-	 if (do_rama_restraints) 
+	 if (do_rama_restraints)
 	    // flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_RAMA;
 	    // flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_RAMA_AND_PARALLEL_PLANES;
 	    flags = coot::ALL_RESTRAINTS;
-	 
 
 	 // coot::pseudo_restraint_bond_type pseudos = coot::NO_PSEUDO_BONDS;
 
@@ -458,53 +469,30 @@ graphics_info_t::copy_mol_and_refine_inner(int imol_for_atoms,
 	 
 	 const coot::protein_geometry &geom = *geom_p;
 
-	 if (molecules[imol_for_atoms].extra_restraints.has_restraints())
-	    restraints.add_extra_restraints(imol_for_atoms, molecules[imol_for_atoms].extra_restraints, geom);
-
-	 // 20132008: debugging CCP4 SRS inclusion.  Currently it
-	 // seems that problem is calling a member function of
-	 // restraints.  An inline version of the same test function
-	 // doesn't cause the corruption of geom.
-	 // 
-	 if (0) { 
-	    std::cout << "------------------- copy_mol_and_refine_inner() pre calling make_restraints() geom size "
-		      << Geom_p()->size() << std::endl;
-	    std::cout << "    geom     pointer " << Geom_p() << std::endl;
-	    std::cout << "------------------- copy_mol_and_refine_inner() pre calling make_restraints() ref geom size "
-		      << geom.size() << std::endl;
-	    std::cout << "    geom ref pointer " << &geom << std::endl;
-
-	 
-
-	    unsigned int n_test = restraints.inline_const_test_function(geom);
-	    std::cout << "------------------- copy_mol_and_refine_inner() inline_const_test_function n_test: "
-		      << n_test << std::endl;
-	 
-	    n_test = restraints.const_test_function(geom);
-	    std::cout << "------------------- copy_mol_and_refine_inner() const_test_function n_test: "
-		      << n_test << std::endl;
-	 
-	    n_test = restraints.test_function(geom);
-	    std::cout << "------------------- copy_mol_and_refine_inner() test_function n_test: "
-		      << n_test << std::endl;
-	 
-	    n_test = restraints.const_test_function(geom);
-	    std::cout << "------------------- copy_mol_and_refine_inner() const test_function n_test: "
-		      << n_test << std::endl;
-	 } 
-
 	 int nrestraints = 
-	    restraints.make_restraints(imol_for_atoms, geom, flags,
-				       do_residue_internal_torsions,
-				       do_trans_peptide_restraints,
-				       rama_plot_restraint_weight,
-				       do_rama_restraints,
-				       pseudo_bonds_type);
+	    last_restraints->make_restraints(imol_for_atoms, geom, flags,
+					     do_residue_internal_torsions,
+					     do_trans_peptide_restraints,
+					     rama_plot_restraint_weight,
+					     do_rama_restraints,
+					     pseudo_bonds_type);
+
+	 if (false)
+	    std::cout << "debug:: in copy_mol_and_refine_inner() nrestraints from make_restraints() was "
+		      << nrestraints << std::endl;
+
+	 last_restraints->set_geman_mcclure_alpha(geman_mcclure_alpha);
+         last_restraints->set_rama_type(restraints_rama_type);
+	 last_restraints->set_rama_plot_weight(rama_restraints_weight);
+
+	 if (molecules[imol_for_atoms].extra_restraints.has_restraints())
+	    last_restraints->add_extra_restraints(imol_for_atoms, molecules[imol_for_atoms].extra_restraints,
+						  geom);
 
 	 if (do_numerical_gradients)
-	    restraints.set_do_numerical_gradients();
+	    last_restraints->set_do_numerical_gradients();
 
-	 rr = update_refinement_atoms(nrestraints, restraints, rr, local_moving_atoms_asc,
+	 rr = update_refinement_atoms(nrestraints, last_restraints, rr, local_moving_atoms_asc,
 				      1, imol_for_atoms, chain_id_1);
 
 	 // local_moving_atoms_asc.clear_up(); // crash.
@@ -556,6 +544,7 @@ int
 graphics_info_t::copy_model_molecule(int imol) {
    int iret = -1;
    if (is_valid_model_molecule(imol)) { 
+      graphics_info_t g;
       int new_mol_number = graphics_info_t::create_molecule();
       mmdb::Manager *m = graphics_info_t::molecules[imol].atom_sel.mol;
       mmdb::Manager *n = new mmdb::Manager;
@@ -563,8 +552,10 @@ graphics_info_t::copy_model_molecule(int imol) {
       atom_selection_container_t asc = make_asc(n);
       std::string label = "Copy_of_";
       label += graphics_info_t::molecules[imol].name_;
-      graphics_info_t g;
-      g.molecules[new_mol_number].install_model(new_mol_number, asc, g.Geom_p(), label, 1);
+      const std::vector<coot::ghost_molecule_display_t> &ghosts = g.molecules[imol].NCS_ghosts();
+      bool shelx_flag = g.molecules[imol].is_from_shelx_ins();
+      g.molecules[new_mol_number].install_model_with_ghosts(new_mol_number, asc, g.Geom_p(), label, 1, ghosts,
+							    shelx_flag, false, false);
       update_go_to_atom_window_on_new_mol();
       iret = new_mol_number;
    }
@@ -576,7 +567,7 @@ graphics_info_t::copy_model_molecule(int imol) {
 
 coot::refinement_results_t
 graphics_info_t::update_refinement_atoms(int n_restraints,
-					 coot::restraints_container_t &restraints,
+					 coot::restraints_container_t *restraints,
 					 coot::refinement_results_t rr_in,
 					 atom_selection_container_t local_moving_atoms_asc,
 					 bool need_residue_order_check,
@@ -587,7 +578,10 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
    
    if (n_restraints > 0) {
       moving_atoms_asc_type = coot::NEW_COORDS_REPLACE;
-      last_restraints = restraints;
+
+      // coot::restraints_container_t last_restraints(molecules[imol_refinement_map].xmap);
+      // last_restraints = coot::restraints_container_t(molecules[imol_refinement_map].xmap);
+      // last_restraints.copy_from(restraints);
 
       regularize_object_bonds_box.clear_up();
       make_moving_atoms_graphics_object(imol, local_moving_atoms_asc); // sets moving_atoms_asc
@@ -599,14 +593,30 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
       unsigned int step_count = 0; 
       print_initial_chi_squareds_flag = 1; // unset by drag_refine_idle_function
       unsigned int step_count_lim = 5000;
-      if (restraints.size() > 10000)
-	 step_count_lim = 3000000/restraints.size();
-      std::cout << "debug:: here with restraints.size() " << restraints.size()
-		<< " and step_count_lim " << step_count_lim << std::endl;
+      // Less steps for many atoms/restraints (e.g. a domain).
+      // Not sure what I want to do here.  If we have NBC restraints for a chain
+      // or prosmart restraints for a chain, then we have many 10,000 (say 60,000)
+      // restraints - only some of which are relevant to the refinement.
+      // We don't want to sphere refine with say 50 active atoms and 60,000
+      // GM restraints.  That will give us a step lim of 50 - bad.
+      // We need to exclude non-relevant GM restraints in make_restraints().
+      if (false)  {
+         if (restraints->size() > 10000) {
+	    unsigned int new_lim = 3000000/restraints->size();
+            std::cout << "debug:: here with restraints.size() " << restraints->size()
+	              << " and step_count_lim " << step_count_lim << std::endl;
+         }
+      }
+
+      // ---------------------------------------------------------------------
+      //  refinement loop
+      // ---------------------------------------------------------------------
+
       while ((step_count < step_count_lim) && continue_flag) {
 
-	 std::cout << ".... step_count: " << step_count
-		   << " step_count_lim " << step_count_lim << std::endl;
+	 if (false)
+	    std::cout << ".... step_count: " << step_count << " step_count_lim "
+		      << step_count_lim << std::endl;
 
 	 int retval = drag_refine_idle_function(NULL);
 	 step_count += dragged_refinement_steps_per_frame;
@@ -615,6 +625,10 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
 	    rr = graphics_info_t::saved_dragged_refinement_results;
 	 }
 	 if (retval == GSL_ENOPROG) {
+	    continue_flag = false;
+	    rr = graphics_info_t::saved_dragged_refinement_results;
+	 }
+	 if (retval == -1) { // no restrainst, because the user pressed Esc
 	    continue_flag = false;
 	    rr = graphics_info_t::saved_dragged_refinement_results;
 	 }
@@ -629,7 +643,7 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
 	 rr = graphics_info_t::saved_dragged_refinement_results;
 	 rr.info = "Time's up...";
       }
-      
+
    } else { 
       if (use_graphics_interface_flag) {
 
@@ -664,7 +678,7 @@ graphics_info_t::update_refinement_atoms(int n_restraints,
 coot::refinement_results_t 
 graphics_info_t::refine_residues_vec(int imol, 
 				     const std::vector<mmdb::Residue *> &residues,
-				     const char *alt_conf, 
+				     const std::string &alt_conf,
 				     mmdb::Manager *mol) {
 
    bool use_map_flag = 1;
@@ -685,7 +699,7 @@ graphics_info_t::refine_residues_vec(int imol,
 coot::refinement_results_t 
 graphics_info_t::regularize_residues_vec(int imol, 
 					 const std::vector<mmdb::Residue *> &residues,
-					 const char *alt_conf, 
+					 const std::string &alt_conf, 
 					 mmdb::Manager *mol) {
 
    bool use_map_flag = 0;
@@ -707,8 +721,8 @@ graphics_info_t::regularize_residues_vec(int imol,
 //
 coot::refinement_results_t
 graphics_info_t::generate_molecule_and_refine(int imol,
-					      const std::vector<mmdb::Residue *> &residues,
-					      const char *alt_conf,
+					      const std::vector<mmdb::Residue *> &residues_in,
+					      const std::string &alt_conf,
 					      mmdb::Manager *mol,
 					      bool use_map_flag) { 
 
@@ -718,17 +732,31 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 
    if (is_valid_map_molecule(Imol_Refinement_Map()) || (! use_map_flag)) {
       float weight = geometry_vs_map_weight;
-      coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
+      // coot::restraint_usage_Flags flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
+      coot::restraint_usage_Flags flags = coot::TYPICAL_RESTRAINTS;
       short int do_residue_internal_torsions = 0;
       if (do_torsion_restraints) { 
 	 do_residue_internal_torsions = 1;
-	 flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_AND_CHIRALS;
+	 flags = coot::TYPICAL_RESTRAINTS_WITH_TORSIONS;
       } 
       
       if (do_rama_restraints)
-	 flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_RAMA;
+	 // flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_CHIRALS_AND_RAMA;
+	 flags = coot::ALL_RESTRAINTS;
       
       std::vector<coot::atom_spec_t> fixed_atom_specs = molecules[imol].get_fixed_atoms();
+
+      // refinement goes a bit wonky if there are multiple occurrances of the same residue
+      // in input residue vector, so let's filter out duplicates here
+      //
+      std::vector<mmdb::Residue *> residues;
+      std::set<mmdb::Residue *> residues_set;
+      std::set<mmdb::Residue *>::const_iterator it;
+      for (std::size_t i=0; i<residues_in.size(); i++)
+	 residues_set.insert(residues_in[i]);
+      residues.reserve(residues_set.size());
+      for(it=residues_set.begin(); it!=residues_set.end(); it++)
+	 residues.push_back(*it);
 
       // OK, so the passed residues are the residues in the graphics_info_t::molecules[imol]
       // molecule.  We need to do 2 things:
@@ -758,7 +786,7 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	 // We only want to act on these new residues and molecule, if
 	 // there is something there.
 	 // 
-	 if (residues_mol_and_res_vec.first > 0) {
+	 if (residues_mol_and_res_vec.first != 0) {
 
 	    // Now we want to do an atom name check.  This stops exploding residues.
 	    //
@@ -772,26 +800,44 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	       info_dialog_refinement_non_matching_atoms(icheck_atoms.second);
 	       
 	    } else { 
-	    
+
+	       moving_atoms_have_hydrogens_displayed = true;
+	       if (! molecules[imol].draw_hydrogens())
+		  moving_atoms_have_hydrogens_displayed = false;
+
 	       atom_selection_container_t local_moving_atoms_asc =
 		  make_moving_atoms_asc(residues_mol_and_res_vec.first, residues);
 	       std::vector<std::pair<bool,mmdb::Residue *> > local_residues;  // not fixed.
 	       for (unsigned int i=0; i<residues_mol_and_res_vec.second.size(); i++)
 		  local_residues.push_back(std::pair<bool, mmdb::Residue *>(0, residues_mol_and_res_vec.second[i]));
 
-	       coot::restraints_container_t restraints(local_residues,
-						       local_moving_atoms_asc.links,
-						       *Geom_p(),
-						       residues_mol_and_res_vec.first,
-						       fixed_atom_specs);
+	       int imol_for_map = Imol_Refinement_Map();
+	       clipper::Xmap<float> &xmap = *dummy_xmap;
+	       if (is_valid_map_molecule(imol_for_map))
+		  xmap = molecules[imol_for_map].xmap;
 
-	       if (use_map_flag) {
-		  clipper::Xmap<float> &xmap = molecules[Imol_Refinement_Map()].xmap;
-		  restraints.add_map(xmap, weight);
+	       if (last_restraints) {
+		  std::cout << "----------------------------------------------" << std::endl;
+		  std::cout << "----------------------------------------------" << std::endl;
+		  std::cout << "     ERROR:: A: last_restraints no cleared up " << std::endl;
+		  std::cout << "----------------------------------------------" << std::endl;
+		  std::cout << "----------------------------------------------" << std::endl;
 	       }
+	       last_restraints = new 
+		  coot::restraints_container_t(local_residues,
+					       local_moving_atoms_asc.links,
+					       *Geom_p(),
+					       residues_mol_and_res_vec.first,
+					       fixed_atom_specs, xmap);
+
+	       if (use_map_flag)
+		  last_restraints->add_map(weight);
 
 #ifdef HAVE_CXX_THREAD
-	       restraints.thread_pool(&static_thread_pool, coot::get_max_number_of_threads());
+
+	       unsigned int n_threads = coot::get_max_number_of_threads();
+	       if (n_threads > 1) // or 0?
+		  last_restraints->thread_pool(&static_thread_pool, n_threads);
 #endif // HAVE_CXX_THREAD
 
 	       if (false)
@@ -801,24 +847,31 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 			    << molecules[imol].extra_restraints.has_restraints()
 			    <<  " " << molecules[imol].extra_restraints.bond_restraints.size()
 			    << std::endl;
-	       
-	       if (molecules[imol].extra_restraints.has_restraints())
-		  restraints.add_extra_restraints(imol, molecules[imol].extra_restraints, *Geom_p());
 
-	       int n_restraints = restraints.make_restraints(imol,
-							     *Geom_p(), flags,
-							     do_residue_internal_torsions,
-							     do_trans_peptide_restraints,
-							     rama_plot_restraint_weight,
-							     do_rama_restraints,
-							     pseudo_bonds_type);
-	       
+	       int n_restraints = last_restraints->make_restraints(imol,
+								   *Geom_p(), flags,
+								   do_residue_internal_torsions,
+								   do_trans_peptide_restraints,
+								   rama_plot_restraint_weight,
+								   do_rama_restraints,
+								   pseudo_bonds_type);
+            	                                                   // link and flank args default true
+
+	       last_restraints->set_geman_mcclure_alpha(geman_mcclure_alpha);
+               last_restraints->set_rama_type(restraints_rama_type);
+               last_restraints->set_rama_plot_weight(rama_restraints_weight);
+
+	       if (molecules[imol].extra_restraints.has_restraints())
+		  last_restraints->add_extra_restraints(imol, molecules[imol].extra_restraints, *Geom_p());
+
 	       if (do_numerical_gradients)
-		  restraints.set_do_numerical_gradients();
+		  last_restraints->set_do_numerical_gradients();
 
 	       std::string dummy_chain = ""; // not used
+
+	       std::cout << "calling update_refinement_atoms() "  << std::endl;
 		   
-	       rr = update_refinement_atoms(n_restraints, restraints, rr, local_moving_atoms_asc,
+	       rr = update_refinement_atoms(n_restraints, last_restraints, rr, local_moving_atoms_asc,
 					    0, imol, dummy_chain);
 	    }
 	 }
@@ -829,16 +882,16 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	 if (icheck.first == 0) { 
 	    info_dialog_missing_refinement_residues(icheck.second);
 	 }
-      } 
+      }
    }
    return rr;
 
 #else
-   
+
    std::cout << "Cannot refine without compilation with GSL" << std::endl;
    return coot::refinement_results_t(0, 0, "");
 
-#endif    
+#endif
 }
 
 // mol is new (not from molecules[imol]) molecule for the moving atoms.
@@ -937,7 +990,7 @@ graphics_info_t::check_dictionary_for_residue_restraints(int imol, mmdb::PResidu
    for (int ires=0; ires<nSelResidues; ires++) {
       std::string resn(SelResidues[ires]->GetResName());
       std::string resname = adjust_refinement_residue_name(resn);
-      int status = geom_p->have_dictionary_for_residue_type(resname, imol, cif_dictionary_read_number);
+      status = geom_p->have_dictionary_for_residue_type(resname, imol, cif_dictionary_read_number);
       cif_dictionary_read_number++;
       if (! status) { 
 	 status_OK = 0;
@@ -1092,7 +1145,7 @@ graphics_info_t::create_mmdbmanager_from_res_vector(const std::vector<mmdb::Resi
    if (residues.size() > 0) { 
 
       std::pair<bool, mmdb::Manager *> n_mol_1 =
-	 coot::util::create_mmdbmanager_from_residue_vector(residues);
+	 coot::util::create_mmdbmanager_from_residue_vector(residues, mol_in);
       
       new_mol = n_mol_1.second;
       mmdb::Model *model_p = new_mol->GetModel(1);
@@ -1113,7 +1166,7 @@ graphics_info_t::create_mmdbmanager_from_res_vector(const std::vector<mmdb::Resi
 
 
       short int whole_res_flag = 0;
-      int atom_index_udd = molecules[imol].atom_sel.UDDAtomIndexHandle;
+      int atom_index_udd_handle = molecules[imol].atom_sel.UDDAtomIndexHandle;
       
       // Now the flanking residues:
       //
@@ -1178,18 +1231,18 @@ graphics_info_t::create_mmdbmanager_from_res_vector(const std::vector<mmdb::Resi
 
 	 r = coot::deep_copy_this_residue(flankers_in_reference_mol[ires],
 					  alt_conf, whole_res_flag, 
-					  atom_index_udd);
+					  atom_index_udd_handle);
 	 if (r) {
 
-	    int sni = find_serial_number_for_insert(flankers_in_reference_mol[ires]->GetSeqNum(), chain_p);
+	    int sni = find_serial_number_for_insert(r->GetSeqNum(),
+						    r->GetInsCode(),
+						    chain_p);
 	    if (sni == -1)
 	       chain_p->AddResidue(r); // at the end
 	    else
 	       chain_p->InsResidue(r, sni);
 	    r->seqNum = flankers_in_reference_mol[ires]->GetSeqNum();
 	    r->SetResName(flankers_in_reference_mol[ires]->GetResName());
-	    // 	 std::cout << " adding flanking residue " << " " << coot::residue_spec_t(r)
-	    // 		   << std::endl;
 	    n_flanker++;
 	 }
       }
@@ -1204,7 +1257,9 @@ graphics_info_t::create_mmdbmanager_from_res_vector(const std::vector<mmdb::Resi
 // return -1 on failure to find a residue for insertion index
 // 
 int 
-graphics_info_t::find_serial_number_for_insert(int seqnum_new, mmdb::Chain *chain_p) const {
+graphics_info_t::find_serial_number_for_insert(int seqnum_new,
+					       const std::string &ins_code_for_new,
+					       mmdb::Chain *chain_p) const {
 
    int iserial_no = -1;
    int current_diff = 999999;
@@ -1219,6 +1274,14 @@ graphics_info_t::find_serial_number_for_insert(int seqnum_new, mmdb::Chain *chai
 	 if ( (diff > 0) && (diff < current_diff) ) {
 	    iserial_no = ires;
 	    current_diff = diff;
+	 } else {
+	    if (diff == 0) {
+	       std::string ins_code_this = residue->GetInsCode();
+	       if (ins_code_this > ins_code_for_new) {
+		  iserial_no = ires;
+		  break;
+	       }
+	    }
 	 }
       }
    }
@@ -1408,7 +1471,7 @@ graphics_info_t::refinement_results_to_scm(coot::refinement_results_t &rr) {
    }
    return r;
 }
-#endif    
+#endif
 
 #ifdef USE_PYTHON
 PyObject *
@@ -1444,7 +1507,7 @@ graphics_info_t::refinement_results_to_py(coot::refinement_results_t &rr) {
    }
    return r;
 } 
-#endif    
+#endif
 
 
 
@@ -1455,64 +1518,63 @@ graphics_info_t::flash_selection(int imol,
 				 int resno_2, 
 				 std::string ins_code_2,
 				 std::string altconf,
-				 std::string chain_id_1) { 
+				 std::string chain_id_1) {
+
+   // std::cout << "----------------- flash_selection() " << std::endl;
 
    // First make an atom selection of the residues selected to regularize.
    // 
-   int selHnd = ((mmdb::Manager *)molecules[imol].atom_sel.mol)->NewSelection();
+   int selHnd = molecules[imol].atom_sel.mol->NewSelection();
    int nSelAtoms;
    mmdb::PPAtom SelAtom;
    const char *chn  = chain_id_1.c_str();
    const char *ins1 = ins_code_1.c_str();
    const char *ins2 = ins_code_2.c_str();
 
-   ((mmdb::Manager *)molecules[imol].atom_sel.mol)->SelectAtoms(selHnd, 0, 
-							       chn,
-							       resno_1, ins1,
-							       resno_2, ins2,
-							       "*",      // RNames
-							       "*","*",  // ANames, Elements
-							       "*" );    // Alternate locations.
+   molecules[imol].atom_sel.mol->SelectAtoms(selHnd, 0,
+					     chn,
+					     resno_1, ins1,
+					     resno_2, ins2,
+					     "*",      // RNames
+					     "*","*",  // ANames, Elements
+					     "*" );    // Alternate locations.
 
+   molecules[imol].atom_sel.mol->GetSelIndex(selHnd, SelAtom, nSelAtoms);
 
-   ((mmdb::Manager *)molecules[imol].atom_sel.mol)->GetSelIndex(selHnd,
-							       SelAtom,
-							       nSelAtoms);
-//    cout << nSelAtoms << " atoms selected to regularize from residue "
-// 	<< resno_1 << " to " << resno_2 << " chain " << chn << endl;
+   if (glarea) {
+      if (nSelAtoms) {
+	 // now we can make an atom_selection_container_t with our new
+	 // atom selection that we will use to find bonds.
 
-   if (nSelAtoms) { 
-      // now we can make an atom_selection_container_t with our new
-      // atom selection that we will use to find bonds.
+	 atom_selection_container_t asc;
+	 asc.mol = molecules[imol].atom_sel.mol;
+	 asc.atom_selection = SelAtom;
+	 asc.n_selected_atoms = nSelAtoms;
 
-      atom_selection_container_t asc; 
-      asc.mol = molecules[imol].atom_sel.mol; 
-      asc.atom_selection = SelAtom; 
-      asc.n_selected_atoms = nSelAtoms; 
+	 int fld = 0;
+	 Bond_lines_container bonds(asc, fld); // don't flash disulfides
 
-      int fld = 0;
-      Bond_lines_container bonds(asc, fld); // don't flash disulfides
-
-      graphical_bonds_container empty_box; 
-      graphical_bonds_container regular_box = bonds.make_graphical_bonds();
+	 graphical_bonds_container empty_box;
+	 graphical_bonds_container regular_box = bonds.make_graphical_bonds();
       
-      int flash_length = residue_selection_flash_frames_number;
+	 int flash_length = residue_selection_flash_frames_number;
 
-      if (glarea) { 
-	 for (int iflash=0; iflash<2; iflash++) { 
-	    regularize_object_bonds_box = regular_box; 
+	 // std::cout << "--------------- flash_length " << flash_length << std::endl;
+
+	 for (int iflash=0; iflash<flash_length; iflash++) {
+	    regularize_object_bonds_box = regular_box;
 	    for (int i=0; i<flash_length; i++)
 	       graphics_draw();
-	    regularize_object_bonds_box = empty_box; 
+	    regularize_object_bonds_box = empty_box;
 	    for (int i=0; i<flash_length; i++)
 	       graphics_draw();
 	 }
-      }
-      regularize_object_bonds_box = empty_box; 
 
-   } // atoms selected
-   molecules[imol].atom_sel.mol->DeleteSelection(selHnd);
-   graphics_draw();
+	 regularize_object_bonds_box = empty_box;
+	 molecules[imol].atom_sel.mol->DeleteSelection(selHnd);
+	 graphics_draw();
+      }
+   }
 }
 
 // static
@@ -1544,9 +1606,23 @@ graphics_info_t::refine(int imol, short int auto_range_flag, int i_atom_no_1, in
    }
    // now i_atom_no_2 is greater than i_atom_no_1.
 
-//    cout << "refine (fit to map): molecule " << imol
-// 	<< " atom index " << i_atom_no_1
-// 	<< " to " << i_atom_no_2 << endl; 
+   if (! is_valid_model_molecule(imol)) {
+      std::cout << "ERROR:: bad molecule number " << imol << std::endl;
+      return rr;
+   }
+   if (i_atom_no_1 < 0) {
+      std::cout << "ERROR:: bad atom index 1 " << i_atom_no_1 << std::endl;
+      return rr;
+   }
+   if (i_atom_no_2 < 0) {
+      std::cout << "ERROR:: bad atom index 2 " << i_atom_no_2 << std::endl;
+      return rr;
+   }
+   if (i_atom_no_2 >= molecules[imol].atom_sel.n_selected_atoms) {
+      std::cout << "out of range atom 2 " << i_atom_no_2 << " vs "
+		<< molecules[imol].atom_sel.n_selected_atoms<< std::endl;
+      return rr;
+   }
 
    int resno_1, resno_2;
 
@@ -1753,6 +1829,16 @@ graphics_info_t::refine_residue_range(int imol,
    } // same chains test
    return rr;
 }
+
+void
+graphics_info_t::repeat_refine_zone() {
+
+   if (is_valid_model_molecule(residue_range_mol_no)) {
+      refine(residue_range_mol_no, false, residue_range_atom_index_1, residue_range_atom_index_2);
+   }
+
+}
+
 
 
 // Question to self: Are you sure that imol_rigid_body_refine (the
@@ -2001,6 +2087,14 @@ graphics_info_t::rigid_body_fit(const coot::minimol::molecule &mol_without_movin
       success = 1;
       rigid_body_asc = make_asc(moved_mol.pcmmdbmanager(), true);
 
+      if (false)
+	 std::cout << "debug in rigid_fit() post-fit: here UDDOldAtomIndexHandle is "
+		   << rigid_body_asc.UDDOldAtomIndexHandle << std::endl;
+
+      // this seems fine.
+      if (debug)
+	 rigid_body_asc.mol->WritePDBASCII("post-rigid-body-refine.pdb");
+
       moving_atoms_asc_type = coot::NEW_COORDS_REPLACE;
       imol_moving_atoms = imol_rigid_body_refine;
       int imol = 0; // dummy (we don't need dictionary for rigid)
@@ -2133,7 +2227,9 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 
 
       if (terminus_type == "not-terminal-residue") {
-	 std::cout << "that residue was not at a terminus" << std::endl;
+	 std::string s = "That residue was not at a terminus";
+	 std::cout << s << std::endl;
+	 add_status_bar_text(s);
       } else {
 
 	 imol_moving_atoms = imol;
@@ -2160,6 +2256,12 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 	 float bf = default_new_atoms_b_factor;
 	 coot::residue_by_phi_psi addres(terminus_type, res_p, chain_id, res_type, bf);
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+	 unsigned int n_threads = coot::get_max_number_of_threads();
+	 if (n_threads > 1)
+	    addres.thread_pool(&static_thread_pool, n_threads);
+#endif
+
 	 // std::cout << "DEBUG:: term_type: " << terminus_type << std::endl;
 
 	 // This was for debugging, so that we get *some* solutions at least.
@@ -2180,10 +2282,11 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 	 addres.set_map_atom_mask_radius(1.2);
 	 if (terminus_type == "MC" || terminus_type == "MN" ||
 	     terminus_type == "singleton")
-	    masked_map_val = 0.0; 
+	    masked_map_val = 0.0;
 	 addres.set_masked_map_value(masked_map_val);   
-	 addres.import_map_from(molecules[imol_map].xmap,
-				molecules[imol_map].map_sigma());
+
+	 // addres.import_map_from(molecules[imol_map].xmap,
+	 // molecules[imol_map].map_sigma());
 
 	 // This masked map will be the one that is used for rigid
 	 // body refinement, unlike normal ligand class usage which
@@ -2224,7 +2327,7 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 							  radius, mmdb::SKEY_NEW);
 	       molecules[imol].atom_sel.mol->GetSelIndex(SelHndSphere, atom_sel, n_selected_atoms);
 	       int invert_flag = 0;
-	       addres.mask_map(molecules[imol].atom_sel.mol, SelHndSphere, invert_flag);
+	       // addres.mask_map(molecules[imol].atom_sel.mol, SelHndSphere, invert_flag);
 	       molecules[imol].atom_sel.mol->DeleteSelection(SelHndSphere);
 	    }
 	 } else {
@@ -2243,10 +2346,15 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 		      << add_terminal_residue_n_phi_psi_trials << " random trials" 
 		      << std::endl;
 
+	 // old
+  	 // coot::minimol::molecule mmol = 
+	 // addres.best_fit_phi_psi(add_terminal_residue_n_phi_psi_trials, 
+	 // terminal_residue_do_rigid_body_refine,
+	 // add_terminal_residue_add_other_residue_flag);
+
   	 coot::minimol::molecule mmol = 
 	    addres.best_fit_phi_psi(add_terminal_residue_n_phi_psi_trials, 
-				    terminal_residue_do_rigid_body_refine,
-				    add_terminal_residue_add_other_residue_flag);
+				    molecules[imol_map].xmap);
 
 	 std::vector<coot::minimol::atom *> mmatoms = mmol.select_atoms_serial();
 	 // mmol.check();
@@ -2273,7 +2381,6 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 	    } else {
 
 	       atom_selection_container_t terminal_res_asc;
-	       float bf = default_new_atoms_b_factor;
 
 	       // if this is begin added to a shelx molecule, then we
 	       // need to set the occs to 11.0
@@ -2351,6 +2458,11 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 		  } 
 
 		  molecules[imol_moving_atoms].insert_coords(tmp_asc);
+
+		  if (terminus_type == "C" || terminus_type == "MC") {
+		     molecules[imol_moving_atoms].move_O_atom_of_added_to_residue(res_p, chain_id);
+		  }
+
 		  graphics_draw();
 	       }
 	    }
@@ -2479,10 +2591,9 @@ graphics_info_t::execute_simple_nucleotide_addition(int imol, const std::string 
 
 	       atom_selection_container_t asc = make_asc(residue_mol);
 	       // set the chain id of the chain that contains interesting_residue_p:
-	       mmdb::Model *model_p = residue_mol->GetModel(imod);
-	       mmdb::Chain *chain_p;
+	       model_p = residue_mol->GetModel(imod);
 	       // run over chains of the existing mol
-	       int nchains = model_p->GetNumberOfChains();
+	       nchains = model_p->GetNumberOfChains();
 	       for (int ichain=0; ichain<nchains; ichain++) {
 		  chain_p = model_p->GetChain(ichain);
 		  int nres = chain_p->GetNumberOfResidues();
@@ -2912,7 +3023,6 @@ graphics_info_t::rot_trans_adjustment_changed(GtkAdjustment *adj, gpointer user_
       // But! maybe we have a different rotation centre
       if (rot_trans_zone_rotates_about_zone_centre) {
 	 if (moving_atoms_asc->n_selected_atoms  > 0) {
-	    graphics_info_t g;
 	    rotation_centre = g.moving_atoms_centre();
 	 } 
       } else { 
@@ -3533,7 +3643,7 @@ graphics_info_t::get_rotamer_probability(mmdb::Residue *res,
 	    r = v[0];
 	 } 
       }
-      catch (std::runtime_error e) {
+      catch (const std::runtime_error &e) {
 	 std::cout << "get_rotamer_probability: caught: " << e.what() << std::endl;
       } 
    } else {
@@ -3670,12 +3780,12 @@ graphics_info_t::update_residue_by_chi_change(int imol, mmdb::Residue *residue,
 	       display_density_level_screen_string += float_to_string(new_torsion);
 	       add_status_bar_text(display_density_level_screen_string);
 	    }
-	    catch (std::runtime_error rte) {
+	    catch (const std::runtime_error &rte) {
 	       std::cout << "Update chi - contact fall-back fails - " << rte.what() << std::endl;
 	    }
 	 }
       }
-      catch (std::runtime_error rte) {
+      catch (const std::runtime_error &rte) {
 	 // atoms of the torsion not found.
 	 std::cout << rte.what() << std::endl;
       }
@@ -3945,7 +4055,6 @@ graphics_info_t::split_residue(int imol, const std::string &chain_id,
 			       const std::string &altconf) {
 
    std::pair<bool, std::string> p(0, "");
-   std::cout << "here in split_residue() " << std::endl;
    
    mmdb::Residue *r = molecules[imol].get_residue(chain_id, resno, ins_code);
    if (!r) {
@@ -3994,11 +4103,29 @@ graphics_info_t::split_residue_range(int imol, int index_1, int index2) {
 // delete zone
 void
 graphics_info_t::delete_residue_range(int imol,
-				      const coot::residue_spec_t &res1,
-				      const coot::residue_spec_t &res2) {
+				      const coot::residue_spec_t &res1_in,
+				      const coot::residue_spec_t &res2_in) {
 
    if (is_valid_model_molecule(imol)) {
+
+      coot::residue_spec_t res1 = res1_in;
+      coot::residue_spec_t res2 = res2_in;
+
+      if (res1.res_no > res2.res_no)
+	 std::swap(res1, res2);
+
       molecules[imol].delete_zone(res1, res2);
+
+      // cheap! I should find the residues with insertion codes in this range too.
+      // How to do that? Hmm... Needs a class function. This will do for now
+      //
+      std::vector<coot::residue_spec_t> res_specs;
+      for (int i=res1.res_no; i<=res2.res_no; i++) {
+	 coot::residue_spec_t r(res1_in.chain_id, i, "");
+	 res_specs.push_back(r);
+      }
+      delete_residues_from_geometry_graphs(imol, res_specs);
+
       if (delete_item_widget) {
 	 GtkWidget *checkbutton = lookup_widget(graphics_info_t::delete_item_widget,
 						"delete_item_keep_active_checkbutton");
@@ -4028,6 +4155,41 @@ graphics_info_t::delete_residue_range(int imol,
    }
    graphics_draw();
 }
+
+void
+graphics_info_t::delete_sidechain_range(int imol,
+					const coot::residue_spec_t &res_1,
+					const coot::residue_spec_t &res_2) {
+
+   if (is_valid_model_molecule(imol)) {
+      molecules[imol].delete_sidechain_range(res_1, res_2);
+      if (delete_item_widget) {
+	 GtkWidget *checkbutton = lookup_widget(graphics_info_t::delete_item_widget,
+						"delete_item_keep_active_checkbutton");
+	 if (GTK_TOGGLE_BUTTON(checkbutton)->active) {
+	    // don't destroy it.
+	 } else {
+	    gtk_widget_destroy(delete_item_widget);
+	    delete_item_widget = 0;
+	    normal_cursor();
+	 }
+      }
+
+      if (graphics_info_t::go_to_atom_window)
+	 update_go_to_atom_window_on_changed_mol(imol);
+
+      // faster is passing a blank asc, but to do that needs to check that
+      // updating other geometry graphs will work (not crash) with residues/mol
+      // unset.
+      //
+      // atom_selection_container_t asc = molecules[imol].atom_sel;
+      atom_selection_container_t asc;
+      update_geometry_graphs(asc, imol);
+   }
+   graphics_draw();
+
+}
+
 
 
 // static
@@ -4218,10 +4380,11 @@ graphics_info_t::check_and_warn_inverted_chirals_and_cis_peptides() const {
 
 
 void
-graphics_info_t::tabulate_geometric_distortions(const coot::restraints_container_t &restraints) const {
+graphics_info_t::tabulate_geometric_distortions(const coot::restraints_container_t &restraints,
+						coot::restraint_usage_Flags flags) const {
 
+   // coot::restraint_usage_Flags flags = coot::TYPICAL_RESTRAINTS; // is passed now
    coot::restraints_container_t rr = restraints;;
-   coot::restraint_usage_Flags flags = coot::TYPICAL_RESTRAINTS;
    coot::geometry_distortion_info_container_t gdic = rr.geometric_distortions(flags);
 
    std::ofstream f("coot-refinement-debug.tab");
@@ -4232,7 +4395,7 @@ graphics_info_t::tabulate_geometric_distortions(const coot::restraints_container
       for (unsigned int ii=0; ii<gdic.geometry_distortion.size(); ii++) { 
 	 const coot::geometry_distortion_info_t &gd = gdic.geometry_distortion[ii];
 	 const coot::simple_restraint &rest = gd.restraint;
-	 
+
 	 if (rest.restraint_type == coot::BOND_RESTRAINT) {
 	    std::string s = "bond  " + coot::util::float_to_string(gd.distortion_score);
 	    for (unsigned int iat=0; iat<gd.atom_indices.size(); iat++)
@@ -4247,21 +4410,34 @@ graphics_info_t::tabulate_geometric_distortions(const coot::restraints_container
 	    for (unsigned int iat=0; iat<gd.atom_indices.size(); iat++)
 	       s += " " + coot::util::int_to_string(gd.atom_indices[iat]);
 	    s += " target: ";
-	    s += coot::util::float_to_string(gd.restraint.target_value);
+	    s += coot::util::float_to_string(rest.target_value);
 	    s += " ";
-	    s += coot::util::float_to_string(gd.restraint.sigma);
+	    s += coot::util::float_to_string(rest.sigma);
 	    rest_info.push_back(std::pair<double, std::string> (gd.distortion_score, s));
 	 }
 	 if (rest.restraint_type == coot::TORSION_RESTRAINT) {
-	    std::string s = "torsion " + coot::util::float_to_string(gd.distortion_score);
-	    // s += " " + rr.get_atom_spec(gd.atom_index_2).format();
-	    // s += " " + rr.get_atom_spec(gd.atom_index_3).format();
+	    std::string s = "torsion ";
+	    s += coot::util::float_to_string_using_dec_pl(gd.distortion_score, 4);
+	    s += " ";
+	    s += " " + rr.get_atom_spec(rest.atom_index_1).format();
+	    s += " ";
+	    s += " " + rr.get_atom_spec(rest.atom_index_2).format();
+	    s += " ";
+	    s += " " + rr.get_atom_spec(rest.atom_index_3).format();
+	    s += " ";
+	    s += " " + rr.get_atom_spec(rest.atom_index_4).format();
+	    s += " idx: ";
+	    s += coot::util::int_to_string(ii);
+	    s += " target: ";
+	    s += coot::util::float_to_string(rest.target_value);
 	    rest_info.push_back(std::pair<double, std::string> (gd.distortion_score, s));
 	 }
 	 if (rest.restraint_type == coot::TRANS_PEPTIDE_RESTRAINT) {
 	    std::string s = "trans " + coot::util::float_to_string(gd.distortion_score);
 	    s += " " + rr.get_atom_spec(rest.atom_index_2).format();
 	    s += " " + rr.get_atom_spec(rest.atom_index_3).format();
+	    s += coot::util::float_to_string(rest.target_value);
+	    s += " ";
 	    rest_info.push_back(std::pair<double, std::string> (gd.distortion_score, s));
 	 }
 	 if (rest.restraint_type == coot::PLANE_RESTRAINT) {
@@ -4278,9 +4454,9 @@ graphics_info_t::tabulate_geometric_distortions(const coot::restraints_container
 	    for (unsigned int iat=0; iat<gd.atom_indices.size(); iat++)
 	       s += " " + coot::util::int_to_string(gd.atom_indices[iat]);
 	    s += " target: ";
-	    s += coot::util::float_to_string(gd.restraint.target_value);
+	    s += coot::util::float_to_string(rest.target_value);
 	    s += " ";
-	    s += coot::util::float_to_string(gd.restraint.sigma);
+	    s += coot::util::float_to_string(rest.sigma);
 	    rest_info.push_back(std::pair<double, std::string> (gd.distortion_score, s));
 	 }
 	 if (rest.restraint_type == coot::CHIRAL_VOLUME_RESTRAINT) {

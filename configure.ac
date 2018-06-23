@@ -25,7 +25,7 @@ dnl implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 dnl
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(coot, 0.8.9-pre)
+AC_INIT(coot, 0.8.9.2-pre)
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -61,8 +61,8 @@ m4_define([v_git_revision_count], m4_esyscmd([(git rev-list --count HEAD 2>/dev/
 if test ! -d src     ; then mkdir src     ; fi
 if test ! -d pyrogen ; then mkdir pyrogen ; fi
 echo 'extern "C" { int git_revision_count() { return v_git_revision_count ; } }' > src/git-revision-count.cc
-echo 'def revision_count():'             > pyrogen/coot_git.py
-echo '    return ' v_git_revision_count >> pyrogen/coot_git.py
+echo 'def revision_count():
+      return ' v_git_revision_count > pyrogen/coot_git.py
 
 AC_CHECK_HEADERS([sys/stdtypes.h], [COOT_STDTYPES="-DHAVE_SYS_STDTYPES_H=1"], [COOT_STDTYPES="-DHAVE_SYS_STDTYPES_H=0"])
 
@@ -181,6 +181,11 @@ coot_gtk2=TRUE
 
 # AM_PATH_GTK(2.4.14)
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.4.12)
+
+# libgnomecanvas is not provided on new GNU/Linux systems.
+# So until all libgnomecanvas-using code is replaced I will have to install that myself
+# rather than rely on the system for it
+#
 PKG_CHECK_MODULES(GNOME_CANVAS, libgnomecanvas-2.0 >= 0.15.0)
 if test -n "$GNOME_CANVAS_CFLAGS" ; then 
    GNOME_CANVAS_CFLAGS="-DHAVE_GNOME_CANVAS $GNOME_CANVAS_CFLAGS"
@@ -254,6 +259,14 @@ fi
 AC_ARG_WITH(enhanced-ligand-tools, [  --with-enhanced-ligand-tools with optional complicated/experimental ligand-related dependencies ],
  coot_enhanced_ligand_additions="true",
  coot_enhanced_ligand_additions="false")
+
+# but we can't use enhanced-ligand-tools without python:
+if $coot_enhanced_ligand_additions = true ; then
+   if test -n "$COOT_USE_PYTHON_TRUE" ; then
+      echo Configuration error: cant use enhanced-ligand-tools without python
+      exit 1
+   fi
+fi
 
 if test x$coot_enhanced_ligand_additions = xtrue ; then
    ENHANCED_LIGAND_TOOLS_CFLAGS="-DMAKE_ENHANCED_LIGAND_TOOLS"
@@ -378,10 +391,14 @@ src/Makefile
 src/coot
 python/coot_load_modules.py
 data/Makefile
+data/rama-coeffs/Makefile
+data/cho-models/Makefile
+data/cho-acedrg/Makefile
 pixmaps/Makefile
 pixmaps/icons/Makefile
 rama-data/Makefile
 man/Makefile
+pli/Makefile
 pyrogen/Makefile
 pyrogen/pyrogen
 auxil/Makefile

@@ -13,9 +13,20 @@
 build_coot_prerelease=${1:-1}
 if [ -e /z/make_stable_build ] ; then
   build_coot_prerelease=0
+  if [ -e /z/make_clean_wincoot_stable ] ; then
+     extra_flag="veryclean"
+     rm /z/make_clean_wincoot_stable
+  fi
 fi
 if [ -z "$build_coot_prerelease" ] ; then
   build_coot_prerelease=0
+fi
+
+if [ "$build_coot_prerelease" -ne "0" ] ; then 
+  if [ -e /z/make_clean_wincoot_prerelease ] ; then
+     extra_flag="veryclean"
+     rm /z/make_clean_wincoot_prerelease
+  fi
 fi
 
 # option to not build guile
@@ -39,8 +50,8 @@ if [ -z "$make_installer_only" ] ; then
 fi
 
 #
-BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/nightlies/pre-release
-PRE_BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/nightlies/pre-release
+BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/pre-release
+PRE_BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/pre-release
 # test if there is enough disk space first
 (
 fsutil.exe volume diskfree c: > ${HOME}/diskspace.tmp
@@ -71,14 +82,14 @@ function copy_logs {
       # copy log files from local to public html
       cp -p $LOCAL_HTML_LOGS/gtk2-build.log $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-build.log $PUBLIC_HTML_LOGS/gtk2-python-build.log
-      cp -r -p $LOCAL_HTML_LOGS/$HOSTLOG_STUB/  $PUBLIC_HTML_LOGS/
+      cp -a $LOCAL_HTML_LOGS/$HOSTLOG_STUB/.  $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-test.log  $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-test.log  $PUBLIC_HTML_LOGS/gtk2-python-test.log
   else
     # copy log files from local to public html
     if [ $make_guile != 0 ] ; then 
       cp -p $LOCAL_HTML_LOGS/gtk2-guile-build.log $PUBLIC_HTML_LOGS/
-      cp -r -p $LOCAL_HTML_LOGS/${HOSTLOG_STUB}-guile/  $PUBLIC_HTML_LOGS/
+      cp -a $LOCAL_HTML_LOGS/${HOSTLOG_STUB}-guile/.  $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-guile-test.log  $PUBLIC_HTML_LOGS/
     fi
   fi
@@ -98,7 +109,7 @@ wincoot_installer_script=${HOME}/Projects/coot/windows/WinCoot_install_masta.nsi
 LOCAL_HTML_LOGS=$HOME/public_html/build-logs/${OS}-${HOST}
 PUBLIC_HTML_LOGS=/z/build-logs/${OS}-${HOST}
 PUBLIC_STABLE_DEST_DIR=${PUBLIC_STABLE_DEST_DIR:=/z/software/binaries/stable}
-PUBLIC_NIGHTLY_DEST_DIR=${PUBLIC_NIGHTLY_DEST_DIR:=/z/software/binaries/nightlies/pre-release}
+PUBLIC_NIGHTLY_DEST_DIR=${PUBLIC_NIGHTLY_DEST_DIR:=/z/software/binaries/pre-release}
 
 # before we start building, lets update the test data files
 #cp -ur /h/data/greg-data/* ~/data/greg-data
@@ -138,6 +149,11 @@ else
   echo building and making installer
 fi
 
+if [ "$build_coot_prerelease" = "0" ] ; then
+    install_top_dir=${HOME}/autobuild/${OS}-${HOST}-gtk2
+else
+    install_top_dir=${HOME}/autobuild/${OS}-${HOST}-pre-release-gtk2
+fi
 
 if [ $make_installer_only == 0 ] ; then
 
@@ -170,11 +186,6 @@ if [ $make_installer_only == 0 ] ; then
       # if failed dont bother with a guile build and other settings
       if [ "$coot_build_status" = "0" ] ; then
 
-          if [ "$build_coot_prerelease" = "0" ] ; then
-              install_top_dir=${HOME}/autobuild/${OS}-${HOST}-gtk2
-          else
-              install_top_dir=${HOME}/autobuild/${OS}-${HOST}-pre-release-gtk2
-          fi
           COOT_PYTHON_VERSION=$install_top_dir/coot-version
           if [ $make_guile != 0 ] ; then 
               COOT_GUILE_VERSION=$install_top_dir-guile/coot-version
@@ -284,6 +295,7 @@ else
     rm /z/make_installer_only
     . ${HOME}/wincoot-installer-variables
     coot_test_status=0
+    echo '!define WinCootVersion "'${wincoot_version}'"' >$install_top_dir/coot-version
 fi
 
 # flag for makensis, i.e. overwrite binary dir when stable release
@@ -342,11 +354,21 @@ if [ "$build_installer" = "0" ] ; then
    wget -N -P ${HOME}/autobuild/extras http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/web/tutorial/tutorial.pdf
    wget -N -P ${HOME}/autobuild/extras http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/web/tutorial/tutorial-2.pdf
    # and download the bat run files
-   wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/runwincoot.bat
-   wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/runwincoot_ccp4.bat
-   wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/runwincoot_ccp4_vista.bat
+   # actually these come from the git repository now
+#   wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/runwincoot.bat
+#   wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/runwincoot_ccp4.bat
+#   wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/runwincoot_ccp4_vista.bat
+   # But should get the icons e.g.
+   wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/coot-icon.ico
+   wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/rama_all.ico
    # some more extras (actually only required for newer msys!?
-   #wget -N -P ${HOME}/autobuild/extras http://www.ysbl.york.ac.uk/~lohkamp/software/extras/libstdc++-6.dll
+   wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/libgcc_s_dw2-1.dll
+   wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/libstdc++-6.dll
+   # get probe and reduce (compiled self)
+   wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/probe.exe
+   wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/reduce.exe
+   wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/reduce_wwPDB_het_dict.txt
+   wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/probe_reduce.txt
    # now make the installer
    echo installer-progress > $PUBLIC_HTML_LOGS/gtk2-build-status
    echo
@@ -372,9 +394,9 @@ if [ "$build_installer" = "0" ] ; then
        echo WinCoot-$wincoot_version > ${BINARY_DIR}/$binary_type_latest
        # finally copy files and update the build-status
        echo copy files from ${BINARY_DIR} to ${PUBLIC_BINARY_DIR}
-       cp ${BINARY_DIR}/${wincoot_exe} ${PUBLIC_BINARY_DIR}
-       cp ${BINARY_DIR}/${wincoot_exe}.md5sum ${PUBLIC_BINARY_DIR}
-       cp ${BINARY_DIR}/${binary_type_latest} ${PUBLIC_BINARY_DIR}
+       cp ${BINARY_DIR}/${wincoot_exe} ${PUBLIC_BINARY_DIR}/
+       cp ${BINARY_DIR}/${wincoot_exe}.md5sum ${PUBLIC_BINARY_DIR}/
+       cp ${BINARY_DIR}/${binary_type_latest} ${PUBLIC_BINARY_DIR}/
        cp $LOCAL_HTML_LOGS/gtk2-build-status $PUBLIC_HTML_LOGS/gtk2-build-status
        
    else
@@ -401,7 +423,7 @@ fi
 # not really working on msys right now
 #chmod 755 /z/build-logs/MINGW32_NT-6.1-sarabellum
 #chmod 744 /z/build-logs/MINGW32_NT-6.1-sarabellum/*
-#chmod 744 /z/software/binaries/nightlies/pre-release/*
+#chmod 744 /z/software/binaries/pre-release/*
 #chmod 744 /z/software/binaries/stable/*
 #chmod 755 /z/build-logs/MINGW32_NT-6.1-sarabellum/*
 #chmod 744 /z/build-logs/MINGW32_NT-6.1-sarabellum/*/*

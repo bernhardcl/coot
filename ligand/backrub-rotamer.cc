@@ -153,7 +153,7 @@ coot::backrub::make_test_fragment(mmdb::Residue *r, double rotation_angle) const
       f.addresidue(r, 0);
       f.addresidue(next_residue, 0);
    }
-   catch (std::runtime_error rte) {
+   catch (const std::runtime_error &rte) {
       std::cout << "ERROR:: make_test_fragment() " << rte.what() << std::endl;
    } 
    
@@ -438,7 +438,7 @@ coot::backrub::sample_individual_peptide(mmdb::Residue *r, double rotation_angle
 	 resno_for_N  = this_resno;
       } 
       
-      double rar = 2 * abs(rotation_angle); // rotation angle range
+      double rar = 2 * fabs(rotation_angle); // rotation angle range
       double best_sum_dist = 9999999.9;
       for (double sample_rotation_angle=-rar;
 	   sample_rotation_angle<=rar;
