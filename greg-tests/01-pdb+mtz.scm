@@ -313,6 +313,23 @@
        )))
 
 
+(greg-testcase "Negative Residues in db-mainchain don't cause a crash" #t 
+   (lambda ()
+
+     ;; Oliver Clarke spotted this bug
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+       (if (not (valid-model-molecule? imol))
+	   #f
+	   (begin
+	     (renumber-residue-range imol "A" 1 50 -20)
+	     (let ((imol-mc-1 (db-mainchain imol "A" -19  6 "forwards"))
+		   (imol-mc-2 (db-mainchain imol "B"  10 30 "backwards")))
+	       ;; (write-pdb-file imol-mc-1 "dbmc-1.pdb")
+	       ;; (write-pdb-file imol-mc-2 "dbmc-2.pdb")
+	       #t))))))
+
+
 (greg-testcase "Set Atom Attribute Test" #t
 	       (lambda ()
 		 (set-atom-attribute imol-rnase "A" 11 "" " CA " "" "x" 64.5) ; an Angstrom or so
@@ -945,6 +962,28 @@
 		 (close-molecule imol-2)
 		 (format #t "dd: ~s~%" dd)
 		 (> dd 1.4))))))))
+
+
+(greg-testcase "HA on a ALA exists after mutation to GLY" #t
+   (lambda ()
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+       (let ((imol-2 (new-molecule-by-atom-selection imol "//A/5-11")))
+	 (coot-reduce imol-2)
+	 (let ((H-atom-o (get-atom imol-2 "A" 10 "" " HA " "")))
+	   (if (not (list? H-atom-o))
+	       (throw 'fail)
+
+	       (begin
+		 (mutate imol-2 "A" 10 "" "GLY")
+		 (let ((H-atom-n (get-atom imol-2 "A" 10 "" " HA " "")))
+
+		   (if (list? H-atom-n)
+		       (begin
+			 (format #t "atom still exists ~s~%" H-atom-n)
+			 #f)
+
+		       #t)))))))))
 
 
 

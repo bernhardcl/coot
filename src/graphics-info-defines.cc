@@ -475,7 +475,9 @@ graphics_info_t::check_if_in_geometry_range_defines(GdkEventButton *event) {
 	    // 20190104-PE Why were we using the symmetry function?
 // 	    display_geometry_distance_symm(geometry_atom_index_1_mol_no, distance_pos_1,
 // 					   geometry_atom_index_2_mol_no, pos2);
-	    display_geometry_distance();
+
+	    display_geometry_distance(geometry_atom_index_1_mol_no, distance_pos_1,
+				      geometry_atom_index_2_mol_no, pos2); // calls graphics_draw()
 
 	    unset_geometry_dialog_distance_togglebutton();
 	    in_distance_define = 0;  // clear flag
@@ -508,8 +510,8 @@ graphics_info_t::check_if_in_geometry_range_defines(GdkEventButton *event) {
 	       // in_distance_define == 2
 	       coot::Cartesian pos2 = symm_nearest_atom_index_info.hybrid_atom.pos;
 	       geometry_atom_index_2_mol_no = symm_nearest_atom_index_info.imol;
-	       display_geometry_distance_symm(geometry_atom_index_1_mol_no, distance_pos_1,
-					      geometry_atom_index_2_mol_no, pos2);
+	       display_geometry_distance(geometry_atom_index_1_mol_no, distance_pos_1,
+					 geometry_atom_index_2_mol_no, pos2);
 	       unset_geometry_dialog_distance_togglebutton();
 	       in_distance_define = 0;
 	       pick_pending_flag = 0;
@@ -1291,9 +1293,12 @@ graphics_info_t::check_if_in_rot_trans_define(GdkEventButton *event) {
 
 
 void
-graphics_info_t::check_if_in_db_main_define(GdkEventButton *event) { 
+graphics_info_t::check_if_in_db_main_define(GdkEventButton *event) {
 
    graphics_info_t g;
+
+   // 20180721 change this so that it needs only a single click.
+
    if (g.in_db_main_define) { 
       pick_info naii = atom_pick(event);
       if (naii.success == GL_TRUE) { 
@@ -1302,23 +1307,7 @@ graphics_info_t::check_if_in_db_main_define(GdkEventButton *event) {
 	    g.db_main_atom_index_1 = naii.atom_index;
 	    g.in_db_main_define = 2;
 	    g.db_main_imol = naii.imol;
-	 } else {
-	    
-	    if (g.in_db_main_define == 2) {
-	       if (naii.imol == g.db_main_imol) { 
-		  g.db_main_atom_index_2 = naii.atom_index;
-		  
-		  // now do it
-		  //
-		  watch_cursor();
-		  g.execute_db_main();
-	       } else {
-		  std::cout << "db-main: that atom was ";
-		  std::cout << "not in the same molecule as the "
-			    << "previous atom" << std::endl;
-		  std::cout << "Cancelling selection" << std::endl;
-	       }
-	    }
+	    g.execute_db_main();
 	    g.in_db_main_define = 0;
 	    pick_pending_flag = 0;
 	    normal_cursor();
