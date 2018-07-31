@@ -1,0 +1,27 @@
+--- mmdb2/mmdb_io_file.cpp.orig	2018-07-31 10:37:33 +0200
++++ mmdb2/mmdb_io_file.cpp	2018-07-31 10:32:29 +0200
+@@ -41,17 +41,19 @@
+ #include <stdio.h>
+ #include <string.h>
+ 
+-#ifdef  _WIN32
+-# include <windows.h>
+-# define sleep Sleep
+-#endif
+-
+ #if !defined _WIN32 || defined __MINGW32__
+ # ifndef  __UNISTD_H
+ #  include <unistd.h>
+ # endif
+ #endif
+ 
++#ifdef  _WIN32
++# include <windows.h>
++#ifndef sleep
++# define sleep Sleep
++#endif
++#endif
++
+ 
+ #include "mmdb_io_file.h"
+ 
