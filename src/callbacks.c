@@ -11871,6 +11871,9 @@ on_map_sharpening_cancel_button_clicked
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
+   /* at least it should close, or we should remove the cancel button */
+   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "map_sharpening_dialog");
+   gtk_widget_destroy(w);
 
 }
 
