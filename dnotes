@@ -8362,3 +8362,44 @@ Fri 27 Jul 2018 14:45:14 BST
    o Pathwalking: Look at 2015/16 EM model-bulding trial:
      find e2pathwalker_auto.py?
 
+---
+Tue 21 Aug 2018 16:20:52 BST
+
+   o CUDA cubic spline for grid interpolation:
+
+     http://www.dannyruijters.nl/cubicinterpolation/
+
+---
+Mon  6 Aug 15:21:40 BST 2018
+
+
+Inverse Kinematics, Featherstone?
+
+   https://github.com/bulletphysics
+
+Also
+   Bullet Physics SDK:
+   real-time collision detection and multi-physics simulation for VR,
+   games, visual effects, robotics, machine learning etc.
+
+Also
+
+   https://dartsim.github.io/ DART (Dynamic Animation and Robotics Toolkit
+
+Book: Rigid Body Dynamics Algorithms 2008, Featherstone, Roy
+   A comprehensive collection of the best rigid-body dynamics algorithms
+
+---
+Mon 27 Aug 2018 12:21:09 BST
+
+   what is geexlab?
+
+---
+Tue 28 Aug 2018 03:27:54 BST
+
+   command line parsing in c++ 11
+
+https://www.reddit.com/r/cpp/comments/4zhm2n/which_library_would_you_recommend_for_parsing/
+
+
+---
