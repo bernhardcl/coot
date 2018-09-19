@@ -93,7 +93,9 @@ scripting exercise
 
 **** General ****
 
-   o optimise sharpen B on kurtosis, e.g. use only a part of the unit cell for large maps (but which one? results will depend on the selection).
+   o Validation: check carbonyl distances, if 3 are too close and not a-helix => inspect
+
+   o optimise sharpen B on kurtosis, e.g. use only a part of the unit cell for large maps (but which one? results will depend on the selection), just locally?.
 
    o revisit anti-aliasing. Seems we need to antialias before drawing map 
 	and lines and not in general, I think.
@@ -545,6 +547,8 @@ low importance
    o Add Documents\ and Settings//My Documents to favourites in filechooser
 
    o build script: better for pango's friends (output and check)
+
+   o fix foreign language encoding in env variables (if possible)
 
    o fix dragNdrop for filenames with spaces!!
 
