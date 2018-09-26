@@ -956,9 +956,9 @@ public:
       lsq_plane_atom_positions = new std::vector<clipper::Coord_orth>;
 
       directory_for_fileselection = "";
-#if (GTK_MAJOR_VERSION > 1)
+
       directory_for_filechooser = "";
-#endif // GTK_MAJOR_VERSION
+
       baton_next_ca_options = new std::vector<coot::scored_skel_coord>;
       baton_previous_ca_positions = new std::vector<clipper::Coord_orth>;
 
@@ -1892,19 +1892,6 @@ public:
 
    static void on_go_to_atom_residue_tree_selection_changed_gtk1(GtkList *gtklist,
 								 gpointer user_data);
-#if (GTK_MAJOR_VERSION == 1) || defined (GTK_ENABLE_BROKEN)
-
-   static int go_to_atom_residue_tree_signal_handler_event_gtk1(GtkWidget *widget, 
-								GdkEventButton *event, 
-								gpointer func_data);
-   static int cb_chain_tree_itemsignal( GtkWidget *item,
-					GdkEventButton *event, 
-					gpointer func_data);
-   static int go_to_atom_atom_list_signal_handler_event_gtk1(GtkWidget *widget, 
-							     GdkEventButton *event, 
-							     gpointer func_data);
-
-#else 
    // -------------------- Gtk2 code -----------------------------
    static void on_go_to_atom_residue_tree_selection_changed (GtkTreeView *gtklist,
 							     gpointer user_data);
@@ -1935,7 +1922,6 @@ public:
 // BL says:: put my gtk2 stuff in here too:
    static int gtk2_file_chooser_selector_flag;
    static int gtk2_chooser_overwrite_flag;
-#endif // #if (GTK_MAJOR_VERSION == 1) || defined (GTK_ENABLE_BROKEN)
 
    void apply_go_to_atom_from_widget(GtkWidget *widget); 
    static void pointer_atom_molecule_menu_item_activate(GtkWidget *item, 
@@ -2938,12 +2924,11 @@ public:
    void set_file_for_save_fileselection(GtkWidget *fileselection) const;
 
    // for file_chooser
-#if (GTK_MAJOR_VERSION > 1)
+
    void set_directory_for_filechooser(GtkWidget *fileselection) const;
    void save_directory_from_filechooser(const GtkWidget *fileselection);
    void save_directory_for_saving_from_filechooser(const GtkWidget *fileselection);
    void set_file_for_save_filechooser(GtkWidget *fileselection) const;
-#endif
 
    // saving temporary files (undo)
    //

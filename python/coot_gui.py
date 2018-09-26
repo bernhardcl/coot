@@ -5237,9 +5237,9 @@ def click_protein_db_loop_gui():
                                          ] + buttons,
                                         " Close ",
                                         lambda: map(lambda im: (set_mol_displayed(im, 0), set_mol_active(im,0)), loop_mols))
-                 
+
       user_defined_click(n, pick_func)
-      
+
    generic_number_chooser(range(2,10), 4,
                           "Number of residues for basis",
                           "Pick Atoms...",
@@ -5266,7 +5266,7 @@ def refmac_multi_sharpen_gui():
       # It is not stored. So we make/guess it...
       map_file_name = molecule_name(active_item_imol)
       if (map_file_name.find(" ") > 0):
-         # we have map ceoffs - but then sharpen as here wont work anyway
+         # we have map coeffs - but then sharpen as here wont work anyway
          map_file_name = map_file_name[:map_file_name.find(" ")]
       map_file_name_stub = strip_path(file_name_sans_extension(map_file_name))
       refmac_output_mtz_file_name = "starting-map-" + map_file_name_stub + ".mtz"
@@ -5276,7 +5276,8 @@ def refmac_multi_sharpen_gui():
       else:
          print "active_item_imol", active_item_imol
          step_size = max_b/n_levels
-         numbers_string = ' '.join(str(i+1) for i in range(n_levels))
+         numbers_string = ' '.join(str((i + 1) * step_size) \
+                                   for i in range(n_levels))
          blur_string = "SFCALC BLUR  " + numbers_string
          sharp_string = "SFCALC SHARP " + numbers_string
 
@@ -5290,7 +5291,7 @@ def refmac_multi_sharpen_gui():
                            cmd_line_args,
                            data_lines,
                            log_file_name)
-         
+
          try:
             if (s == 0):
                # all good
@@ -5299,10 +5300,10 @@ def refmac_multi_sharpen_gui():
                   os.rename("starting-map.mtz", refmac_output_mtz_file_name)
                   # maybe offer a dialog?! Or read automatically?
          except:
+            print "BL DEBUG:: tried to rename starting-map.mtz but failed."
             pass
          delete_event(widget)
 
-   print "BL DEBUG:: now make a windwo"
    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
    # boxes
    vbox = gtk.VBox(False, 0)
@@ -5336,14 +5337,15 @@ def refmac_multi_sharpen_gui():
    hbox_2.pack_start(sb_label, False, False, 2)
    hbox_2.pack_start(option_menu_n_levels, False, False, 2)
    hbox_2.pack_start(levels_label, False, False, 2)
+   hbox_2.pack_start(option_menu_b_factor, False, False, 2)
    hbox_3.pack_end(cancel_button, False, False, 12)
    hbox_3.pack_end(ok_button, False, False, 12)
-   
+
    vbox.pack_start(hbox_1)
    vbox.pack_start(hbox_2)
    vbox.pack_start(h_sep)
    vbox.pack_start(hbox_3)
-   
+
    cancel_button.connect("clicked", delete_event)
 
    ok_button.connect("clicked", sharpen_cb, option_menu_b_factor, b_factor_list,

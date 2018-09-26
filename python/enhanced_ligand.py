@@ -24,23 +24,23 @@ def jiggle_fit_active_residue():
 
 if (use_gui_qm != 2):
     menu = coot_menubar_menu("Ligand")
-        
+
+    add_simple_coot_menu_menuitem(
+        menu,
+        "Find Ligands...",
+        lambda func: do_find_ligands_dialog())
+
+    add_simple_coot_menu_menuitem(
+        menu,
+        "Jiggle-Fit Ligand",
+        lambda func: jiggle_fit_active_residue())
+
+    add_simple_coot_menu_menuitem(
+        menu,
+        "Hydrogenate region",
+        lambda func: hydrogenate_region(6))
+
     if enhanced_ligand_coot_p():
-    
-        add_simple_coot_menu_menuitem(
-          menu,
-          "Find Ligands...",
-          lambda func: do_find_ligands_dialog())
-
-        add_simple_coot_menu_menuitem(
-          menu,
-          "Jiggle-Fit Ligand",
-          lambda func: jiggle_fit_active_residue())
-
-        add_simple_coot_menu_menuitem(
-            menu,
-            "Hydrogenate region",
-            lambda func: hydrogenate_region(6))
 
         add_simple_coot_menu_menuitem(
           menu,
@@ -56,7 +56,7 @@ if (use_gui_qm != 2):
           "SMILES -> simple 3D",
           lambda func:
           generic_double_entry("Residue name", "SMILES string  ", "LIG", "",
-                               False, False, 
+                               False, False,
                                "Import Molecule",
                                lambda text_1, text_2:
                                import_rdkit_mol_from_smiles(text_1, text_2)))
@@ -78,7 +78,7 @@ if (use_gui_qm != 2):
                 fle_view_with_rdkit(aa_imol, aa_chain_id, aa_res_no,
                                     aa_ins_code, 4.2)
                 set_flev_idle_ligand_interactions(1)
-            
+
         add_simple_coot_menu_menuitem(
             menu,
             "FLEV this residue",
@@ -97,12 +97,14 @@ if (use_gui_qm != 2):
             with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                        aa_ins_code, aa_atom_name, aa_alt_conf]:
                 show_feats(aa_imol, aa_chain_id, aa_res_no, aa_ins_code)
-            
+
         add_simple_coot_menu_menuitem(
             menu,
             "Show Chemical Features",
             lambda func: show_chem_func()
             )
+
+    # back to non-EL
 
     def rename_atoms_to_reference(menuitem):
         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
@@ -118,7 +120,7 @@ if (use_gui_qm != 2):
                False,
                "   OK   ",
                lambda (ref_comp_id_txt, new_comp_id_txt, new_cif_file_name_txt): match_this_residue_and_dictionary(aa_imol, aa_chain_id, aa_res_no, aa_ins_code, new_cif_file_name_txt, ref_comp_id_txt, new_comp_id_txt))
-        
+
 
     add_simple_coot_menu_menuitem(
         menu, "Rename Atom to Reference", rename_atoms_to_reference)
@@ -134,7 +136,7 @@ if (use_gui_qm != 2):
     add_simple_coot_menu_menuitem(
          menu, "Unsolid Generic Objects",
          lambda func: go_solid_func(0))
-        
+
 
     def tab_ligand_distortions_func():
         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
@@ -192,7 +194,7 @@ if (use_gui_qm != 2):
 
 
     def probe_ligand_func():
-        global probe_command 
+        global probe_command
         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                             aa_ins_code, aa_atom_name, aa_alt_conf]:
             ss = "//" + aa_chain_id + "/" + str(aa_res_no)
