@@ -1417,7 +1417,8 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
             } else {
                // pre-pro
                if (phi_psi.is_pre_pro()) {
-                  g_print("BL DEBUG:: have pre_pro rn %s\n", phi_psi.residue_name());
+                  // g_print("BL DEBUG:: have pre_pro rn %s\n", phi_psi.residue_name().c_str());
+#ifdef CLIPPER_HAS_TOP8000
                   if (r_pre_pro.allowed(clipper::Util::d2rad(phi),
                                         clipper::Util::d2rad(psi))) {
                      region = coot::rama_plot::RAMA_ALLOWED;
@@ -1430,10 +1431,12 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
                      colour = "red3";
                      region = coot::rama_plot::RAMA_OUTLIER;
                   }
+#endif // CLIPPER_HAS_TOP8000
                } else {
                   // Ile  Val
                   if (phi_psi.residue_name() == "ILE" ||
                       phi_psi.residue_name() == "VAL") {
+#ifdef CLIPPER_HAS_TOP8000
                      if (r_ileval.allowed(clipper::Util::d2rad(phi),
                                           clipper::Util::d2rad(psi))) {
                         region = coot::rama_plot::RAMA_ALLOWED;
@@ -1446,8 +1449,10 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
                         colour = "red3";
                         region = coot::rama_plot::RAMA_OUTLIER;
                      }
+#endif // CLIPPER_HAS_TOP8000
                   } else {
                      // conventional residue
+#ifdef CLIPPER_HAS_TOP8000
                      if (r_non_gly_pro_pre_pro_ileval.allowed(clipper::Util::d2rad(phi),
                                                               clipper::Util::d2rad(psi))) {
                         region = coot::rama_plot::RAMA_ALLOWED;
@@ -1460,6 +1465,7 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
                         colour = "red3";
                         region = coot::rama_plot::RAMA_OUTLIER;
                      }
+#endif // CLIPPER_HAS_TOP8000
                   }
                }
             }
@@ -3591,13 +3597,17 @@ coot::rama_plot::plot_type_changed() {
          int i_chain_id2 = 0;
          if (chains2.size() > 0)
             i_chain_id2 = 1;
-         chain_ids_ = std::pair<std::string, std::string> (chains[0], chains2[i_chain_id2]);
+	 if (chains.size() > 0) {
+	    if (chains2.size() > i_chain_id2) {
+	       chain_ids_ = std::pair<std::string, std::string> (chains[0], chains2[i_chain_id2]);
 
-         draw_it(molecule_numbers().first, molecule_numbers().second,
-                 mols().first, mols().second,
-                 chain_ids().first, chain_ids().second);
-         fill_kleywegt_comboboxes(mols().first, mols().second);
-         kleywegt_plot_uses_chain_ids = 1;
+	       draw_it(molecule_numbers().first, molecule_numbers().second,
+		       mols().first, mols().second,
+		       chain_ids().first, chain_ids().second);
+	       fill_kleywegt_comboboxes(mols().first, mols().second);
+	       kleywegt_plot_uses_chain_ids = 1;
+	    }
+	 }
       } else {
          std::cout<< "BL INFO:: no molecule found, please read one in."<<std::endl;
       }
