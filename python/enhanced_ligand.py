@@ -40,9 +40,7 @@ if (use_gui_qm != 2):
         "Hydrogenate region",
         lambda func: hydrogenate_region(6))
 
-    if enhanced_ligand_coot_p():
-
-        add_simple_coot_menu_menuitem(
+    add_simple_coot_menu_menuitem(
           menu,
           "SMILES -> 2D",
           lambda func:
@@ -51,34 +49,33 @@ if (use_gui_qm != 2):
                                lambda text: smiles_to_ligand_builder(text)))
 
 
-        add_simple_coot_menu_menuitem(
+    add_simple_coot_menu_menuitem(
           menu,
           "SMILES -> simple 3D",
           lambda func:
           generic_double_entry("Residue name", "SMILES string  ", "LIG", "",
-                               False, False,
+                               False, False, 
                                "Import Molecule",
                                lambda text_1, text_2:
                                import_rdkit_mol_from_smiles(text_1, text_2)))
 
 
-        add_simple_coot_menu_menuitem(
+    add_simple_coot_menu_menuitem(
             menu,
             "Residue -> 2D",
             lambda func:
             using_active_atom(residue_to_ligand_builder,
                               "aa_imol", "aa_chain_id", "aa_res_no",
-                              "aa_ins_code", 0.015)
-            )
+                              "aa_ins_code", 0.015))
 
-
+    if enhanced_ligand_coot_p():
         def flev_rdkit_func():
             with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                        aa_ins_code, aa_atom_name, aa_alt_conf]:
                 fle_view_with_rdkit(aa_imol, aa_chain_id, aa_res_no,
                                     aa_ins_code, 4.2)
                 set_flev_idle_ligand_interactions(1)
-
+            
         add_simple_coot_menu_menuitem(
             menu,
             "FLEV this residue",
@@ -97,14 +94,12 @@ if (use_gui_qm != 2):
             with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                        aa_ins_code, aa_atom_name, aa_alt_conf]:
                 show_feats(aa_imol, aa_chain_id, aa_res_no, aa_ins_code)
-
+            
         add_simple_coot_menu_menuitem(
             menu,
             "Show Chemical Features",
             lambda func: show_chem_func()
             )
-
-    # back to non-EL
 
     def rename_atoms_to_reference(menuitem):
         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
@@ -120,7 +115,7 @@ if (use_gui_qm != 2):
                False,
                "   OK   ",
                lambda (ref_comp_id_txt, new_comp_id_txt, new_cif_file_name_txt): match_this_residue_and_dictionary(aa_imol, aa_chain_id, aa_res_no, aa_ins_code, new_cif_file_name_txt, ref_comp_id_txt, new_comp_id_txt))
-
+        
 
     add_simple_coot_menu_menuitem(
         menu, "Rename Atom to Reference", rename_atoms_to_reference)
