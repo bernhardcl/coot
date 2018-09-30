@@ -1465,6 +1465,19 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
                         colour = "red3";
                         region = coot::rama_plot::RAMA_OUTLIER;
                      }
+#else
+                     if (r_non_gly_pro.allowed(clipper::Util::d2rad(phi),
+                                               clipper::Util::d2rad(psi))) {
+                        region = coot::rama_plot::RAMA_ALLOWED;
+                        colour = "DodgerBlue";
+                        if (r_non_gly_pro.favored(clipper::Util::d2rad(phi),
+                                                  clipper::Util::d2rad(psi))) {
+                           region = coot::rama_plot::RAMA_PREFERRED;
+                        }
+                     } else {
+                        colour = "red3";
+                        region = coot::rama_plot::RAMA_OUTLIER;
+                     }
 #endif // CLIPPER_HAS_TOP8000
                   }
                }
