@@ -2253,9 +2253,13 @@ cp lib/libfreeglut.a	$install_top_dir/lib/
 ${WGET} --no-check-certificate https://khronos.org/registry/OpenGL/api/GL/glext.h
 ${WGET} --no-check-certificate https://khronos.org/registry/OpenGL/api/GL/glxext.h
 ${WGET} --no-check-certificate https://khronos.org/registry/OpenGL/api/GL/wglext.h
+# new openGL header need another header khrplatform.h
+mkdir_maybe     $install_top_dir/include/KHR
+${WGET} --no-check-certificate https://www.khronos.org/registry/EGL/api/KHR/khrplatform.h
 cp ${AUTOBUILD_SOURCES}/glext.h  $install_top_dir/include/GL/
 cp ${AUTOBUILD_SOURCES}/glxext.h $install_top_dir/include/GL/
 cp ${AUTOBUILD_SOURCES}/wglext.h $install_top_dir/include/GL/
+cp ${AUTOBUILD_SOURCES}/khrplatform.h $install_top_dir/include/KHR/
 cd ${AUTOBUILD_SOURCES}
 ) >  $HOSTLOGDIR/05-freeglut.txt 2>&1
 else
