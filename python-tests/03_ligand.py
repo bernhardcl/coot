@@ -171,7 +171,6 @@ class LigandTestFunctions(unittest.TestCase):
         self.assertTrue(True)
 
 
-<<<<<<< HEAD
         residue_specs = [["A", 1, ""],
                          ["A", 2, ""],
                          ["A", 3, ""]]
@@ -194,8 +193,6 @@ class LigandTestFunctions(unittest.TestCase):
         self.failUnless(dip_x < 0 and dip_x > -20)
 
 
-=======
->>>>>>> 6dc112c0bb6197f6c484c6a6eac5a550d01e0553
     def test09_0(self):
         """Reading new dictionary restraints replaces"""
 
