@@ -351,11 +351,15 @@ int graphics_info_t::file_selection_dialog_x_size = -1; // unset
 int graphics_info_t::file_selection_dialog_y_size = -1; 
 
 
-// things for quaternion rotation:
+// things for quaternion-based view rotation:
 double graphics_info_t::mouse_current_x = 0.0; 
 double graphics_info_t::mouse_current_y = 0.0;
 float* graphics_info_t::quat = new float[4]; 
 float graphics_info_t::trackball_size = 0.8; // for kevin
+
+// residue reorientation on "space"
+bool graphics_info_t::reorienting_next_residue_mode = false;
+
 
 // things for baton quaternion rotation: Must use a c++ class at some
 // stage:
@@ -885,7 +889,8 @@ float       graphics_info_t::residue_density_fit_scale_factor = 1.0;
 // cif dictionary
 std::vector<std::string> *graphics_info_t::cif_dictionary_filename_vec = NULL;
 int  graphics_info_t::cif_dictionary_read_number = 1;
-bool graphics_info_t::cif_dictionary_file_selector_create_molecule_flag = true;
+// bool graphics_info_t::cif_dictionary_file_selector_create_molecule_flag = true; // Too annoying
+bool graphics_info_t::cif_dictionary_file_selector_create_molecule_flag = false;
 
 
 // map radius slider
@@ -1369,6 +1374,11 @@ std::pair<bool, float> graphics_info_t::model_display_radius = std::pair<bool, f
 
 // Chemical Feature Clusters, cfc
 GtkWidget *graphics_info_t::cfc_dialog = NULL;
+
+// CA-bonds missing loops dotted line params
+float graphics_info_t::ca_bonds_loop_param_1 = 0.5;
+float graphics_info_t::ca_bonds_loop_param_2 = 0.05;
+float graphics_info_t::ca_bonds_loop_param_3 = 111.0;
 
 // GTK2 code
 // 
@@ -1863,7 +1873,7 @@ gint draw(GtkWidget *widget, GdkEventExpose *event) {
 	       // std::cout << "drawing regular gl_area (left) " << std::endl;
 	       draw_mono(widget, event, IN_STEREO_SIDE_BY_SIDE_LEFT);
 	    }
-	 } else { 
+	 } else {
 	    draw_mono(widget, event, IN_STEREO_MONO);
 	 }
       }
@@ -2292,13 +2302,13 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
       graphics_info_t::picked_intermediate_atom_graphics_object();
 
       //
-      graphics_info_t::baton_object();
+      graphics_info_t::draw_baton_object();
 
       //
-      graphics_info_t::geometry_objects(); // angles and distances
+      graphics_info_t::draw_geometry_objects(); // angles and distances
 
       // pointer distances
-      graphics_info_t::pointer_distances_objects();
+      graphics_info_t::draw_pointer_distances_objects();
 
       // lsq atom blobs
       if (graphics_info_t::lsq_plane_atom_positions->size() > 0) {
@@ -3937,10 +3947,20 @@ gint key_release_event(GtkWidget *widget, GdkEventKey *event)
 // 					     g.go_to_atom_residue()+next,
 // 					     g.go_to_atom_atom_name());
 
-      if (graphics_info_t::shift_is_pressed) {
-	 g.intelligent_previous_atom_centring(g.go_to_atom_window);
+      bool reorienting = graphics_info_t::reorienting_next_residue_mode;
+      if (reorienting) {
+	 if (graphics_info_t::shift_is_pressed) {
+	    g.reorienting_next_residue(false); // backwards
+	 } else {
+	    g.reorienting_next_residue(true); // forwards
+	 }
       } else {
-	 g.intelligent_next_atom_centring(g.go_to_atom_window);
+	 // old/standard simple translation
+	 if (graphics_info_t::shift_is_pressed) {
+	    g.intelligent_previous_atom_centring(g.go_to_atom_window);
+	 } else {
+	    g.intelligent_next_atom_centring(g.go_to_atom_window);
+	 }
       }
       break;
    }

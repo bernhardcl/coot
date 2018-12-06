@@ -3949,13 +3949,19 @@
 								data-lines
 								log-file-name
 								#f)))
-					  (if (ok-goosh-status? s)
+					  (if (not (ok-goosh-status? s))
+
+					      (begin
+						(info-dialog "WARNING:: refmac5 failed"))
+
+					      ;; Happy path
 					      (begin
 						(format #t "s: ~s~%" s)
 						(if (file-exists? "starting-map.mtz")
 						    (begin
 						      (rename-file  "starting-map.mtz" refmac-output-mtz-file-name)
-						      ;; maybe offer a read-mtz dialog now
+						      ;; offer a read-mtz dialog
+						      (manage-column-selector refmac-output-mtz-file-name)
 						      )))))))))
 
 			      (gtk-widget-destroy window))))

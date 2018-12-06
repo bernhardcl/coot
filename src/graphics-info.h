@@ -956,9 +956,9 @@ public:
       lsq_plane_atom_positions = new std::vector<clipper::Coord_orth>;
 
       directory_for_fileselection = "";
-#if (GTK_MAJOR_VERSION > 1)
+
       directory_for_filechooser = "";
-#endif // GTK_MAJOR_VERSION
+
       baton_next_ca_options = new std::vector<coot::scored_skel_coord>;
       baton_previous_ca_positions = new std::vector<clipper::Coord_orth>;
 
@@ -1630,6 +1630,10 @@ public:
    //
    void setRotationCentre(int atom_index, int imol); 
 
+   // if dir is true, we are going forward
+   void reorienting_next_residue(bool dir);
+   static bool reorienting_next_residue_mode;
+
    void setRotationCentre(coot::Cartesian centre); 
    void setRotationCentreAndZoom(coot::Cartesian centre,
 				 float target_zoom); 
@@ -1892,19 +1896,6 @@ public:
 
    static void on_go_to_atom_residue_tree_selection_changed_gtk1(GtkList *gtklist,
 								 gpointer user_data);
-#if (GTK_MAJOR_VERSION == 1) || defined (GTK_ENABLE_BROKEN)
-
-   static int go_to_atom_residue_tree_signal_handler_event_gtk1(GtkWidget *widget, 
-								GdkEventButton *event, 
-								gpointer func_data);
-   static int cb_chain_tree_itemsignal( GtkWidget *item,
-					GdkEventButton *event, 
-					gpointer func_data);
-   static int go_to_atom_atom_list_signal_handler_event_gtk1(GtkWidget *widget, 
-							     GdkEventButton *event, 
-							     gpointer func_data);
-
-#else 
    // -------------------- Gtk2 code -----------------------------
    static void on_go_to_atom_residue_tree_selection_changed (GtkTreeView *gtklist,
 							     gpointer user_data);
@@ -1935,7 +1926,6 @@ public:
 // BL says:: put my gtk2 stuff in here too:
    static int gtk2_file_chooser_selector_flag;
    static int gtk2_chooser_overwrite_flag;
-#endif // #if (GTK_MAJOR_VERSION == 1) || defined (GTK_ENABLE_BROKEN)
 
    void apply_go_to_atom_from_widget(GtkWidget *widget); 
    static void pointer_atom_molecule_menu_item_activate(GtkWidget *item, 
@@ -2546,13 +2536,17 @@ public:
 
    // geometry:
    // (text message in the console, currently)
-   void display_geometry_distance() ; // not const because we add to distance_object_vec
+
+   // not const because we add to distance_object_vec
+   // return the distance
+   float display_geometry_distance(int imol1, const coot::Cartesian &p1, 
+				   int imol2, const coot::Cartesian &p2); 
    void display_geometry_angle() const;
    double get_geometry_torsion() const;
    void display_geometry_torsion() const;
    // return the distance
-   double display_geometry_distance_symm(int imol1, const coot::Cartesian &p1, 
-					 int imol2, const coot::Cartesian &p2);
+   // double display_geometry_distance_symm(int imol1, const coot::Cartesian &p1,
+   //                                       int imol2, const coot::Cartesian &p2);
    //
    void pepflip();
 
@@ -2649,6 +2643,7 @@ public:
    // return the new molecule number (can be -1)
    int execute_db_main(int imol, std::string chain_id,
 		       int iresno_start, int iresno_end, std::string direction_string); 
+   std::pair<int, int> execute_db_main_fragment(int imol, coot::residue_spec_t spec); // build both directions.
 
    static float ligand_acceptable_fit_fraction;
    static float ligand_cluster_sigma_level; // was 2.2 default
@@ -2872,7 +2867,7 @@ public:
    static int show_pointer_distances_flag;
    void clear_pointer_distances();
    static std::vector<std::pair<clipper::Coord_orth, clipper::Coord_orth> > *pointer_distances_object_vec;
-   static void pointer_distances_objects(); // draw them
+   static void draw_pointer_distances_objects(); // draw them
    void make_pointer_distance_objects(); // (re)generate them
 
    // Dynamic distances to intermediate atoms:
@@ -2933,12 +2928,11 @@ public:
    void set_file_for_save_fileselection(GtkWidget *fileselection) const;
 
    // for file_chooser
-#if (GTK_MAJOR_VERSION > 1)
+
    void set_directory_for_filechooser(GtkWidget *fileselection) const;
    void save_directory_from_filechooser(const GtkWidget *fileselection);
    void save_directory_for_saving_from_filechooser(const GtkWidget *fileselection);
    void set_file_for_save_filechooser(GtkWidget *fileselection) const;
-#endif
 
    // saving temporary files (undo)
    //
@@ -2972,7 +2966,7 @@ public:
    static short int draw_baton_flag;
    static short int baton_mode; // if set, rotation moves the baton, not the view
    static short int baton_tmp_atoms_to_new_molecule; 
-   static void baton_object();
+   static void draw_baton_object();
    // return a boolean, shall we really draw the baton or not (for
    // example, we don't want to do that if there is no skeletonized
    // map
@@ -3214,7 +3208,7 @@ public:
    // distances and angles displayed on screen
    // uses distance_objects vector
    static bool display_generic_objects_as_solid_flag;
-   static void geometry_objects();
+   static void draw_geometry_objects();
    static void draw_dynamic_distances();
    static void draw_generic_objects();
    static void draw_generic_objects_simple();
@@ -3752,6 +3746,9 @@ public:
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec(int imol);
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec_internal(int imol);
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec_simple();
+   // direct for immediate usage, imol and atom,
+   // return (-1, null) on not found
+   std::pair<int, mmdb::Atom *> get_active_atom() const;
 
    // this can return -1 if there is no active atom molecule.
    int copy_active_atom_molecule();
@@ -4068,6 +4065,10 @@ string   static std::string sessionid;
    static double geman_mcclure_alpha;
 
    static bool update_maps_on_recentre_flag;
+
+   static float ca_bonds_loop_param_1;
+   static float ca_bonds_loop_param_2;
+   static float ca_bonds_loop_param_3;
 
    static pair<bool,float> coords_centre_radius;  // should the display radius limit be applied? And
                                                   // if so, what is it? (say 20A)

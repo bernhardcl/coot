@@ -534,8 +534,13 @@ coot::rama_plot::setup_internal(float level_prefered, float level_allowed) {
    n_diffs = 50; // default value.
    drawing_differences = 0; 
 
+#if CLIPPER_HAS_TOP8000
+   rama.init(clipper::Ramachandran::All2);
+   displayed_rama_type = clipper::Ramachandran::All2;
+#else
    rama.init(clipper::Ramachandran::All5);
    displayed_rama_type = clipper::Ramachandran::All5;
+#endif
 
    // cliper defaults: 
    rama_threshold_preferred = 0.01; 
@@ -565,6 +570,25 @@ coot::rama_plot::setup_internal(float level_prefered, float level_allowed) {
 
    rama.set_thresholds(level_prefered, level_allowed);
    //
+#ifdef CLIPPER_HAS_TOP8000
+   r_gly.init(clipper::Ramachandran::Gly2);
+   r_gly.set_thresholds(level_prefered, level_allowed);
+   //
+   r_pro.init(clipper::Ramachandran::Pro2);
+   r_pro.set_thresholds(level_prefered, level_allowed);
+   // first approximation; shouldnt be used if top8000 is available anyway
+   r_non_gly_pro.init(clipper::Ramachandran::NoGPIVpreP2);
+   r_non_gly_pro.set_thresholds(level_prefered, level_allowed);
+   // new
+   r_ileval.init(clipper::Ramachandran::IleVal2);
+   r_ileval.set_thresholds(level_prefered, level_allowed);
+   //
+   r_pre_pro.init(clipper::Ramachandran::PrePro2);
+   r_pre_pro.set_thresholds(level_prefered, level_allowed);
+   //
+   r_non_gly_pro_pre_pro_ileval.init(clipper::Ramachandran::NoGPIVpreP2);
+   r_non_gly_pro_pre_pro_ileval.set_thresholds(level_prefered, level_allowed);
+#else
    r_gly.init(clipper::Ramachandran::Gly5);
    r_gly.set_thresholds(level_prefered, level_allowed);
    //
@@ -573,6 +597,7 @@ coot::rama_plot::setup_internal(float level_prefered, float level_allowed) {
    // 
    r_non_gly_pro.init(clipper::Ramachandran::NonGlyPro5);
    r_non_gly_pro.set_thresholds(level_prefered, level_allowed);
+#endif
 }
 
 void
@@ -674,11 +699,30 @@ coot::rama_plot::setup_background(bool blocks, bool isolines) {
        fabs(rama_threshold_allowed - 0.002) < 0.000001 &&
        psi_axis_mode == PSI_CLASSIC)
    {
+#ifdef CLIPPER_HAS_TOP8000
+      bg_ileval = goo_canvas_group_new(root, NULL);
+      bg_pre_pro = goo_canvas_group_new(root, NULL);
+      bg_non_gly_pro_pre_pro_ileval = goo_canvas_group_new(root, NULL);
+
+      take_bg_image = make_background_from_image(rama, bg_all, "rama2_all.png");
+      take_bg_image += make_background_from_image(r_gly, bg_gly, "rama2_gly.png");
+      take_bg_image += make_background_from_image(r_pro, bg_pro, "rama2_pro.png");
+      take_bg_image += make_background_from_image(r_non_gly_pro, bg_non_gly_pro,
+                                 "rama2_non_gly_pro.png");
+      take_bg_image += make_background_from_image(r_ileval, bg_ileval,
+                                                  "rama2_ileval.png");
+      take_bg_image += make_background_from_image(r_pre_pro, bg_pre_pro,
+                                                  "rama2_pre_pro.png");
+      take_bg_image += make_background_from_image(r_non_gly_pro_pre_pro_ileval,
+                                                  bg_non_gly_pro_pre_pro_ileval,
+                                                  "rama2_non_gly_pro_pre_pro_ileval.png");
+#else
       take_bg_image = make_background_from_image(rama, bg_all, "rama_all.png");
       take_bg_image += make_background_from_image(r_gly, bg_gly, "rama_gly.png");
       take_bg_image += make_background_from_image(r_pro, bg_pro, "rama_pro.png");
       take_bg_image += make_background_from_image(r_non_gly_pro, bg_non_gly_pro,
                                  "rama_non_gly_pro.png");
+#endif
    }
 
    // no bg done, so lets make the "classic" way
@@ -691,6 +735,11 @@ coot::rama_plot::setup_background(bool blocks, bool isolines) {
          make_background(r_gly, bg_gly);
          make_background(r_pro, bg_pro);
          make_background(r_non_gly_pro, bg_non_gly_pro);
+#ifdef CLIPPER_HAS_TOP8000
+         make_background(r_ileval, bg_ileval);
+         make_background(r_pre_pro, bg_pre_pro);
+         make_background(r_non_gly_pro_pre_pro_ileval, bg_non_gly_pro_pre_pro_ileval);
+#endif
       }
 
       if (isolines) {
@@ -698,6 +747,11 @@ coot::rama_plot::setup_background(bool blocks, bool isolines) {
          make_isolines(r_gly, bg_gly);
          make_isolines(r_pro, bg_pro);
          make_isolines(r_non_gly_pro, bg_non_gly_pro);
+#ifdef CLIPPER_HAS_TOP8000
+         make_isolines(r_ileval, bg_ileval);
+         make_isolines(r_pre_pro, bg_pre_pro);
+         make_isolines(r_non_gly_pro_pre_pro_ileval, bg_non_gly_pro_pre_pro_ileval);
+#endif
       }
    }
 
@@ -856,6 +910,17 @@ coot::rama_plot::hide_all_background() {
    g_object_set (bg_non_gly_pro,
                  "visibility", GOO_CANVAS_ITEM_INVISIBLE,
                  NULL);
+#ifdef CLIPPER_HAS_TOP8000
+   g_object_set (bg_ileval,
+                 "visibility", GOO_CANVAS_ITEM_INVISIBLE,
+                 NULL);
+   g_object_set (bg_pre_pro,
+                 "visibility", GOO_CANVAS_ITEM_INVISIBLE,
+                 NULL);
+   g_object_set (bg_non_gly_pro_pre_pro_ileval,
+                 "visibility", GOO_CANVAS_ITEM_INVISIBLE,
+                 NULL);
+#endif
 }
 #endif
 
@@ -1284,7 +1349,7 @@ int
 coot::rama_plot::draw_phi_psi_point(const coot::util::phi_psi_t &phi_psi,
 				    bool as_white_flag) {
 
-   return draw_phi_psi_point_internal(phi_psi, as_white_flag, 2);
+   return draw_phi_psi_point_internal(phi_psi, as_white_flag, 3);
 }
 
 int 
@@ -1302,8 +1367,8 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
 
    GooCanvasItem *item;
 
-   
-   std::string outline_color("DimGray");
+   std::string outline_color("#333333");
+   bool is_pro = false;
 
    if (box_size == 4) {
       // IDEA:: could be via callback I think
@@ -1334,7 +1399,8 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
             colour = "white";
          } else {
             if (phi_psi.residue_name() == "PRO") {
-               outline_color = "grey";
+               outline_color = "white";
+	       is_pro = true;
 
                if (r_pro.allowed(clipper::Util::d2rad(phi),
                                  clipper::Util::d2rad(psi))) {
@@ -1349,19 +1415,71 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
                   region = coot::rama_plot::RAMA_OUTLIER;
                }
             } else {
-
-               // conventional residue
-               if (r_non_gly_pro.allowed(clipper::Util::d2rad(phi),
-                                         clipper::Util::d2rad(psi))) {
-                  region = coot::rama_plot::RAMA_ALLOWED;
-                  colour = "DodgerBlue";
-                  if (r_non_gly_pro.favored(clipper::Util::d2rad(phi),
-                                            clipper::Util::d2rad(psi))) {
-                     region = coot::rama_plot::RAMA_PREFERRED;
+               // pre-pro
+               if (phi_psi.is_pre_pro()) {
+                  // g_print("BL DEBUG:: have pre_pro rn %s\n", phi_psi.residue_name().c_str());
+#ifdef CLIPPER_HAS_TOP8000
+                  if (r_pre_pro.allowed(clipper::Util::d2rad(phi),
+                                        clipper::Util::d2rad(psi))) {
+                     region = coot::rama_plot::RAMA_ALLOWED;
+                     colour = "DodgerBlue";
+                     if (r_pre_pro.favored(clipper::Util::d2rad(phi),
+                                           clipper::Util::d2rad(psi))) {
+                        region = coot::rama_plot::RAMA_PREFERRED;
+                     }
+                  } else {
+                     colour = "red3";
+                     region = coot::rama_plot::RAMA_OUTLIER;
                   }
+#endif // CLIPPER_HAS_TOP8000
                } else {
-                  colour = "red3";
-                  region = coot::rama_plot::RAMA_OUTLIER;
+                  // Ile  Val
+                  if (phi_psi.residue_name() == "ILE" ||
+                      phi_psi.residue_name() == "VAL") {
+#ifdef CLIPPER_HAS_TOP8000
+                     if (r_ileval.allowed(clipper::Util::d2rad(phi),
+                                          clipper::Util::d2rad(psi))) {
+                        region = coot::rama_plot::RAMA_ALLOWED;
+                        colour = "DodgerBlue";
+                        if (r_ileval.favored(clipper::Util::d2rad(phi),
+                                             clipper::Util::d2rad(psi))) {
+                           region = coot::rama_plot::RAMA_PREFERRED;
+                        }
+                     } else {
+                        colour = "red3";
+                        region = coot::rama_plot::RAMA_OUTLIER;
+                     }
+#endif // CLIPPER_HAS_TOP8000
+                  } else {
+                     // conventional residue
+#ifdef CLIPPER_HAS_TOP8000
+                     if (r_non_gly_pro_pre_pro_ileval.allowed(clipper::Util::d2rad(phi),
+                                                              clipper::Util::d2rad(psi))) {
+                        region = coot::rama_plot::RAMA_ALLOWED;
+                        colour = "DodgerBlue";
+                        if (r_non_gly_pro_pre_pro_ileval.favored(clipper::Util::d2rad(phi),
+                                                                 clipper::Util::d2rad(psi))) {
+                           region = coot::rama_plot::RAMA_PREFERRED;
+                        }
+                     } else {
+                        colour = "red3";
+                        region = coot::rama_plot::RAMA_OUTLIER;
+                     }
+#else
+                     if (r_non_gly_pro.allowed(clipper::Util::d2rad(phi),
+                                               clipper::Util::d2rad(psi))) {
+                        region = coot::rama_plot::RAMA_ALLOWED;
+                        colour = "DodgerBlue";
+                        if (r_non_gly_pro.favored(clipper::Util::d2rad(phi),
+                                                  clipper::Util::d2rad(psi))) {
+                           region = coot::rama_plot::RAMA_PREFERRED;
+                        }
+                     } else {
+                        colour = "red3";
+                        region = coot::rama_plot::RAMA_OUTLIER;
+                     }
+#endif // CLIPPER_HAS_TOP8000
+                  }
                }
             }
          }
@@ -1375,16 +1493,26 @@ coot::rama_plot::draw_phi_psi_point_internal(const coot::util::phi_psi_t &phi_ps
             if (psi_axis_mode == PSI_MINUS_120 && psi < -120)
                psi = psi + 360.0;
 
-            item = goo_canvas_rect_new(residues_grp,
-                                       phi-box_size,
-                                       -psi-box_size,
-                                       2*box_size,
-                                       2*box_size,
-                                       "fill-color", colour.c_str(),
-                                       "stroke-color", outline_color.c_str(),
-                                       "line-width", 1.,
-                                       "tooltip", label.c_str(),
-                                       NULL);
+	    if (is_pro)
+	       item = goo_canvas_rect_new(residues_grp,
+					  phi-box_size,
+					  -psi-box_size,
+					  2*box_size,
+					  2*box_size,
+					  "fill-color", colour.c_str(),
+					  "stroke-color", outline_color.c_str(),
+					  "line-width", 1.,
+					  "tooltip", label.c_str(),
+					  NULL);
+	    else
+	       item = goo_canvas_ellipse_new(residues_grp,
+					     phi, -psi,
+					     3.3, 3.3,
+					     "fill-color", colour.c_str(),
+					     "stroke-color", outline_color.c_str(),
+					     "line-width", 1.,
+					     "tooltip", label.c_str(),
+					     NULL);
 
             set_data_for_phi_psi_point_item(label, phi_psi, item);
 
@@ -1463,6 +1591,7 @@ coot::rama_plot::set_data_for_phi_psi_point_item_other(const std::string &label,
    g_object_set_data (G_OBJECT (item), "res_name", c_res_name);
    g_object_set_data (G_OBJECT (item), "chain",    c_chain_id);
    g_object_set_data (G_OBJECT (item), "res_no", GINT_TO_POINTER(phi_psi.residue_number));
+   g_object_set_data (G_OBJECT (item), "is_pre_pro", GINT_TO_POINTER(phi_psi.is_pre_pro()));
    g_object_set_data (G_OBJECT (item), "rama_plot", (gpointer) this);
 
 }
@@ -1540,7 +1669,7 @@ coot::rama_plot::draw_phi_psi_as_gly(const coot::util::phi_psi_t &phi_psi) {
       item = goo_canvas_polyline_new(residues_grp,
                                      TRUE, 0,
                                      "points", points,
-                                     "line-width", 1.0,
+                                     "line-width", 2.0,
                                      "stroke-color", colour.c_str(),
                                      "tooltip", label.c_str(),
                                      NULL);
@@ -1937,7 +2066,29 @@ coot::rama_plot::item_enter_event(GooCanvasItem *item, GdkEventCrossing *event) 
 
    gchar *res_name = static_cast<gchar *> (g_object_get_data(G_OBJECT(item),
                                                              "res_name"));
+   gint *is_pre_pro = static_cast<gint *> (g_object_get_data(G_OBJECT(item),
+                                                             "is_pre_pro"));
 
+#ifdef CLIPPER_HAS_TOP8000
+   // for clarity all copied
+   if (strcmp(res_name, "GLY") == 0) {
+      show_background(bg_gly);
+   } else {
+      if (strcmp(res_name, "PRO") == 0) {
+         show_background(bg_pro);
+      }  else {
+         if (is_pre_pro) {
+            show_background(bg_pre_pro);
+         } else {
+            if ((strcmp(res_name, "ILE") == 0) || (strcmp(res_name, "VAL") == 0)) {
+               show_background(bg_ileval);
+            } else {
+               show_background(bg_non_gly_pro_pre_pro_ileval);
+            }
+         }
+      }
+   }
+#else
    if (strcmp(res_name, "GLY") == 0) {
       show_background(bg_gly);
    } else {
@@ -1947,6 +2098,7 @@ coot::rama_plot::item_enter_event(GooCanvasItem *item, GdkEventCrossing *event) 
          show_background(bg_non_gly_pro);
       }
    }
+#endif
    return 0;
 }
 #endif
@@ -1973,6 +2125,37 @@ coot::rama_plot::is_outlier(const coot::util::phi_psi_t &phi_psi) const {
 
    double phi = clipper::Util::d2rad(phi_psi.phi());
    double psi = clipper::Util::d2rad(phi_psi.psi());
+#ifdef CLIPPER_HAS_TOP8000
+   // again for clarity all copied
+   if (phi_psi.residue_name() == "GLY") {
+      if (! r_gly.allowed(phi, psi))
+         if (! r_gly.favored(phi, psi))
+            r = true;
+   } else {
+      if (phi_psi.residue_name() == "PRO") {
+         if (! r_pro.allowed(phi, psi))
+            if (! r_pro.favored(phi, psi))
+               r = true;
+      } else {
+         if (phi_psi.is_pre_pro()) {
+            if (! r_pre_pro.allowed(phi, psi))
+               if (! r_pre_pro.favored(phi, psi))
+                  r = true;
+         } else {
+            if ((phi_psi.residue_name() == "ILE") ||
+                (phi_psi.residue_name() == "VAL")) {
+               if (! r_ileval.allowed(phi, psi))
+                  if (! r_ileval.favored(phi, psi))
+                     r = true;
+            } else {
+               if (! rama.allowed(phi, psi))
+                  if (! rama.favored(phi, psi))
+                     r = true;
+            }
+         }
+      }
+   }
+#else
    if (phi_psi.residue_name() == "GLY") {
       if (! r_gly.allowed(phi, psi))
     if (! r_gly.favored(phi, psi))
@@ -1988,6 +2171,7 @@ coot::rama_plot::is_outlier(const coot::util::phi_psi_t &phi_psi) const {
           r = true;
       }
    }
+#endif
    return r;
 }
 
@@ -3217,6 +3401,36 @@ coot::rama_plot::make_bg_images() {
    fn = "rama_pro.png";
    write_png_simple(fn, bg_pro);
 
+#ifdef CLIPPER_HAS_TOP8000
+   show_background(bg_all);
+   fn = "rama2_all.png";
+   write_png_simple(fn, bg_all);
+
+   show_background(bg_gly);
+   fn = "rama2_gly.png";
+   write_png_simple(fn, bg_gly);
+
+   show_background(bg_non_gly_pro);
+   fn = "rama2_non_gly_pro.png";
+   write_png_simple(fn, bg_non_gly_pro);
+
+   show_background(bg_pro);
+   fn = "rama2_pro.png";
+   write_png_simple(fn, bg_pro);
+
+   show_background(bg_ileval);
+   fn = "rama2_ileval.png";
+   write_png_simple(fn, bg_ileval);
+
+   show_background(bg_pre_pro);
+   fn = "rama2_pre_pro.png";
+   write_png_simple(fn, bg_pre_pro);
+
+   show_background(bg_non_gly_pro_pre_pro_ileval);
+   fn = "rama2_non_gly_pro_pre_pro_ileval.png";
+   write_png_simple(fn, bg_non_gly_pro_pre_pro_ileval);
+#endif
+
 #endif
 }
 
@@ -3396,13 +3610,17 @@ coot::rama_plot::plot_type_changed() {
          int i_chain_id2 = 0;
          if (chains2.size() > 0)
             i_chain_id2 = 1;
-         chain_ids_ = std::pair<std::string, std::string> (chains[0], chains2[i_chain_id2]);
+	 if (chains.size() > 0) {
+	    if (chains2.size() > i_chain_id2) {
+	       chain_ids_ = std::pair<std::string, std::string> (chains[0], chains2[i_chain_id2]);
 
-         draw_it(molecule_numbers().first, molecule_numbers().second,
-                 mols().first, mols().second,
-                 chain_ids().first, chain_ids().second);
-         fill_kleywegt_comboboxes(mols().first, mols().second);
-         kleywegt_plot_uses_chain_ids = 1;
+	       draw_it(molecule_numbers().first, molecule_numbers().second,
+		       mols().first, mols().second,
+		       chain_ids().first, chain_ids().second);
+	       fill_kleywegt_comboboxes(mols().first, mols().second);
+	       kleywegt_plot_uses_chain_ids = 1;
+	    }
+	 }
       } else {
          std::cout<< "BL INFO:: no molecule found, please read one in."<<std::endl;
       }
@@ -3646,7 +3864,15 @@ coot::rama_plot::apply_selection_from_widget() {
                           mmdb::STYPE_RESIDUE,
                           selection_txt,
                           mmdb::SKEY_NEW);
+
       current_mol->GetSelIndex(selHnd, SelResidue, nRes);
+      // Note to self: we can't do residue type selection because we need the
+      // upstream and down-stream neighbours of the selected residues to find
+      // phi and psi.
+      if (false)
+	 std::cout << "Using Selection \"" << selection_txt << "\" selects " << nRes
+		   <<  " residues" << std::endl;
+
       draw_it(current_mol, selHnd, 1);
    } else {
       g_print("BL WARNING:: no mols, so cannot make a (new) plot\n");

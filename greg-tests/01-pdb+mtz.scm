@@ -313,6 +313,23 @@
        )))
 
 
+(greg-testcase "Negative Residues in db-mainchain don't cause a crash" #t 
+   (lambda ()
+
+     ;; Oliver Clarke spotted this bug
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+       (if (not (valid-model-molecule? imol))
+	   #f
+	   (begin
+	     (renumber-residue-range imol "A" 1 50 -20)
+	     (let ((imol-mc-1 (db-mainchain imol "A" -19  6 "forwards"))
+		   (imol-mc-2 (db-mainchain imol "B"  10 30 "backwards")))
+	       ;; (write-pdb-file imol-mc-1 "dbmc-1.pdb")
+	       ;; (write-pdb-file imol-mc-2 "dbmc-2.pdb")
+	       #t))))))
+
+
 (greg-testcase "Set Atom Attribute Test" #t
 	       (lambda ()
 		 (set-atom-attribute imol-rnase "A" 11 "" " CA " "" "x" 64.5) ; an Angstrom or so
@@ -945,6 +962,28 @@
 		 (close-molecule imol-2)
 		 (format #t "dd: ~s~%" dd)
 		 (> dd 1.4))))))))
+
+
+(greg-testcase "HA on a ALA exists after mutation to GLY" #t
+   (lambda ()
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb")))
+       (let ((imol-2 (new-molecule-by-atom-selection imol "//A/5-11")))
+	 (coot-reduce imol-2)
+	 (let ((H-atom-o (get-atom imol-2 "A" 10 "" " HA " "")))
+	   (if (not (list? H-atom-o))
+	       (throw 'fail)
+
+	       (begin
+		 (mutate imol-2 "A" 10 "" "GLY")
+		 (let ((H-atom-n (get-atom imol-2 "A" 10 "" " HA " "")))
+
+		   (if (list? H-atom-n)
+		       (begin
+			 (format #t "atom still exists ~s~%" H-atom-n)
+			 #f)
+
+		       #t)))))))))
 
 
 
@@ -1950,7 +1989,10 @@
 (greg-testcase "update monomer restraints" #t 
    (lambda () 
 
-     (let ((atom-pair (list " CB " " CG "))
+     ;; this test needs a refinment map
+
+     (let ((atom-pair ; (list " CB " " CG ")) ;; round the wrong way in the new dictionary
+	                (list " CG " " CB "))
 	   (m (monomer-restraints "TYR")))
 
        (if (not m)
@@ -1958,7 +2000,10 @@
 	     (format #t "   update bond restraints - no momomer restraints~%")
 	     (throw 'fail)))
 
-       (let ((n (strip-bond-from-restraints atom-pair m)))
+       ;; let's delete both ways
+       ;;
+       (let* ((n-t (strip-bond-from-restraints atom-pair m))
+	      (n   (strip-bond-from-restraints (reverse atom-pair) n-t)))
 	 (set-monomer-restraints "TYR" n)
 	 
 	 (let ((imol (new-molecule-by-atom-selection imol-rnase "//A/30")))
@@ -1968,7 +2013,7 @@
 	   
 	   (let ((atom-1 (get-atom imol "A" 30 "" " CB "))
 		 (atom-2 (get-atom imol "A" 30 "" " CG ")))
-	     
+
 	     (format #t "   Bond-length: ~s: ~%"
 		     (bond-length (list-ref atom-1 2) (list-ref atom-2 2)))
 
@@ -1998,7 +2043,7 @@
 			     (begin
 			       (format #t "FAIL plane atom ~s~%" atom)
 			       (throw 'fail)))))
-		     
+
 		     (format #t "   Bond-length: ~s: ~%"
 			     (bond-length (list-ref atom-1 2) (list-ref atom-2 2)))
 		     (bond-length-within-tolerance? atom-1 atom-2 1.512 0.04))))))))))

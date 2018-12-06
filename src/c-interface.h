@@ -775,6 +775,8 @@ objects are no longer depth sorted) considerably faster to render.
  */
 void set_solid_density_surface_opacity(int imol, float opacity);
 
+float get_solid_density_surface_opacity(int imol);
+
 /*! \brief set the flag to do flat shading rather than smooth shading
   for solid density surface.
 
@@ -2349,6 +2351,13 @@ PyObject *go_to_ligand_py();
 
 /*! \brief go to the ligand that has more than n_atom_min atoms */
 void set_go_to_ligand_n_atoms_limit(int n_atom_min);
+
+/*! \brief rotate the view so that the next main-chain atoms are oriented
+ in the same direction as the previous - hence side-chain always seems to be
+"up" - set this mode to 1 for reorientation-mode - and 0 for off (standard translation)
+*/
+void set_reorienting_next_residue_mode(int state);
+
 /* \} */
 
 /*  ---------------------------------------------------------------------- */
@@ -3207,6 +3216,9 @@ void set_residue_selection_flash_frames_number(int i);
 
     If you are scripting refinement and/or regularization, this is the
     function that you need to call after refine-zone or regularize-zone.  */
+void accept_moving_atoms();
+
+/*! \brief a hideous alias for the above  */
 void accept_regularizement();
 void clear_up_moving_atoms();	/* remove the molecule and bonds */
 void clear_moving_atoms_object(); /* just get rid of just the bonds (redraw done here). */
@@ -3484,10 +3496,15 @@ int extra_restraints_are_shown(int imol);
 /*! \brief often we don't want to see all prosmart restraints, just the (big) violations */
 void set_extra_restraints_prosmart_sigma_limits(int imol, double limit_high, double limit_low);
 
+/*! \brief generate external distance local self restraints */
 void generate_local_self_restraints(int imol, const char *chain_id, float local_dist_max);
+
+/*! \brief generate external distance all-molecule self restraints */
+void generate_self_restraints(int imol, float local_dist_max);
 
 #ifdef __cplusplus
 #ifdef USE_GUILE
+/*! \brief generate external distance self restraints for selected residues */
 void generate_local_self_restraints_by_residues_scm(int imol, SCM residue_specs, float local_dist_max);
 #endif // USE_GUILE
 #ifdef USE_PYTHON
@@ -4588,6 +4605,8 @@ int set_b_factor_bonds_scale_factor(int imol, float f);
   the centre of the screen */
 void change_model_molecule_representation_mode(int up_or_down);
 
+void set_ca_bonds_loop_params(float p1, float p2, float p3);
+
 /*! \brief make the carbon atoms for molecule imol be grey
  */
 void set_use_grey_carbons_for_molecule(int imol, short int state);
@@ -4980,12 +4999,21 @@ void do_db_main(short int state);
 
 direction is either "forwards" or "backwards"
 
+See also the function below.
+
 return the new molecule number */
 int db_mainchain(int imol,
 		 const char *chain_id,
 		 int iresno_start,
 		 int iresno_end,
 		 const char *direction);
+
+/*! \brief CA-Zone to Mainchain for a fragment based on the given residue.
+
+Both directions are built. This is the modern interface.
+ */
+int db_mainchains_fragment(int imol, const char *chain_id, int res_no);
+
 /* \} */
 
 /*  ----------------------------------------------------------------------- */
@@ -4995,6 +5023,7 @@ int db_mainchain(int imol,
 /*! \name Close Molecule Functions */
 /* \{ */
 
+/*! \brief close the molecule */
 void close_molecule(int imol);
 
 

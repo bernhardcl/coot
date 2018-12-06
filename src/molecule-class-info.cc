@@ -2022,16 +2022,22 @@ molecule_class_info_t::zero_occupancy_spots() const {
 
    if (bonds_box.n_zero_occ_spots > 0) { 
 
+      const std::pair<bool, float> &use_radius_limit = graphics_info_t::model_display_radius;
+
       glColor3f(0.8, 0.7, 0.7);
       float zsc = graphics_info_t::zoom;
       //glPointSize(145.0/zsc);
       // scale the pointer with the bond width
       glPointSize(30.0/std::min(zsc,(float)20)*std::max(bond_width, (float)4));
       glBegin(GL_POINTS); 
-      for (int i=0; i<bonds_box.n_zero_occ_spots; i++) { 
-	 glVertex3f(bonds_box.zero_occ_spots_ptr[i].x(),
-		    bonds_box.zero_occ_spots_ptr[i].y(),
-		    bonds_box.zero_occ_spots_ptr[i].z());
+      for (int i=0; i<bonds_box.n_zero_occ_spots; i++) {
+
+	 if ((use_radius_limit.first == false) ||
+	     (graphics_info_t::is_within_display_radius(bonds_box.zero_occ_spots_ptr[i]))) {
+	    glVertex3f(bonds_box.zero_occ_spots_ptr[i].x(),
+		       bonds_box.zero_occ_spots_ptr[i].y(),
+		       bonds_box.zero_occ_spots_ptr[i].z());
+	 }
       }
       glEnd();
    }
@@ -2255,7 +2261,7 @@ molecule_class_info_t::display_bonds(const graphical_bonds_container &bonds_box,
 
 	 if (bonds_box.bonds_[i].thin_lines_flag)
 	    zsc *= 0.5;
- 
+
 	 glBegin(GL_QUADS);
 
 	 if (! use_radius_limit.first) {
@@ -4098,11 +4104,10 @@ molecule_class_info_t::full_atom_spec_to_atom_index(const std::string &chain,
 
    if (nSelAtoms == 0) { 
 
-      std::cout << "Sorry (full_atom_spec_to_atom_index) Could not find "
+      std::cout << "WARNING:: full_atom_spec_to_atom_index() Could not find "
 		<< "\"" << atom_name << "\"," << "\"" << alt_conf  << "\"" << "/"
 		<< resno << insertion_code << "/" << chain << " in this molecule: ("
 		<<  imol_no << ") " << name_ << std::endl; 
-
       
       int selHnd2 = atom_sel.mol->NewSelection(); // d
       
@@ -4117,15 +4122,16 @@ molecule_class_info_t::full_atom_spec_to_atom_index(const std::string &chain,
 
       atom_sel.mol->GetSelIndex(selHnd2, local_SelAtom, nSelAtoms);
 
-      std::cout << "There were " << nSelAtoms << " atoms in that residue:\n";
-
-      std::cout << "debgu:: resno " << resno << " vs MinInt4" << mmdb::MinInt4 << "\n";
-      
-      if (resno == mmdb::MinInt4) {
-	 std::cout << "      residue with resno MinInt4\n";
-      } else { 
-	 for (int i=0; i<nSelAtoms; i++) { 
-	    std::cout << "      " << local_SelAtom[i] << "\n";
+      if (false) { // debugging.
+	 std::cout << "There were " << nSelAtoms << " atoms in that residue:\n";
+	 std::cout << "debgu:: full_atom_spec_to_atom_index() resno " << resno
+		   << " (cf MinInt4) " << mmdb::MinInt4 << "\n";
+	 if (resno == mmdb::MinInt4) {
+	    std::cout << "      residue with resno MinInt4\n";
+	 } else { 
+	    for (int i=0; i<nSelAtoms; i++) { 
+	       std::cout << "      " << local_SelAtom[i] << "\n";
+	    }
 	 }
       }
 
@@ -4324,7 +4330,7 @@ molecule_class_info_t::replace_coords(const atom_selection_container_t &asc,
    make_backup();
 
    // debug::
-   if (false) { 
+   if (false) {
       std::cout << "DEBUG:: --------------- replace_coords replacing "
 		<< asc.n_selected_atoms << " atoms " << std::endl;
       for (int i=0; i<asc.n_selected_atoms; i++) {
@@ -7836,12 +7842,13 @@ molecule_class_info_t::add_multiple_dummies(mmdb::Chain *chain_p,
       res_p->seqNum = i + 1;
       res_p->SetResName("DUM");
 
-      std::cout << atom_p << " added to molecule" << std::endl;
+      // std::cout << atom_p << " added to molecule" << std::endl;
    }
 
 
-   std::cout << "DEBUG:: add_multiple_dummies finishing.. "
-	     << pos_position.size() << std::endl;
+   if (false)
+      std::cout << "DEBUG:: add_multiple_dummies finishing.. "
+		<< pos_position.size() << std::endl;
    
    // Actually, we want to run this code when there are no new guide
    // points too.  This sets atom_sel.SelectionHandle properly, which
@@ -8688,12 +8695,36 @@ molecule_class_info_t::next_residue_number_in_chain(mmdb::Chain *w,
 	    if (residue_p->seqNum > max_res_no) {
 	       max_res_no = residue_p->seqNum;
 	       if (new_res_no_by_hundreds) {
-		  int res_no = coot::util::round_up_by_hundreds(max_res_no+1);
-		  p = std::pair<short int, int>(1, res_no+1);
+		  if (max_res_no < 9999) {
+		     int res_no = coot::util::round_up_by_hundreds(max_res_no+1);
+		     p = std::pair<short int, int>(1, res_no+1);
+		  }
 	       } else {
-		  p = std::pair<short int, int>(1, max_res_no+1);
+		  if (max_res_no < 9999) {
+		     p = std::pair<short int, int>(1, max_res_no+1);
+		  }
 	       }
 	    }
+	 }
+	 if (! p.first) {
+	    //  first the first space starting from the front
+	    int test_resno_start = 1001;
+	    bool is_clear = false;
+	    while (! is_clear) {
+	       is_clear = true;
+	       for (int iser=0; iser<nres; iser++) {
+		  int resno_res = w->GetResidue(iser)->seqNum;
+		  if (resno_res >= test_resno_start) {
+		     if (resno_res <= (test_resno_start+10)) {
+			is_clear = false;
+		     }
+		  }
+		  if (! is_clear)
+		     break;
+	       }
+	       test_resno_start += 100;
+	    }
+	    p = std::pair<short int, int> (1, test_resno_start);
 	 }
       }
    }

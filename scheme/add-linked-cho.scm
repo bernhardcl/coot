@@ -214,24 +214,7 @@
 ;; now users can set this
 (define *add-linked-residue-tree-correlation-cut-off* 0.50)
 
-
-(define (add-linked-residue-tree imol parent tree)
-
-  (define (centre-view-on-residue-centre res-spec)
-    (let ((res-centre (residue-centre imol 
-				      (residue-spec->chain-id res-spec)
-				      (residue-spec->res-no res-spec)
-				      (residue-spec->ins-code res-spec))))
-      (if (list? res-centre)
-	  (apply set-rotation-centre res-centre))))
-	  
-  (define func-test
-    (let ((count 10))
-      (lambda (parent res-pair)
-	(let ((rv (list "B" count "")))
-	  (set! count (+ count 1))
-	  (format #t "process res-pair ~s with parent ~s producing ~s ~%" res-pair parent rv)
-	  rv))))
+(define (add-linked-residue-add-cho-function imol parent res-pair)
 
   (define (well-fitting? res-spec)
     (using-active-atom
@@ -240,7 +223,21 @@
 	 (format #t "############# new residue ~s density correlation: ~s~%" res-spec c)
 	 (if (not (number? c))
 	     #f
-	     (> c *add-linked-residue-tree-correlation-cut-off*))))))
+	     (if (> c *add-linked-residue-tree-correlation-cut-off*)
+		 (let ((symm-clash (clashes-with-symmetry imol
+							  (residue-spec->chain-id res-spec)
+							  (residue-spec->res-no   res-spec)
+							  (residue-spec->ins-code res-spec) 2.0)))
+		   (if (= symm-clash 1) #f #t))
+		 #f))))))
+
+  (define (centre-view-on-residue-centre res-spec)
+    (let ((res-centre (residue-centre imol
+				      (residue-spec->chain-id res-spec)
+				      (residue-spec->res-no res-spec)
+				      (residue-spec->ins-code res-spec))))
+      (if (list? res-centre)
+	  (apply set-rotation-centre res-centre))))
 
   (define (delete-residue-by-spec spec)
     (delete-residue imol
@@ -248,67 +245,78 @@
 		    (residue-spec->res-no   spec)
 		    (residue-spec->ins-code spec)))
 
-  (define (func parent res-pair)
+  ;; main line
+  ;;
+  (if (not (list? parent))
+      (begin
+	(format #t "WARNING:: Oops not a proper res-spec ~s with residues-to-add: ~s~%"
+		parent res-pair)
+	#f)
+      (if (not (pair? res-pair))
+	  (begin
+	    (format #t "Oops - not a residue-link string pair when adding res-pair~%" res-pair)
+	    #f)
+	  ;; OK! go!
+	  (let ((new-link     (car res-pair))
+		(new-res-type (cdr res-pair)))
 
-    (if (not (list? parent))
-        (begin
-          (format #t "WARNING:: Oops not a proper res-spec ~s with residues-to-add: ~s~%"
-                  parent res-pair)
-	  #f)
-	(if (not (pair? res-pair))
-	    (begin
-	      (format #t "Oops - not a residue-link string pair when adding res-pair~%" res-pair)
-	      #f)
-	    ;; OK! go!
-	    (let ((new-link     (car res-pair))
-		  (new-res-type (cdr res-pair)))
-
-	      ;; (set-go-to-atom-from-res-spec parent)
-	      (centre-view-on-residue-centre parent)
+	    ;; (set-go-to-atom-from-res-spec parent)
+	    (centre-view-on-residue-centre parent)
 
 ;	      (format #t "================= calling add-linked-residue with args ~s ~s ~s ~s ~s ~s~%"
-;		      imol 
+;		      imol
 ;		      (res-spec->chain-id parent)
 ;		      (res-spec->res-no   parent)
 ;		      (res-spec->ins-code parent)
 ;		      new-res-type
 ;		      new-link)
 
-	      (let* ((tree-residues (glyco-tree-residues imol parent))
-		     (imol-save (new-molecule-by-residue-specs imol tree-residues))
-		     (new-res-spec (add-linked-residue imol
-						       (res-spec->chain-id parent)
-						       (res-spec->res-no   parent)
-						       (res-spec->ins-code parent)
-						       new-res-type
-						       new-link 2))) ;; add and link mode
+	    (let* ((tree-residues (glyco-tree-residues imol parent))
+		   (imol-save (new-molecule-by-residue-specs imol tree-residues))
+		   (new-res-spec (add-linked-residue imol
+						     (res-spec->chain-id parent)
+						     (res-spec->res-no   parent)
+						     (res-spec->ins-code parent)
+						     new-res-type
+						     new-link 2))) ;; add and link mode
 
-		(set-mol-displayed imol-save 0)
-		(set-mol-active    imol-save 0)
-		(let* ((ls (residues-near-residue imol parent 1.9))
-		       (local-ls (cons parent ls)))
-		  (add-cho-restraints-for-residue imol new-res-spec)
-		  (rotate-y-scene 100 0.5)
-		  (with-auto-accept (refine-residues imol local-ls))
-		  (if (list? new-res-spec)
-		      (begin
-			(let ((preped-new-res-spec (cdr new-res-spec))) ;; strip off leading result
-			  (if (well-fitting? preped-new-res-spec)
-			      (begin
-				preped-new-res-spec)
-			      (begin
-				;; ------------ bad fit -----------------
-				;; delete residue and restore others
-				(format #t "------------ That was not well-fitting. Deleting ~s: ~%"
-					preped-new-res-spec)
-				(delete-extra-restraints-for-residue-spec imol preped-new-res-spec)
-				(delete-residue-by-spec preped-new-res-spec)
-				;; restore glyco-tree residues from imol-save
-				(replace-fragment imol imol-save "//")
-				;; (with-auto-accept (refine-residues imol local-ls))
-				#f))))
-		      #f))))))
-    ) ;; oops, something bad...
+	      (set-mol-displayed imol-save 0)
+	      (set-mol-active    imol-save 0)
+	      (let* ((ls (residues-near-residue imol parent 1.9))
+		     (local-ls (cons parent ls)))
+		(add-cho-restraints-for-residue imol new-res-spec)
+		(rotate-y-scene 100 0.5)
+		(with-auto-accept (refine-residues imol local-ls))
+		(if (list? new-res-spec)
+		    (begin
+		      (let ((preped-new-res-spec (cdr new-res-spec))) ;; strip off leading result
+			(if (well-fitting? preped-new-res-spec)
+			    (begin
+			      preped-new-res-spec)
+			    (begin
+			      ;; ------------ bad fit -----------------
+			      ;; delete residue and restore others
+			      (format #t "------------ That was not well-fitting. Deleting ~s: ~%"
+				      preped-new-res-spec)
+			      (delete-extra-restraints-for-residue-spec imol preped-new-res-spec)
+			      (delete-residue-by-spec preped-new-res-spec)
+			      ;; restore glyco-tree residues from imol-save
+			      (replace-fragment imol imol-save "//")
+			      ;; (with-auto-accept (refine-residues imol local-ls))
+			      #f))))
+		    #f))))))
+  ) ;; oops, something bad...
+
+
+(define (add-linked-residue-tree imol parent tree)
+
+  (define func-test
+    (let ((count 10))
+      (lambda (parent res-pair)
+	(let ((rv (list "B" count "")))
+	  (set! count (+ count 1))
+	  (format #t "process res-pair ~s with parent ~s producing ~s ~%" res-pair parent rv)
+	  rv))))
 
   (define (process-tree parent tree proc-func)
     (cond
@@ -318,7 +326,7 @@
 	    (part-2 (process-tree parent (cdr tree) proc-func)))
 	(cons part-1 part-2)))
      (else
-      (let ((new-res (proc-func parent (car tree))))
+      (let ((new-res (proc-func imol parent (car tree))))
 	(cons new-res
 	      (process-tree new-res (cdr tree) proc-func))))))
 
@@ -353,6 +361,7 @@
     (set-matrix (/ wm 4))
     (set-residue-selection-flash-frames-number 1)
     (set-go-to-atom-molecule imol)
+    (set-go-to-atom-from-res-spec parent)
     (let* ((previous-m (default-new-atoms-b-factor))
 	   (m (median-temperature-factor imol))
 	   (new-m (* m 1.55)))
@@ -381,7 +390,7 @@
 
 	     ;; OK, continue
 	     (let ((start-pos-view (add-view-here "Glyo Tree Start Pos")))
-	       (process-tree parent tree func)
+	       (process-tree parent tree add-linked-residue-add-cho-function)
 	       (go-to-view-number start-pos-view 0)
 	       (with-auto-accept (refine-residues aa-imol (glyco-tree-residues aa-imol aa-res-spec)))
 	       ;; add a test here that the tree here (centre of screen) matches a known tree.
@@ -414,15 +423,16 @@
 	 (begin
 	   (for-each (lambda (chain-id)
 		       (for-each (lambda (res-serial)
-				   (let ((res-no (seqnum-from-serial-number aa-imol chain-id res-serial)))
-				     (let ((rn (residue-name aa-imol chain-id res-no "")))
+				   (let ((res-no (seqnum-from-serial-number aa-imol chain-id res-serial))
+					 (ins-code (insertion-code-from-serial-number aa-imol chain-id res-serial)))
+				     (let ((rn (residue-name aa-imol chain-id res-no ins-code)))
 				       (if (string? rn)
 					   ;; a better test is to find all the hetgroups and look at the _chem_comp group or type
 					   (if (or (string=? "NAG" rn) (string=? "MAN" rn) (string=? "BMA" rn) (string=? "FUL" rn)
 						   (string=? "FUC" rn) (string=? "XYP" rn) (string=? "SIA" rn) (string=? "GAL" rn)
-						   (string=? "A2G" rn))
-					       (let* ((residue-spec (list chain-id res-no "")))
-						 (set! delete-cho-list (cons (list chain-id res-no "") delete-cho-list))))))))
+						   (string=? "NDG" rn) (string=? "BGC" rn) (string=? "A2G" rn))
+					       (let* ((residue-spec (list chain-id res-no ins-code)))
+						 (set! delete-cho-list (cons residue-spec delete-cho-list))))))))
 				 (range (chain-n-residues chain-id aa-imol))))
 		     (chain-ids aa-imol))
 

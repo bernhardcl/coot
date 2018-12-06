@@ -4912,6 +4912,13 @@ void graphics_to_phenix_geo_representation(int imol, int mode,
 } 
 
 
+void set_ca_bonds_loop_params(float p1, float p2, float p3) {
+
+    graphics_info_t::ca_bonds_loop_param_1 = p1;
+    graphics_info_t::ca_bonds_loop_param_2 = p2;
+    graphics_info_t::ca_bonds_loop_param_3 = p3;
+
+}
 
 
 // -------------------------------------------------------------------------
@@ -8466,6 +8473,16 @@ set_solid_density_surface_opacity(int imol, float opacity) {
       graphics_draw();
    }
 }
+
+float get_solid_density_surface_opacity(int imol) {
+
+   float opacity = -1;
+   if (is_valid_map_molecule(imol)) {
+      opacity = graphics_info_t::molecules[imol].density_surface_opacity;
+   }
+   return opacity;
+}
+
 
 void
 set_flat_shading_for_solid_density_surface(short int state) {

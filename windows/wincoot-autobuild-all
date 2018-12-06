@@ -78,11 +78,12 @@ function copy_logs {
   cp -p disk-space-status /z/build-logs/${OS}-${HOST}/disk-space-status
 
   echo Copy logs from LOCAL to PUBLIC $1
+  echo Copy logs from LOCAL $LOCAL_HTML_LOGS to PUBLIC $PUBLIC_HTML_LOGS
   if [ $1 = "python" ] ; then 
       # copy log files from local to public html
       cp -p $LOCAL_HTML_LOGS/gtk2-build.log $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-build.log $PUBLIC_HTML_LOGS/gtk2-python-build.log
-      cp -a $LOCAL_HTML_LOGS/$HOSTLOG_STUB/.  $PUBLIC_HTML_LOGS/
+      cp -a $LOCAL_HTML_LOGS/$HOSTLOG_STUB  $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-test.log  $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-test.log  $PUBLIC_HTML_LOGS/gtk2-python-test.log
   else

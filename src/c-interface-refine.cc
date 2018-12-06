@@ -273,7 +273,7 @@ void do_refine(short int state) {
          // shouldnt get here any more?!? Only if we destroy the dialog above!
           g.in_range_define_for_refine = 0;
           g.model_fit_refine_unactive_togglebutton("model_refine_dialog_refine_togglebutton");
-          info_dialog("INFO:: Still, no refinement map has been set!");
+          info_dialog("WARNING:: Still, no refinement map has been set!");
       }
    } else { 
       g.normal_cursor();
@@ -605,9 +605,21 @@ void generate_local_self_restraints(int imol, const char *chain_id, float local_
       // like prosmart self restraints
       graphics_info_t::molecules[imol].generate_local_self_restraints(local_dist_max, chain_id,
 								      *graphics_info_t::Geom_p());
+   }
+   graphics_draw();
+}
+
+/*! \brief generate external distance all-molecule self restraints */
+void generate_self_restraints(int imol, float local_dist_max) {
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t::molecules[imol].generate_self_restraints(local_dist_max,
+								*graphics_info_t::Geom_p());
    } 
    graphics_draw();
 }
+
+
 
 
 

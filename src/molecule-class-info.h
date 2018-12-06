@@ -591,7 +591,9 @@ class molecule_class_info_t {
 				 const std::string &atom_name,
 				 int clicked_atom_idx,
 				 bool invert_selection);
-   
+
+   void asn_hydrogen_position_swap(std::vector<std::pair<bool, mmdb::Residue *> > residues);
+
    // ----------------------------------------------------------------------------------------
    // ----------------------------------------------------------------------------------------
 public:        //                      public
@@ -650,6 +652,7 @@ public:        //                      public
    }
 
    void setup_internal() { 
+
       atom_sel.atom_selection = NULL;
       atom_sel.n_selected_atoms = 0;
       atom_sel.mol = NULL;
@@ -706,6 +709,7 @@ public:        //                      public
       sharpen_b_factor_ = 0.0;
       sharpen_b_factor_kurtosis_optimised_ = -999999.0;
       pending_contour_level_change_count = 0;
+      data_resolution_ = -1; // unset
 
       // fourier (for phase recombination (potentially) in refmac:
       fourier_weight_label = ""; // unset initially.
@@ -764,6 +768,7 @@ public:        //                      public
       //
       theMapContours.first = 0;
       theMapContours.second = 0;
+      is_em_map_cached_flag = -1; // unset
 
       // don't show strict ncs unless it's turned on.
       show_strict_ncs_flag = 1;
@@ -1572,7 +1577,7 @@ public:        //                      public
    int insert_waters_into_molecule(const coot::minimol::molecule &water_mol);
    int append_to_molecule(const coot::minimol::molecule &water_mol);
    mmdb::Residue *residue_from_external(int reso, const std::string &insertion_code,
-				   const std::string &chain_id) const;
+					const std::string &chain_id) const;
 
 
    // for the "Render As: " menu items:
@@ -2815,6 +2820,8 @@ public:        //                      public
    void update_extra_restraints_representation_parallel_planes();
    void add_refmac_extra_restraints(const std::string &file_name);
    // make them yourself - easy as pie.
+   void generate_self_restraints(float local_dist_max,
+				 const coot::protein_geometry &geom);
    void generate_local_self_restraints(float local_dist_max,
 				       const std::string &chain_id,
 				       const coot::protein_geometry &geom);
@@ -3109,6 +3116,8 @@ public:        //                      public
    void globularize();
 
    bool is_EM_map() const;
+   short int is_em_map_cached_flag; // -1 mean unset (so set it, 0 means no, 1 means yes)
+   short int is_em_map_cached_state(); // set is_em_map_cached_flag if not set
 
    void residue_partial_alt_locs_split_residue(coot::residue_spec_t spec,
 					       int i_bond,

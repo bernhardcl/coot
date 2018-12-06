@@ -1138,9 +1138,11 @@ int set_atom_attributes_py(PyObject *attribute_expression_list) {
 	 if (PyList_Check(attribute_expression)) { 
 	    int attr_expression_length = PyObject_Length(attribute_expression);
 	    if (attr_expression_length != 8) {
-	       std::cout << "Incomplete attribute expression: "
-			 << PyString_AsString(attribute_expression)
-			 << std::endl;		  
+	       char *ps = PyString_AsString(display_python(attribute_expression));
+	       if (ps) {
+		  std::string ae(ps);
+		  std::cout << "Incomplete attribute expression: " << ae << std::endl;
+	       }
 	    } else {
 	       imol_py            = PyList_GetItem(attribute_expression, 0);
 	       chain_id_py        = PyList_GetItem(attribute_expression, 1);
@@ -2363,6 +2365,7 @@ int is_protein_chain_p(int imol, const char *chain_id) {
    args.push_back(imol);
    args.push_back(coot::util::single_quote(chain_id));
    add_to_history_typed(cmd, args);
+
    return r;
 }
 
@@ -2370,19 +2373,22 @@ int is_protein_chain_p(int imol, const char *chain_id) {
 // model), 0 for no, 1 for is.
 int is_nucleotide_chain_p(int imol, const char *chain_id) {
 
-   int r = -1;
+   int r = 0;
    if (is_valid_model_molecule(imol)) {
       mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;
       int nchains = mol->GetNumberOfChains(1);
       for (int ichain=0; ichain<nchains; ichain++) {
 	 mmdb::Chain *chain_p = mol->GetChain(1,ichain);
 	 std::string mol_chain_id(chain_p->GetChainID());
-	 r = 0;
+
 	 if (mol_chain_id == std::string(chain_id)) {
 	    r = chain_p->isNucleotideChain();
+	    break;
 	 }
       }
    }
+
+
    std::string cmd = "is-nucleotide-chain-p";
    std::vector<coot::command_arg_t> args;
    args.push_back(imol);
@@ -4516,6 +4522,11 @@ int secondary_structure_restraints_type() {
 
 
 void accept_regularizement() {
+
+   accept_moving_atoms();
+}
+
+void accept_moving_atoms() {
 
    graphics_info_t g;
    g.accept_moving_atoms();	// does a g.clear_up_moving_atoms();

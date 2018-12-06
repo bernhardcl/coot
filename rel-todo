@@ -1,25 +1,130 @@
 
    For Release 0.8.9.2
 
-   o panning - don't centre on atom on scroll-button-down ::: 2 h
-     Fix when you have a mouse.
 
-   o SMILES -> Simple 3D
+   o Add distance restraint - does that work? - What about helical restraints?
+     Test with a distorted model in a very low resolution map.
 
-   o Does --version and --version-full work OK?
+   o add symmetry and try povray - crash?
 
-   o Multi-sharpen should run refmac in the background and check for existance of output mtz file
-     When it does, offfer a dialog "Open sharpening?" or some such.  Try 6 steps to 400
-     Does it give the right values to refmac?
-     ::: 1
+   o raster3d should show symmetry?
+
+   o what has happened to RCrane?
+
+   o When merging a ligand - allow the ligand to be in user-specified chain.
+     Maybe a menu item "Merge this ligand" which uses new function 
+     merge_ligand(imol, current_residue_spec, into_mol, new_residue_spec)
+
+   o Randy: origin removed patterson: what's next to fix?
+
+   o Make a trivial ligand in the ligand builder, run acedrg. make an incorrect ligand
+     (valence error) and run acedrg - the previous ligand gets imported.
+
+     -> Apply button should grey out if there is no SMILES string (perhaps)
+
+   o I don't like the double call to make_bonds() (it's in CA mode at least). Get rid of it.
 
 ------
+
+   o Randy: update NCS matrices for "O" key after symm shift reference chain here
+
+* fill_ghost_info() needs to be called again to regenerate the matrices.
+  Done.
+
+   o this was from coot-experimental but maybe it's a problem here.
+
+#7  0x00002b2579376601 in char* std::string::_S_construct<char const*>(char const*, char const*, std::allocator<char> const&, std::forward_iterator_tag) () at /lib64/libstdc++.so.6
+#8  0x00002b25793769b8 in std::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string(char const*, std::allocator<char> const&) () at /lib64/libstdc++.so.6
+#9  0x00000000007a0b91 in graphics_info_t::save_directory_for_saving_from_filechooser(_GtkWidget const*) (this=this@entry=0x7ffcc09e7d3f, fileselection=fileselection@entry=0x16c474c0) at graphics-info-gui.cc:665
+#10 0x000000000069f1ab in save_directory_for_saving_from_filechooser(GtkWidget const*) (fileselection=fileselection@entry=0x16c474c0) at c-interface.cc:1466
+#11 0x00000000006cd628 in on_save_coords_filechooserdialog1_response (dialog=<optimized out>, response_id=<optimized out>, user_data=<optimized out>) at callbacks.c:10897
+
+* Done as much as I can from this, I think
+
+   o somewhow draw the baton so that the direction is obvious. As an arrow, perhaps?
+
+* Done
+
+   o Delete extra restraints - does that work?
+
+* Yes - I wonder what I thought the problem was.
+
+   o Capture the mmdb error message ("Disk quota exceeded or some such") when
+     trying to save/quick-save a pdb file).
+
+* There's already a dialog on error on write - that will do for now (it doesn't say the error type)
+
+   o when multi-sharpen fails because there is no refmac, we should get a message
+     in the status bar.
+
+* Done - something like that.
+
+   o Add map resolution from grid spacing to Map Properties dialog - Bernhard Rupp.
+
+* Done.
+
+   o when generating density lines, check for is-EM map, and if so, don't draw outside
+     the boundaries of the cell.
+     This needs to know that a reboxed map is *not* an EM map because it can have density
+     outside of the unit cell - to include reboxed map, it needs to have x,y,z limits
+     derived from the grid box.
+     Remove the current box restriction and move to refinement
+
+* Done.
+
+   o zero occupancy markers should respect the model molecule display limit
+
+* Done.
+
+   o zero occupancies markers for hydrogens should respect the no-bonds-to-hydrogens
+     setting
+
+* Punt. Too hard too esoteric.
+
+   o accept_regularizement() needs a better name (keep this one for backwards compatibility)
+
+* Done.
+
+   o Label for "Limit Model Display Radius" should have a ...
+
+* Done.
+
+   o N-linked Additon -> remove the word "Dialog"
+
+* Done.
+
+   o Oliver-Clarke bonding
+
+*Done! Yay.
+
+   o Pointer distances should not show distances to Hydrogen atom if they are not displayed!
+     Steven Sherrif
+
+* Done.
+
+   o do the bug fix for Robbie.
+
+* Done.
+
+   o CA-Zone -> mainchain on a zone that includes negative residue numbers -> crash
+     Oliver Clarke. ::: 2 h
+
+* Done.
+
+   o remove default adding of monomer on read cif dictionary
+
+* Done.
 
    o when I have undisplayed hydrogens, I don't want to ever pick them during refinement.
      Fix. ::: 1
 
+   o G is reverse JED
+ 
+* Done.
+
    o While we are at it, I don't want to pick atoms at the back when I am refining either.
      ::: 1
+   o Fix db_mainchain fragment/chain indexing bug. Oliver Clarke ::: 1 h
 
    o copy fragment should have a "move it here" button. ::: 0.5
 
@@ -218,3 +323,72 @@ command "cprodrg" not found
 
    o coot --version and --version-full ::: 1
 
+* Works.
+
+   o Authors and Journal in header browser? ::: 3 h
+
+* Done.
+
+
+   o SMILES -> Simple 3D ::: 1 h
+
+* missing move_molecule_to_screen_centre_internal()
+
+   o does multi-sharpen work?
+
+* yes.
+
+   o the application of a pir alignemnent needs to add a save.
+
+* done.
+
+   o mutate an ALA with hydrogens to a GLY. HA floats away (it should be deleted).
+     Make a test.
+
+* Done.
+
+   o Use fragment/linked-residues behind the CA-Zone -> Mainchain button
+
+* Done
+
+   o Mutate DNA in Mutate Residue Range (DNA generate in Ideal DNA/RNA)
+
+* Done.
+
+   o use comma to split fields in search monomer library. Flight-time fun.
+
+* Done.
+
+   o cherry-pick e5278d7fad21a8813cccb78ed51b5cc038947a63 from refinement
+
+* Done.
+
+
+   o FLEV on A401 NPD of 5uat (after Hydrogenate region)
+
+* What was the problem? Looks OK to me - apart from Star Wars.
+
+   o distance, symmetry atom click first -> wrong first atom
+
+* Done.
+
+   o Don't use " CG " quoting in the cif file output by Edit->Restraints->Write
+
+* Done.
+
+   o sync Bernie
+
+* Nothing new.
+
+   o does the tree comprehension work? (Marilyn Yoder problem)
+   o is the carbohydrate module in a working state?
+
+*it does now.
+
+   o ASN has Hydrogen atoms. How does cho builder work?
+
+*it does now
+
+   o 1abr 140B "Delete all carbohydrate" fail
+
+* Insertion codes!

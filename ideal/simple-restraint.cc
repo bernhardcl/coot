@@ -826,7 +826,7 @@ coot::restraints_container_t::minimize(restraint_usage_Flags usage_flags,
 	 status = gsl_multimin_test_gradient (s->gradient, grad_lim);
 
 	 if (false) { // debug
-	    double norm = gsl_blas_dnrm2(s->gradient); 
+	    double norm = gsl_blas_dnrm2(s->gradient);
 	    std::cout << "debug:: iteration number " << iter << " of " << nsteps_max
 		      << " status from gsl_multimin_test_gradient() " << status << " for norm "
 		      << norm << std::endl;
@@ -2176,10 +2176,10 @@ coot::restraints_container_t::make_helix_pseudo_bond_restraints_from_res_vec() {
 				 double ideal_dist = 2.91;
 				 if (res_no_delta == 3)
 				    ideal_dist = 3.18;
-				 add(BOND_RESTRAINT, index_1, index_2, fixed_flags, 2.91, pseudo_bond_esd, 1.2);
+				 add(BOND_RESTRAINT, index_1, index_2, fixed_flags, ideal_dist, pseudo_bond_esd, 1.2);
 				 std::cout << "Helix Bond restraint ("
 					   << at_1->name << " " << at_1->GetSeqNum() << ") to ("
-					   << at_2->name << " " << at_2->GetSeqNum() << ") 2.91" << std::endl;
+					   << at_2->name << " " << at_2->GetSeqNum() << ") " << ideal_dist << std::endl;
 			      }
 			   }
 			}
@@ -2697,47 +2697,45 @@ coot::restraints_container_t::bonded_residues_from_res_vec(const coot::protein_g
       mmdb::Residue *res_f = residues_vec[ii].second;
       for (unsigned int jj=ii+1; jj<residues_vec.size(); jj++) {
 	 mmdb::Residue *res_s = residues_vec[jj].second;
-	 std::pair<bool, float> d = closest_approach(res_f, res_s);
 
-	 if (debug) { 
-	    std::cout << " closest approach given " << coot::residue_spec_t(res_f)
-		      << " and " << coot::residue_spec_t(res_s) << std::endl;
-	    std::cout << " closest approach d " << d.first << " " << d.second << std::endl;
-	 }
-	 if (d.first) {
-	    if (d.second < dist_crit) {
-	       std::pair<std::string, bool> l  = find_link_type_complicado(res_f, res_s, geom);
-	       std::string link_type = l.first;
-	       if (!link_type.empty()) {
+	 if (res_f == res_s) continue;
 
-		  // too verbose?
-		  if (debug)
-		     std::cout << "   INFO:: find_link_type_complicado(): "
-			       << coot::residue_spec_t(res_f) << " " << coot::residue_spec_t(res_s)
-			       << " link_type -> :" << link_type << ":" << std::endl;
+	 // 20180911 I now no longer want to evaluate closest approach here.
+	 //
+	 // std::pair<bool, float> d = closest_approach(res_f, res_s);
+	 // Linking should be resolved by find_link_type_complicado(), not
+	 // here by distance between residues.
 
-		  bool whole_first_residue_is_fixed = 0;
-		  bool whole_second_residue_is_fixed = 0;
-		  bool order_switch_flag = l.second;
+	 std::pair<std::string, bool> l  = find_link_type_complicado(res_f, res_s, geom);
+	 std::string link_type = l.first;
+	 if (!link_type.empty()) {
 
-		  if (!order_switch_flag) {
-		     coot::bonded_pair_t p(res_f, res_s,
-					   whole_first_residue_is_fixed,
-					   whole_second_residue_is_fixed, link_type);
-		     bool previously_added_flag = bpc.try_add(p);
-		  } else {
-		     coot::bonded_pair_t p(res_s, res_f,
-					   whole_first_residue_is_fixed,
-					   whole_second_residue_is_fixed,
-					   link_type);
-		     bool previously_added_flag = bpc.try_add(p);
-		  }
-	       } else {
-		  if (debug)
-		     std::cout << "DEBUG:: blank link_type find_link_type_complicado() returns \""
-			       << l.first << "\" " << l.second << std::endl;
-	       } 
+	    // too verbose?
+	    if (debug)
+	       std::cout << "   INFO:: find_link_type_complicado(): "
+			 << coot::residue_spec_t(res_f) << " " << coot::residue_spec_t(res_s)
+			 << " link_type -> :" << link_type << ":" << std::endl;
+
+	    bool whole_first_residue_is_fixed = 0;
+	    bool whole_second_residue_is_fixed = 0;
+	    bool order_switch_flag = l.second;
+
+	    if (!order_switch_flag) {
+	       coot::bonded_pair_t p(res_f, res_s,
+				     whole_first_residue_is_fixed,
+				     whole_second_residue_is_fixed, link_type);
+	       bool previously_added_flag = bpc.try_add(p);
+	    } else {
+	       coot::bonded_pair_t p(res_s, res_f,
+				     whole_first_residue_is_fixed,
+				     whole_second_residue_is_fixed,
+				     link_type);
+	       bool previously_added_flag = bpc.try_add(p);
 	    }
+	 } else {
+	    if (debug)
+	       std::cout << "DEBUG:: blank link_type find_link_type_complicado() returns \""
+			 << l.first << "\" " << l.second << std::endl;
 	 }
       }
    }
@@ -2747,6 +2745,81 @@ coot::restraints_container_t::bonded_residues_from_res_vec(const coot::protein_g
    return bpc;
 }
 
+// a pair, first is if C and N are close
+//       using enum peptide_order_info_t { IS_PEPTIDE=1, IS_NOT_PEPTIDE=0, UNKNOWN=-1 }
+//
+// and second if and order switch is needed to make it so.
+std::pair<coot::restraints_container_t::peptide_order_info_t, bool>
+coot::restraints_container_t::peptide_C_and_N_are_in_order_p(mmdb::Residue *r1, mmdb::Residue *r2) const {
+
+   // If the residues are next to each other in serial and residue number then it's a peptide, no
+   // matter how far apart they are.
+   //
+   // If that is not the case, then sometimes we don't know because this might be a residues pair
+   // with an insertion code - and in that case, a different check should be used.
+
+   bool debug = false;
+   if (r1->chain == r2->chain) {
+      int serial_delta = r2->index - r1->index;
+      if (debug)
+	 std::cout << "   serial_delta " << serial_delta << std::endl;
+      if ((serial_delta == -1) || (serial_delta == 1)) {
+	 // ok to proceed
+      } else {
+	 if (debug)
+	    std::cout << "   ------ peptide_C_and_N_are_in_order_p path : A0 - "
+		      << "same chain not sequencial" << std::endl;
+	 return std::pair<peptide_order_info_t, bool> (IS_NOT_PEPTIDE, false);
+      }
+
+      if (serial_delta == 1) {
+	 if (debug)
+	    std::cout << "   ------ peptide_C_and_N_are_in_order_p path A" << std::endl;
+	 std::string ins_code_1 = r1->GetInsCode();
+	 std::string ins_code_2 = r2->GetInsCode();
+	 int res_no_delta = r2->GetSeqNum() - r1->GetSeqNum();
+	 if (ins_code_1 == "") {
+	    if (ins_code_2 == "") {
+	       if (res_no_delta == 1 || res_no_delta == -1) {
+		  return std::pair<peptide_order_info_t, bool> (IS_PEPTIDE, false);
+	       }
+	    }
+	 }
+	 if (debug)
+	    std::cout << "   ------ peptide_C_and_N_are_in_order_p path A-unk" << std::endl;
+	 return std::pair<peptide_order_info_t, bool> (UNKNOWN, false);
+
+      } else {
+	 if (debug)
+	    std::cout << "   ------ peptide_C_and_N_are_in_order_p path B" << std::endl;
+
+	 std::string ins_code_1 = r1->GetInsCode();
+	 std::string ins_code_2 = r2->GetInsCode();
+	 int res_no_delta = r2->GetSeqNum() - r1->GetSeqNum();
+	 if (ins_code_1 == "") {
+	    if (ins_code_2 == "") {
+	       if (res_no_delta == 1 || res_no_delta == -1) {
+		  return std::pair<peptide_order_info_t, bool> (IS_PEPTIDE, true);
+	       }
+	    }
+	 }
+	 if (debug)
+	    std::cout << "   ------ peptide_C_and_N_are_in_order_p path B-unk" << std::endl;
+	 return std::pair<peptide_order_info_t, bool> (UNKNOWN, true);
+      }
+
+   } else {
+      // we are considering a link between a residue in the mol and a residue
+      // of the neighbouring residues vectors (which are not residues in the mol(!))
+      // i.e. the don't have the same indexing (residue serial indexing) scheme.
+
+      // we can't make a decision. We need to be able to tell the caller that - so
+      // that the caller can choose to bond the residues by distance (and residue number
+      // and insertion code)
+
+      return std::pair<peptide_order_info_t, bool> (UNKNOWN, false);
+   }
+}
 
 
 // a pair, first is if C and N are close and second if and order
@@ -3123,14 +3196,19 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const
 
 	    int res_no_1 = at_1->GetSeqNum();
 	    int res_no_2 = at_2->GetSeqNum();
-	    
+
 	    if (add_it) { 
 
 	       // Don't make a bump between the CD of a PRO at residue(n) and the atoms of n-1
 	    
 	       std::string res_name_1 = at_1->GetResName();
 	       std::string res_name_2 = at_2->GetResName();
-	    
+
+	       if (false)
+		  std::cout << "DEBUG:: here with res_names " << res_name_1 << " " << res_name_2 << " "
+			    << at_1->GetAtomName() << " " << at_2->GetAtomName()
+			    << std::endl;
+
 	       if (res_name_1 == "PRO" || res_name_1 == "HYP") {
 		  int res_no_pro   = res_no_1;
 		  int res_no_other = res_no_2;
@@ -3151,6 +3229,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const
 		     } 
 		  }
 	       }
+
 	       // hack to remove C1-OD1 NBC on N-linked glycosylation
 	       //
 	       if (res_name_1 == "ASN" || res_name_2 == "NAG") {
@@ -3159,12 +3238,19 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const
 		  if (atom_name_1 == " OD1")
 		     if (atom_name_2 == " C1 ")
 			add_it = false;
+		  if (atom_name_1 == "HD21")
+		     if (atom_name_2 == " C1 ")
+			add_it = false;
 	       }
+
 	       if (res_name_1 == "NAG" || res_name_2 == "ASN") {
 		  std::string atom_name_1(at_1->name);
 		  std::string atom_name_2(at_2->name);
 		  if (atom_name_1 == " C1 ")
 		     if (atom_name_2 == " OD1")
+			add_it = false;
+		  if (atom_name_1 == " C1 ")
+		     if (atom_name_2 == "HD21")
 			add_it = false;
 	       }
 	    }

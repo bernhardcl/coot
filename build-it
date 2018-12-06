@@ -385,7 +385,9 @@
 # 5.28 20170925 Fixes for clipper and guile and gmp version update (gcc-7.2)
 # 5.29 20171006 Test for libgnomecanvas devel (now not available in system for Redhat 7.3)
 # 5.30 20180109 Update python version.
-script_version=5.30
+# 5.31 20180822 gdkshapes.c in gtkglext
+# 5.32 20180924 bump the clipper version (pre-Pro)
+script_version=5.32
 
 
 
@@ -2577,7 +2579,11 @@ if test -n "$build_clipper" ; then
 
     # now clipper has all the bits.
     # ${WGET} $extras_place/clipper-$clipper_version.tar.gz
-    ${WGET} ftp://ftp.ccp4.ac.uk/opensource/clipper-$clipper_version.tar.gz
+    # ${WGET} ftp://ftp.ccp4.ac.uk/opensource/clipper-$clipper_version.tar.gz
+
+    # Bernie made this tarball
+    clipper_version=2.1.20180802
+    ${WGET} $extras_place/clipper-$clipper_version.tar.gz
 
     (
     gzip -dc ${AUTOBUILD_SOURCES}/clipper-$clipper_version.tar.gz | tar xf -
@@ -2770,7 +2776,13 @@ if [ "$build_gtkglext" = 1 ] ; then
             echo gtkglext patch_file_3 failed.
             my_exit 2
         fi
-     else 
+
+        # 20180822 I also found on Ubuntu 18.04 gtk 2.24.32 that we need to fix up gdkglshapes.c
+        sed -e 's/static int index/static int index_xx/' \
+            -e 's/drawtriangle(i, idata, index/drawtriangle(i, idata, index_xx/' \
+           gdk/gdkglshapes.c > shapes-tmp
+        mv shapes-tmp gdk/gdkglshapes.c
+     else
         echo version of gtk is old, no need to patch gtkglext.
      fi
 

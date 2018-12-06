@@ -193,6 +193,7 @@ AM_CXXFLAGS = \
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	$(RDKIT_CXXFLAGS) 		\
+	$(BOOST_CPPFLAGS) 		\
 	$(ENHANCED_LIGAND_TOOLS_CFLAGS) \
 	$(WITH_GUILE_CFLAGS)		\
 	$(USE_GUILE_GTK) 		\
@@ -227,11 +228,12 @@ coot_extended_la_SOURCES = coot-extended.cc
 coot_embedded_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined
 coot_embedded_la_LIBADD = \
                        $(top_builddir)/lidia-core/libcoot-lidia-core.la   \
-                       $(RDKIT_LIBS) $(L_BOOST_PYTHON)
+                       $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(L_BOOST_PYTHON)   \
+                       $(PYTHON_LIBS)
 coot_extended_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined
 coot_extended_la_LIBADD = \
                        $(top_builddir)/pli/libcoot-pli.la   \
-                       $(RDKIT_LIBS) $(L_BOOST_PYTHON)
+                       $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(L_BOOST_PYTHON)
 pyexec_LTLIBRARIES = coot_embedded.la coot_extended.la
 endif
 endif
@@ -661,6 +663,7 @@ dynarama_bin_LDADD = \
         $(top_builddir)/utils/libcoot-utils.la  \
         $(top_builddir)/coot-utils/libcoot-coord-utils.la       \
         $(top_builddir)/coot-surface/libcoot-surface.la         \
+        $(top_builddir)/compat/libcoot-compat.la  \
         $(CLIPPER_LIBS)         \
         $(MMDB_LIBS)            \
         $(GLOB_LIBS)            \
