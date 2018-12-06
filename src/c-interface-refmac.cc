@@ -135,7 +135,7 @@ void execute_refmac(GtkWidget *window) {
       active_item = gtk_menu_get_active(GTK_MENU(menu));
       int imol_map_refmac = -1;
       bool have_mtz_file = false;
-      if (mtz_file_radiobutton && GTK_TOGGLE_BUTTON(mtz_file_radiobutton)->active) {
+      if (mtz_file_radiobutton && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(mtz_file_radiobutton))) {
 	 have_mtz_file = true;
       }
 
@@ -153,7 +153,7 @@ void execute_refmac(GtkWidget *window) {
 	    // we get imol from a map mtz file
 	    // get imol_window from active item of run_refmac_map_optionmenu.
 	    //
-	    imol_window = GPOINTER_TO_INT(gtk_object_get_user_data(GTK_OBJECT(active_item)));
+       imol_window = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(active_item), "user_data"));
 	 } else {
 	    // check the filename of the button
 	    GtkWidget *button_mtz_label = lookup_widget(window, "run_refmac_mtz_file_label");
@@ -225,7 +225,7 @@ void execute_refmac(GtkWidget *window) {
 		     phase_combine_flag = get_refmac_phase_input();
 	       
 		     checkbutton =  lookup_widget(window,"run_refmac_diff_map_checkbutton");
-		     if (GTK_TOGGLE_BUTTON(checkbutton)->active) {
+           if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton))) {
 			diff_map_flag = 1;
 		     } else {
 			diff_map_flag = 0;
@@ -262,7 +262,7 @@ void execute_refmac(GtkWidget *window) {
 		     // this should overwrite whatever has been set as refmac parameters before
 		     // we do it before checking for phases, so that these can be included later
 		     coot::mtz_column_types_info_t *saved_f_phi_columns
-			= static_cast<coot::mtz_column_types_info_t *>(gtk_object_get_user_data(GTK_OBJECT(window)));
+         = static_cast<coot::mtz_column_types_info_t *>(g_object_get_data(G_OBJECT(window), "user_data"));
 
 		     if (! saved_f_phi_columns) {
 			std::cout << "ERROR:: Null saved_f_phi_columns" << std::endl;
@@ -595,7 +595,7 @@ void execute_refmac(GtkWidget *window) {
 			   if (refmac_runs_with_nolabels()) {
 			      GtkWidget *nolabels_checkbutton = lookup_widget(window,
 									      "run_refmac_nolabels_checkbutton");
-			      if (GTK_TOGGLE_BUTTON(nolabels_checkbutton)->active) {
+               if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(nolabels_checkbutton))) {
 				 run_refmac_with_no_labels = 1;
 				 fobs_col    = "";
 				 sigfobs_col = "";
@@ -742,7 +742,7 @@ void
 wrapped_create_run_refmac_dialog() {
    
    GtkWidget *window = create_run_refmac_dialog();
-   GtkSignalFunc callback_func = GTK_SIGNAL_FUNC(refmac_molecule_button_select);
+   GCallback callback_func = G_CALLBACK(refmac_molecule_button_select);
    GtkWidget *diff_map_button = lookup_widget(window, "run_refmac_diff_map_checkbutton");
    GtkWidget *optionmenu;
    int imol_coords = first_coords_imol();
@@ -756,7 +756,7 @@ wrapped_create_run_refmac_dialog() {
 
    optionmenu = lookup_widget(window, "run_refmac_phase_input_optionmenu");
    fill_option_menu_with_refmac_phase_input_options(optionmenu);
-   if (GTK_TOGGLE_BUTTON(mtz_file_radiobutton)->active) have_file = 1;
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(mtz_file_radiobutton))) have_file = 1;
 
    set_refmac_molecule(imol_coords);
 
@@ -842,7 +842,7 @@ wrapped_create_run_refmac_dialog() {
    clear_refmac_ccp4i_project();
    add_ccp4i_projects_to_optionmenu(optionmenu, 
 				    COOT_COORDS_FILE_SELECTION,
-				    GTK_SIGNAL_FUNC(run_refmac_ccp4i_option_menu_signal_func));
+                G_CALLBACK(run_refmac_ccp4i_option_menu_signal_func));
 
    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(diff_map_button), TRUE);
 
@@ -875,7 +875,7 @@ void free_memory_run_refmac(GtkWidget *window) {
       menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(option_menu));
       active_item = gtk_menu_get_active(GTK_MENU(menu));
       if (active_item) { 
-	 imol_ptr = gtk_object_get_user_data(GTK_OBJECT(active_item));
+    imol_ptr = g_object_get_data(G_OBJECT(active_item), "user_data");
       } else { 
 	 std::cout << "no active item in coords option_menu\n";
       } 
@@ -893,7 +893,7 @@ void free_memory_run_refmac(GtkWidget *window) {
        menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(option_menu));
        active_item = gtk_menu_get_active(GTK_MENU(menu));
        if (active_item) { 
-	 imol_ptr = gtk_object_get_user_data(GTK_OBJECT(active_item));
+    imol_ptr = g_object_get_data(G_OBJECT(active_item), "user_data");
        } else { 
 	 std::cout << "no active item in maps option_menu\n";
        }

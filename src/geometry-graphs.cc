@@ -92,13 +92,13 @@ coot::on_geometry_graph_block_clicked(GtkCanvasItem *item, GdkEvent *event, gpoi
 	 // graphs must not have gone out scope of course :-)
 	 // 
 	 coot::geometry_graphs *graphs = 
-	    (coot::geometry_graphs *) (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+       (coot::geometry_graphs *) (g_object_get_data(G_OBJECT(canvas), "user_data"));
 	 graphs->button_press(item, event, *block_info);
       }
    } else {
       if (canvas) {
 	 coot::geometry_graphs *graphs = 
-	    (coot::geometry_graphs *) (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+       (coot::geometry_graphs *) (g_object_get_data(G_OBJECT(canvas), "user_data"));
 	 graphs->mouse_over(item, event, *block_info);
       }
    }
@@ -956,8 +956,8 @@ coot::geometry_graphs::setup_canvas(int n_chains, int max_chain_length) {
    double scroll_width  = canvas_usize_x + 20.0;
    double scroll_height = canvas_usize_y + 20.0;
 
-   gtk_widget_set_usize(GTK_WIDGET(canvas), canvas_usize_x, canvas_usize_y);
-   gtk_widget_set_usize(dialog, 600, 400);
+   gtk_widget_set_size_request(GTK_WIDGET(canvas), canvas_usize_x, canvas_usize_y);
+   gtk_widget_set_size_request(dialog, 600, 400);
    GtkWidget *scrolled_window = lookup_widget(dialog, "geometry_graphs_scrolledwindow");
 
 //    std::cout << "INFO:: canvas size based on " << n_chains << " chains with max"
@@ -981,10 +981,10 @@ coot::geometry_graphs::setup_canvas(int n_chains, int max_chain_length) {
    gtk_widget_show(GTK_WIDGET(canvas));
    gtk_widget_show(dialog);
 
-   gtk_widget_ref(GTK_WIDGET(canvas));
-   gtk_object_set_data_full(GTK_OBJECT(dialog), "geometry_graph_canvas", canvas,
-			    (GtkDestroyNotify) gtk_widget_unref);
-   gtk_object_set_user_data(GTK_OBJECT(canvas), (char *) this); 
+   g_object_ref(G_OBJECT(canvas));
+   g_object_set_data_full(G_OBJECT(dialog), "geometry_graph_canvas", canvas,
+             (GDestroyNotify) g_object_unref);
+   g_object_set_data(G_OBJECT(canvas), "user_data", (char *) this);
 
 }
 
@@ -1057,8 +1057,8 @@ coot::geometry_graphs::plot_block(const coot::geometry_graph_block_info &block_i
 
    coot::geometry_graph_block_info *local_block_info_p = new coot::geometry_graph_block_info(block_info);
 
-   gtk_signal_connect(GTK_OBJECT(item), "event", 
-		      (GtkSignalFunc) coot::on_geometry_graph_block_clicked, // dangerous?
+   g_signal_connect(G_OBJECT(item), "event",
+            (GCallback) coot::on_geometry_graph_block_clicked, // dangerous?
 		      gpointer(local_block_info_p));
 
 }

@@ -267,7 +267,7 @@ void execute_superpose(GtkWidget *w) {
    GtkWidget *chain_mol2_checkbutton =  lookup_widget(w, "superpose_moving_chain_checkbutton");
 
    bool make_copy = false;
-   if (GTK_TOGGLE_BUTTON(checkbutton)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
       make_copy = true;
    
    if (imol1 >= 0 && imol1 < graphics_info_t::n_molecules()) { 
@@ -283,11 +283,11 @@ void execute_superpose(GtkWidget *w) {
 	 // These chain_mol1/2 need checking to see if they are set
 	 // properly when the use-chain check_button is toggled.
 	 // 
-	 if (GTK_TOGGLE_BUTTON(chain_mol1_checkbutton)->active) {
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chain_mol1_checkbutton))) {
 	    chain_used_flag_imol1 = 1;
 	    chain_mol1 = graphics_info_t::superpose_imol1_chain;
 	 }
-	 if (GTK_TOGGLE_BUTTON(chain_mol2_checkbutton)->active) {
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(chain_mol2_checkbutton))) {
 	    chain_used_flag_imol2 = 1;
 	    chain_mol2 = graphics_info_t::superpose_imol2_chain;
 	 }
@@ -352,10 +352,10 @@ GtkWidget *wrapped_create_superpose_dialog() {
    GtkWidget *optionmenu1 = lookup_widget(w, "superpose_dialog_reference_mol_optionmenu");
    GtkWidget *optionmenu2 = lookup_widget(w, "superpose_dialog_moving_mol_optionmenu");
 
-   GtkSignalFunc signal_func1 =
-      GTK_SIGNAL_FUNC(graphics_info_t::superpose_optionmenu_activate_mol1);
-   GtkSignalFunc signal_func2 =
-      GTK_SIGNAL_FUNC(graphics_info_t::superpose_optionmenu_activate_mol2);
+   GCallback signal_func1 =
+      G_CALLBACK(graphics_info_t::superpose_optionmenu_activate_mol1);
+   GCallback signal_func2 =
+      G_CALLBACK(graphics_info_t::superpose_optionmenu_activate_mol2);
 
    graphics_info_t::superpose_imol1 = -1;
    graphics_info_t::superpose_imol2 = -1;
@@ -641,8 +641,8 @@ GtkWidget *wrapped_create_least_squares_dialog() {
    GtkWidget *mov_mol_chain_id_option_menu = lookup_widget(lsq_dialog, "least_squares_moving_chain_id");
    
    graphics_info_t g;
-   GtkSignalFunc callback_func1 = GTK_SIGNAL_FUNC(lsq_ref_mol_option_menu_changed);
-   GtkSignalFunc callback_func2 = GTK_SIGNAL_FUNC(lsq_mov_mol_option_menu_changed);
+   GCallback callback_func1 = G_CALLBACK(lsq_ref_mol_option_menu_changed);
+   GCallback callback_func2 = G_CALLBACK(lsq_mov_mol_option_menu_changed);
    
    int imol_1 = first_coords_imol();
    int imol_2 = first_coords_imol();
@@ -740,7 +740,7 @@ int apply_lsq_matches_by_widget(GtkWidget *lsq_dialog) {
 
    GtkWidget *copy_checkbutton = lookup_widget(lsq_dialog, "least_squares_move_copy_checkbutton");
    if (copy_checkbutton) { 
-      if (GTK_TOGGLE_BUTTON(copy_checkbutton)->active) {
+      if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(copy_checkbutton))) {
 	 int new_imol_moving = copy_molecule(imol_moving);
 	 imol_moving = new_imol_moving;
 	 graphics_info_t::lsq_mov_imol = imol_moving;
@@ -762,11 +762,11 @@ int apply_lsq_matches_by_widget(GtkWidget *lsq_dialog) {
    std::string ref_chain_id_str = graphics_info_t::lsq_match_chain_id_ref;
    std::string mov_chain_id_str = graphics_info_t::lsq_match_chain_id_mov;
 
-   if (GTK_TOGGLE_BUTTON(match_type_all_check_button)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(match_type_all_check_button)))
       match_type = 0;
-   if (GTK_TOGGLE_BUTTON(match_type_main_check_button)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(match_type_main_check_button)))
       match_type = 1;
-   if (GTK_TOGGLE_BUTTON(match_type_calpha_check_button)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(match_type_calpha_check_button)))
       match_type = 2;
    
    std::cout << "INFO:: reference from " << ref_start_resno << " to " <<  ref_end_resno << " chain "
@@ -795,15 +795,15 @@ fill_lsq_option_menu_with_chain_options(GtkWidget *chain_optionmenu,
    // graphics_info_t::fill_superpose_option_menu_with_chain_options(GtkWidget *chain_optionmenu, 
    // int is_reference_structure_flag) {
 
-   GtkSignalFunc callback_func;
+   GCallback callback_func;
    int imol = -1;
    if (is_reference_structure_flag) {  
       imol = graphics_info_t::lsq_ref_imol;
-      callback_func = GTK_SIGNAL_FUNC(lsq_reference_chain_option_menu_item_activate);
+      callback_func = G_CALLBACK(lsq_reference_chain_option_menu_item_activate);
    } else {
       imol = graphics_info_t::lsq_mov_imol;
        callback_func =
-	 GTK_SIGNAL_FUNC(lsq_moving_chain_option_menu_item_activate);
+    G_CALLBACK(lsq_moving_chain_option_menu_item_activate);
    }
 
    if (false) { // debug

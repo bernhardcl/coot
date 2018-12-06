@@ -37,9 +37,9 @@ coot::goograph::show_dialog() {
    
       gtk_window_set_default_size(GTK_WINDOW(dialog), dialog_width, dialog_height);
       gtk_window_set_title (GTK_WINDOW(dialog), title_string.c_str());
-      gtk_object_set_data(GTK_OBJECT(dialog), "goograph_dialog", dialog);
-      gtk_object_set_data(GTK_OBJECT(dialog), "goograph", this);
-      GtkWidget *vbox = GTK_DIALOG(dialog)->vbox;
+      g_object_set_data(G_OBJECT(dialog), "goograph_dialog", dialog);
+      g_object_set_data(G_OBJECT(dialog), "goograph", this);
+      GtkWidget *vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
       GtkWidget *vbox_inner = gtk_vbox_new(FALSE, 2);
       GtkWidget *scrolled_window = gtk_scrolled_window_new (NULL, NULL);
       gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window),
@@ -133,20 +133,22 @@ gint
 coot::goograph::reshape(GtkWidget *widget, GdkEventConfigure *event) {
 
    gint status = 0;
-   coot::goograph *g_p = static_cast<coot::goograph *> (gtk_object_get_data(GTK_OBJECT(widget), "goograph"));
+   coot::goograph *g_p = static_cast<coot::goograph *> (g_object_get_data(G_OBJECT(widget), "goograph"));
 
    if (g_p) {
       bool do_redraw = false;
-      if (g_p->dialog_width != widget->allocation.width)
- 	 do_redraw = true;
-      if (g_p->dialog_height != widget->allocation.height)
- 	 do_redraw = true;
-      if (do_redraw) { 
- 	 g_p->dialog_width = widget->allocation.width;
- 	 g_p->dialog_height = widget->allocation.height;
-	 // g_p->set_data_scales();
- 	 g_p->draw_graph();
-	 // status = 1; // this slows things down dramatically!
+      GtkAllocation alloc;
+      gtk_widget_get_allocation(widget, &alloc);
+      if (g_p->dialog_width != alloc.width)
+         do_redraw = true;
+      if (g_p->dialog_height != alloc.height)
+         do_redraw = true;
+      if (do_redraw) {
+         g_p->dialog_width = alloc.width;
+         g_p->dialog_height = alloc.height;
+         // g_p->set_data_scales();
+         g_p->draw_graph();
+         // status = 1; // this slows things down dramatically!
       }
    }
    return status;

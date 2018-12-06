@@ -72,18 +72,19 @@ coot::sequence_view *coot::sequence_view_object_t::seq_view = NULL;
 coot::sequence_view::sequence_view(mmdb::Manager *mol_in, std::string name, int coot_mol_no_in) {
 
    GtkWidget *top_lev = create_sequence_view_dialog();
-   gtk_widget_set_usize(GTK_WIDGET(top_lev), 500, 160);
+   gtk_widget_set_size_request(GTK_WIDGET(top_lev), 500, 160);
    molecule_names.push_back(name);
    setup_internal(mol_in);
    mol.push_back(mol_in);
    coot_mol_no = coot_mol_no_in;
-   gtk_object_set_user_data(GTK_OBJECT(canvas), (void *) this);
+   g_object_set_data(G_OBJECT(canvas), "user_data", (void *) this);
    // this user datum is used in the dialog destroy method (so that
    // the graphics_info_t sequence_view_is_displayed vector knows that
    // this object no longer is displayed)
    // 
    // (on_sequence_view_dialog_destroy).
-   gtk_object_set_user_data(GTK_OBJECT(top_lev), GINT_TO_POINTER(coot_mol_no_in));
+   // BL says:: 2 user data with same name?!?!? FIXME
+   g_object_set_data(G_OBJECT(top_lev), "user_data", GINT_TO_POINTER(coot_mol_no_in));
 
    // connect canvas (which was created in setup_internal) to top_lev:
    //
@@ -192,7 +193,7 @@ coot::sequence_view::setup_canvas(int max_n_res, int n_chains) {
 				 // label, but for now it isn't.
    scroll_height = usize_y;
 
-   gtk_widget_set_usize(GTK_WIDGET(canvas), usize_x, usize_y);
+   gtk_widget_set_size_request(GTK_WIDGET(canvas), usize_x, usize_y);
    gtk_widget_show(GTK_WIDGET(canvas));
 
    gtk_widget_set_events(GTK_WIDGET(canvas),
@@ -229,10 +230,10 @@ coot::sequence_view::setup_canvas(int max_n_res, int n_chains) {
 
    gtk_canvas_set_scroll_region(canvas, left_limit, upper_limit, scroll_width, scroll_height);
 
-   gtk_signal_connect (GTK_OBJECT(canvas), "button_press_event",
-		       GTK_SIGNAL_FUNC(seq_view_button_press), NULL);
-   gtk_signal_connect (GTK_OBJECT(canvas), "motion_notify_event",
-		       GTK_SIGNAL_FUNC(seq_view_motion_notify), NULL);
+   g_signal_connect (G_OBJECT(canvas), "button_press_event",
+             G_CALLBACK(seq_view_button_press), NULL);
+   g_signal_connect (G_OBJECT(canvas), "motion_notify_event",
+             G_CALLBACK(seq_view_motion_notify), NULL);
 
 }
 
@@ -275,7 +276,7 @@ coot::sequence_view::seq_view_button_press (GtkWidget *widget,
 //    int *imol = (int *) gtk_object_get_user_data(GTK_OBJECT(widget));
 //    graphics_info_t g;
 //    seq_view = g.get_sequence_view(*imol);
-   seq_view = (coot::sequence_view *) gtk_object_get_user_data(GTK_OBJECT(widget));
+   seq_view = (coot::sequence_view *) g_object_get_data(G_OBJECT(widget), "user_data");
 #endif
    
    if (seq_view) {
@@ -389,7 +390,7 @@ coot::sequence_view::seq_view_motion_notify(GtkWidget *widget, GdkEventMotion *e
 //    int *imol = (int *) gtk_object_get_user_data(GTK_OBJECT(widget));
 //    graphics_info_t g;
 //    seq_view = g.get_sequence_view(*imol);
-   seq_view = (coot::sequence_view *) gtk_object_get_user_data(GTK_OBJECT(widget));
+   seq_view = (coot::sequence_view *) g_object_get_data(G_OBJECT(widget), "user_data");
 #endif
    
    if (seq_view) {

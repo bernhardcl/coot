@@ -752,7 +752,7 @@ class graphics_info_t {
       } else {
 	 GtkWidget *local_graph_dialog = lookup_widget(w, "geometry_graph_canvas");
 	 if (local_graph_dialog)
-	    gr = (coot::geometry_graphs *) (gtk_object_get_user_data(GTK_OBJECT(local_graph_dialog)));
+       gr = (coot::geometry_graphs *) (g_object_get_data(G_OBJECT(local_graph_dialog), "user_data"));
       }
       return gr;
    }
@@ -1249,13 +1249,21 @@ public:
 #endif // WII_INTERFACE_WIIUSE
 
    static void graphics_draw() {
+      GtkAllocation alloc;
      if (glarea) { 
-       gtk_widget_draw(glarea, NULL);
+        gtk_widget_get_allocation(glarea, &alloc);
+       gtk_widget_queue_draw_area(glarea, 0, 0,
+                                  alloc.width,
+                                  alloc.height);
        if (make_movie_flag)
 	 dump_a_movie_image();
      }
-     if (glarea_2)
-       gtk_widget_draw(glarea_2, NULL);
+     if (glarea_2) {
+        gtk_widget_get_allocation(glarea_2, &alloc);
+        gtk_widget_queue_draw_area(glarea_2, 0, 0,
+                                   alloc.width,
+                                   alloc.height);
+     }
    }
 
 
@@ -1865,36 +1873,36 @@ public:
 							       GtkWidget *atom_list);
    void fill_go_to_atom_option_menu(GtkWidget *option_menu);
    void fill_option_menu_with_coordinates_options(GtkWidget *option_menu,
-						  GtkSignalFunc callback_func);
+                    GCallback callback_func);
    void fill_option_menu_with_coordinates_options(GtkWidget *option_menu, 
-						  GtkSignalFunc signal_func,
+                    GCallback signal_func,
 						  int imol_active_position);
    void fill_option_menu_with_coordinates_options_internal(GtkWidget *option_menu,
-							   GtkSignalFunc callback_func,
+                        GCallback callback_func,
 							   short int set_last_active_flag);
    void fill_option_menu_with_coordinates_options_internal_2(GtkWidget *option_menu,
-							     GtkSignalFunc callback_func, 
+                          GCallback callback_func,
 							     short int set_last_active_flag,
 							     int imol_active);
    void fill_option_menu_with_coordinates_options_internal_3(GtkWidget *option_menu,
-							     GtkSignalFunc callback_func, 
+                          GCallback callback_func,
 							     std::vector<int> fill_with_these_molecules,
 							     short int set_last_active_flag,
 							     int imol_active);
    void fill_option_menu_with_coordinates_options_internal_with_active_mol(GtkWidget *option_menu,
-									   GtkSignalFunc callback_func, 
+                              GCallback callback_func,
 									   int imol_active);
    void fill_option_menu_with_coordinates_options_possibly_small(GtkWidget *option_menu, 
-								 GtkSignalFunc callback_func, 
+                         GCallback callback_func,
 								 int imol,
 								 bool fill_with_small_molecule_only_flag);
 
    
    static void go_to_atom_mol_menu_item_select(GtkWidget *item, GtkPositionType pos); 
-   static void on_go_to_atom_residue_list_selection_changed (GtkList *gtklist,
+   static void on_go_to_atom_residue_list_selection_changed (GList *gtklist,
 							     gpointer user_data);
 
-   static void on_go_to_atom_residue_tree_selection_changed_gtk1(GtkList *gtklist,
+   static void on_go_to_atom_residue_tree_selection_changed_gtk1(GList *gtklist,
 								 gpointer user_data);
    // -------------------- Gtk2 code -----------------------------
    static void on_go_to_atom_residue_tree_selection_changed (GtkTreeView *gtklist,
@@ -2702,16 +2710,16 @@ public:
 								 gpointer         user_data);
    // Return the molecule number of the selected map (I mean, top of
    // the list, in the option menu)
-   int fill_option_menu_with_map_options(GtkWidget *option_menu, GtkSignalFunc signal_func); 
-   void fill_option_menu_with_map_options(GtkWidget *option_menu, GtkSignalFunc signal_func,
+   int fill_option_menu_with_map_options(GtkWidget *option_menu, GCallback signal_func);
+   void fill_option_menu_with_map_options(GtkWidget *option_menu, GCallback signal_func,
 					  int imol_active_position);
-   int fill_option_menu_with_map_mtz_options(GtkWidget *option_menu, GtkSignalFunc signal_func); 
-   int fill_option_menu_with_map_options_generic(GtkWidget *option_menu, GtkSignalFunc signal_func, int mtz_only=0); 
+   int fill_option_menu_with_map_mtz_options(GtkWidget *option_menu, GCallback signal_func);
+   int fill_option_menu_with_map_options_generic(GtkWidget *option_menu, GCallback signal_func, int mtz_only=0);
    void fill_option_menu_with_difference_map_options(GtkWidget *option_menu, 
-						     GtkSignalFunc signal_func,
+                       GCallback signal_func,
 						     int imol_active_position);
    void fill_option_menu_with_map_options_internal(GtkWidget *option_menu, 
-						   GtkSignalFunc signal_func,
+                     GCallback signal_func,
 						   std::vector<int> map_molecule_numbers,
 						   int imol_active_position);
    GtkWidget *wrapped_create_skeleton_dialog(bool show_ca_mode_needs_skel_label);
@@ -3498,12 +3506,12 @@ public:
    // (return "no-chain" if it was not assigned (nothing in the list)).
    static std::string fill_option_menu_with_chain_options(GtkWidget *option_menu,
 					     int imol,
-					     GtkSignalFunc signal_func);
+                    GCallback signal_func);
    // as above, except if one of the chain options is active_chain_id,
    // then set the active menu item to that.
    static std::string fill_option_menu_with_chain_options(GtkWidget *option_menu,
 							  int imol,
-							  GtkSignalFunc signal_func, 
+                       GCallback signal_func,
 							  const std::string &active_chain_id);
    static std::string add_OXT_chain;
    static void add_OXT_chain_menu_item_activate (GtkWidget *item,

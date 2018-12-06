@@ -110,7 +110,7 @@ GtkWidget *create_map_colour_selection_window(struct map_colour_data_type *mcdt)
    t = (struct map_colour_data_type*) malloc(100);
 
    colorseldialog = gtk_color_selection_dialog_new("Map Colour Selection"); 
-   gtk_object_set_data(GTK_OBJECT(colorseldialog), "map_color_selection_dialog",
+   g_object_set_data(G_OBJECT(colorseldialog), "map_color_selection_dialog",
 		       colorseldialog);
 
    colorsel = GTK_COLOR_SELECTION_DIALOG(colorseldialog)->colorsel;
@@ -243,10 +243,10 @@ create_initial_map_color_submenu(GtkWidget *widget) {
    map_colour1 = GTK_WIDGET(lookup_widget(window1, "map_colour1"));
 
    map_colour1_menu = gtk_menu_new ();
-   gtk_widget_ref (map_colour1_menu);
-   gtk_object_set_data_full (GTK_OBJECT (window1), "map_colour1_menu", 
+   g_object_ref (map_colour1_menu);
+   g_object_set_data_full (G_OBJECT (window1), "map_colour1_menu",
 			     map_colour1_menu,
-			     (GtkDestroyNotify) gtk_widget_unref);
+              (GDestroyNotify) g_object_unref);
 
    gtk_menu_item_set_submenu (GTK_MENU_ITEM (map_colour1), 
 			      map_colour1_menu);
@@ -276,11 +276,11 @@ create_initial_map_scroll_wheel_submenu(GtkWidget *widget) {
      GTK_WIDGET(lookup_widget(window1, "attach_scroll_wheel_to_which_map_1"));
 
    map_scroll_wheel_menu = gtk_menu_new ();
-   gtk_widget_ref (map_scroll_wheel_menu);
-   gtk_object_set_data_full (GTK_OBJECT (window1), 
+   g_object_ref (map_scroll_wheel_menu);
+   g_object_set_data_full (G_OBJECT (window1),
 			     "map_scroll_wheel_menu", 
 			     map_scroll_wheel_menu,
-			     (GtkDestroyNotify) gtk_widget_unref);
+              (GDestroyNotify) g_object_unref);
 
    gtk_menu_item_set_submenu (GTK_MENU_ITEM (map_scroll_wheel), 
 			      map_scroll_wheel_menu);
@@ -310,17 +310,17 @@ update_map_scroll_wheel_menu_manual(int imol, const char *name) {
    map_scroll_wheel1_menu = 
      GTK_WIDGET(lookup_widget(window1, "map_scroll_wheel_menu")); 
 
-   gtk_widget_ref (mapscroll_wheelmap1);
-   gtk_object_set_data_full (GTK_OBJECT (window1), "mapscroll_wheelmap1", 
+   g_object_ref (mapscroll_wheelmap1);
+   g_object_set_data_full (G_OBJECT (window1), "mapscroll_wheelmap1",
 			     mapscroll_wheelmap1,
-			     (GtkDestroyNotify) gtk_widget_unref);
+              (GDestroyNotify) g_object_unref);
 
   gtk_widget_show (mapscroll_wheelmap1);
   gtk_container_add (GTK_CONTAINER (map_scroll_wheel1_menu), 
 		     mapscroll_wheelmap1);
 
-  gtk_signal_connect (GTK_OBJECT (mapscroll_wheelmap1), "activate",  
-		      GTK_SIGNAL_FUNC (my_map_scroll_wheel_activate),  
+  g_signal_connect (G_OBJECT (mapscroll_wheelmap1), "activate",
+            G_CALLBACK (my_map_scroll_wheel_activate),
 		      (gpointer) map_scroll_wheel_data);   
 }
 
@@ -349,10 +349,10 @@ create_initial_ramachandran_mol_submenu(GtkWidget *widget) {
    rama_draw = GTK_WIDGET(lookup_widget(window1, "ramachandran_plot1"));
 			
    rama_draw_menu = gtk_menu_new ();
-   gtk_widget_ref (rama_draw_menu);
-   gtk_object_set_data_full (GTK_OBJECT (window1), "rama_plot_menu", 
+   g_object_ref (rama_draw_menu);
+   g_object_set_data_full (G_OBJECT (window1), "rama_plot_menu",
 			     rama_draw_menu,
-			     (GtkDestroyNotify) gtk_widget_unref);
+              (GDestroyNotify) g_object_unref);
 
    gtk_menu_item_set_submenu (GTK_MENU_ITEM (rama_draw), 
 			      rama_draw_menu);
@@ -373,16 +373,16 @@ update_ramachandran_plot_menu_manual(int imol, const char *name) {
 
    rama_plot_menu = GTK_WIDGET(lookup_widget(window1, "rama_plot_menu")); 
 
-   gtk_widget_ref (menu_item);
-   gtk_object_set_data_full (GTK_OBJECT (window1), "rama_plot_menu_item", 
+   g_object_ref (menu_item);
+   g_object_set_data_full (G_OBJECT (window1), "rama_plot_menu_item",
 			     menu_item,
-			     (GtkDestroyNotify) gtk_widget_unref);
+              (GDestroyNotify) g_object_unref);
 
   gtk_widget_show (menu_item);
   gtk_container_add (GTK_CONTAINER (rama_plot_menu), menu_item);
 
-  gtk_signal_connect (GTK_OBJECT (menu_item), "activate",  
-		      GTK_SIGNAL_FUNC (rama_plot_mol_selector_activate),  
+  g_signal_connect (G_OBJECT (menu_item), "activate",
+            G_CALLBACK (rama_plot_mol_selector_activate),
 		      GINT_TO_POINTER(imol));
 }
 
@@ -404,10 +404,10 @@ rama_plot_mol_selector_activate (GtkMenuItem     *menuitem,
   if (rama_widget == NULL) { 
     do_ramachandran_plot(imol); 
   } else { 
-    if (!GTK_WIDGET_MAPPED(rama_widget))
+    if (!gtk_widget_get_mapped(rama_widget))
       gtk_widget_show(rama_widget);
     else 
-      gdk_window_raise(rama_widget->window);
+      gdk_window_raise(gtk_widget_get_parent_window(rama_widget));
   }
 #else 
   printf("not compiled with HAVE_GTK_CANVAS/GNOME_CANVAS - remake\n"); 
@@ -420,10 +420,10 @@ void create_initial_sequence_view_mol_submenu(GtkWidget *widget) {
 
    GtkWidget *seq_view_draw = lookup_widget(widget, "sequence_view1");
    GtkWidget *seq_view_menu = gtk_menu_new();
-   gtk_widget_ref(seq_view_menu);
-   gtk_object_set_data_full(GTK_OBJECT(widget), "seq_view_menu",
+   g_object_ref(seq_view_menu);
+   g_object_set_data_full(G_OBJECT(widget), "seq_view_menu",
 			    seq_view_menu,
-			    (GtkDestroyNotify) gtk_widget_unref);
+             (GDestroyNotify) g_object_unref);
    gtk_menu_item_set_submenu (GTK_MENU_ITEM(seq_view_draw),
 			      seq_view_menu);
 }
@@ -436,14 +436,14 @@ void update_sequence_view_menu_manual(int imol, const char *name) {
    GtkWidget *menu_item;
    
    menu_item = gtk_menu_item_new_with_label (name);
-   gtk_widget_ref(menu_item);
-   gtk_object_set_data_full (GTK_OBJECT(window1), "seq_view_menu_item",
+   g_object_ref(menu_item);
+   g_object_set_data_full (G_OBJECT(window1), "seq_view_menu_item",
 			     menu_item, 
-			     (GtkDestroyNotify) gtk_widget_unref);
+              (GDestroyNotify) g_object_unref);
    gtk_widget_show(menu_item);
    gtk_container_add(GTK_CONTAINER(seq_view_menu), menu_item);
-   gtk_signal_connect (GTK_OBJECT(menu_item), "activate",
-		       GTK_SIGNAL_FUNC(sequence_view_mol_selector_activate),
+   g_signal_connect (G_OBJECT(menu_item), "activate",
+             G_CALLBACK(sequence_view_mol_selector_activate),
 		       GINT_TO_POINTER(imol));
 }
 
@@ -544,7 +544,7 @@ void display_control_molecule_combo_box(GtkWidget *display_control_window_glade,
 
 
   display_mol_frame_1 = gtk_frame_new (NULL);
-  gtk_widget_ref (display_mol_frame_1);
+  g_object_ref (display_mol_frame_1);
   
   widget_name = (gchar *) malloc(100); /* should be enough */
 
@@ -553,10 +553,10 @@ void display_control_molecule_combo_box(GtkWidget *display_control_window_glade,
   
   snprintf(tmp_name, 4, "%-d", n); 
 
-  gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), 
+  g_object_set_data_full (G_OBJECT (display_control_window_glade),
 			    widget_name, 
 			    display_mol_frame_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (display_mol_frame_1);
   gtk_box_pack_start (GTK_BOX (display_molecule_vbox), display_mol_frame_1, 
 		      FALSE, FALSE, 0);
@@ -802,17 +802,17 @@ void display_control_molecule_combo_box(GtkWidget *display_control_window_glade,
 /* Set User Data, the molecule which this button(s) is attached to 
    (casting (int *) to (char *)).
 */
-  gtk_object_set_user_data(GTK_OBJECT(displayed_button_1), GINT_TO_POINTER(n)); 
-  gtk_object_set_user_data(GTK_OBJECT(   active_button_1), GINT_TO_POINTER(n)); 
+  g_object_set_data(G_OBJECT(displayed_button_1), "user_data", GINT_TO_POINTER(n));
+  g_object_set_data(G_OBJECT(   active_button_1), "user_data", GINT_TO_POINTER(n));
 
 /* Add signals for the Active and Display toggle buttons */
 
-  gtk_signal_connect(GTK_OBJECT (displayed_button_1),  "toggled",
-		     GTK_SIGNAL_FUNC (on_display_control_mol_displayed_button_toggled),
+  g_signal_connect(G_OBJECT (displayed_button_1),  "toggled",
+           G_CALLBACK (on_display_control_mol_displayed_button_toggled),
 		     NULL);
 
-  gtk_signal_connect(GTK_OBJECT (active_button_1),  "toggled",
-		     GTK_SIGNAL_FUNC (on_display_control_mol_active_button_toggled),
+  g_signal_connect(G_OBJECT (active_button_1),  "toggled",
+           G_CALLBACK (on_display_control_mol_active_button_toggled),
 		     NULL);
 
 
@@ -903,8 +903,8 @@ void display_control_add_delete_molecule_button(int imol, GtkWidget *hbox32,
    gtk_widget_show(delete_button);
    gtk_box_pack_start (GTK_BOX (hbox32), delete_button, FALSE, FALSE, 0);
    gtk_container_set_border_width (GTK_CONTAINER (delete_button), 2);
-   gtk_signal_connect(GTK_OBJECT(delete_button), "clicked",
-		      GTK_SIGNAL_FUNC(on_display_control_delete_molecule_button_clicked),
+   g_signal_connect(G_OBJECT(delete_button), "clicked",
+            G_CALLBACK(on_display_control_delete_molecule_button_clicked),
 		      GINT_TO_POINTER(imol));
 
 } 
@@ -921,8 +921,8 @@ void add_add_reps_frame_and_vbox(GtkWidget *display_control_window_glade,
    // show the frame if there were additional representations
    if (show_add_reps_frame_flag)
       gtk_widget_show(frame);
-   gtk_widget_ref (v);
-   gtk_widget_ref (frame);
+   g_object_ref (v);
+   g_object_ref (frame);
 
    std::string arl = "   Show Additional Representations  ";
    GtkWidget *all_on_check_button = gtk_check_button_new_with_label(arl.c_str());
@@ -932,27 +932,27 @@ void add_add_reps_frame_and_vbox(GtkWidget *display_control_window_glade,
    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(all_on_check_button), TRUE);
    std::string widget_name = "add_rep_all_on_check_button_";
    widget_name += coot::util::int_to_string(imol_no);
-   gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), 
+   g_object_set_data_full (G_OBJECT (display_control_window_glade),
 			     widget_name.c_str(),
 			     all_on_check_button, NULL);
-   gtk_signal_connect(GTK_OBJECT (all_on_check_button),  "toggled",
-		      GTK_SIGNAL_FUNC (on_add_rep_all_on_check_button_toggled),
+   g_signal_connect(G_OBJECT (all_on_check_button),  "toggled",
+            G_CALLBACK (on_add_rep_all_on_check_button_toggled),
 		      GINT_TO_POINTER(imol_no));
 
    // set the name so that it can be looked up.
    widget_name = "add_rep_display_control_frame_vbox_";
    widget_name += coot::util::int_to_string(imol_no);
-   gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), 
+   g_object_set_data_full (G_OBJECT (display_control_window_glade),
 			     widget_name.c_str(),
 			     v,
-			     (GtkDestroyNotify) gtk_widget_unref);
+              (GDestroyNotify) g_object_unref);
    
    widget_name = "add_rep_display_control_frame_";
    widget_name += coot::util::int_to_string(imol_no);
-   gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), 
+   g_object_set_data_full (G_OBJECT (display_control_window_glade),
 			     widget_name.c_str(),
 			     frame,
-			     (GtkDestroyNotify) gtk_widget_unref);
+              (GDestroyNotify) g_object_unref);
    
    gtk_container_add(GTK_CONTAINER(hbox_for_single_molecule), frame);
    gtk_container_add(GTK_CONTAINER(frame), v);
@@ -965,7 +965,7 @@ on_add_rep_all_on_check_button_toggled   (GtkToggleButton       *button,
 					  gpointer         user_data) {
 
    int imol = GPOINTER_TO_INT(user_data);
-   if (button->active) {
+   if (gtk_toggle_button_get_active(button)) {
       // std::cout << "Turn on all add reps of " << imol << std::endl;
       set_show_all_additional_representations(imol, 1);
    } else {
@@ -1103,7 +1103,7 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
 				   "display_map_vbox"); 
 
   display_map_frame_1 = gtk_frame_new (NULL);
-  gtk_widget_ref (display_map_frame_1);
+  g_object_ref (display_map_frame_1);
   
   widget_name = (gchar *) malloc(100); /* should be enough */
 
@@ -1115,18 +1115,18 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
 /*   printf("display_map_frame_{thing} name constructed as: :%s:\n", widget_name);  */
   
 
-  gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), widget_name,
+  g_object_set_data_full (G_OBJECT (display_control_window_glade), widget_name,
 			    display_map_frame_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (display_map_frame_1);
   /* setting to true means that the buttons etc in the box can expand
      vertically to fill the box  */
   gtk_box_pack_start (GTK_BOX (display_map_vbox), display_map_frame_1, FALSE, FALSE, 0);
 
   hbox31 = gtk_hbox_new (FALSE, 0);
-  gtk_widget_ref (hbox31);
-  gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), "hbox31", hbox31,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (hbox31);
+  g_object_set_data_full (G_OBJECT (display_control_window_glade), "hbox31", hbox31,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (hbox31);
   gtk_container_add (GTK_CONTAINER (display_map_frame_1), hbox31);
 
@@ -1137,9 +1137,9 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
   snprintf(tmp_name, 4, "%-d", n);
 
   mol_label = gtk_label_new (_(tmp_name));
-  gtk_widget_ref (mol_label);
-  gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), widget_name, mol_label,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (mol_label);
+  g_object_set_data_full (G_OBJECT (display_control_window_glade), widget_name, mol_label,
+                            (GDestroyNotify) g_object_unref);
 
   gtk_widget_show (mol_label);
   gtk_box_pack_start (GTK_BOX (hbox31), mol_label, FALSE, FALSE, 3);
@@ -1153,21 +1153,21 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
   snprintf(tmp_name, 4, "%-d", n);
 
   entry2 = gtk_entry_new ();
-  gtk_widget_ref (entry2);
-  gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), widget_name, entry2,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (entry2);
+  g_object_set_data_full (G_OBJECT (display_control_window_glade), widget_name, entry2,
+                            (GDestroyNotify) g_object_unref);
   if (name) { 
     gtk_entry_set_text(GTK_ENTRY(entry2), name); 
   } 
-  gtk_entry_set_editable(GTK_ENTRY (entry2), FALSE);
+  gtk_editable_set_editable(GTK_EDITABLE (entry2), FALSE);
 
   gtk_widget_show (entry2);
   gtk_box_pack_start (GTK_BOX (hbox31), entry2, TRUE, TRUE, 0);
 
   hbox32 = gtk_hbox_new (FALSE, 0);
-  gtk_widget_ref (hbox32);
-  gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), "hbox32", hbox32,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (hbox32);
+  g_object_set_data_full (G_OBJECT (display_control_window_glade), "hbox32", hbox32,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (hbox32);
   gtk_box_pack_start (GTK_BOX (hbox31), hbox32, TRUE, TRUE, 0);
 
@@ -1179,17 +1179,17 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
 
   displayed_button_1 = gtk_check_button_new_with_label (_("Display"));
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(displayed_button_1), map_is_displayed(n));
-  gtk_widget_ref (displayed_button_1);
-  gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), 
+  g_object_ref (displayed_button_1);
+  g_object_set_data_full (G_OBJECT (display_control_window_glade),
 			    widget_name, 
 			    displayed_button_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (displayed_button_1);
   gtk_box_pack_start (GTK_BOX (hbox32), displayed_button_1, FALSE, FALSE, 0);
   gtk_container_set_border_width (GTK_CONTAINER (displayed_button_1), 2);
 
-  gtk_signal_connect(GTK_OBJECT (displayed_button_1),  "toggled",
-		     GTK_SIGNAL_FUNC (on_display_control_map_displayed_button_toggled),
+  g_signal_connect(G_OBJECT (displayed_button_1),  "toggled",
+           G_CALLBACK (on_display_control_map_displayed_button_toggled),
 		     GINT_TO_POINTER(n));
 
 /*   // associate with the button a pointer to the variable which */
@@ -1197,7 +1197,7 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
 /*   //  */
 /*   // we cast as a (char *) to make the compiler happy. */
 /*   //  */
-   gtk_object_set_user_data (GTK_OBJECT (displayed_button_1), GINT_TO_POINTER(n)); 
+   g_object_set_data (G_OBJECT (displayed_button_1), "user_data", GINT_TO_POINTER(n));
 
 /* -- */
   /* 20050316 Today I add scroll check-button, as Charlie asked for ages ago. */
@@ -1216,7 +1216,7 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
   else 
      scroll_radio_button_1 = gtk_radio_button_new_with_label(NULL, _("Scroll"));
   
-  gtk_object_set_data_full(GTK_OBJECT(display_control_window_glade),
+  g_object_set_data_full(G_OBJECT(display_control_window_glade),
 			   widget_name,
  			   scroll_radio_button_1,
  			   NULL);
@@ -1224,11 +1224,11 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
 
   gtk_widget_show(scroll_radio_button_1);
   gtk_box_pack_start(GTK_BOX(hbox32), scroll_radio_button_1, FALSE,FALSE, 2);
-  gtk_signal_connect(GTK_OBJECT(scroll_radio_button_1), "toggled",
-		     GTK_SIGNAL_FUNC (on_display_control_map_scroll_radio_button_toggled),
+  g_signal_connect(G_OBJECT(scroll_radio_button_1), "toggled",
+           G_CALLBACK (on_display_control_map_scroll_radio_button_toggled),
 		     GINT_TO_POINTER(n));
-  gtk_signal_connect(GTK_OBJECT(scroll_radio_button_1), "group_changed",
-		     GTK_SIGNAL_FUNC (on_display_control_map_scroll_radio_button_group_changed),
+  g_signal_connect(G_OBJECT(scroll_radio_button_1), "group_changed",
+           G_CALLBACK (on_display_control_map_scroll_radio_button_group_changed),
 		     GINT_TO_POINTER(n));
   
   if (scroll_wheel_map() == n) {
@@ -1247,17 +1247,17 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
   snprintf(tmp_name, 4, "%-d", n);
 
   displayed_button_1 = gtk_button_new_with_label (_("Properties"));
-  gtk_widget_ref (displayed_button_1);
-  gtk_object_set_data_full (GTK_OBJECT (display_control_window_glade), 
+  g_object_ref (displayed_button_1);
+  g_object_set_data_full (G_OBJECT (display_control_window_glade),
 			    widget_name, 
 			    displayed_button_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (displayed_button_1);
   gtk_box_pack_start (GTK_BOX (hbox32), displayed_button_1, FALSE, FALSE, 0);
   gtk_container_set_border_width (GTK_CONTAINER (displayed_button_1), 2);
 
-  gtk_signal_connect(GTK_OBJECT (displayed_button_1),  "clicked",
-		     GTK_SIGNAL_FUNC (on_display_control_map_properties_button_clicked),
+  g_signal_connect(G_OBJECT (displayed_button_1),  "clicked",
+           G_CALLBACK (on_display_control_map_properties_button_clicked),
 		     GINT_TO_POINTER(n));
 
 /*   // associate with the button a pointer to the variable which */
@@ -1265,7 +1265,7 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
 /*   //  */
   /*   // we cast as a (char *) to make the compiler happy. */
 /*   //  */
-    gtk_object_set_user_data (GTK_OBJECT (displayed_button_1), GINT_TO_POINTER(n));
+    g_object_set_data (G_OBJECT (displayed_button_1), "user_data", GINT_TO_POINTER(n));
 
   // A delete molecule button
   display_control_add_delete_molecule_button(n, hbox32, true);
@@ -1280,9 +1280,9 @@ on_display_control_map_displayed_button_toggled   (GtkToggleButton       *button
 						   gpointer         user_data)
 {
 
-  int imol = GPOINTER_TO_INT(gtk_object_get_user_data(GTK_OBJECT(button)));
+  int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "user_data"));
 
-  if (button->active)
+  if (gtk_toggle_button_get_active(button))
     set_map_displayed(imol, 1);
   else 
     set_map_displayed(imol, 0);
@@ -1294,7 +1294,7 @@ on_display_control_map_scroll_radio_button_toggled (GtkToggleButton *button,
 						    gpointer         user_data) {
   int imol = GPOINTER_TO_INT(user_data);
   const char *state = "inactive";
-  if (GTK_TOGGLE_BUTTON(button)->active) {
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
     state = "active";
     set_scrollable_map(imol);
   }
@@ -1389,7 +1389,7 @@ on_display_control_map_properties_button_clicked   (GtkButton       *button,
 //   gtk_rc_style_unref (rc_style);
 
   fill_single_map_properties_dialog(window, imol);
-  gtk_object_set_user_data(GTK_OBJECT(window), GINT_TO_POINTER(imol));
+  g_object_set_data(G_OBJECT(window), "user_data", GINT_TO_POINTER(imol));
   /*  and now the skeleton buttons */
   frame = lookup_widget(window, "single_map_skeleton_frame");
   set_on_off_single_map_skeleton_radio_buttons(frame, imol);
@@ -1425,11 +1425,11 @@ fill_map_colour_patch(GtkWidget *patch_frame, int imol){
   gtk_container_add(GTK_CONTAINER(widget_thing), widget);
 
   // printf("gdk_gc_new\n");
-  gc = gdk_gc_new(widget->window);
+  gc = gdk_gc_new(gtk_widget_get_parent_window(widget));
 
   printf("get window size\n");
   /* find proper dimensions for rectangle */
-  gdk_window_get_size(widget->window, &width, &height);
+  gdk_window_get_size(gtk_widget_get_parent_window(widget), &width, &height);
 
   /* the color we want to use */
   color = (GdkColor *)malloc(sizeof(GdkColor));
@@ -1461,7 +1461,7 @@ fill_map_colour_patch(GtkWidget *patch_frame, int imol){
   
   /* draw the rectangle */
   printf("draw rectangle:\n");
-  gdk_draw_rectangle(widget->window, gc, 1, 0, 0, width, height);
+  gdk_draw_rectangle(gtk_widget_get_parent_window(widget), gc, 1, 0, 0, width, height);
 } 
 
 
@@ -1470,7 +1470,7 @@ void
 on_display_control_mol_displayed_button_toggled   (GtkToggleButton       *button,
 						   gpointer         user_data)
 {
-  int imol = GPOINTER_TO_INT(gtk_object_get_user_data(GTK_OBJECT(button))); 
+  int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "user_data"));
   int idisplay; 
   GtkWidget *active_toggle_button;
   char *widget_name = (char *) malloc(100);
@@ -1485,7 +1485,7 @@ on_display_control_mol_displayed_button_toggled   (GtkToggleButton       *button
 /*   printf("mol display button clicked %d, active: %d\n", *imol, button->active); */
 
   if (imol >= 0 && imol < graphics_n_molecules()) {
-    if (button->active)
+    if (gtk_toggle_button_get_active(button))
       set_mol_displayed(imol, 1);
     else 
       set_mol_displayed(imol, 0);
@@ -1519,9 +1519,9 @@ void
 on_display_control_mol_active_button_toggled   (GtkToggleButton  *toggle_button,
 						gpointer         user_data)
 {
-  int imol = GPOINTER_TO_INT(gtk_object_get_user_data(GTK_OBJECT(toggle_button))); 
+  int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(toggle_button), "user_data"));
   int iactive; 
-  if (toggle_button->active) { 
+  if (gtk_toggle_button_get_active(toggle_button)) {
     set_mol_active(imol, 1);
 /*     iactive = toggle_active_mol(*imol);  */
   } else {
@@ -1571,9 +1571,9 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
   phs_cell_chooser_vbox = lookup_widget(phs_cell_choice_window, "phs_cell_chooser_vbox"); 
 
   hbox33 = gtk_hbox_new (FALSE, 0);
-  gtk_widget_ref (hbox33);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "hbox33", hbox33,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (hbox33);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "hbox33", hbox33,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (hbox33);
   gtk_box_pack_start (GTK_BOX (phs_cell_chooser_vbox), hbox33, TRUE, TRUE, 4);
   gtk_container_set_border_width (GTK_CONTAINER (hbox33), 6);
@@ -1584,20 +1584,20 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
 
 
   phs_cell_radiobutton_1 = gtk_radio_button_new_with_label (phs_cell_group, "");
-  phs_cell_group = gtk_radio_button_group (GTK_RADIO_BUTTON (phs_cell_radiobutton_1));
-  gtk_widget_ref (phs_cell_radiobutton_1);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), widget_name, 
+  phs_cell_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (phs_cell_radiobutton_1));
+  g_object_ref (phs_cell_radiobutton_1);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), widget_name,
 			    phs_cell_radiobutton_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (phs_cell_radiobutton_1), FALSE); 
 
   gtk_widget_show (phs_cell_radiobutton_1);
   gtk_box_pack_start (GTK_BOX (hbox33), phs_cell_radiobutton_1, FALSE, FALSE, 4);
 
   label53 = gtk_label_new (_("Symm"));
-  gtk_widget_ref (label53);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "label53", label53,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (label53);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "label53", label53,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (label53);
   gtk_box_pack_start (GTK_BOX (hbox33), label53, FALSE, FALSE, 2);
 
@@ -1608,18 +1608,18 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
 
 
   phs_cell_symm_entry_1 = gtk_entry_new ();
-  gtk_widget_ref (phs_cell_symm_entry_1);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), widget_name, 
+  g_object_ref (phs_cell_symm_entry_1);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), widget_name,
 			    phs_cell_symm_entry_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (phs_cell_symm_entry_1);
   gtk_box_pack_start (GTK_BOX (hbox33), phs_cell_symm_entry_1, TRUE, TRUE, 0);
-  gtk_widget_set_usize (phs_cell_symm_entry_1, 80, -2);
+  gtk_widget_set_size_request (phs_cell_symm_entry_1, 80, -2);
 
   label54 = gtk_label_new (_("a"));
-  gtk_widget_ref (label54);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "label54", label54,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (label54);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "label54", label54,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (label54);
   gtk_box_pack_start (GTK_BOX (hbox33), label54, FALSE, FALSE, 2);
 
@@ -1630,18 +1630,18 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
 
 
   phs_cell_a_entry_1 = gtk_entry_new ();
-  gtk_widget_ref (phs_cell_a_entry_1);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), widget_name, 
+  g_object_ref (phs_cell_a_entry_1);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), widget_name,
 			    phs_cell_a_entry_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (phs_cell_a_entry_1);
   gtk_box_pack_start (GTK_BOX (hbox33), phs_cell_a_entry_1, TRUE, TRUE, 0);
-  gtk_widget_set_usize (phs_cell_a_entry_1, 65, -2);
+  gtk_widget_set_size_request (phs_cell_a_entry_1, 65, -2);
 
   label55 = gtk_label_new (_("b"));
-  gtk_widget_ref (label55);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "label55", label55,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (label55);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "label55", label55,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (label55);
   gtk_box_pack_start (GTK_BOX (hbox33), label55, FALSE, FALSE, 2);
 
@@ -1652,18 +1652,18 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
 
 
   phs_cell_b_entry_1 = gtk_entry_new ();
-  gtk_widget_ref (phs_cell_b_entry_1);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), widget_name, 
+  g_object_ref (phs_cell_b_entry_1);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), widget_name,
 			    phs_cell_b_entry_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (phs_cell_b_entry_1);
   gtk_box_pack_start (GTK_BOX (hbox33), phs_cell_b_entry_1, TRUE, TRUE, 0);
-  gtk_widget_set_usize (phs_cell_b_entry_1, 65, -2);
+  gtk_widget_set_size_request (phs_cell_b_entry_1, 65, -2);
 
   label56 = gtk_label_new (_("c"));
-  gtk_widget_ref (label56);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "label56", label56,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (label56);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "label56", label56,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (label56);
   gtk_box_pack_start (GTK_BOX (hbox33), label56, FALSE, FALSE, 2);
 
@@ -1674,18 +1674,18 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
 
 
   phs_cell_c_entry_1 = gtk_entry_new ();
-  gtk_widget_ref (phs_cell_c_entry_1);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), widget_name, 
+  g_object_ref (phs_cell_c_entry_1);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), widget_name,
 			    phs_cell_c_entry_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (phs_cell_c_entry_1);
   gtk_box_pack_start (GTK_BOX (hbox33), phs_cell_c_entry_1, TRUE, TRUE, 0);
-  gtk_widget_set_usize (phs_cell_c_entry_1, 65, -2);
+  gtk_widget_set_size_request (phs_cell_c_entry_1, 65, -2);
 
   label57 = gtk_label_new (_("alpha"));
-  gtk_widget_ref (label57);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "label57", label57,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (label57);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "label57", label57,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (label57);
   gtk_box_pack_start (GTK_BOX (hbox33), label57, FALSE, FALSE, 2);
 
@@ -1696,18 +1696,18 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
 
 
   phs_cell_alpha_entry_1 = gtk_entry_new ();
-  gtk_widget_ref (phs_cell_alpha_entry_1);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), widget_name, 
+  g_object_ref (phs_cell_alpha_entry_1);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), widget_name,
 			    phs_cell_alpha_entry_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (phs_cell_alpha_entry_1);
   gtk_box_pack_start (GTK_BOX (hbox33), phs_cell_alpha_entry_1, TRUE, TRUE, 0);
-  gtk_widget_set_usize (phs_cell_alpha_entry_1, 60, -2);
+  gtk_widget_set_size_request (phs_cell_alpha_entry_1, 60, -2);
 
   label58 = gtk_label_new (_("beta"));
-  gtk_widget_ref (label58);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "label58", label58,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (label58);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "label58", label58,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (label58);
   gtk_box_pack_start (GTK_BOX (hbox33), label58, FALSE, FALSE, 2);
 
@@ -1718,18 +1718,18 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
 
 
   phs_cell_beta_entry_1 = gtk_entry_new ();
-  gtk_widget_ref (phs_cell_beta_entry_1);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), widget_name,
+  g_object_ref (phs_cell_beta_entry_1);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), widget_name,
 			    phs_cell_beta_entry_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (phs_cell_beta_entry_1);
   gtk_box_pack_start (GTK_BOX (hbox33), phs_cell_beta_entry_1, TRUE, TRUE, 0);
-  gtk_widget_set_usize (phs_cell_beta_entry_1, 60, -2);
+  gtk_widget_set_size_request (phs_cell_beta_entry_1, 60, -2);
 
   label59 = gtk_label_new (_("gamma"));
-  gtk_widget_ref (label59);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "label59", label59,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (label59);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "label59", label59,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (label59);
   gtk_box_pack_start (GTK_BOX (hbox33), label59, FALSE, FALSE, 2);
 
@@ -1740,13 +1740,13 @@ GSList *display_cell_chooser_box(GtkWidget *phs_cell_choice_window,
 
 
   phs_cell_gamma_entry_1 = gtk_entry_new ();
-  gtk_widget_ref (phs_cell_gamma_entry_1);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), widget_name, 
+  g_object_ref (phs_cell_gamma_entry_1);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), widget_name,
 			    phs_cell_gamma_entry_1,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (phs_cell_gamma_entry_1);
   gtk_box_pack_start (GTK_BOX (hbox33), phs_cell_gamma_entry_1, TRUE, TRUE, 0);
-  gtk_widget_set_usize (phs_cell_gamma_entry_1, 60, -2);
+  gtk_widget_set_size_request (phs_cell_gamma_entry_1, 60, -2);
 
   return phs_cell_group; 
 
@@ -1768,19 +1768,19 @@ void display_none_cell_chooser_box(GtkWidget *phs_cell_choice_window,
   phs_cell_chooser_vbox = lookup_widget(phs_cell_choice_window, "phs_cell_chooser_vbox"); 
 
   hbox34 = gtk_hbox_new (FALSE, 0);
-  gtk_widget_ref (hbox34);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "hbox34", hbox34,
-                            (GtkDestroyNotify) gtk_widget_unref);
+  g_object_ref (hbox34);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "hbox34", hbox34,
+                            (GDestroyNotify) g_object_unref);
   gtk_widget_show (hbox34);
   gtk_box_pack_start (GTK_BOX (phs_cell_chooser_vbox), hbox34, TRUE, TRUE, 0);
   gtk_container_set_border_width (GTK_CONTAINER (hbox34), 6);
 
   phs_cell_none_radiobutton = gtk_radio_button_new_with_label (phs_cell_group, _("None of the Above"));
-  phs_cell_group = gtk_radio_button_group (GTK_RADIO_BUTTON (phs_cell_none_radiobutton));
-  gtk_widget_ref (phs_cell_none_radiobutton);
-  gtk_object_set_data_full (GTK_OBJECT (phs_cell_choice_window), "phs_cell_none_radiobutton", 
+  phs_cell_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (phs_cell_none_radiobutton));
+  g_object_ref (phs_cell_none_radiobutton);
+  g_object_set_data_full (G_OBJECT (phs_cell_choice_window), "phs_cell_none_radiobutton",
 			    phs_cell_none_radiobutton,
-                            (GtkDestroyNotify) gtk_widget_unref);
+                            (GDestroyNotify) g_object_unref);
   
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (phs_cell_none_radiobutton), TRUE); 
 
@@ -1877,11 +1877,11 @@ void display_control_add_reps(GtkWidget *display_control_window_glade,
 //       std::cout <<  "DEBUG:: add_rep_frame is " << add_rep_frame << std::endl;
 
       GtkWidget *hbox = gtk_hbox_new(FALSE, 2);
-      gtk_widget_ref (hbox);
+      g_object_ref (hbox);
       gtk_box_pack_start(GTK_BOX(add_rep_vbox), hbox, FALSE, FALSE, 0);
       std::string label = name;
       GtkWidget *toggle_button_show_it = gtk_check_button_new_with_label(label.c_str());
-      gtk_widget_ref (toggle_button_show_it);
+      g_object_ref (toggle_button_show_it);
       if (show_it) { 
 	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle_button_show_it), TRUE);
 	 gtk_widget_show(add_rep_all_on_checkbutton);
@@ -1889,8 +1889,8 @@ void display_control_add_reps(GtkWidget *display_control_window_glade,
 	 gtk_widget_hide(add_rep_all_on_checkbutton);
       } 
       int cc = encode_ints(imol_no, add_rep_no);
-      gtk_signal_connect(GTK_OBJECT(toggle_button_show_it), "toggled",
-			 GTK_SIGNAL_FUNC(add_rep_toggle_button_toggled),
+      g_signal_connect(G_OBJECT(toggle_button_show_it), "toggled",
+          G_CALLBACK(add_rep_toggle_button_toggled),
 			 GINT_TO_POINTER(cc));
       gtk_box_pack_start(GTK_BOX(hbox), toggle_button_show_it, FALSE, FALSE, 0);
       
@@ -1906,7 +1906,7 @@ void add_rep_toggle_button_toggled(GtkToggleButton       *button,
    
    std::pair<int, int> p = decode_ints(GPOINTER_TO_INT(user_data));
    int on_off_flag = 0;
-   if (button->active)
+   if (gtk_toggle_button_get_active(button))
       on_off_flag = 1;
    set_show_additional_representation(p.first, p.second, on_off_flag);
 } 

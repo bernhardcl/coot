@@ -2501,7 +2501,7 @@ lbg_info_t::have_2_stubs_attached_to_atom(unsigned int atom_index,
 void
 lbg_handle_toggle_button(GtkToggleToolButton *tb, GtkWidget *canvas, int mode) {
 
-   gpointer gp = gtk_object_get_user_data(GTK_OBJECT(canvas));
+   gpointer gp = g_object_get_data(G_OBJECT(canvas), "user_data");
    lbg_info_t *l = static_cast<lbg_info_t *> (gp);
 
    if (l) { 
@@ -3141,8 +3141,8 @@ lbg_info_t::init(GtkBuilder *builder) {
    // this works, but need gui access
    // 
    goo_canvas_set_scale(GOO_CANVAS(canvas), 1.0);
-   
-   GTK_WIDGET_SET_FLAGS (canvas, GTK_CAN_FOCUS);
+
+   gtk_widget_set_can_default(canvas, TRUE);
 
    GooCanvasItem *root_item = goo_canvas_get_root_item(GOO_CANVAS(canvas));
    g_object_set(G_OBJECT(root_item), "line_width", 1.5, NULL); // thank you Damon Chaplin
@@ -3169,8 +3169,8 @@ lbg_info_t::init(GtkBuilder *builder) {
 #endif // HAVE_CCP4SRS
 
    if (use_graphics_interface_flag) { 
-      gtk_widget_set(GTK_WIDGET(canvas), "bounds-padding", 50.0, NULL);
-      gtk_object_set_user_data(GTK_OBJECT(canvas), (gpointer) this);
+      g_object_set(G_OBJECT(canvas), "bounds-padding", 50.0, NULL);
+      g_object_set_data(G_OBJECT(canvas), "user_data", (gpointer) this);
    
       save_togglebutton_widgets(builder);
       GtkWidget *lbg_scrolled_win =
@@ -3181,6 +3181,7 @@ lbg_info_t::init(GtkBuilder *builder) {
 
    GooCanvas *gc = GOO_CANVAS(canvas);
 
+   /* BL says:: only debug, so comment out for now
    if (0) 
       std::cout << "   after setting bounds: canvas adjustments: h-lower " 
 		<< gc->hadjustment->lower << " h-upper-page "
@@ -3189,6 +3190,7 @@ lbg_info_t::init(GtkBuilder *builder) {
 		<< gc->vadjustment->upper - gc->vadjustment->page_size  << " h-page "
 		<< gc->hadjustment->page_size  << " "
 		<< gc->vadjustment->page_size << std::endl;
+      */
 
    if (use_graphics_interface_flag) {
 
@@ -3216,7 +3218,7 @@ lbg_info_t::init(GtkBuilder *builder) {
    // ------------ (old-style) watch for new files from coot ---------------------
    //
    if (is_stand_alone()) 
-      int timeout_handle = gtk_timeout_add(500, watch_for_mdl_from_coot, this);
+      int timeout_handle = g_timeout_add(500, watch_for_mdl_from_coot, this);
 
    // Hack in a button (or hide the hbox) for PE to test stuff
    // 
@@ -3265,11 +3267,11 @@ lbg_info_t::init(GtkBuilder *builder) {
 void
 lbg_scale_adj_changed(GtkWidget *widget, GtkSpinButton *spinbutton) {
 
-   float f = gtk_spin_button_get_value_as_float(spinbutton);
+   float f = gtk_spin_button_get_value(spinbutton);
    gpointer user_data = g_object_get_data(G_OBJECT(spinbutton), "user_data");
    if (user_data) {
       GtkWidget *canvas = GTK_WIDGET(user_data);
-      lbg_info_t *l = static_cast<lbg_info_t *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+      lbg_info_t *l = static_cast<lbg_info_t *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
       if (l) {
 	 l->scale_canvas(f);
       }

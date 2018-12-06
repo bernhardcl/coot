@@ -224,7 +224,7 @@ void fileselection_sort_button_clicked( GtkWidget *sort_button,
 					GtkWidget  *file_list) {
 
    GtkOptionMenu *history_pulldown =
-      GTK_OPTION_MENU(gtk_object_get_user_data(GTK_OBJECT(sort_button)));
+      GTK_OPTION_MENU(g_object_get_data(G_OBJECT(sort_button), "user_data"));
 
    GList *dlist = gtk_container_children(GTK_CONTAINER(history_pulldown));
    GList *free_list = dlist;
@@ -321,7 +321,7 @@ on_filename_filter_toggle_button_toggled(GtkButton       *button,
    std::vector<std::string> v;
    
    if (fileselection) { 
-      if (GTK_TOGGLE_BUTTON(button)->active) { 
+      if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
 	 gtk_label_set_text(GTK_LABEL(GTK_BIN(button)->child), "Unfilter");
 	 
 	 // so now we have pre_directory

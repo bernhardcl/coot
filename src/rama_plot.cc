@@ -393,10 +393,8 @@ coot::rama_plot::init_internal(const std::string &mol_name,
    gtk_widget_set_size_request(canvas, 400, 400);
    gtk_container_add(GTK_CONTAINER(scrolled_window),
                      canvas);
-   gtk_widget_ref(canvas);
-   gtk_object_set_user_data(GTK_OBJECT(canvas), (gpointer) this);
+   g_object_ref(canvas);
    g_object_set_data(G_OBJECT(canvas), "user_data", (gpointer) this);
-   gtk_object_set_user_data(GTK_OBJECT(dynawin), (gpointer) this);
    g_object_set(G_OBJECT(canvas),
                 "has-tooltip", TRUE,
                 NULL);
@@ -411,7 +409,7 @@ coot::rama_plot::init_internal(const std::string &mol_name,
 
 
    if (dialog_position_x > -1)
-      gtk_widget_set_uposition(dynawin, dialog_position_x, dialog_position_y);
+      gtk_window_move(GTK_WINDOW(dynawin), dialog_position_x, dialog_position_y);
 
    gtk_widget_show (canvas);
 
@@ -1258,7 +1256,7 @@ coot::rama_plot::key_release_event(GtkWidget *widget, GdkEventKey *event) {
    }
 
    /* prevent the default handler from being run */
-   gtk_signal_emit_stop_by_name(GTK_OBJECT(canvas),"key_release_event");
+   g_signal_stop_emission_by_name(G_OBJECT(canvas),"key_release_event");
 
    return 0;
 }
@@ -3578,7 +3576,7 @@ coot::rama_plot::plot_type_changed() {
          // show selections (fill maybe FIXME - and set tick?)
          // gtk_widget_show(selection_checkbutton);
          draw_it(mols().first);
-         if (GTK_TOGGLE_BUTTON(selection_checkbutton)->active) {
+         if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(selection_checkbutton))) {
             apply_selection_from_widget();
          }
       }

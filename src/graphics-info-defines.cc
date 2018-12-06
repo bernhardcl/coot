@@ -1719,7 +1719,7 @@ graphics_info_t::check_if_in_save_symmetry_define(GdkEventButton *event) {
 	 coot::Symm_Atom_Pick_Info_t *save_pick_info = new coot::Symm_Atom_Pick_Info_t;
 	 *save_pick_info = naii;
 
-	 gtk_object_set_user_data(GTK_OBJECT(w), save_pick_info);
+    g_object_set_data(G_OBJECT(w), "user_data", save_pick_info);
 
 // 	 std::string filename = "molecule-";
 // 	 filename += int_to_string(naii.imol);

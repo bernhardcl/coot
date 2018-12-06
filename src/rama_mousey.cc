@@ -40,12 +40,12 @@ on_dynarama2_window_destroy(GtkObject *caller, gpointer user_data) {
 
    // maybe no callback from builder for mainwindow!?
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (!plot) {
       std::cout<<"failed to get the plot from " << canvas <<std::endl;
    } else {
       if (plot->is_stand_alone())
-         gtk_exit(0);
+         exit(0);
       else {
          int imol = plot->molecule_number();
          if (imol >= 0) {
@@ -74,12 +74,12 @@ extern "C" G_MODULE_EXPORT void
 on_dynarama2_ok_button_clicked(GtkButton *button, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (!plot) {
       std::cout<<"failed to get the plot from " << canvas <<std::endl;
    } else {
       if (plot->is_stand_alone())
-         gtk_exit(0);
+         exit(0);
       else {
          int imol = plot->molecule_number();
          if (imol == -9999)
@@ -94,9 +94,9 @@ extern "C" G_MODULE_EXPORT void
 on_dynarama2_cancel_button_clicked(GtkButton *button, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot->is_stand_alone())
-      gtk_exit(0);
+      exit(0);
    else {
       int imol = plot->molecule_number();
       if (imol == -9999)
@@ -110,7 +110,7 @@ extern "C" G_MODULE_EXPORT void
 on_kleywegt_apply_chain_button_clicked(GtkButton *button, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    plot->update_kleywegt_plot();
 
 }
@@ -119,9 +119,9 @@ extern "C" G_MODULE_EXPORT void
 on_dynarama2_outliers_only_togglebutton_toggled(GtkToggleButton *button, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
-      plot->show_outliers_only(button->active);
+      plot->show_outliers_only(gtk_toggle_button_get_active(button));
    }
 }
 
@@ -129,9 +129,9 @@ extern "C" G_MODULE_EXPORT void
 on_dynarama_selection_checkbutton_toggled(GtkToggleButton *button, gpointer user_data){
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
-      plot->show_selection_widget(button->active);
+      plot->show_selection_widget(gtk_toggle_button_get_active(button));
    }
 }
 
@@ -139,7 +139,7 @@ extern "C" G_MODULE_EXPORT void
 on_dynarama_selection_entry_activate(GtkEntry *entry, gpointer  user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       plot->apply_selection_from_widget();
    }
@@ -149,7 +149,7 @@ extern "C" G_MODULE_EXPORT void
 on_dynarama_selection_apply_button_clicked(GtkButton *button, gpointer user_data){
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       plot->apply_selection_from_widget();
    }
@@ -159,7 +159,7 @@ extern "C" G_MODULE_EXPORT void
 on_psi_axis_classic_radioitem_toggled(GtkToggleButton *button, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       plot->psi_axis_changed();
    }
@@ -180,9 +180,9 @@ extern "C" G_MODULE_EXPORT void
 on_dynarama2_zoom_resize_togglebutton_toggled(GtkToggleButton *button, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
-      plot->resize_mode_changed(button->active);
+      plot->resize_mode_changed(gtk_toggle_button_get_active(button));
    }
 }
 
@@ -205,7 +205,7 @@ extern "C" G_MODULE_EXPORT void
 on_rama_print_menuitem_activate(GtkMenuItem *item, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       const gchar *file_name = "dynarama.pdf";
       gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(plot->rama_export_as_pdf_filechooserdialog),
@@ -220,7 +220,7 @@ extern "C" G_MODULE_EXPORT void
 on_rama_save_as_png_menuitem_activate(GtkMenuItem *item, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       const gchar *file_name = "dynarama.png";
       gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(plot->rama_export_as_png_filechooserdialog),
@@ -236,7 +236,7 @@ extern "C" G_MODULE_EXPORT void
 on_rama_close_menuitem_activate(GtkMenuItem *item, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot)
       gtk_widget_destroy(plot->dynawin);
    else
@@ -247,7 +247,7 @@ extern "C" G_MODULE_EXPORT void
 on_rama_radiomenuitem_toggled(GtkCheckMenuItem *checkmenuitem, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       plot->plot_type_changed();
    }
@@ -264,7 +264,7 @@ extern "C" G_MODULE_EXPORT void
 on_outliers_only_menuitem_toggled(GtkCheckMenuItem *checkmenuitem, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       int state;
       state = gtk_check_menu_item_get_active (checkmenuitem);
@@ -278,7 +278,7 @@ extern "C" G_MODULE_EXPORT void
 on_zoom_in_activate(GtkMenuItem *item, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       plot->zoom_in();
    } else {
@@ -290,7 +290,7 @@ extern "C" G_MODULE_EXPORT void
 on_zoom_out_activate(GtkMenuItem *item, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       plot->zoom_out();
    } else {
@@ -303,7 +303,7 @@ extern "C" G_MODULE_EXPORT void
 on_zoom_resize_menuitem_toggled(GtkCheckMenuItem *checkmenuitem, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       int state;
       state = gtk_check_menu_item_get_active (checkmenuitem);
@@ -317,7 +317,7 @@ extern "C" G_MODULE_EXPORT void
 on_rama_about_menuitem_activate(GtkMenuItem *item, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       GtkWidget *about = plot->about_dialog;
       gtk_widget_show(about);
@@ -331,7 +331,7 @@ extern "C" G_MODULE_EXPORT void
 on_rama_aboutdialog1_close(GtkDialog *dialog, gpointer user_data){
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       GtkWidget *about = plot->about_dialog;
       gtk_widget_hide(about);
@@ -344,7 +344,7 @@ extern "C" G_MODULE_EXPORT void
 on_rama_aboutdialog1_response(GtkDialog *dialog, gint response_id, gpointer user_data) {
 
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   coot::rama_plot *plot = static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   coot::rama_plot *plot = static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(canvas), "user_data"));
    if (plot) {
       GtkWidget *about = plot->about_dialog;
       gtk_widget_hide(about);
@@ -552,7 +552,7 @@ gint rama_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
 
 gint rama_button_press (GtkWidget *widget, GdkEventButton *event) {
    coot::rama_plot *plot =
-         static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(widget)));
+         static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(widget), "user_data"));
 
    plot->button_press(widget, event);
    //g_print("BL DEBUG:: button press notify\n");
@@ -564,7 +564,7 @@ gint rama_button_press (GtkWidget *widget, GdkEventButton *event) {
 gint rama_key_release_event(GtkWidget *widget, GdkEventKey *event) {
 
    coot::rama_plot *plot =
-      static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(widget)));
+      static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(widget), "user_data"));
    gint i = plot->key_release_event(widget, event);
    //g_print("BL DEBUG:: key release event\n");
    return i;
@@ -590,7 +590,7 @@ gint rama_key_press_event(GtkWidget *widget, GdkEventKey *event) {
 void rama_zoom_out(GtkWidget *widget) {
 
    coot::rama_plot *plot =
-      static_cast<coot::rama_plot *> (gtk_object_get_user_data(GTK_OBJECT(widget)));
+      static_cast<coot::rama_plot *> (g_object_get_data(G_OBJECT(widget), "user_data"));
 
    plot->zoom_out(); 
 
@@ -599,7 +599,7 @@ void rama_zoom_out(GtkWidget *widget) {
 void rama_zoom_in(GtkWidget *widget) {
 
    coot::rama_plot *plot =
-      (coot::rama_plot *) gtk_object_get_user_data(GTK_OBJECT(widget));
+      (coot::rama_plot *) (g_object_get_data(G_OBJECT(widget), "user_data"));
 
    plot->zoom_in(); 
 

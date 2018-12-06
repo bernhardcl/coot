@@ -774,11 +774,11 @@ graphics_info_t::fill_preferences_toolbar_icons(GtkWidget *preferences,
   gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(icons_tree), FALSE);
   gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window),
 					icons_tree);
-  gtk_widget_ref(icons_tree);
+  g_object_ref(icons_tree);
   g_object_set_data_full(G_OBJECT(preferences),
                          tree_name,
                          icons_tree,
-                         (GtkDestroyNotify) gtk_widget_unref);
+                         (GDestroyNotify) g_object_unref);
 
   // maybe clear tree and model first?!
  

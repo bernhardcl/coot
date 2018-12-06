@@ -105,15 +105,15 @@ graphics_info_t::fill_option_menu_with_map_options(GtkWidget *option_menu,
 }
 
 int
-graphics_info_t::fill_option_menu_with_map_mtz_options(GtkWidget *option_menu, 
-						   GtkSignalFunc signal_func) {
+graphics_info_t::fill_option_menu_with_map_mtz_options(GtkWidget *option_menu,
+                     GCallback signal_func) {
 
    return fill_option_menu_with_map_options_generic(option_menu, signal_func, 1);
 }
 
 int
 graphics_info_t::fill_option_menu_with_map_options_generic(GtkWidget *option_menu, 
-                                                           GtkSignalFunc signal_func,
+                                                           GCallback signal_func,
                                                            int mtz_only) {
 
    GtkWidget *menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(option_menu));
@@ -159,9 +159,9 @@ graphics_info_t::fill_option_menu_with_map_options_generic(GtkWidget *option_men
 // 						   GtkSignalFunc signal_func)
 // 
 void
-graphics_info_t::fill_option_menu_with_map_options(GtkWidget *option_menu, 
-						   GtkSignalFunc signal_func,
-						   int imol_active_position) {
+graphics_info_t::fill_option_menu_with_map_options(GtkWidget *option_menu,
+                     GCallback signal_func,
+                     int imol_active_position) {
 
    GtkWidget *menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(option_menu));
    GtkWidget *menuitem;
@@ -194,9 +194,9 @@ graphics_info_t::fill_option_menu_with_map_options(GtkWidget *option_menu,
 
 
 void
-graphics_info_t::fill_option_menu_with_difference_map_options(GtkWidget *option_menu, 
-							      GtkSignalFunc signal_func,
-							      int imol_active_position) {
+graphics_info_t::fill_option_menu_with_difference_map_options(GtkWidget *option_menu,
+                           GCallback signal_func,
+                           int imol_active_position) {
 
    std::vector<int> maps_vec;
    for (int i=0; i<n_molecules(); i++) {
@@ -211,10 +211,10 @@ graphics_info_t::fill_option_menu_with_difference_map_options(GtkWidget *option_
 
 
 void
-graphics_info_t::fill_option_menu_with_map_options_internal(GtkWidget *option_menu, 
-							    GtkSignalFunc signal_func,
-							    std::vector<int> map_molecule_numbers,
-							    int imol_active_position) {
+graphics_info_t::fill_option_menu_with_map_options_internal(GtkWidget *option_menu,
+                         GCallback signal_func,
+                         std::vector<int> map_molecule_numbers,
+                         int imol_active_position) {
 
    GtkWidget *menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(option_menu));
    GtkWidget *menuitem;
@@ -872,7 +872,8 @@ graphics_info_t::update_refmac_column_labels_frame(GtkWidget *map_optionmenu,
   coot::mtz_column_types_info_t *saved_f_phi_columns
     = (coot::mtz_column_types_info_t *) gtk_object_get_user_data(GTK_OBJECT(dialog));
   
-  if (not refmac_use_twin_flag && not GTK_TOGGLE_BUTTON(mtz_file_radiobutton)->active) {
+  if (not refmac_use_twin_flag &&
+      not gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(mtz_file_radiobutton))) {
     menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(map_optionmenu));
     GtkWidget *active_item = gtk_menu_get_active(GTK_MENU(menu));
     imol_map_refmac = GPOINTER_TO_INT(gtk_object_get_user_data(GTK_OBJECT(active_item)));

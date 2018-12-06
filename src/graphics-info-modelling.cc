@@ -2739,7 +2739,7 @@ graphics_info_t::execute_rotate_translate_ready() { // manual movement
 
       // set its position if it was shown before
       if (rotate_translate_x_position > -100) {
-	 gtk_widget_set_uposition(widget,
+    gtk_window_move(GTK_WINDOW(widget),
 				  rotate_translate_x_position,
 				  rotate_translate_y_position);
       }
@@ -2960,9 +2960,9 @@ graphics_info_t::do_rot_trans_adjustments(GtkWidget *dialog) {
       GtkWidget *hscale = lookup_widget(dialog, hscale_lab[i].c_str());
       GtkAdjustment *adj = GTK_ADJUSTMENT(gtk_adjustment_new(0.0, -180.0, 360.0, 0.1, 1.0, 0));
       gtk_range_set_adjustment(GTK_RANGE(hscale), GTK_ADJUSTMENT(adj));
-      gtk_signal_connect(GTK_OBJECT(adj), 
+      g_signal_connect(G_OBJECT(adj),
 			 "value_changed",
-			 GTK_SIGNAL_FUNC(graphics_info_t::rot_trans_adjustment_changed), 
+          G_CALLBACK(graphics_info_t::rot_trans_adjustment_changed),
 			 GINT_TO_POINTER(i));
    }
 }
@@ -2992,7 +2992,7 @@ graphics_info_t::rot_trans_adjustment_changed(GtkAdjustment *adj, gpointer user_
 
    graphics_info_t g;  // because rotate_round_vector is not static - it should be.  
                        // FIXME at some stage.
-   double v = adj->value;
+   double v = gtk_adjustment_get_value(adj);
    
    int i_hscale = GPOINTER_TO_INT(user_data);
    short int do_rotation;
@@ -3428,9 +3428,9 @@ graphics_info_t::do_rotamers(int atom_index, int imol) {
 	 // The max value is 3rd arg - 6th arg (here 2 and 1 is the same as 1 and 0)
 	 GtkAdjustment *adj = GTK_ADJUSTMENT(gtk_adjustment_new(v, 0.0, 2.0, 0.01, 0.1, 1.0));
 	 gtk_range_set_adjustment(GTK_RANGE(hscale), GTK_ADJUSTMENT(adj));
-	 gtk_signal_connect(GTK_OBJECT(adj), 
+    g_signal_connect(G_OBJECT(adj),
 			    "value_changed",
-			    GTK_SIGNAL_FUNC(graphics_info_t::new_alt_conf_occ_adjustment_changed), 
+             G_CALLBACK(graphics_info_t::new_alt_conf_occ_adjustment_changed),
 			    NULL);
 	 g_object_set_data(G_OBJECT(dialog), "type", GINT_TO_POINTER(1));
       
@@ -3449,7 +3449,7 @@ graphics_info_t::do_rotamers(int atom_index, int imol) {
       //    gtk_signal_connect(GTK_OBJECT(window), "key_press_event",
       // 		      GTK_SIGNAL_FUNC(rotamer_key_press_event), NULL);
       /* set focus to glarea widget - we need this to get key presses. */
-      GTK_WIDGET_SET_FLAGS(dialog, GTK_CAN_FOCUS);
+      gtk_widget_set_can_focus(dialog, TRUE);
       gtk_widget_grab_focus(GTK_WIDGET(glarea)); // but set focus to the graphics.
    
       fill_rotamer_selection_buttons(dialog, atom_index, imol);
@@ -3468,7 +3468,7 @@ void graphics_info_t::new_alt_conf_occ_adjustment_changed(GtkAdjustment *adj,
 							  gpointer user_data) {
 
    graphics_info_t g;
-   g.add_alt_conf_new_atoms_occupancy = adj->value;
+   g.add_alt_conf_new_atoms_occupancy = gtk_adjustment_get_value(adj);
 
    // Change the occupancies of the intermediate atoms:
    //
@@ -3477,7 +3477,7 @@ void graphics_info_t::new_alt_conf_occ_adjustment_changed(GtkAdjustment *adj,
 	 // this if test is a kludge!
 	 // Don't change the alt conf for fully occupied atoms.
 	 if (moving_atoms_asc->atom_selection[i]->occupancy < 0.99) 
-	    moving_atoms_asc->atom_selection[i]->occupancy = adj->value;
+       moving_atoms_asc->atom_selection[i]->occupancy = gtk_adjustment_get_value(adj);
       }
    }
 }
@@ -3563,7 +3563,7 @@ graphics_info_t::fill_rotamer_selection_buttons(GtkWidget *window, int atom_inde
    // Attach the number of residues to the dialog so that we can get
    // that data item when we make a synthetic key press due to
    // keyboard (arrow?) key press:
-   gtk_object_set_user_data(GTK_OBJECT(window), GINT_TO_POINTER(probabilities.size()));
+   g_object_set_data(G_OBJECT(window), "user_data", GINT_TO_POINTER(probabilities.size()));
 
    GtkWidget *frame;
    for (unsigned int i=0; i<probabilities.size(); i++) {
@@ -3579,16 +3579,16 @@ graphics_info_t::fill_rotamer_selection_buttons(GtkWidget *window, int atom_inde
    
       rotamer_selection_radio_button =
 	 gtk_radio_button_new_with_label (gr_group, button_label.c_str());
-      gr_group = gtk_radio_button_group (GTK_RADIO_BUTTON (rotamer_selection_radio_button));
-      gtk_widget_ref (rotamer_selection_radio_button);
-      gtk_object_set_data_full (GTK_OBJECT (rotamer_selection_dialog),
+      gr_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (rotamer_selection_radio_button));
+      g_object_ref (rotamer_selection_radio_button);
+      g_object_set_data_full (G_OBJECT (rotamer_selection_dialog),
 				button_name.c_str(), rotamer_selection_radio_button,
-				(GtkDestroyNotify) gtk_widget_unref);
+            (GDestroyNotify) g_object_unref);
       
       int *iuser_data = new int;
       *iuser_data = i;
-      gtk_signal_connect (GTK_OBJECT (rotamer_selection_radio_button), "toggled",
-			  GTK_SIGNAL_FUNC (on_rotamer_selection_button_toggled),
+      g_signal_connect (G_OBJECT (rotamer_selection_radio_button), "toggled",
+           G_CALLBACK (on_rotamer_selection_button_toggled),
 			  iuser_data);
        
        gtk_widget_show (rotamer_selection_radio_button);
@@ -4231,11 +4231,11 @@ graphics_info_t::delete_residue_range(int imol,
       if (delete_item_widget) {
 	 GtkWidget *checkbutton = lookup_widget(graphics_info_t::delete_item_widget,
 						"delete_item_keep_active_checkbutton");
-	 if (GTK_TOGGLE_BUTTON(checkbutton)->active) {
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton))) {
 	    // don't destroy it.
 	 } else {
 	    gint upositionx, upositiony;
-	    gdk_window_get_root_origin (delete_item_widget->window, &upositionx, &upositiony);
+       gdk_window_get_root_origin (gtk_widget_get_parent_window(delete_item_widget), &upositionx, &upositiony);
 	    delete_item_widget_x_position = upositionx;
 	    delete_item_widget_y_position = upositiony;
 	    gtk_widget_destroy(delete_item_widget);
@@ -4268,7 +4268,7 @@ graphics_info_t::delete_sidechain_range(int imol,
       if (delete_item_widget) {
 	 GtkWidget *checkbutton = lookup_widget(graphics_info_t::delete_item_widget,
 						"delete_item_keep_active_checkbutton");
-	 if (GTK_TOGGLE_BUTTON(checkbutton)->active) {
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton))) {
 	    // don't destroy it.
 	 } else {
 	    gtk_widget_destroy(delete_item_widget);

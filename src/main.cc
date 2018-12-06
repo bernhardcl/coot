@@ -189,7 +189,7 @@ main (int argc, char *argv[]) {
 
   
    if (graphics_info_t::use_graphics_interface_flag) {
-      gtk_set_locale(); // gtk stuff
+      setlocale(LC_ALL, ""); // gtk_set_locale(); // gtk stuff
       load_gtk_resources();
       gtk_init (&argc, &argv);
       // activate to force icons in menus; cannot get it to work with 
@@ -883,29 +883,29 @@ void create_rot_trans_menutoolbutton_menu(GtkWidget *window1) {
       GSList *group = NULL;
 
       menu_item = gtk_radio_menu_item_new_with_label(group, "By Residue Range...");
-      group = gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(menu_item));
-      gtk_menu_append(GTK_MENU(menu), menu_item);
+      group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menu_item));
+      gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
       gtk_widget_show(menu_item);
-      gtk_signal_connect(GTK_OBJECT(menu_item), "activate",
-			 GTK_SIGNAL_FUNC(menutoolbutton_rot_trans_activated),
+      g_signal_connect(G_OBJECT(menu_item), "activate",
+          G_CALLBACK(menutoolbutton_rot_trans_activated),
 			 GINT_TO_POINTER(ROT_TRANS_TYPE_ZONE));
       /* activate the first item */
       gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), TRUE);
 
       menu_item = gtk_radio_menu_item_new_with_label(group, "By Chain...");
-      group = gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(menu_item));
-      gtk_menu_append(GTK_MENU(menu), menu_item);
+      group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menu_item));
+      gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
       gtk_widget_show(menu_item);
-      gtk_signal_connect(GTK_OBJECT(menu_item), "activate",
-			 GTK_SIGNAL_FUNC(menutoolbutton_rot_trans_activated),
+      g_signal_connect(G_OBJECT(menu_item), "activate",
+          G_CALLBACK(menutoolbutton_rot_trans_activated),
 			 GINT_TO_POINTER(ROT_TRANS_TYPE_CHAIN));
 
       menu_item = gtk_radio_menu_item_new_with_label(group, "By Molecule...");
-      group = gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(menu_item));
-      gtk_menu_append(GTK_MENU(menu), menu_item);
+      group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menu_item));
+      gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
       gtk_widget_show(menu_item);
-      gtk_signal_connect(GTK_OBJECT(menu_item), "activate",
-			 GTK_SIGNAL_FUNC(menutoolbutton_rot_trans_activated),
+      g_signal_connect(G_OBJECT(menu_item), "activate",
+          G_CALLBACK(menutoolbutton_rot_trans_activated),
 			 GINT_TO_POINTER(ROT_TRANS_TYPE_MOLECULE));
       
       gtk_menu_tool_button_set_menu(GTK_MENU_TOOL_BUTTON(menu_tool_button), menu);

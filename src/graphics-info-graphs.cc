@@ -356,7 +356,7 @@ graphics_info_t::update_validation_graphs(int imol) {
 #if defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
    GtkWidget *w = coot::get_validation_graph(imol, coot::RAMACHANDRAN_PLOT);
    if (w) {
-      coot::rama_plot *plot = reinterpret_cast<coot::rama_plot *>(gtk_object_get_user_data(GTK_OBJECT(w)));
+      coot::rama_plot *plot = reinterpret_cast<coot::rama_plot *>(g_object_get_data(G_OBJECT(w), "user_data"));
       std::cout << "doing handle_rama_plot_update() " << std::endl;
       handle_rama_plot_update(plot);
    }

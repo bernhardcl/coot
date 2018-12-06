@@ -97,7 +97,7 @@ std::pair<short int, float> float_from_entry(GtkWidget *entry);
 std::pair<short int, int>   int_from_entry(GtkWidget *entry);
 
 void
-add_validation_mol_menu_item(int imol, const std::string &name, GtkWidget *menu, GtkSignalFunc callback);
+add_validation_mol_menu_item(int imol, const std::string &name, GtkWidget *menu, GCallback callback);
 void create_initial_validation_graph_submenu_generic(GtkWidget *window1,
 						     const std::string &menu_name,
 						     const std::string &sub_menu_name);
@@ -205,12 +205,12 @@ std::vector<int> auto_read_make_and_draw_maps_from_cns(const char *filename);
 
 
 void add_map_colour_mol_menu_item(int imol, const std::string &name,
-				  GtkWidget *sub_menu, GtkSignalFunc callback);
+              GtkWidget *sub_menu, GCallback callback);
 /* Actually this function is generic and could be renamed so. */
 void add_map_scroll_wheel_mol_menu_item(int imol, 
 					const std::string &name,
 					GtkWidget *menu, 
-					GtkSignalFunc callback);
+               GCallback callback);
 
 //! \brief return the colour triple of the imolth map
 //! 

@@ -231,7 +231,6 @@ class rama_plot {
    // a set of phi-psis for each model.
    std::vector<phi_psis_for_model_t> phi_psi_model_sets;
    std::vector<phi_psis_for_model_t> secondary_phi_psi_model_sets;
-   GtkTooltips *tooltips;
    std::string fixed_font_str;
 
    void setup_internal(float level_prefered, float level_allowed);

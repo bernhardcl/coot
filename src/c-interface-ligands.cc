@@ -1362,10 +1362,10 @@ handle_make_monomer_search(const char *text, GtkWidget *viewport) {
    short int allow_minimal_descriptions_flag = 0;
    GtkWidget *dialog = lookup_widget(viewport, "monomer_search_dialog");
 
-   if (GTK_TOGGLE_BUTTON(checkbutton)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
       allow_minimal_descriptions_flag = 1;
 
-   if (GTK_TOGGLE_BUTTON(use_sbase_checkbutton)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(use_sbase_checkbutton)))
       use_sbase_molecules = 1;
 
    graphics_info_t g;
@@ -1412,19 +1412,19 @@ handle_make_monomer_search(const char *text, GtkWidget *viewport) {
       // gets embedded as user data (hmm).
       string *s = new string(v[i].first); // the 3-letter-code/comp_id (for user data).
       button_name += v[i].first;
-      gtk_widget_ref (button);
-      gtk_object_set_data_full (GTK_OBJECT (dialog), 
+      g_object_ref (button);
+      g_object_set_data_full (G_OBJECT (dialog),
 				button_name.c_str(), button,
-				(GtkDestroyNotify) gtk_widget_unref);
+            (GDestroyNotify) g_object_unref);
       gtk_box_pack_start (GTK_BOX (vbox), button, FALSE, FALSE, 0);
       gtk_container_set_border_width (GTK_CONTAINER (button), 2);
 
       if (! use_sbase_molecules)
-	 gtk_signal_connect(GTK_OBJECT(button), "clicked",
-			    GTK_SIGNAL_FUNC (on_monomer_lib_search_results_button_press), s);
+    g_signal_connect(G_OBJECT(button), "clicked",
+             G_CALLBACK (on_monomer_lib_search_results_button_press), s);
       else
-	 gtk_signal_connect(GTK_OBJECT(button), "clicked",
-			    GTK_SIGNAL_FUNC (on_monomer_lib_sbase_molecule_button_press), s);
+    g_signal_connect(G_OBJECT(button), "clicked",
+             G_CALLBACK (on_monomer_lib_sbase_molecule_button_press), s);
       gtk_widget_show(button);
    }
 
@@ -1434,10 +1434,12 @@ handle_make_monomer_search(const char *text, GtkWidget *viewport) {
    
    // we need to set widget size to new_box_size.  On the dialog?
 
-   gtk_widget_set_usize(dialog, dialog->allocation.width, new_box_size);
+   GtkAllocation alloc;
+   gtk_widget_get_allocation(dialog, &alloc);
+   gtk_widget_set_size_request(dialog, alloc.width, new_box_size);
       
    // a box of 14 is 400 pixels.  400 is about max size, I'd say 
-   gtk_signal_emit_by_name(GTK_OBJECT(vbox), "check_resize");
+   g_signal_emit_by_name(G_OBJECT(vbox), "check_resize");
    gtk_widget_show (vbox);
    return stat;
 

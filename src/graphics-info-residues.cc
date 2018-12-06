@@ -201,8 +201,10 @@ graphics_info_t::graphics_ligand_view() {
 	    g.graphics_ligand_mol.ligand_extents();
 
 	 float sc = 28;
-	 float h = float(glarea->allocation.height);
-	 float w = float(glarea->allocation.width);
+    GtkAllocation alloc;
+    gtk_widget_get_allocation(glarea, &alloc);
+    float h = float(alloc.height);
+    float w = float(alloc.width);
 	 float ar = h/w;
 	 glPushMatrix();
 	 glLoadIdentity();

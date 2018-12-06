@@ -128,7 +128,7 @@ GtkWidget *wrapped_create_check_waters_dialog() {
 
    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check_waters_OR_radiobutton), TRUE);
 
-   GtkSignalFunc callback_func = GTK_SIGNAL_FUNC(check_waters_molecule_menu_item_activate);
+   GCallback callback_func = G_CALLBACK(check_waters_molecule_menu_item_activate);
 
    GtkWidget *optionmenu = lookup_widget(dialog, "check_waters_molecule_optionmenu");
 //    std::cout << "optionmenu: " << optionmenu << std::endl;
@@ -195,8 +195,8 @@ GtkWidget *wrapped_create_check_waters_dialog() {
 
       if (imol_active != -1) {
 	 graphics_info_t::check_waters_by_difference_map_map_number = imol_active;
-	 GtkSignalFunc signal_func =
-	    GTK_SIGNAL_FUNC(check_water_by_difference_maps_option_menu_item_select);
+    GCallback signal_func =
+       G_CALLBACK(check_water_by_difference_maps_option_menu_item_select);
 	 g.fill_option_menu_with_difference_map_options(diff_map_option_menu,
 							signal_func, imol_active);
       }
@@ -264,16 +264,16 @@ void do_check_waters_by_widget(GtkWidget *dialog) {
    GtkToggleButton *checkbutton5 =
       GTK_TOGGLE_BUTTON(lookup_widget(dialog, "check_waters_by_difference_map_active_checkbutton"));
 
-   if (! checkbutton1->active)
+   if (! gtk_toggle_button_get_active(checkbutton1))
       use_b_factor_limit_test = 0; 
-   if (! checkbutton2->active)
+   if (! gtk_toggle_button_get_active(checkbutton2))
       use_map_sigma_limit_test = 0; 
-   if (! checkbutton3->active)
+   if (! gtk_toggle_button_get_active(checkbutton3))
       use_min_dist_test = 0; 
-   if (! checkbutton4->active)
+   if (! gtk_toggle_button_get_active(checkbutton4))
       use_max_dist_test = 0;
    if (checkbutton5) 
-      if (! checkbutton5->active)
+      if (! gtk_toggle_button_get_active(checkbutton5))
 	 use_difference_map_test = 0;
       
    GtkWidget *zero_occ_checkbutton = lookup_widget(dialog, "check_waters_zero_occ_checkbutton");
@@ -282,14 +282,14 @@ void do_check_waters_by_widget(GtkWidget *dialog) {
 
    short int zero_occ_flag = 0;
    short int part_occ_dist_flag = 0;
-   if (GTK_TOGGLE_BUTTON(zero_occ_checkbutton)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(zero_occ_checkbutton)))
       zero_occ_flag = 1;
-   if (GTK_TOGGLE_BUTTON(partial_occ_close_contact_checkbutton)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(partial_occ_close_contact_checkbutton)))
       part_occ_dist_flag = 1;
    
    //
    short int logical_operator_and_or_flag = 0; // logical AND
-   if (GTK_TOGGLE_BUTTON(checklogic_OR_radiobutton)->active) {
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checklogic_OR_radiobutton))) {
       logical_operator_and_or_flag = 1;
    }
 
@@ -399,7 +399,7 @@ GtkWidget *wrapped_checked_waters_baddies_dialog(int imol, float b_factor_lim, f
 
 	    // User data is used to keyboard up and down baddie water
 	    // list (in graphics_info_t::checked_waters_next_baddie).
-	    gtk_object_set_user_data(GTK_OBJECT(w), GINT_TO_POINTER(baddies.size()));
+       g_object_set_data(G_OBJECT(w), "user_data", GINT_TO_POINTER(baddies.size()));
 	 
 	    GtkWidget *button;
 	    GtkWidget *vbox = lookup_widget(w, "checked_waters_baddies_vbox");
@@ -430,19 +430,19 @@ GtkWidget *wrapped_checked_waters_baddies_dialog(int imol, float b_factor_lim, f
 		  button_label += " " ;
 		  
 		  button = gtk_radio_button_new_with_label(gr_group, button_label.c_str());
-		  gr_group = gtk_radio_button_group (GTK_RADIO_BUTTON (button));
+        gr_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (button));
 		  coot::atom_spec_t *atom_spec = new coot::atom_spec_t(baddies[i]);
 		  atom_spec->int_user_data = imol;
 
 		  std::string button_name = "checked_waters_baddie_button_";
 		  button_name += coot::util::int_to_string(i);
 
- 		  gtk_object_set_data_full(GTK_OBJECT(w),
+        g_object_set_data_full(G_OBJECT(w),
  					   button_name.c_str(), button,
 					   NULL);
 		  
-		  gtk_signal_connect(GTK_OBJECT(button), "clicked",
-				     GTK_SIGNAL_FUNC (graphics_info_t::on_generic_atom_spec_button_clicked),
+        g_signal_connect(G_OBJECT(button), "clicked",
+                 G_CALLBACK (graphics_info_t::on_generic_atom_spec_button_clicked),
 				     atom_spec);
 		  
 		  GtkWidget *frame = gtk_frame_new(NULL);
@@ -583,7 +583,7 @@ void free_geometry_graph(GtkWidget *dialog) {
       if (w) { 
 	 GtkObject *obj = GTK_OBJECT(w);
 #if defined(HAVE_GNOME_CANVAS) || defined(HAVE_GTK_CANVAS)
-	 coot::geometry_graphs *graphs = (coot::geometry_graphs *) gtk_object_get_user_data(obj);
+    coot::geometry_graphs *graphs = (coot::geometry_graphs *) g_object_get_data(G_OBJECT(obj), "user_data");
 	 if (!graphs) {
 	    std::cout << "ERROR:: NULL graphs in free_geometry_graph\n";
 	 } else {
@@ -610,7 +610,7 @@ void unset_geometry_graph(GtkWidget *dialog) {  /* set the graphics info
       GtkWidget *w = lookup_widget(dialog, "geometry_graph_canvas");
       if (w) { 
 	 GtkObject *obj = GTK_OBJECT(w);
-	 coot::geometry_graphs *graphs = (coot::geometry_graphs *) gtk_object_get_user_data(obj);
+    coot::geometry_graphs *graphs = (coot::geometry_graphs *) g_object_get_data(G_OBJECT(obj), "user_data");
 	 if (!graphs) {
 
 	    std::cout << "ERROR:: NULL graphs in unset_geometry_graph\n";
@@ -737,53 +737,53 @@ void add_on_validation_graph_mol_options(GtkWidget *menu, const char *type_in) {
    graphics_info_t g;
    std::string validation_type(type_in);
    std::string sub_menu_name;
-   GtkSignalFunc callback = 0; // depends on type
+   GCallback callback = 0; // depends on type
    short int found_validation_type = 0;
 
    if (validation_type == "b factor") {
-      callback = GTK_SIGNAL_FUNC(validation_graph_b_factor_mol_selector_activate);
+      callback = G_CALLBACK(validation_graph_b_factor_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "temp_factor_variance_submenu";
    }
 ////B B GRAPH
    if (validation_type == "calc b factor") {
-      callback = GTK_SIGNAL_FUNC(validation_graph_calc_b_factor_mol_selector_activate);
+      callback = G_CALLBACK(validation_graph_calc_b_factor_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "temp_factor_submenu";
    }
 ////E B GRAPH
    if (validation_type == "geometry") {
-      callback = GTK_SIGNAL_FUNC(validation_graph_geometry_mol_selector_activate);
+      callback = G_CALLBACK(validation_graph_geometry_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "geometry_submenu";
    }
    if (validation_type == "omega") {
-      callback = GTK_SIGNAL_FUNC(validation_graph_omega_mol_selector_activate);
+      callback = G_CALLBACK(validation_graph_omega_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "omega_submenu";
    }
    if (validation_type == "rotamer") {
-      callback = GTK_SIGNAL_FUNC(validation_graph_rotamer_mol_selector_activate);
+      callback = G_CALLBACK(validation_graph_rotamer_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "rotamer_submenu";
    }
    if (validation_type == "density-fit") {
-      callback = GTK_SIGNAL_FUNC(validation_graph_density_fit_mol_selector_activate);
+      callback = G_CALLBACK(validation_graph_density_fit_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "density_fit_submenu";
    }
    if (validation_type == "probe") {
-      callback = GTK_SIGNAL_FUNC(probe_mol_selector_activate);
+      callback = G_CALLBACK(probe_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "probe_submenu";
    }
    if (validation_type == "gln_and_asn_b_factor_outliers") {
-      callback = GTK_SIGNAL_FUNC(gln_and_asn_b_factor_outlier_mol_selector_activate);
+      callback = G_CALLBACK(gln_and_asn_b_factor_outlier_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "gln_and_asn_b_factor_outliers_submenu";
    }
    if (validation_type == "ncs-diffs") {
-      callback = GTK_SIGNAL_FUNC(validation_graph_ncs_diffs_mol_selector_activate);
+      callback = G_CALLBACK(validation_graph_ncs_diffs_mol_selector_activate);
       found_validation_type = 1;
       sub_menu_name = "ncs_diffs_submenu";
    }
@@ -813,11 +813,11 @@ void
 add_validation_mol_menu_item(int imol,
 			     const std::string &name,
 			     GtkWidget *menu,
-			     GtkSignalFunc callback) {
+              GCallback callback) {
 
    GtkWidget *menu_item = gtk_menu_item_new_with_label(name.c_str());
    gtk_container_add(GTK_CONTAINER(menu), menu_item);
-   gtk_signal_connect(GTK_OBJECT(menu_item), "activate",
+   g_signal_connect(G_OBJECT(menu_item), "activate",
 		      callback, GINT_TO_POINTER(imol));
    gtk_widget_show(menu_item);
 }
@@ -1007,11 +1007,11 @@ create_initial_validation_graph_submenu_generic(GtkWidget *widget,
 
    GtkWidget *b_factor_menu_item = lookup_widget(widget, menu_name.c_str());
    GtkWidget *b_factor_sub_menu = gtk_menu_new();
-   gtk_widget_ref(b_factor_sub_menu);
-   gtk_object_set_data_full(GTK_OBJECT(widget),
+   g_object_ref(b_factor_sub_menu);
+   g_object_set_data_full(G_OBJECT(widget),
 			    sub_menu_name.c_str(),
 			    b_factor_sub_menu,
-			    (GtkDestroyNotify) gtk_widget_unref);
+             (GDestroyNotify) g_object_unref);
 
    gtk_menu_item_set_submenu(GTK_MENU_ITEM(b_factor_menu_item),
 			     b_factor_sub_menu);
@@ -1168,7 +1168,7 @@ void difference_map_peaks_by_widget(GtkWidget *dialog) {
 	    map_str += graphics_info_t::int_to_string(imol);
 	    map_button = lookup_widget(dialog, map_str.c_str());
 	    if (map_button) {
-	       if (GTK_TOGGLE_BUTTON(map_button)->active) {
+          if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(map_button))) {
 		  imol_diff_map = imol;
 		  found_active_button_for_map = 1;
 	       }
@@ -1188,7 +1188,7 @@ void difference_map_peaks_by_widget(GtkWidget *dialog) {
 	 coords_str += graphics_info_t::int_to_string(imol);
 	 coords_button = lookup_widget(dialog, coords_str.c_str());
 	 if (coords_button) {
-	    if (GTK_TOGGLE_BUTTON(coords_button)->active) {
+       if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(coords_button))) {
 	       imol_coords = imol;
 	       found_active_button_for_map = 1;
 	    }
@@ -1223,10 +1223,10 @@ void difference_map_peaks_by_widget(GtkWidget *dialog) {
    GtkWidget *checkbutton_positive =
       lookup_widget(dialog, "generate_diff_map_peaks_positive_level_checkbutton");
 
-   if (GTK_TOGGLE_BUTTON(checkbutton_negative)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton_negative)))
       do_negative_level = 1;
 
-   if (GTK_TOGGLE_BUTTON(checkbutton_positive)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton_positive)))
       do_positive_level = 1;
 
    if (found_active_button_for_map) {
@@ -1473,10 +1473,10 @@ GtkWidget *wrapped_ramachandran_plot_differences_dialog() {
    GtkWidget *optionmenu2 =
       lookup_widget(w, "ramachandran_plot_differences_second_mol_optionmenu");
 
-   GtkSignalFunc signal_func1 =
-      GTK_SIGNAL_FUNC(ramachandran_plot_differences_mol_option_menu_activate_first);
-   GtkSignalFunc signal_func2 =
-      GTK_SIGNAL_FUNC(ramachandran_plot_differences_mol_option_menu_activate_second);
+   GCallback signal_func1 =
+      G_CALLBACK(ramachandran_plot_differences_mol_option_menu_activate_first);
+   GCallback signal_func2 =
+      G_CALLBACK(ramachandran_plot_differences_mol_option_menu_activate_second);
 
    int imol = -1;
    for (int i=0; i<graphics_info_t::n_molecules(); i++) {
@@ -1517,13 +1517,13 @@ int do_ramachandran_plot_differences_by_widget(GtkWidget *w) {
    GtkWidget *checkbutton2 = lookup_widget(GTK_WIDGET(w),
 					  "ramachandran_plot_differences_second_chain_checkbutton");
 
-   if (GTK_TOGGLE_BUTTON(checkbutton1)->active && GTK_TOGGLE_BUTTON(checkbutton2)->active) {
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton1)) && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton2))) {
       istat = 1;
       ramachandran_plot_differences_by_chain(imol1, imol2,
 					     first_chain.c_str(),
 					     second_chain.c_str());
    } else {
-      if (!GTK_TOGGLE_BUTTON(checkbutton1)->active && !GTK_TOGGLE_BUTTON(checkbutton2)->active) {
+      if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton1)) && !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton2))) {
 	 istat = 1;
 	 ramachandran_plot_differences(imol1, imol2);
       } else {
@@ -1560,7 +1560,7 @@ void ramachandran_plot_differences_mol_option_menu_activate_first(GtkWidget *ite
 						"ramachandran_plot_differences_first_chain_optionmenu");
    GtkWidget *checkbutton = lookup_widget(GTK_WIDGET(item),
 					  "ramachandran_plot_differences_first_chain_checkbutton");
-   if (GTK_TOGGLE_BUTTON(checkbutton)->active) {
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton))) {
       fill_ramachandran_plot_differences_option_menu_with_chain_options(chain_optionmenu, 1);
    }
 }
@@ -1571,7 +1571,7 @@ void ramachandran_plot_differences_mol_option_menu_activate_second(GtkWidget *it
 						"ramachandran_plot_differences_second_chain_optionmenu");
    GtkWidget *checkbutton = lookup_widget(GTK_WIDGET(item),
 					  "ramachandran_plot_differences_second_chain_checkbutton");
-   if (GTK_TOGGLE_BUTTON(checkbutton)->active) {
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton))) {
       fill_ramachandran_plot_differences_option_menu_with_chain_options(chain_optionmenu, 0);
    }
 }
@@ -1635,7 +1635,7 @@ ramachandran_plot_differences(int imol1, int imol2) {
       GtkWidget *w = coot::get_validation_graph(imol1, coot::RAMACHANDRAN_PLOT);
       if (w && (imol1 == imol2)) {
          coot::rama_plot *plot =
-               (coot::rama_plot *) gtk_object_get_user_data(GTK_OBJECT(w));
+               (coot::rama_plot *) g_object_get_data(G_OBJECT(w), "user_data");
          gtk_widget_show(w);
          plot->make_kleywegt_plot(1);
       } else {
@@ -1691,7 +1691,7 @@ void ramachandran_plot_differences_by_chain(int imol1, int imol2,
       GtkWidget *w = coot::get_validation_graph(imol1, coot::RAMACHANDRAN_PLOT);
       if (w) {
          coot::rama_plot *plot =
-               (coot::rama_plot *) gtk_object_get_user_data(GTK_OBJECT(w));
+               (coot::rama_plot *) g_object_get_data(G_OBJECT(w), "user_data");
          gtk_widget_show(w);
          plot->make_kleywegt_plot(1);
       } else {
@@ -1755,17 +1755,17 @@ void fill_ramachandran_plot_differences_option_menu_with_chain_options(GtkWidget
 		       "ramachandran_plot_differences_second_mol_optionmenu");
    }
 
-   GtkSignalFunc callback_func;
+   GCallback callback_func;
    int imol;
 
    if (is_first_mol_flag) { 
       imol = graphics_info_t::ramachandran_plot_differences_imol1;
       callback_func =
-	 GTK_SIGNAL_FUNC(ramachandran_plot_differences_chain_option_menu_activate_first);
+    G_CALLBACK(ramachandran_plot_differences_chain_option_menu_activate_first);
    } else {
       imol = graphics_info_t::ramachandran_plot_differences_imol2;
       callback_func =
-	 GTK_SIGNAL_FUNC(ramachandran_plot_differences_chain_option_menu_activate_second);
+    G_CALLBACK(ramachandran_plot_differences_chain_option_menu_activate_second);
    }
 
    if (imol >=0 && imol< graphics_info_t::n_molecules()) {
@@ -1845,7 +1845,7 @@ int get_mol_from_dynarama(GtkWidget *window) {
       if (canvas) { 
 	 coot::rama_plot * plot =
 	    (coot::rama_plot *)
-	    gtk_object_get_user_data(GTK_OBJECT(canvas));
+       g_object_get_data(G_OBJECT(canvas), "user_data");
 	 if (plot) 
 	    imol = plot->molecule_number();
 
@@ -1882,7 +1882,7 @@ void toggle_dynarama_outliers(GtkWidget *window, int state) {
    int imol = get_mol_from_dynarama(window);
    GtkWidget *canvas = lookup_widget(GTK_WIDGET(window), "canvas");
    if (canvas) { 
-      coot::rama_plot * plot = (coot::rama_plot *) gtk_object_get_user_data(GTK_OBJECT(canvas));
+      coot::rama_plot * plot = (coot::rama_plot *) g_object_get_data(G_OBJECT(canvas), "user_data");
       if (plot) {
 	 if (is_valid_model_molecule(imol)) {
 	    mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;

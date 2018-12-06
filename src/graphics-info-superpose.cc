@@ -50,7 +50,7 @@ graphics_info_t::superpose_optionmenu_activate_mol1(GtkWidget *item, GtkPosition
 					       "superpose_reference_chain_optionmenu");
    GtkWidget *checkbutton = lookup_widget(GTK_WIDGET(item),
 					  "superpose_reference_chain_checkbutton");
-   if (GTK_TOGGLE_BUTTON(checkbutton)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
       graphics_info_t::fill_superpose_option_menu_with_chain_options(chain_optionmenu, 1);
 } 
 
@@ -63,7 +63,7 @@ graphics_info_t::superpose_optionmenu_activate_mol2(GtkWidget *item, GtkPosition
 					       "superpose_moving_chain_optionmenu");
    GtkWidget *checkbutton = lookup_widget(GTK_WIDGET(item),
 					  "superpose_moving_chain_checkbutton");
-   if (GTK_TOGGLE_BUTTON(checkbutton)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
       graphics_info_t::fill_superpose_option_menu_with_chain_options(chain_optionmenu, 0);
 } 
  

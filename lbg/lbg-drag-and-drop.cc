@@ -42,9 +42,10 @@ on_lbg_drag_drop (GtkWidget *widget,
    // gboolean is_valid_drop_site = TRUE;
    gboolean retval = FALSE;
    // Request the data from the source.
-   if (context->targets) {
+   if (gdk_drag_context_list_targets(context)) {
       GdkAtom target_type =
-	 GDK_POINTER_TO_ATOM(g_list_nth_data(context->targets, TARGET_STRING));
+    GDK_POINTER_TO_ATOM(g_list_nth_data(gdk_drag_context_list_targets(context),
+                                        TARGET_STRING));
       
       gtk_drag_get_data(widget, context,  
 			target_type,    /* the target type we want (a string) */
@@ -70,12 +71,12 @@ on_lbg_drag_data_received (GtkWidget *widget,
    gboolean delete_selection_data = FALSE;
    
    GtkWidget *canvas = GTK_WIDGET(user_data);
-   lbg_info_t *l = static_cast<lbg_info_t *> (gtk_object_get_user_data(GTK_OBJECT(widget)));
+   lbg_info_t *l = static_cast<lbg_info_t *> (g_object_get_data(G_OBJECT(widget), "user_data"));
    if (l) {
       // Deal with what the source sent over
-      if((selection_data != NULL) && (selection_data-> length >= 0)) {
+      if ((selection_data != NULL) && (gtk_selection_data_get_length(selection_data) >= 0)) {
 	 if (target_type == TARGET_STRING) {
-	    std::string uri_string = (gchar*)selection_data-> data;
+       std::string uri_string = (gchar*)gtk_selection_data_get_data(selection_data);
 	    dnd_success = l->handle_lbg_drag_and_drop_string(uri_string);
 	 } 
       }

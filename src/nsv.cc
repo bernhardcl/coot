@@ -73,9 +73,9 @@ exptl::nsv::nsv(mmdb::Manager *mol,
    points_max = canvas_pixel_limit;
 
    GtkWidget *top_lev = gtk_dialog_new();
-   gtk_object_set_data(GTK_OBJECT(top_lev), "nsv_dialog", top_lev);
+   g_object_set_data(G_OBJECT(top_lev), "nsv_dialog", top_lev);
    gtk_window_set_title(GTK_WINDOW(top_lev), "Coot Sequence View");
-   GtkWidget *vbox = GTK_DIALOG(top_lev)->vbox;
+   GtkWidget *vbox = gtk_dialog_get_content_area(GTK_DIALOG(top_lev));
 #ifdef HAVE_GOOCANVAS
    canvas = goo_canvas_new();
    g_object_set(G_OBJECT(canvas), "has-tooltip", TRUE, NULL); // needed for tooltips
@@ -98,17 +98,17 @@ exptl::nsv::nsv(mmdb::Manager *mol,
 					 GTK_WIDGET(canvas));
    
    GtkWidget *close_button = gtk_button_new_with_label("  Close   ");
-   GtkWidget *aa = GTK_DIALOG(top_lev)->action_area;
+   GtkWidget *aa = gtk_dialog_get_action_area(GTK_DIALOG(top_lev));
    gtk_box_pack_start(GTK_BOX(aa), close_button, FALSE, FALSE, 2);
 
-   gtk_signal_connect(GTK_OBJECT(close_button), "clicked",
-		      GTK_SIGNAL_FUNC(on_nsv_close_button_clicked), NULL);
+   g_signal_connect(G_OBJECT(close_button), "clicked",
+            G_CALLBACK(on_nsv_close_button_clicked), NULL);
 
-   gtk_signal_connect(GTK_OBJECT(top_lev), "destroy",
-		      GTK_SIGNAL_FUNC(on_nsv_dialog_destroy), top_lev);
+   g_signal_connect(G_OBJECT(top_lev), "destroy",
+            G_CALLBACK(on_nsv_dialog_destroy), top_lev);
 
    // used on destroy
-   gtk_object_set_user_data(GTK_OBJECT(top_lev),
+   g_object_set_data(G_OBJECT(top_lev), "user_data",
 			    GINT_TO_POINTER(molecule_number));
 
    g_object_set_data(G_OBJECT(canvas), "nsv", (gpointer) this); // used to regenerate.
@@ -144,7 +144,7 @@ exptl::nsv::on_nsv_dialog_destroy (GtkObject *obj,
 				   gpointer user_data) {
 
    GtkWidget *dialog = (GtkWidget *) user_data;
-   int imol = GPOINTER_TO_INT(gtk_object_get_user_data(GTK_OBJECT(dialog)));
+   int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(dialog), "user_data"));
 
    std::cout << "DEBUG:: on_nsv_dialog_destroy() called for molecule " << imol << std::endl;
    set_sequence_view_is_displayed(0, imol);
@@ -230,7 +230,7 @@ exptl::nsv::setup_canvas(mmdb::Manager *mol) {
 	 int canvas_y_size = 65 + n_limited_chains * 20; 
 
 	 // the size of the widget on the screens
-	 gtk_widget_set_usize(GTK_WIDGET(scrolled_window), 700, 20*(3+n_limited_chains));
+    gtk_widget_set_size_request(GTK_WIDGET(scrolled_window), 700, 20*(3+n_limited_chains));
 	 // the size of the canvas (e.g. long chain, we see only part
 	 // of it at one time).
 
@@ -240,7 +240,7 @@ exptl::nsv::setup_canvas(mmdb::Manager *mol) {
 		      << canvas_y_size << std::endl;
 	    std::cout << "DEBUG:: n_limited_chains: " << n_limited_chains << std::endl;
 	 }
-	 gtk_widget_set_usize(GTK_WIDGET(canvas), canvas_x_size, canvas_y_size);
+    gtk_widget_set_size_request(GTK_WIDGET(canvas), canvas_x_size, canvas_y_size);
 
 	 double left_limit = 0.0;
 	 double upper_limit = 0.0;

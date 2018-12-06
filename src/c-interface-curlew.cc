@@ -210,8 +210,8 @@ GtkWidget *make_and_add_curlew_extension_widget(GtkWidget *dialog,
    g_object_set_data_full(G_OBJECT(dialog),
 			  item_hbox_name.c_str(),
 			  item_hbox,
-			  (GtkDestroyNotify) gtk_widget_unref);
-   gtk_widget_ref(item_hbox);
+                          (GDestroyNotify) g_object_unref);
+   g_object_ref(item_hbox);
 
    // --------------- Icon -----------------
    GtkWidget *icon_widget = 0;
@@ -238,7 +238,7 @@ GtkWidget *make_and_add_curlew_extension_widget(GtkWidget *dialog,
       std::cout << "No icon in item " << std::endl;
       icon_widget = gtk_label_new("  ----");
    }
-   gtk_widget_set_usize(icon_widget, 50, -1);
+   gtk_widget_set_size_request(icon_widget, 50, -1);
 
    // --------------- Description -----------------
    std::string rr = "<b>";
@@ -248,7 +248,7 @@ GtkWidget *make_and_add_curlew_extension_widget(GtkWidget *dialog,
    GtkWidget *description_label = gtk_label_new(rr.c_str());
    gtk_label_set_use_markup(GTK_LABEL(description_label), TRUE);
    gtk_misc_set_alignment (GTK_MISC(description_label), 0, 0.5);
-   gtk_widget_set_usize(description_label, 320, -1);
+   gtk_widget_set_size_request(description_label, 320, -1);
    // --------------- Version -----------------
    GtkWidget *version_label = gtk_label_new(version.c_str());
    // --------------- Date -----------------
@@ -277,7 +277,7 @@ GtkWidget *make_and_add_curlew_extension_widget(GtkWidget *dialog,
    g_object_set_data_full(G_OBJECT(dialog),
 			  cb_name.c_str(),
 			  selected_check_button,
-			  (GtkDestroyNotify) gtk_widget_unref);
+                          (GDestroyNotify) g_object_unref);
 
    char *file_name_copy = new char[file_name.size() +1];
    strcpy(file_name_copy, file_name.c_str());
@@ -291,7 +291,7 @@ GtkWidget *make_and_add_curlew_extension_widget(GtkWidget *dialog,
 			(gpointer) checksum_copy);
    }
 
-   gtk_widget_ref(selected_check_button); // ref after set_data?
+   g_object_ref(selected_check_button); // ref after set_data?
 
    return item_hbox;
 }

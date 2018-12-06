@@ -240,7 +240,7 @@ coot::setup_refmac_parameters_from_file(GtkWidget *window) {
   GtkWidget *option_menu;
   std::string filename;
   GtkWidget *file_mtz_radiobutton = lookup_widget(window, "run_refmac_mtz_file_radiobutton");
-  if (GTK_TOGGLE_BUTTON(file_mtz_radiobutton)->active) {
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(file_mtz_radiobutton))) {
     // twin/mtz filename given
     GtkWidget *file_mtz_label = lookup_widget(window, "run_refmac_mtz_file_label");
     // in twin we use the label as a dummy widget
@@ -739,8 +739,8 @@ f_button_select(GtkWidget *item, GtkPositionType pos) {
 }
 
 
-GtkWidget *make_menu_item( gchar         *name,
-                           GtkSignalFunc  callback,
+GtkWidget *make_menu_item(gchar         *name,
+                           GCallback callback,
                            gpointer       data )
 {
     GtkWidget *item;

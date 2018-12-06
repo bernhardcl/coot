@@ -1527,8 +1527,10 @@ gl_extras(GtkWidget* vbox1, short int try_stereo_flag) {
  	if (context_count > 1) { // more than the first context
 	   // std::cout << " =============== " << context_count << std::endl;
 	  if (graphics_info_t::glarea) {
- 	   gl_context_x_size = graphics_info_t::glarea->allocation.width;
- 	   gl_context_y_size = graphics_info_t::glarea->allocation.height;
+        GtkAllocation alloc;
+        gtk_widget_get_allocation(graphics_info_t::glarea, &alloc);
+      gl_context_x_size = alloc.width;
+      gl_context_y_size = alloc.height;
 	  }
 	   // std::cout << " ===============" << gl_context_x_size
 	   // << " "<< gl_context_y_size << std::endl;
@@ -1579,26 +1581,26 @@ gl_extras(GtkWidget* vbox1, short int try_stereo_flag) {
 
 	/* Connect signal handlers */
 	/* Redraw image when exposed. */
-	gtk_signal_connect(GTK_OBJECT(drawing_area_tmp), "expose_event",
-			   GTK_SIGNAL_FUNC(expose), NULL);
+   g_signal_connect(G_OBJECT(drawing_area_tmp), "expose_event",
+            G_CALLBACK(expose), NULL);
 	/* When window is resized viewport needs to be resized also. */
-	gtk_signal_connect(GTK_OBJECT(drawing_area_tmp), "configure_event",
-			   GTK_SIGNAL_FUNC(reshape), NULL);
+   g_signal_connect(G_OBJECT(drawing_area_tmp), "configure_event",
+            G_CALLBACK(reshape), NULL);
 	/* Do initialization when widget has been realized. */
-	gtk_signal_connect(GTK_OBJECT(drawing_area_tmp), "realize",
-			   GTK_SIGNAL_FUNC(init), NULL);
+   g_signal_connect(G_OBJECT(drawing_area_tmp), "realize",
+            G_CALLBACK(init), NULL);
 
 	/* pressed a button? */
-	gtk_signal_connect (GTK_OBJECT(drawing_area_tmp), "button_press_event",
-			    GTK_SIGNAL_FUNC(glarea_button_press), NULL);
-	gtk_signal_connect (GTK_OBJECT(drawing_area_tmp), "button_release_event",
-			    GTK_SIGNAL_FUNC(glarea_button_release), NULL);
+   g_signal_connect (G_OBJECT(drawing_area_tmp), "button_press_event",
+             G_CALLBACK(glarea_button_press), NULL);
+   g_signal_connect (G_OBJECT(drawing_area_tmp), "button_release_event",
+             G_CALLBACK(glarea_button_release), NULL);
 	/* mouse in motion! */
-	gtk_signal_connect (GTK_OBJECT(drawing_area_tmp), "motion_notify_event",
-			    GTK_SIGNAL_FUNC(glarea_motion_notify), NULL);
+   g_signal_connect (G_OBJECT(drawing_area_tmp), "motion_notify_event",
+             G_CALLBACK(glarea_motion_notify), NULL);
 	// mouse wheel scrolled:
-	gtk_signal_connect (GTK_OBJECT(drawing_area_tmp), "scroll_event",
-			    GTK_SIGNAL_FUNC(glarea_scroll_event), NULL);
+   g_signal_connect (G_OBJECT(drawing_area_tmp), "scroll_event",
+             G_CALLBACK(glarea_scroll_event), NULL);
 
 	/* put glarea into vbox */
 	GtkWidget *main_window_graphics_hbox =
@@ -1607,10 +1609,10 @@ gl_extras(GtkWidget* vbox1, short int try_stereo_flag) {
 			  GTK_WIDGET(drawing_area_tmp));
   
 	/* Capture keypress events */
-	gtk_signal_connect(GTK_OBJECT(drawing_area_tmp), "key_press_event",
-			   GTK_SIGNAL_FUNC(key_press_event), NULL);
-	gtk_signal_connect(GTK_OBJECT(drawing_area_tmp), "key_release_event",
-			   GTK_SIGNAL_FUNC(key_release_event), NULL);
+   g_signal_connect(G_OBJECT(drawing_area_tmp), "key_press_event",
+            G_CALLBACK(key_press_event), NULL);
+   g_signal_connect(G_OBJECT(drawing_area_tmp), "key_release_event",
+            G_CALLBACK(key_release_event), NULL);
 
 	// setup drag and drop
 	int n_dnd_targets = 4;
@@ -1644,7 +1646,7 @@ gl_extras(GtkWidget* vbox1, short int try_stereo_flag) {
 			  G_CALLBACK(on_drag_data_received), NULL);
 
 	/* set focus to glarea widget - we need this to get key presses. */
-	GTK_WIDGET_SET_FLAGS(drawing_area_tmp, GTK_CAN_FOCUS);
+   gtk_widget_set_can_focus(drawing_area_tmp, TRUE);
 	gtk_widget_grab_focus(GTK_WIDGET(drawing_area_tmp));
 
      } else {
@@ -1693,7 +1695,9 @@ init(GtkWidget *widget)
 gint
 init_gl_widget(GtkWidget *widget) { 
 
-   glViewport(0,0, widget->allocation.width, widget->allocation.height);
+   GtkAllocation alloc;
+   gtk_widget_get_allocation(widget, &alloc);
+   glViewport(0,0, alloc.width, alloc.height);
    glMatrixMode(GL_PROJECTION);
    glLoadIdentity();
    glOrtho(-10,30, 10,-20, -20,20); // change clipping
@@ -1806,12 +1810,15 @@ setup_lighting(short int do_lighting_flag) {
 gint reshape(GtkWidget *widget, GdkEventConfigure *event) {
 
    if (graphics_info_t::make_current_gl_context(widget)) {
-      glViewport(0,0, widget->allocation.width, widget->allocation.height);
+      GtkAllocation alloc;
+      gtk_widget_get_allocation(widget, &alloc);
+      glViewport(0,0, alloc.width, alloc.height);
       graphics_info_t g;
       // BL says:: shouldnt widget be window1?!
       GtkWidget *win = lookup_widget(widget, "window1");
-      g.graphics_x_size = win->allocation.width;
-      g.graphics_y_size = win->allocation.height;
+      gtk_widget_get_allocation(win, &alloc);
+      g.graphics_x_size = alloc.width;
+      g.graphics_y_size = alloc.height;
    } 
    graphics_info_t::graphics_draw(); // Added 20080408, needed?
    return TRUE;
@@ -2051,8 +2058,10 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
    /* OpenGL functions can be called only if make_current returns true */
    if (graphics_info_t::make_current_gl_context(widget)) {
 
-      float aspect_ratio = float (widget->allocation.width)/
-	 float (widget->allocation.height);
+      GtkAllocation alloc;
+      gtk_widget_get_allocation(widget, &alloc);
+      float aspect_ratio = float (alloc.width)/
+    float (alloc.height);
 
       if (graphics_info_t::display_mode == coot::DTI_SIDE_BY_SIDE_STEREO) {
 	 aspect_ratio *= 2.0; // DTI side by side stereo mode
@@ -2568,8 +2577,10 @@ draw_crosshairs_maybe() {
       // screen x axis
       // 
       // adjust for the width being strange
-      float adjustment = float(graphics_info_t::glarea->allocation.height) /
-          	         float(graphics_info_t::glarea->allocation.width);
+      GtkAllocation alloc;
+      gtk_widget_get_allocation(graphics_info_t::glarea, &alloc);
+      float adjustment = float(alloc.height) /
+                     float(alloc.width);
       s *= adjustment;
       
       val = 3.8;
@@ -2842,11 +2853,13 @@ gint glarea_motion_notify (GtkWidget *widget, GdkEventMotion *event) {
 	    // (0,0). 
 	    // 
 	    // modify spin_quat:
+       GtkAllocation alloc;
+       gtk_widget_get_allocation(widget, &alloc);
 	    trackball(spin_quat,
-		      (2.0*info.GetMouseBeginX() - widget->allocation.width) /widget->allocation.width,
-		      (widget->allocation.height - 2.0*info.GetMouseBeginY())/widget->allocation.height,
-		      (2.0*info.mouse_current_x - widget->allocation.width)  /widget->allocation.width,
-		      (widget->allocation.height -  2.0*info.mouse_current_y)/widget->allocation.height,
+            (2.0*info.GetMouseBeginX() - alloc.width) /alloc.width,
+            (alloc.height - 2.0*info.GetMouseBeginY())/alloc.height,
+            (2.0*info.mouse_current_x - alloc.width)  /alloc.width,
+            (alloc.height -  2.0*info.mouse_current_y)/alloc.height,
 		      info.get_trackball_size() );
 
 	    // 	 cout << (2.0*info.GetMouseBeginX() - widget->allocation.width) /widget->allocation.width
@@ -3814,7 +3827,7 @@ gint key_release_event(GtkWidget *widget, GdkEventKey *event)
 	 // std::cout << "here in key_release_event for -" << std::endl;
 	 // istate = graphics_info_t::molecules[s].change_contour(-1); // no longer needed
 	 graphics_info_t::molecules[s].pending_contour_level_change_count--;
-	 int contour_idle_token = gtk_idle_add((GtkFunction) idle_contour_function, g.glarea);
+    int contour_idle_token = g_idle_add((GSourceFunc) idle_contour_function, g.glarea);
 	 g.set_density_level_string(s, g.molecules[s].contour_level);
 	 g.display_density_level_this_image = 1;
 
@@ -3832,7 +3845,7 @@ gint key_release_event(GtkWidget *widget, GdkEventKey *event)
       if (s >= 0) {
 
 	 graphics_info_t::molecules[s].pending_contour_level_change_count++;
-	 int contour_idle_token = gtk_idle_add((GtkFunction) idle_contour_function, g.glarea);
+    int contour_idle_token = g_idle_add((GSourceFunc) idle_contour_function, g.glarea);
 
 	 // graphics_info_t::molecules[s].change_contour(1); // positive change
 	 // graphics_info_t::molecules[s].update_map();
@@ -3966,7 +3979,7 @@ gint key_release_event(GtkWidget *widget, GdkEventKey *event)
    }
    
    /* prevent the default handler from being run */
-   gtk_signal_emit_stop_by_name(GTK_OBJECT(widget),"key_release_event");
+   g_signal_stop_emission_by_name(G_OBJECT(widget),"key_release_event");
    return TRUE;
 
   return TRUE;
@@ -4523,7 +4536,7 @@ void handle_scroll_density_level_event(int scroll_up_down_flag) {
 	 if (s>=0) {
 	    // short int istate = info.molecules[s].change_contour(1);
 	    info.molecules[s].pending_contour_level_change_count++;
-	    int contour_idle_token = gtk_idle_add((GtkFunction) idle_contour_function, info.glarea);
+       int contour_idle_token = g_idle_add((GSourceFunc) idle_contour_function, info.glarea);
 	    info.set_density_level_string(s, info.molecules[s].contour_level);
 	    info.display_density_level_this_image = 1;
 	 } else {
@@ -4538,7 +4551,7 @@ void handle_scroll_density_level_event(int scroll_up_down_flag) {
 	 if (s>=0) {
 	    // short int istate = info.molecules[s].change_contour(-1);
 	    info.molecules[s].pending_contour_level_change_count--;
-	    int contour_idle_token = gtk_idle_add((GtkFunction) idle_contour_function, info.glarea);
+       int contour_idle_token = g_idle_add((GSourceFunc) idle_contour_function, info.glarea);
 	    info.set_density_level_string(s, info.molecules[s].contour_level);
 	    info.display_density_level_this_image = 1;
 	 } else {
