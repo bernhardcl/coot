@@ -934,7 +934,7 @@ int       graphics_info_t::imol_rigid_body_refine = 0;
 
 // terminal residue define
 short int graphics_info_t::in_terminal_residue_define = 0;
-short int graphics_info_t::add_terminal_residue_immediate_addition_flag = 0;
+short int graphics_info_t::add_terminal_residue_immediate_addition_flag = 1;
 short int graphics_info_t::add_terminal_residue_do_post_refine = 0;
 float graphics_info_t::terminal_residue_addition_direct_phi = -135.0;
 float graphics_info_t::terminal_residue_addition_direct_psi =  135.0;
@@ -1231,6 +1231,7 @@ float graphics_info_t::bond_thickness_intermediate_atoms = 5; // thick white ato
 // merge molecules
 int graphics_info_t::merge_molecules_master_molecule = -1;
 std::vector<int> *graphics_info_t::merge_molecules_merging_molecules;
+coot::residue_spec_t graphics_info_t::merge_molecules_ligand_spec;
 
 // change chain ids:
 int graphics_info_t::change_chain_id_molecule = -1;
@@ -3189,6 +3190,13 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
 	 }
 	 graphics_info_t::accept_reject_dialog = 0;
       }
+
+      if (graphics_info_t::rotamer_dialog) {
+	 accept_regularizement();
+	 gtk_widget_destroy(graphics_info_t::rotamer_dialog);
+	 set_graphics_rotamer_dialog(NULL);
+      }
+
       handled = TRUE;
       break;
 
