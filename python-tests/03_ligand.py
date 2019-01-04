@@ -165,36 +165,36 @@ class LigandTestFunctions(unittest.TestCase):
         self.failUnless(d2 < 0.001, "fail to move atom back to start d2")
 
 
-    def test08_0(self):
-        """Test dipole"""
+    # def test08_0(self):
+    #     """Test dipole"""
 
-        if self.skip_test(True, "Skipping dipole test. disabled for now!"):
-            return
+    #     if self.skip_test(True, "Skipping dipole test. disabled for now!"):
+    #         return
 
-        imol = unittest_pdb("dipole-residues.pdb")
+    #     imol = unittest_pdb("dipole-residues.pdb")
 
-        self.failUnless(valid_model_molecule_qm(imol), "dipole-residues.pdb not found")
+    #     self.failUnless(valid_model_molecule_qm(imol), "dipole-residues.pdb not found")
 
-        residue_specs = [["A", 1, ""],
-                         ["A", 2, ""],
-                         ["A", 3, ""]]
-        dipole = add_dipole_for_residues(imol, residue_specs)
+    #     residue_specs = [["A", 1, ""],
+    #                      ["A", 2, ""],
+    #                      ["A", 3, ""]]
+    #     dipole = add_dipole_for_residues(imol, residue_specs)
 
-        self.failIf(not dipole, "bad dipole %s" %dipole)
+    #     self.failIf(not dipole, "bad dipole %s" %dipole)
 
-        d = dipole[0]
-        dip = dipole[1]
+    #     d = dipole[0]
+    #     dip = dipole[1]
 
-        dip_x = dip[0]
-        dip_y = dip[1]
-        dip_z = dip[2]
+    #     dip_x = dip[0]
+    #     dip_y = dip[1]
+    #     dip_z = dip[2]
 
-        print "info:: dipole components", dip
+    #     print "info:: dipole components", dip
 
-        self.failUnlessAlmostEqual(dip_y, 0.0, 2, "bad dipole y component %s" %dip_y)
-        self.failUnlessAlmostEqual(dip_z, 0.0, 2, "bad dipole z component %s" %dip_z)
+    #     self.failUnlessAlmostEqual(dip_y, 0.0, 2, "bad dipole y component %s" %dip_y)
+    #     self.failUnlessAlmostEqual(dip_z, 0.0, 2, "bad dipole z component %s" %dip_z)
 
-        self.failUnless(dip_x < 0 and dip_x > -20)
+    #     self.failUnless(dip_x < 0 and dip_x > -20)
 
     def test09_0(self):
         """Reading new dictionary restraints replaces"""
