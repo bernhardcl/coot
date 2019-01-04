@@ -57,7 +57,7 @@ class LigandTestFunctions(unittest.TestCase):
                 v = get_ccp4_version()
                 # will always be string
                 return v < "6.2"
-
+            
         r_1 = monomer_restraints("LIG")
         o = old_ccp4_restraints_qm()
         unittest_pdb("test-LIG.pdb")
@@ -196,7 +196,6 @@ class LigandTestFunctions(unittest.TestCase):
 
         self.failUnless(dip_x < 0 and dip_x > -20)
 
-
     def test09_0(self):
         """Reading new dictionary restraints replaces"""
 
@@ -215,7 +214,7 @@ class LigandTestFunctions(unittest.TestCase):
         self.failUnless(len(t) < 26, "torsions: %s %s" %(len(t), t))
         # 22 in new dictionary, it seems
 
-
+        
     def test10_0(self):
         """Pyrogen Runs OK?"""
 
@@ -224,10 +223,10 @@ class LigandTestFunctions(unittest.TestCase):
             return
 
         # bad things may well happen if we run the wrong version of pyrogen.
-        # so force pyrogen to be the one that is installed alongside this version of coot
+        # so force pyrogen to be the one that is installed alongside this version of coot 
         # that we are running. We do that by looking and manipulating sys.argv[0]
         import os, sys
-
+        
         coot_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
         prefix_dir = os.path.normpath(os.path.join(coot_dir, ".."))
         pyrogen_exe = "pyrogen"
@@ -272,7 +271,7 @@ class LigandTestFunctions(unittest.TestCase):
         # untested - no mogul
 
         # make sure that you are running the correct pyrogen
-
+        
         if self.skip_test(not enhanced_ligand_coot_p(),
                           "No ligand enhaced version, skipping Pyrogen test"):
             return
@@ -280,7 +279,7 @@ class LigandTestFunctions(unittest.TestCase):
         import os
         if os.path.isfile("UVP-pyrogen.cif"):
             os.remove("UVP-pyrogen.cif")
-
+        
         popen_status = popen_command("pyrogen",
                                      ["-nM", "-r", "UVP",
                                       "CO[C@@H]1[C@H](O)[C@H](O[C@H]1[n+]1ccc(O)nc1O)\\C=C\\P(O)(O)=O"],
@@ -297,5 +296,9 @@ class LigandTestFunctions(unittest.TestCase):
             atom_name = residue_atom2atom_name(atom)
             self.failIf("\"" in atom_name,
                         "Atom name quote fail %s" %atom_name)
+    
+        
+        
 
+                         
 
