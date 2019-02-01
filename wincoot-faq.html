@@ -27,8 +27,8 @@
     following and please don't tell me about these ones again.<br>
     <ul id="mozToc">
       <!--mozToc h2 1 h3 2 h4 3 h5 4 h6 5 h6 6-->
-      <li><a href="#mozTocId444230">(Win)Coot reference, citation and
-          furtherinformation </a></li>
+      <li><a href="#mozTocId444230">(Win)Coot
+          reference, citation and furtherinformation </a></li>
       <li><a href="#mozTocId876747">Installation and Windows problems</a>
         <ul>
           <li><a href="#mozTocId169986">Which Windows version does
@@ -49,7 +49,7 @@
               <li><a href="#mozTocId514994">WinCoot hangs opening and/or
                   saving files </a></li>
               <li><a href="#mozTocId358284">WinCoot "automatically"
-                  loads pdb files repeatedly</a></li>
+                  loads pdb files repeatedly </a></li>
               <li><a href="#mozTocId514994">Problems with virtual
                   desktops (e.g. Dexpot, VirtuaWin) </a></li>
               <li><a href="#mozTocId260018">Ramachandran plot (or
@@ -75,8 +75,10 @@
       <li><a href="#mozTocId296675"> Using WinCoot </a>
         <ul>
           <li><a href="#mozTocId515894">What about WinCoot and CCP4?</a></li>
+          <li><a href="#mozTocId249512">How do I change the font size of
+              the labels?</a></li>
           <li><a href="#mozTocId56914">What are these 'Generic objects'?</a></li>
-          <li><a href="#mozTocId860510">How do I get molprobity (probe
+          <li><a href="#mozTocId860510">How do I get MolProbity (probe
               and reduce) working in WinCoot?</a></li>
           <li><a href="#mozTocId721941">How do I get raster3d and/or
               povray working with WinCoot?</a></li>
@@ -104,6 +106,7 @@ reference,
 
 
 
+
       citation and furtherinformation<br>
     </h2>
     <p>The official reference for WinCoot is published now:</p>
@@ -123,6 +126,7 @@ reference,
     <pre>@Article{emsley10:coot,<br> author = {Emsley P, Lohkamp B, Scott W, Cowtan K},<br> title = {Features and Development of Coot},<br> journal = {Acta Crystallographica Section D - Biological Crystallography},<br> year = 2010,<br> volume = 66,<br> pages = 486-501<br>}<br></pre>
     <p>The Coot paper is published in the <a
         href="http://journals.iucr.org/d/issues/2010/04/00/issconts.html">proceedings
+
 
         of the 2009 CCP4 Study Weekend</a>.<br>
     </p>
@@ -153,8 +157,8 @@ reference,
     solutions to overcome this problem:<br>
     <ol>
       <li>disable the desktop compositing&nbsp;of coot-real.exe (e.g. in
-        C:\WinCoot\bin) or wincoot.bat (e.g. in C:\WinCoot; prior to 0.8.8 runwincoot.bat).
-        [Right-Click
+        C:\WinCoot\bin) or wincoot.bat (e.g. in C:\WinCoot; prior to
+        0.8.8 runwincoot.bat). [Right-Click
         coot-real(.exe)-&gt;Properties-&gt;Compatibility-&gt;Disable
         desktop composition]</li>
       <li>set the theme to Windows Classic. [Control
@@ -303,7 +307,8 @@ href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=
       <li>download the language setting <a
 href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/extras/language.zip">files</a>.</li>
       <li>unzip the files in <i>yourWinCootDirectory</i></li>
-      <li>Edit your wincoot.bat (runwincoot.bat prior to 0.8.8) file the following way:</li>
+      <li>Edit your wincoot.bat (runwincoot.bat prior to 0.8.8) file the
+        following way:</li>
       <ul>
         <li>place the following after set COOT_PREFIX=C:\WinCoot</li>
       </ul>
@@ -353,6 +358,7 @@ href="http://www.ysbl.york.ac.uk/%7Elohkamp/software/binaries/nightlies/pre-rele
       display window</h3>
     Turning down your graphics card acceleration should solve this. To
     do so go to <span style="font-style: italic;">Start-&gt;Settings-&gt;Control
+
 
 
 
@@ -421,13 +427,32 @@ want/need the text use Python...-->
     <h3><a class="mozTocH3" name="mozTocId515894"></a>What about WinCoot
       and CCP4?</h3>
     Coot is part of the CCP4 Windows package (6.0.x) now. Previously it
-    was CCP4's own version and didn't seem to be fully functional (wasnt
-    done by me). Now CCP4 is distributing my WinCoot, so all is fine.<br>
+    was CCP4's own version and didn't seem to be fully functional (it
+    wasnt done by me). Now CCP4 is distributing my WinCoot, so all is
+    fine.<br>
     However, I don't know when updates for the CCP4 packages will be
     made available and how it interplays with CCP4i2!<br>
+    <br>
+    <h3><a name="mozTocId249512" class="mozTocH3"></a>How do I change
+      the font size of the labels?</h3>
+    You can edit your <i>cootrc</i> file (found in C:\<i>YourWinCootDirectory</i>\share\coot).<br>
+    Please replace the line (under style "defaultfont"; line ~26)<br>
+    <br>
+    &nbsp;&nbsp; font =
+    "-adobe-helvetica-medium-r-normal--*-75-*-*-*-*-*-*,*"<br>
+    <br>
+    with (e.g.)<br>
+    <br>
+    &nbsp;&nbsp; font_name = "tahoma 12"<br>
+    <br>
+    You can choose other (available) font names there too as well as
+    further increase (or decrease) the size of the label (default size
+    is 8).<br>
+    <br>
     <h3><a class="mozTocH3" name="mozTocId56914"></a>What are these
       'Generic objects'?</h3>
-    These are (dot) objects generated by the programs <span
+    Generic objects are other displayed objects than models or maps,
+    e.g. probe dots.These are (dot) objects generated by the programs <span
       style="font-style: italic;">probe</span> and <span
       style="font-style: italic;">reduce</span> from the <a
       href="http://kinemage.biochem.duke.edu">Richardson Lab</a>. The
@@ -443,8 +468,13 @@ want/need the text use Python...-->
     detailed instructions below.<br>
     <br>
     <h3><a class="mozTocH3" name="mozTocId860510"></a>How do I get
-      molprobity (probe and reduce) working in WinCoot?</h3>
-    Depending on your WinCoot version follow the following steps:<br>
+      MolProbity (<i>probe</i> and <i>reduce</i>) working in WinCoot?</h3>
+    Now you can get <i>probe</i> and <i>reduce</i> together with
+    WinCoot (select during the installation). Or you can use the
+    programs which come with CCP4 (if they are found in the PATH).<br>
+    <br>
+    For older WinCoot versions without <i>probe</i> and <i>reduce</i>,
+    depending on your WinCoot version follow these steps:<br>
     <br>
     WinCoot 0.5.1(-pre-1) and later:<br>
     <ol>
@@ -468,6 +498,7 @@ somewhere
 else
 in
 your
+
 
 
 
@@ -508,6 +539,7 @@ your
 
 
 
+
           <span style="font-style: italic;">PATH&nbsp;</span>; for an
           alternative see 5)</li>
         <li>Optionally: copy/move reduce_wwPDB_het_dict.txt to the same
@@ -527,6 +559,7 @@ that
 probe_command
 and
 reduce_command
+
 
 
 
@@ -602,6 +635,7 @@ reduce_command
 
 
 
+
         describe the location of your files (e.g. probe_command =
         "C:\Mydirectory\probe.exe") </li>
     </ol>
@@ -627,11 +661,13 @@ or
 
 
 
+
       put a line in your <span style="font-style: italic;">YourWinCootDirectory</span>\.coot.py
 which
 reads
 something
 like
+
 
 
 
@@ -666,10 +702,11 @@ like
     always loaded from the directory which WinCoot is started from you
     have to change this. You can do this by having different WinCoot
     shortcuts running in different directories or by starting WinCoot
-    (wincoot.bat; runwincoot.bat prior to 0.8.8) from the Command Prompt in the appropriate
-    directory. Alternatively make a copy the 0-coot-state.py files and
-    read it in as a python script file. Some additional informations can
-    be found on the <a href="wincoot-download.html">installation page</a><span
+    (wincoot.bat; runwincoot.bat prior to 0.8.8) from the Command Prompt
+    in the appropriate directory. Alternatively make a copy the
+    0-coot-state.py files and read it in as a python script file. Some
+    additional information can be found on the <a
+      href="wincoot-download.html">installation page</a><span
       style="text-decoration: underline;"></span>.<span
       style="font-weight: bold;"></span><br>
     <span style="font-weight: bold;"></span><span style="font-weight:
@@ -698,6 +735,7 @@ like
 
 
 
+
       WIKI page</a>.<br>
     <h3><a class="mozTocH3" name="mozTocId107913"></a>How do I use extra
       parameters in the Refmac interface?<br>
@@ -709,6 +747,7 @@ like
     which give refmac extra parameters is called <span
       style="font-style: italic;">refmac-extra-params.txt</span> for
     easy text editing (see an example <a href="refmac-extra-params.txt">here</a>).
+
 
 
 
