@@ -2007,8 +2007,11 @@ def residues_matching_criteria(imol, residue_test_func):
 # Return residue specs for all residues in imol (each spec is preceeded by True)
 #
 def all_residues(imol):
-    return residues_matching_criteria(imol,
-                                      lambda chain_id, resno, ins_code, serial: True)
+    r = all_residues_with_serial_numbers(imol)
+    try:
+        return [e[1:] for e in r]
+    except TypeError as e:
+        return r
 
 def all_residues_sans_water(imol):
     return residues_matching_criteria(imol,
