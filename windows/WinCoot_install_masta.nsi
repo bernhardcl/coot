@@ -255,6 +255,7 @@ Section "!WinCoot" SEC01
   File "${src_dir}\bin\findwaters-bin.exe"
   File "${src_dir}\bin\mini-rsr-bin.exe"
   File "${src_dir}\bin\dynarama-bin.exe"
+  File "${src_dir}\bin\pyrogen.bat"
   File "C:\MinGW\msys\1.0\home\bernhard\Projects\coot\windows\dynarama.bat"
   SetOverwrite ifnewer
   File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\coot-icon.ico"
@@ -692,6 +693,7 @@ Section Uninstall
   Delete "$INSTDIR\bin\dynarama-bin.exe"
   Delete "$INSTDIR\bin\dynarama.bat"
   Delete "$INSTDIR\bin\dynarama"
+  Delete "$INSTDIR\bin\pyrogen.bat"
   Delete "$INSTDIR\bin\rama_all.ico"
   Delete "$INSTDIR\bin\findligand"
   Delete "$INSTDIR\bin\findligand-bin.exe"
