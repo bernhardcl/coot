@@ -49,6 +49,15 @@ if [ -z "$make_installer_only" ] ; then
   make_installer_only=1
 fi
 
+# BL note:: this needs to become more flexible!!!
+build_enhanced_ligand=${4:-1}
+if [ -e /z/make_no_EL ] ; then
+  build_enhanced_ligand=0
+fi
+if [ -z "$build_enhanced_ligand" ] ; then
+  build_enhanced_ligand=1
+fi
+
 #
 BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/pre-release
 PRE_BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/pre-release
@@ -168,8 +177,8 @@ if [ $make_installer_only == 0 ] ; then
       echo BUILDING:: python WinCoot
 
       # do the build
-      echo Now build with:: run_tests=true build_coot_prerelease=${build_coot_prerelease} $build_it $extra_flag
-      run_tests=true build_coot_prerelease=${build_coot_prerelease} $build_it $extra_flag
+      echo Now build with:: run_tests=true build_coot_prerelease=${build_coot_prerelease} $build_enhanced_ligand $build_it $extra_flag
+      run_tests=true build_coot_prerelease=${build_coot_prerelease} $build_enhanced_ligand $build_it $extra_flag
       python_build_status=$?
       echo "python build (and test) status: " $python_build_status
       copy_logs python
