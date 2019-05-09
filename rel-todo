@@ -1,11 +1,21 @@
 
+   For Release 0.8.9.3
+
+   o crash: Use CCP4 Coot, Accept Baton Atom then JED flip.
+
+   o Add a residue to a residue that is has a TER. The TER is kept on the added-to-residue.
+     It should not be. [Christine Gee]
+
+   o Read in a PDB file that has a TER. Write it out as a mmCIF. It has a blank atom at the
+     end - it should not [Nigel Moriarty].
+
+----
+
    For Release 0.8.9.2
 
    o edit chi angles gives the wrong chi angles for chi2? update_residue_by_chi_change() uses
      tree.rotate_about() with 2 atoms as the arguments.  tree should preferentially
      choose N as the base atom, if it is an option. Also, CG1 rather than CG2.
-
-   o read in a phs file - can you scroll the map? No, but + and - work.
 
    o validation outliers gui in the release, in the gui.
 
@@ -16,6 +26,10 @@
    o Dock sequence?
 
 * Hmm...
+
+   o read in a phs file - can you scroll the map? No, but + and - work.
+
+* Done.
 
    o add --command in --help
 

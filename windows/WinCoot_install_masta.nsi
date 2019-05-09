@@ -124,6 +124,7 @@ Var STARTDIR
 !macro MyErrorHandlerMacro un
 
 Function ${un}ErrorHandlerFunction
+<<<<<<< HEAD
 
   Pop $0  ; Abort Flag
   Pop $1  ; Message txt
@@ -143,6 +144,27 @@ Function ${un}ErrorHandlerFunction
     Abort $1
   ${EndIf}
 
+=======
+
+  Pop $0  ; Abort Flag
+  Pop $1  ; Message txt
+  Pop $2  ; error code
+
+; convert strings to ints
+  IntOp $0 $0 + 0
+  IntOp $2 $2 + 0
+
+; the message box could be rather a question to abort!?
+  IfSilent +2 0
+  MessageBox MB_OK 'Error in Installation. Aborting!$\n$\r$\n$\r$1'
+
+  DetailPrint $1
+  SetErrorLevel $2
+  ${If} $0 == 1
+    Abort $1
+  ${EndIf}
+
+>>>>>>> dcfd63fe53b9c206d91dc11185025bef129de06a
 FunctionEnd
 !macroend
 
