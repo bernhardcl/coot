@@ -3,7 +3,7 @@ title WinCoot
 
 
 set COOT_PREFIX=yourWinCootdirectory
-set COOT_GUILE_PREFIX=yourWinCootdirectoryGUILE
+set COOT_GUILE_PREFIX=%COOT_PREFIX:\=/%
 
 set COOT_HOME=%COOT_PREFIX%
 set COOT_BACKUP_DIR=%COOT_PREFIX%\coot-backup
@@ -28,7 +28,7 @@ set GUILE_LOAD_PATH=%COOT_GUILE_PREFIX%/share/guile/1.8;%COOT_GUILE_PREFIX%/shar
 
 set SYMINFO=%COOT_SHARE%\coot\syminfo.lib
 
-set PATH=%COOT_PREFIX%\bin;%COOT_PREFIX%\python27;%PATH%
+set PATH=%COOT_PREFIX%\bin;%COOT_PREFIX%\lib;%COOT_PREFIX%\python27;%PATH%;%COOT_PREFIX%\bin\extras
 
 coot-bin.exe %*
 

@@ -4,8 +4,27 @@
 global my_favourite_3d_generator
 my_favourite_3d_generator=None
 
-
 cprodrg = "cprodrg"
+
+# if there is a prodrg_xyzin set the current-time to its mtime, else False
+#
+global prodrg_xyzin
+global sbase_to_coot_tlc
+prodrg_xyzin      = "coot-lidia.mdl"
+sbase_to_coot_tlc = ".sbase-to-coot-comp-id"
+
+def get_file_latest_time(file_name):
+    if not os.path.isfile(file_name):
+        return False
+    else:
+        return os.stat(file_name).st_mtime
+
+global mdl_latest_time
+global sbase_transfer_latest_time
+mdl_latest_time = get_file_latest_time(prodrg_xyzin)
+sbase_transfer_latest_time = get_file_latest_time(sbase_to_coot_tlc)
+
+
 # we cannot use full path as cprodrg is spawning refmac...
 #cprodrg = "c:/Programs/CCP4-Packages/ccp4-6.1.13/bin/cprodrg.exe"
 
@@ -32,36 +51,27 @@ if not os.getenv("CLIBD"):
            pass
         # should load rest?
         # i.e. stop here?
+    
 
-
-# these are the files that mdl-latest-time and sbase time-out functions
-# look at.
-#
-# if there is a prodrg-xyzin set the current-time to its mtime, else False
-#
-global prodrg_xyzin
-global sbase_to_coot_tlc
-prodrg_xyzin      = "coot-lidia.mdl"
-sbase_to_coot_tlc = ".sbase-to-coot-comp-id"
 
 # this is for BL win machine
 # Mmmh. FIXME!!!!
-home = os.getenv("HOME")
-if (not home and is_windows()):
-    home = os.getenv("COOT_HOME")
-if home:
-    prodrg_xyzin      = os.path.join(home, "Projects",
-                                     "build-xp-python", "lbg", "prodrg-in.mdl")
-else:
-    print "BL WARNING:: Problem: home is", home  # FIXME
-sbase_to_coot_tlc = "../../build-xp-python/lbg/.sbase-to-coot-comp-id"
+# home = os.getenv("HOME")
+# if (not home and is_windows()):
+#     home = os.getenv("COOT_HOME")
+# if home:
+#     prodrg_xyzin      = os.path.join(home, "Projects",
+#                                      "build-xp-python", "lbg", "prodrg-in.mdl")
+# else:
+#     print "BL WARNING:: Problem: home is", home  # FIXME
+# sbase_to_coot_tlc = "../../build-xp-python/lbg/.sbase-to-coot-comp-id"
 
 
 # Need to play with the env variables to make sure acedrg runs in
 # (Win)Coot setting since acedrg has a different python
 #
 def acedrg_env():
-
+    
     import os
 
     # copy what we have
@@ -77,12 +87,8 @@ def acedrg_env():
     if dir_name:
         my_env["PATH"] = dir_name + ";" + my_env["PATH"]
     my_env["PYTHONHOME"] = ""
-
+    
     return my_env
-
-# this is latest!!!!
-prodrg_xyzin      = "coot-lidia.mdl"
-sbase_to_coot_tlc = ".sbase-to-coot-comp-id"
 
 def import_from_3d_generator_from_mdl_using_acedrg(mdl_file_name, comp_id):
 
@@ -156,7 +162,7 @@ def import_from_3d_generator_from_mdl(mdl_file_name, comp_id):
 
 
 def import_ligand_with_overlay(prodrg_xyzout, prodrg_cif):
-
+    
     # OK, so here we read the PRODRG files and
     # manipulate them.  We presume that the active
     # residue is quite like the input ligand from
@@ -174,7 +180,7 @@ def import_ligand_with_overlay(prodrg_xyzout, prodrg_cif):
     # add_ligand_delete_residue_copy_molecule provides
     # that for us.  We just colour it and undisplay the
     # other molecules.
-
+    
     # overlap the imol_ligand residue if there are restraints for the
     # reference residue/ligand.
     #
@@ -198,7 +204,7 @@ def import_ligand_with_overlay(prodrg_xyzout, prodrg_cif):
                       %(imol_ligand, imol_ref, chain_id_ref, res_no_ref)
                 # this can return the rtop operator or False (for fail of course).
                 return overlap_ligands(imol_ligand, imol_ref, chain_id_ref, res_no_ref)
-
+            
     # return the new molecule number.
     #
     def read_and_regularize(prodrg_xyzout):
@@ -225,7 +231,7 @@ def import_ligand_with_overlay(prodrg_xyzout, prodrg_cif):
         else:
             overlap_status = overlap_ligands_maybe(imol, imol_ref,
                                                    chain_id_ref, res_no_ref)
-
+            
             # speed up the minisation (and then restore setting).
             # No need to put refinement steps in auto accept!?
             s = dragged_refinement_steps_per_frame()
@@ -251,7 +257,7 @@ def import_ligand_with_overlay(prodrg_xyzout, prodrg_cif):
     # not there is an active residue.  We need to test
     # for having an active residue here (currently we
     # presume that there is).
-    #
+    # 
     # Similarly, if the aa_ins_code is non-null, let's
     # presume that we do not have an active residue.
 
@@ -302,7 +308,7 @@ def import_ligand_with_overlay(prodrg_xyzout, prodrg_cif):
     return True
     # return False otherwise? When? FIXME
 
-
+    
 def import_from_prodrg(minimize_mode, res_name):
 
     import operator
@@ -519,18 +525,15 @@ def get_file_latest_time(file_name):
     else:
         return os.stat(file_name).st_mtime
 
-# globals should be in the beginning! FIXME
-global mdl_latest_time
-global sbase_transfer_latest_time
-mdl_latest_time = get_file_latest_time(prodrg_xyzin)
-sbase_transfer_latest_time = get_file_latest_time(sbase_to_coot_tlc)
 # FIXME: this is not a proper name
 def mdl_update_timeout_func():
 
     import operator
     global mdl_latest_time
     global sbase_transfer_latest_time
-
+    global prodrg_xyzin
+    global sbase_to_coot_tlc
+    
     mdl_now_time   = get_file_latest_time(prodrg_xyzin)
     sbase_now_time = get_file_latest_time(sbase_to_coot_tlc)
 
@@ -559,7 +562,7 @@ def mdl_update_timeout_func():
                                           "aa_imol", "aa_chain_id", "aa_res_no")
                 except:
                     print "BL ERROR:: reading sbase file", sbase_to_coot_tlc
-
+                
     return True # return value, keep running; FIXME:: how to stop?
 
 
@@ -582,7 +585,7 @@ def prodrg_flat(imol_in, chain_id_in, res_no_in):
     imol_in -- the molecule number
     chain_id_in -- chain id of the molecule
     res_no_in -- residue number ot the molecule
-
+    
     """
 
     import operator
@@ -649,14 +652,16 @@ def prodrg_plain(mode, imol_in, chain_id_in, res_no_in):
                        str(res_no_in)
     imol = new_molecule_by_atom_selection(imol_in, selection_string)
     stub = os.path.join("coot-ccp4", "prodrg-tmp-" + str(os.getpid()))
-    prodrg_xyzin  = stub + "-xyzin.pdb"
+    # make the name different as not to be confused with the global
+    # prodrg_xyzin.
+    prodrg_xyzinX = stub + "-xyzin.pdb"
     prodrg_xyzout = stub + "-xyzout.pdb"
     prodrg_cif    = stub + "-dict.cif"
     prodrg_log    = stub + ".log"
 
-    write_pdb_file(imol, prodrg_xyzin)
+    write_pdb_file(imol, prodrg_xyzinX)
     result = popen_command(cprodrg,
-                           ["XYZIN",  prodrg_xyzin,
+                           ["XYZIN",  prodrg_xyzinX,
                             "XYZOUT", prodrg_xyzout,
                             "LIBOUT", prodrg_cif],
                            ["MINI PREP", "END"],
@@ -670,7 +675,7 @@ def fle_view(imol, chain_id, res_no, ins_code):
 
     import operator
     global have_mingw
-
+    
     # not using active atom, but make property list
     r_flat  = prodrg_flat (imol, chain_id, res_no)
     r_plain = prodrg_plain('mini-no', imol, chain_id, res_no)
@@ -730,10 +735,10 @@ def fle_view_to_png(imol, chain_id, res_no, ins_code, neighb_radius,
     imol     = active_atom[0]
     chain_id = active_atom[1]
     res_no   = active_atom[2]
-
+    
     r_flat  = prodrg_flat (imol, chain_id, res_no)
     r_plain = prodrg_plain('mini-no', imol, chain_id, res_no)
-
+    
     if (r_flat and (r_plain[0] == 0 )):
         imol_ligand_fragment = r_flat[0]
         prodrg_output_flat_mol_file_name = r_flat[1]
@@ -747,7 +752,7 @@ def fle_view_to_png(imol, chain_id, res_no, ins_code, neighb_radius,
                                  prodrg_output_3d_pdb_file_name,
                                  prodrg_output_cif_file_name, 1,
                                  png_file_name)
-
+                
 
 # import from SRS, callback using sbase_import_function
 # BL says:: not tested; FIXME

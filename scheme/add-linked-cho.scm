@@ -299,7 +299,7 @@
 			      (format #t "------------ That was not well-fitting. Deleting ~s: ~%"
 				      preped-new-res-spec)
 			      (delete-extra-restraints-for-residue-spec imol preped-new-res-spec)
-			      (delete-residue-by-spec preped-new-res-spec)
+			      (delete-residue-by-spec imol preped-new-res-spec)
 			      ;; restore glyco-tree residues from imol-save
 			      (replace-fragment imol imol-save "//")
 			      ;; (with-auto-accept (refine-residues imol local-ls))
@@ -361,6 +361,7 @@
     (set-matrix (/ wm 4))
     (set-residue-selection-flash-frames-number 1)
     (set-go-to-atom-molecule imol)
+    (set-go-to-atom-from-res-spec parent)
     (let* ((previous-m (default-new-atoms-b-factor))
 	   (m (median-temperature-factor imol))
 	   (new-m (* m 1.55)))

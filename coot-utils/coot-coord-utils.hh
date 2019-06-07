@@ -276,6 +276,7 @@ namespace coot {
 
    bool is_member_p(const std::vector<mmdb::Residue *> &v, mmdb::Residue *a);
 
+   bool is_hydrogen_atom(mmdb::Atom *at);
 
    // Throw an exception if there is no consistent seg id for the
    // atoms in the given residue.
@@ -818,6 +819,17 @@ namespace coot {
 
       
       std::pair<bool, clipper::Coord_orth> get_residue_centre(mmdb::Residue *res);
+
+      std::pair<bool, clipper::Coord_orth> get_CA_position_in_residue(mmdb::Residue *residue_p);
+
+      // current view has a particular orientation of the mainchain on the screen -
+      // I want to move to the residue_next (which could be the previous residue)
+      // for shift-space - what rotation/translation do I need?
+      //
+      // @return pair.first false if we don't have a valid RTop.
+      //
+      std::pair<bool, clipper::RTop_orth> get_reorientation_matrix(mmdb::Residue *residue_current,
+                                                                   mmdb::Residue *residue_next);
       
       std::vector<std::string> get_residue_alt_confs(mmdb::Residue *res);
 
@@ -1030,7 +1042,9 @@ namespace coot {
 
       // adjust the atoms of residue_p
       void delete_alt_confs_except(mmdb::Residue *residue_p, const std::string &alt_conf);
-      
+
+      // helper function for below create_mmdbmanager function
+      void transfer_links(mmdb::Manager *mol_old, mmdb::Manager *mol_new);
 
       // The flanking residues (if any) are in the residue selection (SelResidues).
       // The flags are not needed now we have made adjustments in the calling
@@ -1093,6 +1107,9 @@ namespace coot {
 							  mmdb::Manager *mol);
 
       void add_copy_of_atom(mmdb::Manager *mol, mmdb::Atom *atom);
+
+      // important for bonding in refinement
+      void pdbcleanup_serial_residue_numbers(mmdb::Manager *mol);
 
       // return success status, 1 is good, 0 is fail.  Use clipper::Coord_orth constructor
       // 
@@ -1182,6 +1199,9 @@ namespace coot {
       // This presumes that a_residue_p and b_residue_p are valid.
       std::vector<std::pair<int, int> > pair_residue_atoms(mmdb::Residue *a_residue_p,
 							   mmdb::Residue *b_residue_p);
+
+      // CBs in GLY etc
+      void delete_anomalous_atoms(mmdb::Manager *mol);
 
       // A useful function that was (is) in molecule_class_info_t
       //

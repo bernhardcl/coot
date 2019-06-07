@@ -255,6 +255,7 @@ Section "!WinCoot" SEC01
   File "${src_dir}\bin\findwaters-bin.exe"
   File "${src_dir}\bin\mini-rsr-bin.exe"
   File "${src_dir}\bin\dynarama-bin.exe"
+  File "${src_dir}\bin\pyrogen.bat"
   File "C:\MinGW\msys\1.0\home\bernhard\Projects\coot\windows\dynarama.bat"
   SetOverwrite ifnewer
   File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\coot-icon.ico"
@@ -296,8 +297,9 @@ Section "!WinCoot" SEC01
   ; now the new mingw files for static compilation (or not)
   ; FIXME:: seems to be only needed in newer versions of msys
   ; ....... and maybe if we have shared compilation - not yet
-  File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\libstdc++-6.dll"
-  File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\libgcc_s_dw2-1.dll"
+  ; 19/2/19 take the system file on the system its build on
+  File "C:\MinGW\bin\libstdc++-6.dll"
+  File "C:\MinGW\bin\libgcc_s_dw2-1.dll"
 ; PYTHON stuff new
   SetOutPath "$INSTDIR\python27"
   File /r "${src_dir}\python27\*.*"
@@ -406,6 +408,9 @@ Section "!WinCoot" SEC01
   SetOutPath "$INSTDIR\share\coot\scheme"
   File "${src_dir}\share\coot\scheme\*"
   ;lib
+  ; maybe the boost and rdkit dlls should be in bin rather than lib?!
+  SetOutPath "$INSTDIR\lib"
+  File /r "${src_dir}\lib\*.dll"
   SetOutPath "$INSTDIR\lib\gdk-pixbuf-2.0"
   File /r "${src_dir}\lib\gdk-pixbuf-2.0\*.*"
   SetOutPath "$INSTDIR\lib\gtk-2.0"
@@ -459,7 +464,6 @@ Section "!WinCoot" SEC01
   SetOutPath "$INSTDIR\share\coot\data\cho-models"
   File "${src_dir}\share\coot\data\cho-models\*"
   SetOutPath "$INSTDIR\share\coot\data\rama"
-  File "${src_dir}\share\coot\data\rama\*"
   SetOutPath "$INSTDIR\share\coot\data\rama\zo-tables"
   File "${src_dir}\share\coot\data\rama\zo-tables\*"
   ;docs
@@ -506,9 +510,13 @@ SectionEnd
 Section /o "Add probe&reduce" SEC03
   ClearErrors
   SetOverwrite on
-  SetOutPath "$INSTDIR\bin"
+  ; This needs to go in another bin as to void conflicst with the libstd and
+  ; libgcc dlls. Needs addition to PATH as well
+  SetOutPath "$INSTDIR\bin\extras"
   File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\probe.exe"
   File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\reduce.exe"
+  File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\libstdc++-6.dll"
+  File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\libgcc_s_dw2-1.dll"
   SetOutPath "$INSTDIR\share\coot"
   File "C:\MinGW\msys\1.0\home\bernhard\autobuild\extras\reduce_wwPDB_het_dict.txt"
   SetOverwrite ifnewer
@@ -690,6 +698,7 @@ Section Uninstall
   Delete "$INSTDIR\bin\dynarama-bin.exe"
   Delete "$INSTDIR\bin\dynarama.bat"
   Delete "$INSTDIR\bin\dynarama"
+  Delete "$INSTDIR\bin\pyrogen.bat"
   Delete "$INSTDIR\bin\rama_all.ico"
   Delete "$INSTDIR\bin\findligand"
   Delete "$INSTDIR\bin\findligand-bin.exe"
@@ -727,8 +736,7 @@ Section Uninstall
   Delete "$INSTDIR\bin\pkg-config.exe"
   Delete "$INSTDIR\bin\ppm2bmp.exe"
   ; probe & reduce (optional?)
-  Delete "$INSTDIR\bin\probe.exe"
-  Delete "$INSTDIR\bin\reduce.exe"
+  Delete "$INSTDIR\bin\extras\*"
   ; guile things
   Delete "$INSTDIR\bin\*guile*"
   Delete "$INSTDIR\bin\libgmp-3.dll"
@@ -739,6 +747,7 @@ Section Uninstall
   Delete "$INSTDIR\etc\gtk-2.0\*"
   Delete "$INSTDIR\etc\fonts\*"
   Delete "$INSTDIR\etc\*"
+  Delete "$INSTDIR\lib\*"
   Delete "$INSTDIR\lib\gdk-pixbuf-2.0\*"
   Delete "$INSTDIR\lib\gtk-2.0\engines\*"
   Delete "$INSTDIR\lib\gtk-2.0\2.10.0\loaders\*"
@@ -814,6 +823,7 @@ Section Uninstall
   RMDir "$INSTDIR\share\coot\data\rama\zo-tables"
   RMDir "$INSTDIR\share\coot\data\rama\zo-tables"
   RMDir "$INSTDIR\share\coot\data\rama"
+  RMDir "$INSTDIR\share\coot\data"
   RMDir "$INSTDIR\share\coot"
   RMDir "$INSTDIR\share\guile\site"
   RMDir "$INSTDIR\share\guile\gui"
@@ -840,6 +850,7 @@ Section Uninstall
   RMDir "$INSTDIR\etc\gtk-2.0"
   RMDir "$INSTDIR\etc\fonts"
   RMDir "$INSTDIR\etc"
+  RMDir "$INSTDIR\bin\extras"
   RMDir "$INSTDIR\bin"
   RMDir /r "$INSTDIR\lib\gdk-pixbuf-2.0"
   RMDir /r "$INSTDIR\lib\gtk-2.0"
@@ -1154,14 +1165,14 @@ FunctionEnd
 Function FinishPagePreFunction
    ; first apply changes to wincoot.bat
    Var /GLOBAL GUILE_INST_DIR
-   ${WordReplace} "$INSTDIR" "\" "/" "+" $GUILE_INST_DIR
+;   ${WordReplace} "$INSTDIR" "\" "/" "+" $GUILE_INST_DIR
    !insertmacro ReplaceOnLine "yourWinCootdirectory" "$INSTDIR" "5" "$INSTDIR\wincoot.bat.tmp"
-   !insertmacro ReplaceOnLine "yourWinCootdirectoryGuile" "$GUILE_INST_DIR" "6" "$INSTDIR\wincoot.bat.tmp"
+;   !insertmacro ReplaceOnLine "yourWinCootdirectoryGuile" "$GUILE_INST_DIR" "6" "$INSTDIR\wincoot.bat.tmp"
    ;we want to change more for Vista (and possibly for Windows 7 too FIXME!)
    ; Maybe not too much any more... (since graphics card issue)
    ${If} ${AtLeastWinVista}
        ; change to run on 1 core only (to enable compositing!)
-       !insertmacro AdvReplaceInFile "coot-bin.exe" "start /affinity 1 coot-bin.exe" "0" "1" "$INSTDIR\wincoot.bat.tmp"
+       !insertmacro AdvReplaceInFile "coot-bin.exe" "start /wait /affinity 1 coot-bin.exe" "0" "1" "$INSTDIR\wincoot.bat.tmp"
      ${EndIf}
 
    ; if we have an old bat file
@@ -1220,9 +1231,9 @@ ${If} $update = 0
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
   CreateDirectory "$SMPROGRAMS\$ICONS_GROUP"
   SetOutPath "$STARTDIR"
-  CreateShortCut "$QUICKLAUNCH\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico"
-  CreateShortCut "$DESKTOP\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico"
-  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico"
+  CreateShortCut "$QUICKLAUNCH\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico" 0 SW_SHOWMINIMIZED
+  CreateShortCut "$DESKTOP\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico" 0 SW_SHOWMINIMIZED
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico" 0 SW_SHOWMINIMIZED
   Sleep 10
   SetOutPath "$INSTDIR"
   CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\DynaRama.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\bin\dynarama.bat"' "$INSTDIR\bin\rama_all.ico"

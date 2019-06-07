@@ -49,6 +49,15 @@ if [ -z "$make_installer_only" ] ; then
   make_installer_only=1
 fi
 
+# BL note:: this needs to become more flexible!!!
+build_enhanced_ligand=${4:-1}
+if [ -e /z/make_no_EL ] ; then
+  build_enhanced_ligand=0
+fi
+if [ -z "$build_enhanced_ligand" ] ; then
+  build_enhanced_ligand=1
+fi
+
 #
 BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/pre-release
 PRE_BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/pre-release
@@ -78,11 +87,12 @@ function copy_logs {
   cp -p disk-space-status /z/build-logs/${OS}-${HOST}/disk-space-status
 
   echo Copy logs from LOCAL to PUBLIC $1
+  echo Copy logs from LOCAL $LOCAL_HTML_LOGS to PUBLIC $PUBLIC_HTML_LOGS
   if [ $1 = "python" ] ; then 
       # copy log files from local to public html
       cp -p $LOCAL_HTML_LOGS/gtk2-build.log $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-build.log $PUBLIC_HTML_LOGS/gtk2-python-build.log
-      cp -a $LOCAL_HTML_LOGS/$HOSTLOG_STUB/.  $PUBLIC_HTML_LOGS/
+      cp -a $LOCAL_HTML_LOGS/$HOSTLOG_STUB  $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-test.log  $PUBLIC_HTML_LOGS/
       cp -p $LOCAL_HTML_LOGS/gtk2-test.log  $PUBLIC_HTML_LOGS/gtk2-python-test.log
   else
@@ -167,8 +177,8 @@ if [ $make_installer_only == 0 ] ; then
       echo BUILDING:: python WinCoot
 
       # do the build
-      echo Now build with:: run_tests=true build_coot_prerelease=${build_coot_prerelease} $build_it $extra_flag
-      run_tests=true build_coot_prerelease=${build_coot_prerelease} $build_it $extra_flag
+      echo Now build with:: run_tests=true build_coot_prerelease=${build_coot_prerelease} build_enhanced_ligand=$build_enhanced_ligand $build_it $extra_flag
+      run_tests=true build_coot_prerelease=${build_coot_prerelease} build_enhanced_ligand=$build_enhanced_ligand $build_it $extra_flag
       python_build_status=$?
       echo "python build (and test) status: " $python_build_status
       copy_logs python
@@ -361,7 +371,7 @@ if [ "$build_installer" = "0" ] ; then
    # But should get the icons e.g.
    wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/coot-icon.ico
    wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/rama_all.ico
-   # some more extras (actually only required for newer msys!?
+   # some more extras (for probe and reduce)
    wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/libgcc_s_dw2-1.dll
    wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/libstdc++-6.dll
    # get probe and reduce (compiled self)

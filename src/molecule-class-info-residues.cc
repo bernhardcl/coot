@@ -567,6 +567,30 @@ molecule_class_info_t::get_all_molecule_rama_score() const {
    
    // clipper defaults: 0.01 0.0005
 
+#ifdef CLIPPER_HAS_TOP8000
+   clipper::Ramachandran r_ileval, r_pre_pro, r_non_gly_pro_pre_pro_ileval;
+   r_gly.init(clipper::Ramachandran::Gly2);
+   r_gly.set_thresholds(level_prefered, level_allowed);
+   //
+   r_pro.init(clipper::Ramachandran::Pro2);
+   r_pro.set_thresholds(level_prefered, level_allowed);
+   //
+   // as usual we make a first approximation and add some new ones...
+   r_non_gly_pro.init(clipper::Ramachandran::NoGPIVpreP2);
+   r_non_gly_pro.set_thresholds(level_prefered, level_allowed);
+   //
+   r_ileval.init(clipper::Ramachandran::IleVal2);
+   r_ileval.set_thresholds(level_prefered, level_allowed);
+   //
+   r_pre_pro.init(clipper::Ramachandran::PrePro2);
+   r_pre_pro.set_thresholds(level_prefered, level_allowed);
+   //
+   r_non_gly_pro_pre_pro_ileval.init(clipper::Ramachandran::NoGPIVpreP2);
+   r_non_gly_pro_pre_pro_ileval.set_thresholds(level_prefered, level_allowed);
+   //
+   r_all.init(clipper::Ramachandran::All2);
+   r_all.set_thresholds(level_prefered, level_allowed);
+#else
    r_gly.init(clipper::Ramachandran::Gly5);
    r_gly.set_thresholds(level_prefered, level_allowed);
    //
@@ -578,6 +602,7 @@ molecule_class_info_t::get_all_molecule_rama_score() const {
 
    r_all.init(clipper::Ramachandran::All5);
    r_all.set_thresholds(level_prefered, level_allowed);
+#endif
 
    double zero_cut_off = 1e-6;
 
@@ -1269,6 +1294,7 @@ molecule_class_info_t::add_linked_residue_by_atom_torsions(const coot::residue_s
 	 coot::link_by_torsion_t l(link_type, new_residue_comp_id);
 	 l.set_temperature_factor(default_b_factor_new_atoms);
 	 mmdb::Residue *result = l.make_residue(residue_ref);
+
 	 atom_sel.mol->FinishStructEdit();
 	 std::pair<bool, mmdb::Residue *> status_pair = add_residue(result, spec_in.chain_id);
 	 if (status_pair.first) {
@@ -1608,6 +1634,36 @@ molecule_class_info_t::split_water(std::string chain_id, int res_no, std::string
       update_molecule_after_additions();
    } 
 } 
+
+std::vector<coot::residue_spec_t>
+molecule_class_info_t::all_residues() const {
+
+   std::vector<coot::residue_spec_t> r;
+
+   if (!atom_sel.mol) return r;
+   int n_models = atom_sel.mol->GetNumberOfModels();
+   for (int imod=1; imod<=n_models; imod++) {
+      mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
+      if (model_p) {
+	 mmdb::Chain *chain_p;
+	 int n_chains = model_p->GetNumberOfChains();
+	 for (int ichain=0; ichain<n_chains; ichain++) {
+	    chain_p = model_p->GetChain(ichain);
+	    int nres = chain_p->GetNumberOfResidues();
+	    mmdb::Residue *residue_p;
+	    for (int ires=0; ires<nres; ires++) {
+	       residue_p = chain_p->GetResidue(ires);
+	       if (residue_p) {
+		  coot::residue_spec_t spec(residue_p);
+		  spec.int_user_data = ires;
+		  r.push_back(spec);
+	       }
+	    }
+	 }
+      }
+   }
+   return r;
+}
 
 
 std::vector<coot::residue_spec_t>

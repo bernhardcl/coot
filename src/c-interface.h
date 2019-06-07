@@ -24,7 +24,7 @@
 /* svn $Id: c-interface.h 1458 2007-01-26 20:20:18Z emsley $ */
 
 /*! \file 
-  \brief Coot Scripting Interface
+  \brief Coot Scripting Interface - General
 
   Here is a list of all the scripting interface functions. They are
   described/formatted in c/python format.
@@ -266,11 +266,11 @@ void manage_column_selector(const char *filename);
 /*! \name Molecule Info Functions */
 /* \{ */
 
-/*! \brief  the number of residues in chain chain_id and molecule number imol
+/*! \brief the number of residues in chain chain_id and molecule number imol
   @return the number of residues 
 */
 int chain_n_residues(const char *chain_id, int imol); 
-/* \brief internal function for molecule centre
+/*! \brief internal function for molecule centre
 
 @return status, less than -9999 is for failure (eg. bad imol); */
 float molecule_centre_internal(int imol, int iaxis);
@@ -362,11 +362,17 @@ int is_protein_chain_p(int imol, const char *chain_id);
 int is_nucleotide_chain_p(int imol, const char *chain_id);
 
 
-/*!\brief return the number of residues in the molecule, 
+/*! \brief return the number of residues in the molecule,
 
 return -1 if this is a map or closed.
  */
 int n_residues(int imol);
+
+/*! \brief return the atoms of residues in the molecule,
+
+return -1 if this is a map or closed.
+ */
+int n_atoms(int imol);
 
 
 /* Does this work? */
@@ -928,12 +934,12 @@ int main_toolbar_style_state();
 /*! \name   Mouse Buttons */
 /* \{ */
 
-/* \brief quanta-like buttons
+/*! \brief quanta-like buttons
 
 Note, when you have set these, there is no way to turn them of
    again (other than restarting). */
 void quanta_buttons(); 
-/* \brief quanta-like zoom buttons
+/*! \brief quanta-like zoom buttons
 
 Note, when you have set these, there is no way to turn them of
    again (other than restarting). */
@@ -1179,15 +1185,15 @@ void set_last_map_colour(double f1, double f2, double f3);
 /*! \brief set the colour of the imolth map */
 void set_map_colour(int imol, float red, float green, float blue);
 
-/* \brief set the contour level, direct control */
+/*! \brief set the contour level, direct control */
 void set_contour_level_absolute(int imol_map, float level);
-/* \brief set the contour level, direct control in r.m.s.d. (if you like that sort of thing) */
+/*! \brief set the contour level, direct control in r.m.s.d. (if you like that sort of thing) */
 void set_contour_level_in_sigma(int imol_map, float level);
 
-/* \brief get the contour level */
+/*! \brief get the contour level */
 float get_contour_level_absolute(int imol);
 
-/* \brief get the contour level in rmd above 0. */
+/*! \brief get the contour level in rmd above 0. */
 float get_contour_level_in_sigma(int imol);
 
 /*! \brief set the sigma step of the last map to f sigma */
@@ -1776,6 +1782,8 @@ void set_symmetry_atom_labels_expanded(int state);
    @return 1 on "yes, it has a cell", 0 for "no" */
 int has_unit_cell_state(int imol); 
 
+/* a gui function really */
+void add_symmetry_on_to_preferences_and_apply();
 
 /*! \brief Undo symmetry view. Translate back to main molecule from
   this symmetry position.  */
@@ -2351,6 +2359,13 @@ PyObject *go_to_ligand_py();
 
 /*! \brief go to the ligand that has more than n_atom_min atoms */
 void set_go_to_ligand_n_atoms_limit(int n_atom_min);
+
+/*! \brief rotate the view so that the next main-chain atoms are oriented
+ in the same direction as the previous - hence side-chain always seems to be
+"up" - set this mode to 1 for reorientation-mode - and 0 for off (standard translation)
+*/
+void set_reorienting_next_residue_mode(int state);
+
 /* \} */
 
 /*  ---------------------------------------------------------------------- */
@@ -2891,7 +2906,7 @@ void set_all_models_displayed_and_active(int on_or_off);
 */
 void set_only_last_model_molecule_displayed();
 
-/*\brief display only the active mol and the refinement map */
+/*! \brief display only the active mol and the refinement map */
 void display_only_active();
 
 
@@ -2954,10 +2969,12 @@ the first argument is a list of molecule numbers and the second is the target
 #ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
 #ifdef USE_GUILE
 SCM merge_molecules(SCM add_molecules, int imol);
+void set_merge_molecules_ligand_spec_scm(SCM ligand_spec_scm);
 #endif
 
 #ifdef USE_PYTHON
 PyObject *merge_molecules_py(PyObject *add_molecules, int imol);
+void set_merge_molecules_ligand_spec_py(PyObject *ligand_spec_py);
 #endif /* PYTHON */
 #endif	/* c++ */
 
@@ -3209,6 +3226,9 @@ void set_residue_selection_flash_frames_number(int i);
 
     If you are scripting refinement and/or regularization, this is the
     function that you need to call after refine-zone or regularize-zone.  */
+void accept_moving_atoms();
+
+/*! \brief a hideous alias for the above  */
 void accept_regularizement();
 void clear_up_moving_atoms();	/* remove the molecule and bonds */
 void clear_moving_atoms_object(); /* just get rid of just the bonds (redraw done here). */
@@ -3357,6 +3377,7 @@ void set_refinement_drag_elasticity(float e);
 /*! \brief turn on Ramachandran angles refinement in refinement and regularization */
 /*! name consistent with set_refine_with_torsion_restraints() !?  */
 void set_refine_ramachandran_angles(int state);
+void set_refine_ramachandran_torsion_angles(int state);
 
 void set_refine_ramachandran_restraints_type(int type);
 void set_refine_ramachandran_restraints_weight(float w);
@@ -3375,6 +3396,15 @@ void set_fix_chiral_volumes_before_refinement(int istate);
 
 /*! \brief query the state of the above option */
 void check_chiral_volumes(int imol);
+
+#ifdef __cplusplus
+#ifdef USE_GUILE
+SCM chiral_volume_errors_scm(int imol);
+#endif /* USE_GUILE */
+#ifdef USE_PYTHON
+PyObject *chiral_volume_errors_py(int imol);
+#endif	/* USE_PYTHON */
+#endif	/* __cplusplus */
 
 
 /*! \brief For experienced Cooters who don't like Coot nannying about
@@ -3413,7 +3443,7 @@ int set_imol_refinement_map(int imol);	/* returns imol on success, otherwise -1 
 */
 int does_residue_exist_p(int imol, char *chain_id, int resno, char *inscode); 
 
-/* ! \brief delete the restraints for the given comp_id (i.e. residue name)  
+/*! \brief delete the restraints for the given comp_id (i.e. residue name)
 
 @return success status (0 is failed, 1 is success)
 */
@@ -3486,10 +3516,15 @@ int extra_restraints_are_shown(int imol);
 /*! \brief often we don't want to see all prosmart restraints, just the (big) violations */
 void set_extra_restraints_prosmart_sigma_limits(int imol, double limit_high, double limit_low);
 
+/*! \brief generate external distance local self restraints */
 void generate_local_self_restraints(int imol, const char *chain_id, float local_dist_max);
+
+/*! \brief generate external distance all-molecule self restraints */
+void generate_self_restraints(int imol, float local_dist_max);
 
 #ifdef __cplusplus
 #ifdef USE_GUILE
+/*! \brief generate external distance self restraints for selected residues */
 void generate_local_self_restraints_by_residues_scm(int imol, SCM residue_specs, float local_dist_max);
 #endif // USE_GUILE
 #ifdef USE_PYTHON
@@ -3615,7 +3650,7 @@ void do_residue_info_dialog();
 /* MOVE-ME to c-interface-gtk-widgets.h */
  void output_residue_info_dialog    (int imol, int atom_index); /* widget version */
 /* scripting version */
- /*! \brief show residue info dialog for given residue */
+/*! \brief show residue info dialog for given residue */
 void residue_info_dialog(int imol, const char *chain_id, int resno, const char *ins_code); 
 int residue_info_dialog_is_displayed();
 void output_residue_info_as_text(int atom_index, int imol); /* text version */
@@ -3668,10 +3703,17 @@ int show_environment_distances_state();
 /*! \brief min and max distances for the environment distances */
 void set_environment_distances_distance_limits(float min_dist, float max_dist);
 
+/*! \brief show the environment distances with solid modelling */
 void set_show_environment_distances_as_solid(int state);
 
+/*! \brief Label the atom on Environment Distances start/change */
 void set_environment_distances_label_atom(int state);
 
+/*! \brief Add a geometry distance between points in a given molecule
+
+@return the distance between the points
+
+*/
 double add_geometry_distance(int imol_1, float x_1, float y_1, float z_1, int imol_2, float x_2, float y_2, float z_2);
 #ifdef __cplusplus
 #ifdef USE_GUILE
@@ -4590,6 +4632,8 @@ int set_b_factor_bonds_scale_factor(int imol, float f);
   the centre of the screen */
 void change_model_molecule_representation_mode(int up_or_down);
 
+void set_ca_bonds_loop_params(float p1, float p2, float p3);
+
 /*! \brief make the carbon atoms for molecule imol be grey
  */
 void set_use_grey_carbons_for_molecule(int imol, short int state);
@@ -4949,25 +4993,27 @@ void set_rot_trans_object_type(short int rt_type); /* zone, chain, mol */
 int get_rot_trans_object_type();
 
 /*  ----------------------------------------------------------------------- */
-/*                  cis <-> trans conversion                                */
+/*                  cis and trans info and conversion                       */
 /*  ----------------------------------------------------------------------- */
 void do_cis_trans_conversion_setup(int istate);
 void cis_trans_convert(int imol, const char *chain_id, int resno, const char *altconf);
 
 #ifdef __cplusplus	/* need this wrapper, else gmp.h problems in callback.c */
-#ifdef USE_GUILE 
+#ifdef USE_GUILE
 /*! \brief return cis_peptide info for imol.
 
 Return a SCM list object of (residue1 residue2 omega) */
 SCM cis_peptides(int imol);
+SCM twisted_trans_peptides(int imol);
 #endif /* GUILE */
 #ifdef USE_PYTHON
 /*! \brief return cis_peptide info for imol.
 
 Return a Python list object of [residue1, residue2, omega] */
 PyObject *cis_peptides_py(int imol);
+PyObject *twisted_trans_peptides_py(int imol);
 #endif /* PYTHON */
-#endif 
+#endif
 
 
 /*  ----------------------------------------------------------------------- */
@@ -5006,6 +5052,7 @@ int db_mainchains_fragment(int imol, const char *chain_id, int res_no);
 /*! \name Close Molecule Functions */
 /* \{ */
 
+/*! \brief close the molecule */
 void close_molecule(int imol);
 
 
@@ -6853,9 +6900,9 @@ PyObject *all_molecule_ramachandran_region_py(int imol);
 /*! 
 
     20100616 This doesn't get into the doxygen documentation for some
-    reason I can't figure out.  Ask Kevin.
+    reason I can't figure out.
 
-    \fn user_defined_click(int n_clicks, SCM func);
+    \fn user_defined_click_scm(int n_clicks, SCM func);
 
     \brief run a user defined function
 

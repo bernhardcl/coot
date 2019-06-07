@@ -184,8 +184,13 @@ int test_internal() {
 
    // restore me at some stage.
    // functions.push_back(named_func(test_peptide_link, "test_peptide_link"));
-   functions.push_back(named_func(test_dictionary_partial_charges,
-				  "test dictionary partial charges"));
+
+
+   // dictionaries don't have partial charges at the moment
+   //
+   // functions.push_back(named_func(test_dictionary_partial_charges,
+   // 				  "test dictionary partial charges"));
+
    // restore me at some stage
    // functions.push_back(named_func(test_dipole, "test_dipole"));
 
@@ -2259,13 +2264,21 @@ int test_OXT_in_restraints() {
    } else { 
       bool v1 = geom.OXT_in_residue_restraints_p("TRP");
       bool v2 = geom.OXT_in_residue_restraints_p("BCS");
-      if (v1 == 0)
-	 if (v2 == 1)
-	    r = 1;
-	 else
-	    std::cout << "fail to find OXT in BSC" << std::endl;
+
+// This doesn't work for new restraints (which *do* have OXTs)
+//       if (v1 == 0)
+// 	 if (v2 == 1)
+// 	    r = 1;
+// 	 else
+// 	    std::cout << "fail to find OXT in BSC" << std::endl;
+//       else
+// 	 std::cout << "Fail to not find OXT in TRP" << std::endl;
+
+      if (v2 == 1)
+	 r = 1;
       else
-	 std::cout << "Fail to not find OXT in TRP" << std::endl;
+	 std::cout << "fail to find OXT in BSC" << std::endl;
+
    }
    return r; 
 } 

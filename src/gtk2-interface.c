@@ -4012,9 +4012,10 @@ create_show_symmetry_window (void)
   GtkWidget *vbox169;
   GtkWidget *frame7;
   GtkWidget *vbox11;
-  GtkWidget *show_symmetry_yes_radiobutton;
-  GSList *show_symmetry_yes_radiobutton_group = NULL;
   GtkWidget *show_symmetry_no_radiobutton;
+  GSList *show_symmetry_no_radiobutton_group = NULL;
+  GtkWidget *show_symmetry_yes_radiobutton;
+  GtkWidget *symmetry_always_on_checkbutton;
   GtkWidget *label277;
   GtkWidget *show_symmetry_molecule_control_button;
   GtkWidget *frame8;
@@ -4086,18 +4087,22 @@ create_show_symmetry_window (void)
   gtk_widget_show (vbox11);
   gtk_container_add (GTK_CONTAINER (frame7), vbox11);
 
-  show_symmetry_yes_radiobutton = gtk_radio_button_new_with_mnemonic (NULL, "Symmetry On");
-  gtk_widget_show (show_symmetry_yes_radiobutton);
-  gtk_box_pack_start (GTK_BOX (vbox11), show_symmetry_yes_radiobutton, FALSE, FALSE, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (show_symmetry_yes_radiobutton), show_symmetry_yes_radiobutton_group);
-  show_symmetry_yes_radiobutton_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (show_symmetry_yes_radiobutton));
-
   show_symmetry_no_radiobutton = gtk_radio_button_new_with_mnemonic (NULL, "Symmetry Off");
   gtk_widget_show (show_symmetry_no_radiobutton);
   gtk_box_pack_start (GTK_BOX (vbox11), show_symmetry_no_radiobutton, FALSE, FALSE, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (show_symmetry_no_radiobutton), show_symmetry_yes_radiobutton_group);
-  show_symmetry_yes_radiobutton_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (show_symmetry_no_radiobutton));
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (show_symmetry_no_radiobutton), show_symmetry_no_radiobutton_group);
+  show_symmetry_no_radiobutton_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (show_symmetry_no_radiobutton));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (show_symmetry_no_radiobutton), TRUE);
+
+  show_symmetry_yes_radiobutton = gtk_radio_button_new_with_mnemonic (NULL, "Symmetry On");
+  gtk_widget_show (show_symmetry_yes_radiobutton);
+  gtk_box_pack_start (GTK_BOX (vbox11), show_symmetry_yes_radiobutton, FALSE, FALSE, 0);
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (show_symmetry_yes_radiobutton), show_symmetry_no_radiobutton_group);
+  show_symmetry_no_radiobutton_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (show_symmetry_yes_radiobutton));
+
+  symmetry_always_on_checkbutton = gtk_check_button_new_with_mnemonic ("Always On");
+  gtk_widget_show (symmetry_always_on_checkbutton);
+  gtk_box_pack_start (GTK_BOX (vbox11), symmetry_always_on_checkbutton, FALSE, FALSE, 0);
 
   label277 = gtk_label_new ("Master Switch");
   gtk_widget_show (label277);
@@ -4165,7 +4170,6 @@ create_show_symmetry_window (void)
   symmetry_colorbutton = gtk_color_button_new ();
   gtk_widget_show (symmetry_colorbutton);
   gtk_box_pack_start (GTK_BOX (hbox8), symmetry_colorbutton, FALSE, FALSE, 4);
-  gtk_color_button_set_title (GTK_COLOR_BUTTON (symmetry_colorbutton), "Pick a Colour");
 
   label810 = gtk_label_new ("    ");
   gtk_widget_show (label810);
@@ -4276,6 +4280,9 @@ create_show_symmetry_window (void)
   gtk_widget_show (label347);
   gtk_box_pack_start (GTK_BOX (hbox173), label347, FALSE, FALSE, 0);
 
+  g_signal_connect ((gpointer) symmetry_always_on_checkbutton, "toggled",
+                    G_CALLBACK (on_symmetry_always_on_checkbutton_toggled),
+                    NULL);
   g_signal_connect ((gpointer) show_symmetry_molecule_control_button, "clicked",
                     G_CALLBACK (on_show_symmetry_molecule_control_button_clicked),
                     NULL);
@@ -4303,8 +4310,9 @@ create_show_symmetry_window (void)
   GLADE_HOOKUP_OBJECT (show_symmetry_window, vbox169, "vbox169");
   GLADE_HOOKUP_OBJECT (show_symmetry_window, frame7, "frame7");
   GLADE_HOOKUP_OBJECT (show_symmetry_window, vbox11, "vbox11");
-  GLADE_HOOKUP_OBJECT (show_symmetry_window, show_symmetry_yes_radiobutton, "show_symmetry_yes_radiobutton");
   GLADE_HOOKUP_OBJECT (show_symmetry_window, show_symmetry_no_radiobutton, "show_symmetry_no_radiobutton");
+  GLADE_HOOKUP_OBJECT (show_symmetry_window, show_symmetry_yes_radiobutton, "show_symmetry_yes_radiobutton");
+  GLADE_HOOKUP_OBJECT (show_symmetry_window, symmetry_always_on_checkbutton, "symmetry_always_on_checkbutton");
   GLADE_HOOKUP_OBJECT (show_symmetry_window, label277, "label277");
   GLADE_HOOKUP_OBJECT (show_symmetry_window, show_symmetry_molecule_control_button, "show_symmetry_molecule_control_button");
   GLADE_HOOKUP_OBJECT (show_symmetry_window, frame8, "frame8");
@@ -12179,6 +12187,8 @@ create_single_map_properties_dialog (void)
   GtkWidget *single_map_properties_cell_text;
   GtkWidget *label165;
   GtkWidget *single_map_properties_sg_text;
+  GtkWidget *label818;
+  GtkWidget *single_map_properties_reso_text;
   GtkWidget *label751;
   GtkWidget *frame293;
   GtkWidget *alignment153;
@@ -12289,6 +12299,18 @@ create_single_map_properties_dialog (void)
   gtk_box_pack_start (GTK_BOX (vbox110), single_map_properties_sg_text, FALSE, FALSE, 0);
   gtk_label_set_justify (GTK_LABEL (single_map_properties_sg_text), GTK_JUSTIFY_CENTER);
   gtk_misc_set_alignment (GTK_MISC (single_map_properties_sg_text), 7.45058e-09, 0.5);
+
+  label818 = gtk_label_new ("Resolution:");
+  gtk_widget_show (label818);
+  gtk_box_pack_start (GTK_BOX (vbox110), label818, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label818), GTK_JUSTIFY_CENTER);
+  gtk_misc_set_alignment (GTK_MISC (label818), 0, 0.5);
+
+  single_map_properties_reso_text = gtk_label_new ("[reso]");
+  gtk_widget_show (single_map_properties_reso_text);
+  gtk_box_pack_start (GTK_BOX (vbox110), single_map_properties_reso_text, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (single_map_properties_reso_text), GTK_JUSTIFY_CENTER);
+  gtk_misc_set_alignment (GTK_MISC (single_map_properties_reso_text), 0, 0.5);
 
   label751 = gtk_label_new ("<b>Cell and Symmetry:</b>");
   gtk_widget_show (label751);
@@ -12589,6 +12611,8 @@ create_single_map_properties_dialog (void)
   GLADE_HOOKUP_OBJECT (single_map_properties_dialog, single_map_properties_cell_text, "single_map_properties_cell_text");
   GLADE_HOOKUP_OBJECT (single_map_properties_dialog, label165, "label165");
   GLADE_HOOKUP_OBJECT (single_map_properties_dialog, single_map_properties_sg_text, "single_map_properties_sg_text");
+  GLADE_HOOKUP_OBJECT (single_map_properties_dialog, label818, "label818");
+  GLADE_HOOKUP_OBJECT (single_map_properties_dialog, single_map_properties_reso_text, "single_map_properties_reso_text");
   GLADE_HOOKUP_OBJECT (single_map_properties_dialog, label751, "label751");
   GLADE_HOOKUP_OBJECT (single_map_properties_dialog, frame293, "frame293");
   GLADE_HOOKUP_OBJECT (single_map_properties_dialog, alignment153, "alignment153");
@@ -12858,7 +12882,7 @@ create_splash_screen_window (void)
   gtk_window_set_position (GTK_WINDOW (splash_screen_window), GTK_WIN_POS_CENTER);
   gtk_window_set_type_hint (GTK_WINDOW (splash_screen_window), GDK_WINDOW_TYPE_HINT_SPLASHSCREEN);
 
-  image10854 = create_pixmap (splash_screen_window, "coot-0.8.9.1.png");
+  image10854 = create_pixmap (splash_screen_window, "coot-0.8.9.2.png");
   gtk_widget_show (image10854);
   gtk_container_add (GTK_CONTAINER (splash_screen_window), image10854);
 

@@ -53,8 +53,16 @@
       (add-simple-coot-menu-menuitem 
        menu "Highly coordinated waters..."
        (lambda ()
-	 (water-coordination-gui)))))
+	 (water-coordination-gui)))
 
+		(add-simple-coot-menu-menuitem
+		 menu "Validation Outliers"
+		 (lambda ()
+			(using-active-atom
+			 (let ((imol-map (imol-refinement-map)))
+				(if (not (valid-map-molecule? imol-map))
+					 (add-status-bar-text "Refinement Map is currently not set")
+					 (validation-outliers-dialog aa-imol imol-map))))))))
 
 
 (define (add-module-user-defined-restraints)
@@ -1275,7 +1283,7 @@
 					      (clear-dots imol n)))))))
 
 	(add-simple-coot-menu-menuitem
-	 submenu-representation "Limit Model Display Radius"
+	 submenu-representation "Limit Model Display Radius..."
 	 (lambda ()
 	   (generic-single-entry "Display Radius Limit (0 for 'no limit') "
 				 ;; "15.0" ;; maybe this should be the map radius

@@ -258,9 +258,10 @@ double graphics_info_t::mouse_begin_y = 0.0;
 float  graphics_info_t::rotation_centre_x = 0.0;
 float  graphics_info_t::rotation_centre_y = 0.0;
 float  graphics_info_t::rotation_centre_z = 0.0;
-float  graphics_info_t::old_rotation_centre_x = 0.0;
-float  graphics_info_t::old_rotation_centre_y = 0.0;
-float  graphics_info_t::old_rotation_centre_z = 0.0;
+// float  graphics_info_t::old_rotation_centre_x = 0.0;
+// float  graphics_info_t::old_rotation_centre_y = 0.0;
+// float  graphics_info_t::old_rotation_centre_z = 0.0;
+coot::Cartesian graphics_info_t::old_rotation_centre(0,0,0);
 float  graphics_info_t::zoom                = 100;
 int    graphics_info_t::smooth_scroll       =   1; // flag: default is ..
 int    graphics_info_t::smooth_scroll_steps =  40;
@@ -351,11 +352,15 @@ int graphics_info_t::file_selection_dialog_x_size = -1; // unset
 int graphics_info_t::file_selection_dialog_y_size = -1; 
 
 
-// things for quaternion rotation:
+// things for quaternion-based view rotation:
 double graphics_info_t::mouse_current_x = 0.0; 
 double graphics_info_t::mouse_current_y = 0.0;
 float* graphics_info_t::quat = new float[4]; 
 float graphics_info_t::trackball_size = 0.8; // for kevin
+
+// residue reorientation on "space"
+bool graphics_info_t::reorienting_next_residue_mode = false;
+
 
 // things for baton quaternion rotation: Must use a c++ class at some
 // stage:
@@ -929,7 +934,7 @@ int       graphics_info_t::imol_rigid_body_refine = 0;
 
 // terminal residue define
 short int graphics_info_t::in_terminal_residue_define = 0;
-short int graphics_info_t::add_terminal_residue_immediate_addition_flag = 0;
+short int graphics_info_t::add_terminal_residue_immediate_addition_flag = 1;
 short int graphics_info_t::add_terminal_residue_do_post_refine = 0;
 float graphics_info_t::terminal_residue_addition_direct_phi = -135.0;
 float graphics_info_t::terminal_residue_addition_direct_psi =  135.0;
@@ -1006,8 +1011,7 @@ int         graphics_info_t::align_and_mutate_imol;
 std::string graphics_info_t::align_and_mutate_chain_from_optionmenu;
 int         graphics_info_t::nsv_canvas_pixel_limit = 22500;
 
-// Bob recommends:
-mmdb::realtype    graphics_info_t::alignment_wgap   = -0.5; // was -3.0;
+mmdb::realtype    graphics_info_t::alignment_wgap   = -3.0; // was -0.5 (Bob) // was -3.0;
 mmdb::realtype    graphics_info_t::alignment_wspace = -0.4;
 
 //
@@ -1226,6 +1230,7 @@ float graphics_info_t::bond_thickness_intermediate_atoms = 5; // thick white ato
 // merge molecules
 int graphics_info_t::merge_molecules_master_molecule = -1;
 std::vector<int> *graphics_info_t::merge_molecules_merging_molecules;
+coot::residue_spec_t graphics_info_t::merge_molecules_ligand_spec;
 
 // change chain ids:
 int graphics_info_t::change_chain_id_molecule = -1;
@@ -1352,7 +1357,7 @@ float graphics_info_t::mogul_max_badness = 5.0;   // The z value colour at which
 bool graphics_info_t::linked_residue_fit_and_refine_state = true;
 
 //
-bool graphics_info_t::allow_duplseqnum = false;
+bool graphics_info_t::allow_duplseqnum = true; // 20181214-PE - I presume that this is safe now?
 
 std::map<std::string, std::string> graphics_info_t::extensions_registry;
 
@@ -1370,6 +1375,11 @@ std::pair<bool, float> graphics_info_t::model_display_radius = std::pair<bool, f
 
 // Chemical Feature Clusters, cfc
 GtkWidget *graphics_info_t::cfc_dialog = NULL;
+
+// CA-bonds missing loops dotted line params
+float graphics_info_t::ca_bonds_loop_param_1 = 0.5;
+float graphics_info_t::ca_bonds_loop_param_2 = 0.05;
+float graphics_info_t::ca_bonds_loop_param_3 = 111.0;
 
 // GTK2 code
 // 
@@ -2293,7 +2303,7 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
       graphics_info_t::picked_intermediate_atom_graphics_object();
 
       //
-      graphics_info_t::baton_object();
+      graphics_info_t::draw_baton_object();
 
       //
       graphics_info_t::draw_geometry_objects(); // angles and distances
@@ -3179,6 +3189,13 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
 	 }
 	 graphics_info_t::accept_reject_dialog = 0;
       }
+
+      if (graphics_info_t::rotamer_dialog) {
+	 accept_regularizement();
+	 gtk_widget_destroy(graphics_info_t::rotamer_dialog);
+	 set_graphics_rotamer_dialog(NULL);
+      }
+
       handled = TRUE;
       break;
 
@@ -3938,10 +3955,20 @@ gint key_release_event(GtkWidget *widget, GdkEventKey *event)
 // 					     g.go_to_atom_residue()+next,
 // 					     g.go_to_atom_atom_name());
 
-      if (graphics_info_t::shift_is_pressed) {
-	 g.intelligent_previous_atom_centring(g.go_to_atom_window);
+      bool reorienting = graphics_info_t::reorienting_next_residue_mode;
+      if (reorienting) {
+	 if (graphics_info_t::shift_is_pressed) {
+	    g.reorienting_next_residue(false); // backwards
+	 } else {
+	    g.reorienting_next_residue(true); // forwards
+	 }
       } else {
-	 g.intelligent_next_atom_centring(g.go_to_atom_window);
+	 // old/standard simple translation
+	 if (graphics_info_t::shift_is_pressed) {
+	    g.intelligent_previous_atom_centring(g.go_to_atom_window);
+	 } else {
+	    g.intelligent_next_atom_centring(g.go_to_atom_window);
+	 }
       }
       break;
    }
@@ -4499,6 +4526,7 @@ void handle_scroll_density_level_event(int scroll_up_down_flag) {
    }
 
    int s = info.scroll_wheel_map;
+
    if (scroll_up_down_flag == 1) {
       if (graphics_info_t::do_scroll_by_wheel_mouse_flag) { 
 	 if (s>=0) {

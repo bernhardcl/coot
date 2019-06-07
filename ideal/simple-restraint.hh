@@ -74,22 +74,27 @@ namespace coot {
       mmdb::Residue *r_1; 
       mmdb::Residue *r_2; 
       mmdb::Residue *r_3;
+      std::string link_type;
       bool fixed_1; 
       bool fixed_2; 
       bool fixed_3; 
-      rama_triple_t(mmdb::Residue *r1, mmdb::Residue *r2, mmdb::Residue *r3) {
+      rama_triple_t(mmdb::Residue *r1, mmdb::Residue *r2, mmdb::Residue *r3,
+		    const std::string &link_type_in) {
 	 r_1 = r1;
 	 r_2 = r2;
 	 r_3 = r3;
+	 link_type = link_type_in;
 	 fixed_1 = 0;
 	 fixed_2 = 0;
 	 fixed_3 = 0;
       }
       rama_triple_t(mmdb::Residue *r1, mmdb::Residue *r2, mmdb::Residue *r3,
+		    const std::string &link_type_in,
 		    bool fixed_1_in, bool fixed_2_in, bool fixed_3_in) {
 	 r_1 = r1;
 	 r_2 = r2;
 	 r_3 = r3;
+	 link_type = link_type_in;
 	 fixed_1 = fixed_1_in;
 	 fixed_2 = fixed_2_in;
 	 fixed_3 = fixed_3_in;
@@ -1437,6 +1442,18 @@ namespace coot {
       // switch is needed to make it so.
       // 
       std::pair<bool, bool> peptide_C_and_N_are_close_p(mmdb::Residue *r1, mmdb::Residue *r2) const;
+
+      // a pair, first is if C and N are close and second if and order
+      // switch is needed to make it so.
+      //
+      // the first value means the following:
+      // 1: is
+      // 0: is not
+      // -1: can't decide here (if that;s the case, use peptide_C_and_N_are_close_p())
+      //
+      enum peptide_order_info_t { IS_PEPTIDE=1, IS_NOT_PEPTIDE=0, UNKNOWN=-1 };
+      //
+      std::pair<peptide_order_info_t, bool> peptide_C_and_N_are_in_order_p(mmdb::Residue *r1, mmdb::Residue *r2) const;
 
 
       // a pair, first is if C and N are close and second if and order

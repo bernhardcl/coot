@@ -84,7 +84,7 @@
 			  (add-linked-residue-with-extra-restraints-to-active-residue "SIA" "ALPHA2-6")))
 		  )))
 
-    (let ((vbox (dialog-box-of-buttons "Add N-linked Glycan" (cons 420 600) buttons "Close")))
+    (let ((vbox (car (dialog-box-of-buttons "Add N-linked Glycan" (cons 420 600) buttons "Close"))))
       (gui-add-linked-cho-dialog-vbox-set-rotation-centre-hook vbox)
       ;; set the callback on the first button
       (let ((children  (gtk-container-children vbox)))
@@ -488,7 +488,7 @@
       (let ((menu (coot-menubar-menu "Glyco")))
 
 	(add-simple-coot-menu-menuitem
-	 menu "N-linked Glycan Addition Dialog..."
+	 menu "N-linked Glycan Addition..."
 	 (lambda ()
 	   (interactive-add-cho-dialog)))
 

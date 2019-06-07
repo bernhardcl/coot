@@ -1,9 +1,203 @@
 
    For Release 0.8.9.2
 
-   o Use dictionary, make yes/no dialog for ligand fitting: Anna.
+   o edit chi angles gives the wrong chi angles for chi2? update_residue_by_chi_change() uses
+     tree.rotate_about() with 2 atoms as the arguments.  tree should preferentially
+     choose N as the base atom, if it is an option. Also, CG1 rather than CG2.
+
+   o read in a phs file - can you scroll the map? No, but + and - work.
+
+   o validation outliers gui in the release, in the gui.
+
+   o Fetch molecule favipiravir doesn't work
+
+   o fix the colours of (say) 5vic in Calpha Backbone mode
+
+   o Dock sequence?
+
+* Hmm...
+
+   o add --command in --help
+
+* Done.
+
+   o make the screen output of peak-search give the Nsigma also.  BR
+
+* Done.
+
+   o All symmetry to always be on (add a setting to ~/.coot-preferences)
+
+* Done.
+
+   o Difference map Peak search results came from which map? Put it in the titlebar
+     EJD
+
+* Done.
+
+   o make anamalous maps non-red/green
+
+ * Done.
+
+   o twisted peptide/geometry omega added to validation outlier dialog.
+     does cis_peptides(imol) do what is needed?
+
+* Fixed.
+
+   o can you make a stand-alone doxygen version of the python documentation?
+
+* In part - python files need to be added.
+
+   o Does align and mutate work?
+
+* It does now.
+
+   o multisharpen in a directory not writable. Give a better error message
+
+* Done.
+
+   o delete is_sane_inter_residue_distance debug
+
+* Done.
+
+   o Copy Fragment (new_molecule_by_atom_selection()) should copy links too.
+
+* Done.
+
+   o Andreas K:
+
+   > Coot now adds new ligands to the chain of the corresponding protein. Refmac5 (5.8.0238) then adds two TER
+   > records to that chain, one after the protein and one after the ligand. When now adding a C-terminal residue
+   > in Coot, it will not remove the original TER record after the protein
+
+* Can't reproduce.
+
+   o something for the trip: The acedrg link dialog needs to be able to delete a bond
+     and change a bond order
+     Needs to be done in python too
+
+* Done for the moment, needs Bernie to do python version.
+
+   o Phosphorylate this residue on a SER. New dictionary problems? Problem is in refinement part. OXT?
+     What happens if there is no map? We should get a regularized model.
+
+* Done.
+
+   o Add residue type to the validation outlier ramachandran outlier button
+     (should the rama plot and the rama outlier have the same criterion?)
+     Needs to be done in python too
+
+* Done - needs python update.
+
+   o loops: when the gap between residue number is small but the gap is large, we
+     need to be able to represent that differently. With big red discs - or something.
+     John Berrisford.
+
+* Done.
+
+   o OC: Using delelete residue range for all residues in the moleucle should delete the
+     molecule from the display manager.
+
+* Done
+
+   o fill and use go_to_ligand_non_interesting_comp_ids: add_non_interesting_ligand_type().
+
+* Punt
+
+   o Map Dialog, Setting 8 rmsd should move the block in the graph below.
+
+* Punt
+
+   o check for double ligands and/or nan atoms when using set_merge_molecules_ligand_spec().
+     Add it to the test (do I have a test already?)
+     Check that the returned value corresponds to the new ligand: L 1
+
+* Done.
+
+   o Try rotate/translate on a chain by picking C4',B in B 2 of 2H0N
+
+   o update the copyright in the about dialog?
 
 ------
+
+   o Randy: update NCS matrices for "O" key after symm shift reference chain here
+
+* fill_ghost_info() needs to be called again to regenerate the matrices.
+  Done.
+
+   o this was from coot-experimental but maybe it's a problem here.
+
+#7  0x00002b2579376601 in char* std::string::_S_construct<char const*>(char const*, char const*, std::allocator<char> const&, std::forward_iterator_tag) () at /lib64/libstdc++.so.6
+#8  0x00002b25793769b8 in std::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string(char const*, std::allocator<char> const&) () at /lib64/libstdc++.so.6
+#9  0x00000000007a0b91 in graphics_info_t::save_directory_for_saving_from_filechooser(_GtkWidget const*) (this=this@entry=0x7ffcc09e7d3f, fileselection=fileselection@entry=0x16c474c0) at graphics-info-gui.cc:665
+#10 0x000000000069f1ab in save_directory_for_saving_from_filechooser(GtkWidget const*) (fileselection=fileselection@entry=0x16c474c0) at c-interface.cc:1466
+#11 0x00000000006cd628 in on_save_coords_filechooserdialog1_response (dialog=<optimized out>, response_id=<optimized out>, user_data=<optimized out>) at callbacks.c:10897
+
+* Done as much as I can from this, I think
+
+   o somewhow draw the baton so that the direction is obvious. As an arrow, perhaps?
+
+* Done
+
+   o Delete extra restraints - does that work?
+
+* Yes - I wonder what I thought the problem was.
+
+   o Capture the mmdb error message ("Disk quota exceeded or some such") when
+     trying to save/quick-save a pdb file).
+
+* There's already a dialog on error on write - that will do for now (it doesn't say the error type)
+
+   o when multi-sharpen fails because there is no refmac, we should get a message
+     in the status bar.
+
+* Done - something like that.
+
+   o Add map resolution from grid spacing to Map Properties dialog - Bernhard Rupp.
+
+* Done.
+
+   o when generating density lines, check for is-EM map, and if so, don't draw outside
+     the boundaries of the cell.
+     This needs to know that a reboxed map is *not* an EM map because it can have density
+     outside of the unit cell - to include reboxed map, it needs to have x,y,z limits
+     derived from the grid box.
+     Remove the current box restriction and move to refinement
+
+* Done.
+
+   o zero occupancy markers should respect the model molecule display limit
+
+* Done.
+
+   o zero occupancies markers for hydrogens should respect the no-bonds-to-hydrogens
+     setting
+
+* Punt. Too hard too esoteric.
+
+   o accept_regularizement() needs a better name (keep this one for backwards compatibility)
+
+* Done.
+
+   o Label for "Limit Model Display Radius" should have a ...
+
+* Done.
+
+   o N-linked Additon -> remove the word "Dialog"
+
+* Done.
+
+   o Oliver-Clarke bonding
+
+*Done! Yay.
+
+   o Pointer distances should not show distances to Hydrogen atom if they are not displayed!
+     Steven Sherrif
+
+* Done.
+
+   o do the bug fix for Robbie.
+
+* Done.
 
    o CA-Zone -> mainchain on a zone that includes negative residue numbers -> crash
      Oliver Clarke. ::: 2 h
@@ -291,3 +485,93 @@ command "cprodrg" not found
    o 1abr 140B "Delete all carbohydrate" fail
 
 * Insertion codes!
+
+   o multiple maps - undefined refinement map - jiggle fit this molecule needs an dialog alert.
+
+* Done.
+
+   o When merging a ligand - allow the ligand to be in user-specified chain.
+     Maybe a menu item "Merge this ligand" which uses new function
+     merge_ligand(imol, current_residue_spec, into_mol, new_residue_spec)
+
+* Done. Even added a test.
+
+   o Make a trivial ligand in the ligand builder, run acedrg. make an incorrect ligand
+     (valence error) and run acedrg - the previous ligand gets imported.
+
+     -> Apply button should grey out if there is no SMILES string (perhaps)
+
+* Done.
+
+   o add-terminal-residue should do not make intermediate atoms and not do a rigid body fit.
+     Use --no-startup-scripts to help test this.
+
+* The second of those was already so, immediate addition mode changed.
+
+   o Carmen question: ?
+
+       If you are on the keyboard and doing rotamer, can you accept it with Enter?
+       No.
+       Fix it then.
+
+* Done.
+
+       Adding solvent molecules - add it to the right molecule - make the spacing bigger to make the widget bigger.
+
+* Done.
+
+   o Draw hydrogens is not respected in colour-by-chain mode.
+
+* I wonder what I meant. It was respected, but colour-by-secondary-structure was not. I had been looking at the
+  refinement build, which has (had?) different arguments. Fixed.
+
+   o Add a test that fle_view with_png output makes a sensible file.
+
+* Done
+
+   o Add distance restraint - does that work? - What about helical restraints?
+     Test with a distorted model in a very low resolution map.
+
+* It's working fine. There needs to be a lot of them to make a serious impact on the refinement.
+
+   o what has happened to RCrane?
+
+* It has moved to Calculate
+
+   o I don't like the double call to make_bonds() (it's in CA mode at least). Get rid of it.
+
+* I don't see it.
+
+   o OXT in residue type LYS fle_view_with_rditk() failure.
+     New monomer library!?
+
+* Punt.
+
+   o Randy: origin removed patterson: what's next to fix?
+
+Punt.
+
+   o compare the origins of a rebox and maps from the EMDB - look for nxstart etc differences
+     use mrcfile for convenience.
+
+* Punt.
+
+   o CryoEM tutorial says "choose a sensible weight for the map" - how do we do that Paul?
+
+* Is this really a problem - if so, punt.
+
+   o add symmetry and try povray - crash?
+
+* Punt.
+
+   o raster3d should show symmetry?
+
+* Punt.
+
+   o can you add a download for EMDB bundles?
+
+* Punt.
+
+   o does normal/old/standard cis-trans update the bonds?
+
+* Yes

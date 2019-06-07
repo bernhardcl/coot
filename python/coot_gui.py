@@ -2079,6 +2079,8 @@ def add_view_to_views_panel(view_name, view_number):
       views_dialog_vbox.pack_start(button, False, False, 2)
       button.show()
 
+# return a list of [h_box_buttons, window]
+#
 # a button is a list of [label, callback, text_description]
 #
 def dialog_box_of_buttons(window_name, geometry, buttons,
@@ -2089,7 +2091,7 @@ def dialog_box_of_buttons(window_name, geometry, buttons,
 
 # geometry is an improper list of ints
 #
-# return the h_box of the buttons
+# return a list of [h_box_buttons, window]
 #
 # a button is a list of [label, callback, (optional: text_description)]
 # where callback is a string or list of strings to be evaluated
@@ -2161,7 +2163,7 @@ def dialog_box_of_buttons_with_check_button(window_name, geometry,
    ok_button.connect("clicked", close_cb_func, window, post_close_hook)
 	
    window.show_all()
-   return inside_vbox
+   return [inside_vbox, window]
 
 # This is exported outside of the box-of-buttons gui because the
 # clear_and_add_back function (e.g. from using the check button)
@@ -2193,10 +2195,20 @@ def add_button_info_to_box_of_buttons_vbox(button_info, vbox):
             eval(call)
          button.connect("clicked", callback_func, callback)
       elif (type(callback) is ListType):
-         def callback_func(button, call):
-            for item in call:
-               eval(item)
-         button.connect("clicked", callback_func, callback)                   
+         # list can be list of strings or list of functions
+         # with args
+         #
+         if (isinstance(callback[0], str)):
+            # we have strings to evaluate
+            def callback_func(button, call):
+               for item in call:
+                  eval(item)
+            button.connect("clicked", callback_func, callback)
+         else:
+            def callback_func(button, call):
+               for item in call:
+                  item[0](*item[1:])
+            button.connect("clicked", callback_func, callback)
       else:
          button.connect("clicked", callback)
 
@@ -4619,22 +4631,22 @@ def solvent_ligands_gui():
    outside_vbox = gtk.VBox(False, 2)
    inside_vbox  = gtk.VBox(False, 2)
    label = gtk.Label("\nSolvent molecules added to molecule: ")
-   frame_for_option_menu = gtk.Frame()
-   vbox_for_option_menu = gtk.VBox(False, 2)
+   frame_for_option_menu = gtk.Frame(" Choose Molecule ")
+   vbox_for_option_menu = gtk.VBox(False, 6)
    molecule_option_menu = gtk.combo_box_new_text()
    model_list = fill_option_menu_with_coordinates_mol_options(molecule_option_menu)
    add_new_button = gtk.Button("  Add a new Residue Type...")
    h_sep = gtk.HSeparator()
    close_button = gtk.Button("  Close  ")
 
-   window.set_default_size(250, 400)
+   window.set_default_size(250, 500)
    window.set_title("Solvent Ligands")
    window.set_border_width(8)
    window.add(outside_vbox)
    outside_vbox.pack_start(label, False, False, 2)
    frame_for_option_menu.add(vbox_for_option_menu)
-   vbox_for_option_menu.pack_start(molecule_option_menu, False, False, 2)
-   frame_for_option_menu.set_border_width(4)
+   vbox_for_option_menu.pack_start(molecule_option_menu, False, False, 8)
+   frame_for_option_menu.set_border_width(6)
    outside_vbox.pack_start(frame_for_option_menu, False, False, 2)
    outside_vbox.pack_start(scrolled_win, True, True, 0)
    scrolled_win.add_with_viewport(inside_vbox)
@@ -5237,9 +5249,9 @@ def click_protein_db_loop_gui():
                                          ] + buttons,
                                         " Close ",
                                         lambda: map(lambda im: (set_mol_displayed(im, 0), set_mol_active(im,0)), loop_mols))
-                 
+
       user_defined_click(n, pick_func)
-      
+
    generic_number_chooser(range(2,10), 4,
                           "Number of residues for basis",
                           "Pick Atoms...",
@@ -5266,17 +5278,22 @@ def refmac_multi_sharpen_gui():
       # It is not stored. So we make/guess it...
       map_file_name = molecule_name(active_item_imol)
       if (map_file_name.find(" ") > 0):
-         # we have map ceoffs - but then sharpen as here wont work anyway
+         # we have map coeffs - but then sharpen as here wont work anyway
          map_file_name = map_file_name[:map_file_name.find(" ")]
       map_file_name_stub = strip_path(file_name_sans_extension(map_file_name))
-      refmac_output_mtz_file_name = "starting-map-" + map_file_name_stub + ".mtz"
-      log_file_name = "refmac-sharp" + map_file_name_stub + ".log"
+      refmac_output_mtz_file_name = "starting_map-" + map_file_name_stub + ".mtz"
+      log_file_name = "refmac-multisharp-" + map_file_name_stub + ".log"
       if not os.path.isfile(map_file_name):
          info_dialog("WARNING:: file not found %s" %map_file_name)
       else:
+         if not directory_is_modifiable_qm(os.getcwd()):
+            m = "ERROR:: Current directory " + os.getcwd() + " is not writable"
+            info_dialog(m)
+            return
          print "active_item_imol", active_item_imol
          step_size = max_b/n_levels
-         numbers_string = ' '.join(str(i+1) for i in range(n_levels))
+         numbers_string = ' '.join(str((i + 1) * step_size) \
+                                   for i in range(n_levels))
          blur_string = "SFCALC BLUR  " + numbers_string
          sharp_string = "SFCALC SHARP " + numbers_string
 
@@ -5285,24 +5302,33 @@ def refmac_multi_sharpen_gui():
                        blur_string,
                        sharp_string,
                        "END"]
-         refmac_execfile = find_exe("refmac5", "CBIN", "CCP4_BIN", "PATH")
-         s = popen_command(refmac_execfile,
-                           cmd_line_args,
-                           data_lines,
-                           log_file_name)
-         
-         try:
-            if (s == 0):
-               # all good
-               print "BL DEBUG:: s", s
-               if os.path.isfile("starting-map.mtz"):
-                  os.rename("starting-map.mtz", refmac_output_mtz_file_name)
-                  # maybe offer a dialog?! Or read automatically?
-         except:
-            pass
+         this_dir = os.getcwd()
+         if not directory_is_modifiable_qm(this_dir):
+            info_dialog("WARNING:: Current directory is not writable")
+         else:
+            refmac_execfile = find_exe("refmac5", "CBIN", "CCP4_BIN", "PATH")
+            s = popen_command(refmac_execfile,
+                              cmd_line_args,
+                              data_lines,
+                              log_file_name,
+                              False)
+
+            try:
+               if s != 0:
+                  info_dialog("WARNING:: refmac5 failed")
+               else:
+                  # Happy path
+                  print "BL DEBUG:: s", s
+                  if os.path.isfile("starting_map.mtz"):
+                     os.rename("starting_map.mtz", refmac_output_mtz_file_name)
+                     # offer a read-mtz dialog
+                     manage_column_selector(refmac_output_mtz_file_name)
+
+            except:
+               print "BL DEBUG:: tried to rename starting-map.mtz but failed."
+               pass
          delete_event(widget)
 
-   print "BL DEBUG:: now make a windwo"
    window = gtk.Window(gtk.WINDOW_TOPLEVEL)
    # boxes
    vbox = gtk.VBox(False, 0)
@@ -5336,14 +5362,15 @@ def refmac_multi_sharpen_gui():
    hbox_2.pack_start(sb_label, False, False, 2)
    hbox_2.pack_start(option_menu_n_levels, False, False, 2)
    hbox_2.pack_start(levels_label, False, False, 2)
+   hbox_2.pack_start(option_menu_b_factor, False, False, 2)
    hbox_3.pack_end(cancel_button, False, False, 12)
    hbox_3.pack_end(ok_button, False, False, 12)
-   
+
    vbox.pack_start(hbox_1)
    vbox.pack_start(hbox_2)
    vbox.pack_start(h_sep)
    vbox.pack_start(hbox_3)
-   
+
    cancel_button.connect("clicked", delete_event)
 
    ok_button.connect("clicked", sharpen_cb, option_menu_b_factor, b_factor_list,

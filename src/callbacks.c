@@ -11871,6 +11871,9 @@ on_map_sharpening_cancel_button_clicked
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
+   /* at least it should close, or we should remove the cancel button */
+   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "map_sharpening_dialog");
+   gtk_widget_destroy(w);
 
 }
 
@@ -12303,11 +12306,11 @@ on_ligand_check_okbutton_clicked(GtkButton       *button,
 void
 on_generic_objects_dialog_closebutton_clicked
                                         (GtkButton       *button,
-					 gpointer         user_data) { 
-
+					 gpointer         user_data) {
 
   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "generic_objects_dialog");
-  gtk_widget_hide(w);
+  gtk_widget_destroy(w);
+  clear_generic_objects_dialog_pointer();
   graphics_draw();
 
 } 
@@ -12317,7 +12320,7 @@ void
 on_generic_objects_dialog_close        (GtkDialog       *dialog,
                                         gpointer         user_data) { 
 
-/*   printf("on_generic_objects_dialog_close\n"); */
+  clear_generic_objects_dialog_pointer(); /* needed here? */
   graphics_draw();
 
 }
@@ -12702,6 +12705,23 @@ on_curlew_dialog_response              (GtkDialog       *dialog,
 
   if (response_id == GTK_RESPONSE_CLOSE)
     gtk_widget_destroy(GTK_WIDGET(dialog));
+
+}
+
+
+void
+on_symmetry_always_on_checkbutton_toggled
+                                        (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+
+   GtkWidget *symmetry_on_radio_button = NULL;
+   if (togglebutton->active) {
+      add_symmetry_on_to_preferences_and_apply();
+      symmetry_on_radio_button = lookup_widget(GTK_WIDGET(togglebutton), "show_symmetry_yes_radiobutton");
+      if (! gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(symmetry_on_radio_button)))
+	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(symmetry_on_radio_button), TRUE);
+   }
 
 }
 

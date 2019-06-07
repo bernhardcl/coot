@@ -1623,6 +1623,14 @@ int set_go_to_atom_from_res_spec_scm(SCM residue_spec_scm) {
    return set_go_to_atom_from_res_spec(spec);
 }
 
+#ifdef USE_GUILE
+int set_go_to_atom_from_atom_spec_scm(SCM atom_spec_scm) {
+   coot::atom_spec_t spec = atom_spec_from_scm_expression(atom_spec_scm);
+   return set_go_to_atom_from_spec(spec);
+}
+#endif // USE_GUILE
+
+
 #endif 
 
 #ifdef USE_PYTHON
@@ -1637,6 +1645,14 @@ int set_go_to_atom_from_res_spec_py(PyObject *residue_spec_py) {
 } 
 #endif 
 
+
+#ifdef USE_PYTHON
+int set_go_to_atom_from_atom_spec_py(PyObject *atom_spec_py) {
+
+   coot::atom_spec_t spec = atom_spec_from_python_expression(atom_spec_py);
+   return set_go_to_atom_from_spec(spec);
+}
+#endif
 
 
 // (is-it-valid? (active-molecule-number spec))
@@ -2553,26 +2569,40 @@ void fill_single_map_properties_dialog(GtkWidget *window, int imol) {
 
    GtkWidget *cell_text = lookup_widget(window, "single_map_properties_cell_text");
    GtkWidget *spgr_text = lookup_widget(window, "single_map_properties_sg_text");
+   GtkWidget *reso_text = lookup_widget(window, "single_map_properties_reso_text");
 
    std::string cell_text_string;
    std::string spgr_text_string;
+   std::string reso_text_string;
 
+   // 20180924-PE FIXME needs to consider NXmaps
+   //
+   const clipper::Xmap<float> &xmap = graphics_info_t::molecules[imol].xmap;
    cell_text_string = graphics_info_t::molecules[imol].cell_text_with_embeded_newline();
    spgr_text_string = "   ";
-   spgr_text_string += graphics_info_t::molecules[imol].xmap.spacegroup().descr().symbol_hm();
+   spgr_text_string += xmap.spacegroup().descr().symbol_hm();
    spgr_text_string += "  [";
-   spgr_text_string += graphics_info_t::molecules[imol].xmap.spacegroup().descr().symbol_hall();
+   spgr_text_string += xmap.spacegroup().descr().symbol_hall();
    spgr_text_string += "]";
+   float r = graphics_info_t::molecules[imol].data_resolution();
+   if (r < 0) {
+      r = 2.0 * xmap.cell().descr().a()/static_cast<float>(xmap.grid_sampling().nu());
+      reso_text_string = " ";
+      reso_text_string += coot::util::float_to_string(r);
+      reso_text_string += " (by grid)";
+   } else {
+      reso_text_string = coot::util::float_to_string(r);
+   }
 
    gtk_label_set_text(GTK_LABEL(cell_text), cell_text_string.c_str());
    gtk_label_set_text(GTK_LABEL(spgr_text), spgr_text_string.c_str());
+   gtk_label_set_text(GTK_LABEL(reso_text), reso_text_string.c_str());
 
    // And now the map rendering style: transparent surface or standard lines:
    GtkWidget *rb_1  = lookup_widget(window, "displayed_map_style_as_lines_radiobutton");
    GtkWidget *rb_2  = lookup_widget(window, "displayed_map_style_as_cut_glass_radiobutton");
    GtkWidget *rb_3  = lookup_widget(window, "displayed_map_style_as_transparent_radiobutton");
    GtkWidget *scale = lookup_widget(window, "map_opacity_hscale");
-   
 
    graphics_info_t g;
    if (g.molecules[imol].draw_it_for_solid_density_surface) {

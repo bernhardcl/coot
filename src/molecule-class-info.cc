@@ -1590,8 +1590,13 @@ molecule_class_info_t::rotate_rgb_in_place(float *rgb, const float &amount) cons
 // So they need to be filled after calling this function.
 void 
 molecule_class_info_t::initialize_map_things_on_read_molecule(std::string molecule_name,
-							      int is_diff_map,
-							      short int swap_difference_map_colours) {
+							      bool is_diff_map,
+							      bool is_anomalous_map,
+							      bool swap_difference_map_colours) {
+
+   if (false)
+      std::cout << "------------------- initialize_map_things_on_read_molecule() is_anomalous_map: "
+		<< is_diff_map << " " << is_anomalous_map << " " << swap_difference_map_colours << std::endl;
 
    // unset coordinates, this is not a set of coordinates:
    atom_sel.n_selected_atoms = 0;
@@ -1614,16 +1619,22 @@ molecule_class_info_t::initialize_map_things_on_read_molecule(std::string molecu
    map_colour = new double*[10];
 
    map_colour[0] = new double[4];
-   if (is_diff_map == 1) { 
+   if (is_diff_map) { 
       if (! swap_difference_map_colours) { 
-	 map_colour[0][0] = 0.2; 
-	 map_colour[0][1] = 0.6; 
+	 if (! is_anomalous_map) {
+	    map_colour[0][0] = 0.2; 
+	    map_colour[0][1] = 0.6; 
+	    map_colour[0][2] = 0.2;
+	 } else {
+	    map_colour[0][0] = 0.6;
+	    map_colour[0][1] = 0.6;
+	    map_colour[0][2] = 0.4;
+	 }
+      } else {
+	 map_colour[0][0] = 0.6;
+	 map_colour[0][1] = 0.2;
 	 map_colour[0][2] = 0.2;
-      } else { 
-	 map_colour[0][0] = 0.6; 
-	 map_colour[0][1] = 0.2; 
-	 map_colour[0][2] = 0.2; 
-      } 
+      }
    } else {
       std::vector<float> orig_colours(3);
       orig_colours[0] =  0.2;
@@ -1638,13 +1649,19 @@ molecule_class_info_t::initialize_map_things_on_read_molecule(std::string molecu
    } 
       
    // negative contour level
-   // 
+   //
    map_colour[1] = new double[4];
-   if (! swap_difference_map_colours) { 
-      map_colour[1][0] = 0.6; 
-      map_colour[1][1] = 0.2; 
-      map_colour[1][2] = 0.2; 
-   } else { 
+   if (! swap_difference_map_colours) {
+      if (! is_anomalous_map) {
+	 map_colour[1][0] = 0.6;
+	 map_colour[1][1] = 0.2;
+	 map_colour[1][2] = 0.2;
+      } else {
+	 map_colour[1][0] = 0.55;
+	 map_colour[1][1] = 0.25;
+	 map_colour[1][2] = 0.45;
+      }
+   } else {
       map_colour[1][0] = 0.2; 
       map_colour[1][1] = 0.6; 
       map_colour[1][2] = 0.2;
@@ -2010,7 +2027,8 @@ molecule_class_info_t::draw_molecule(short int do_zero_occ_spots,
 	       }
 	    }
 	    if (show_cis_peptide_markups)
-	       cis_peptide_markups();
+	       draw_cis_peptide_markups();
+	    draw_bad_CA_CA_dist_spots();
 	 }
       }
    }
@@ -2022,16 +2040,22 @@ molecule_class_info_t::zero_occupancy_spots() const {
 
    if (bonds_box.n_zero_occ_spots > 0) { 
 
+      const std::pair<bool, float> &use_radius_limit = graphics_info_t::model_display_radius;
+
       glColor3f(0.8, 0.7, 0.7);
       float zsc = graphics_info_t::zoom;
       //glPointSize(145.0/zsc);
       // scale the pointer with the bond width
       glPointSize(30.0/std::min(zsc,(float)20)*std::max(bond_width, (float)4));
       glBegin(GL_POINTS); 
-      for (int i=0; i<bonds_box.n_zero_occ_spots; i++) { 
-	 glVertex3f(bonds_box.zero_occ_spots_ptr[i].x(),
-		    bonds_box.zero_occ_spots_ptr[i].y(),
-		    bonds_box.zero_occ_spots_ptr[i].z());
+      for (int i=0; i<bonds_box.n_zero_occ_spots; i++) {
+
+	 if ((use_radius_limit.first == false) ||
+	     (graphics_info_t::is_within_display_radius(bonds_box.zero_occ_spots_ptr[i]))) {
+	    glVertex3f(bonds_box.zero_occ_spots_ptr[i].x(),
+		       bonds_box.zero_occ_spots_ptr[i].y(),
+		       bonds_box.zero_occ_spots_ptr[i].z());
+	 }
       }
       glEnd();
    }
@@ -2056,7 +2080,7 @@ molecule_class_info_t::deuterium_spots() const {
 }
 
 void
-molecule_class_info_t::cis_peptide_markups() const {
+molecule_class_info_t::draw_cis_peptide_markups() const {
 
    const std::pair<bool, float> &use_radius_limit = graphics_info_t::model_display_radius;
    if (bonds_box.n_cis_peptide_markups > 0) {
@@ -2103,6 +2127,24 @@ molecule_class_info_t::cis_peptide_markups() const {
 	    }
 	 }
       }
+   }
+}
+
+void
+molecule_class_info_t::draw_bad_CA_CA_dist_spots() const {
+
+   if (bonds_box.n_bad_CA_CA_dist_spots > 0) {
+
+      glColor3f(0.9, 0.6, 0.3);
+      const float &z = graphics_info_t::zoom;
+      glPointSize(200.0 / z);
+      glBegin(GL_POINTS);
+      for (int i=0; i<bonds_box.n_bad_CA_CA_dist_spots; i++) {
+	 glVertex3f(bonds_box.bad_CA_CA_dist_spots_ptr[i].x(),
+		    bonds_box.bad_CA_CA_dist_spots_ptr[i].y(),
+		    bonds_box.bad_CA_CA_dist_spots_ptr[i].z());
+      }
+      glEnd();
    }
 }
 
@@ -2255,7 +2297,7 @@ molecule_class_info_t::display_bonds(const graphical_bonds_container &bonds_box,
 
 	 if (bonds_box.bonds_[i].thin_lines_flag)
 	    zsc *= 0.5;
- 
+
 	 glBegin(GL_QUADS);
 
 	 if (! use_radius_limit.first) {
@@ -3326,7 +3368,7 @@ molecule_class_info_t::make_ca_plus_ligands_and_sidechains_bonds(coot::protein_g
 void
 molecule_class_info_t::make_colour_by_chain_bonds(short int change_c_only_flag) {
    // 
-   Bond_lines_container bonds(graphics_info_t::Geom_p());
+   Bond_lines_container bonds(graphics_info_t::Geom_p(), draw_hydrogens_flag);
    bonds.do_colour_by_chain_bonds(atom_sel, imol_no, draw_hydrogens_flag, change_c_only_flag);
    bonds_box = bonds.make_graphical_bonds_no_thinning(); // make_graphical_bonds() is pretty
                                                          // stupid when it comes to thining.
@@ -3444,7 +3486,7 @@ molecule_class_info_t::update_bonds_using_phenix_geo(const coot::phenix_geo_bond
 int
 molecule_class_info_t::n_models() const {
    int r = -1;
-   if (has_model()) { 
+   if (has_model()) {
       r = atom_sel.mol->GetNumberOfModels();
    }
    return r;
@@ -4098,11 +4140,10 @@ molecule_class_info_t::full_atom_spec_to_atom_index(const std::string &chain,
 
    if (nSelAtoms == 0) { 
 
-      std::cout << "Sorry (full_atom_spec_to_atom_index) Could not find "
+      std::cout << "WARNING:: full_atom_spec_to_atom_index() Could not find "
 		<< "\"" << atom_name << "\"," << "\"" << alt_conf  << "\"" << "/"
 		<< resno << insertion_code << "/" << chain << " in this molecule: ("
 		<<  imol_no << ") " << name_ << std::endl; 
-
       
       int selHnd2 = atom_sel.mol->NewSelection(); // d
       
@@ -4117,15 +4158,16 @@ molecule_class_info_t::full_atom_spec_to_atom_index(const std::string &chain,
 
       atom_sel.mol->GetSelIndex(selHnd2, local_SelAtom, nSelAtoms);
 
-      std::cout << "There were " << nSelAtoms << " atoms in that residue:\n";
-
-      std::cout << "debgu:: resno " << resno << " vs MinInt4" << mmdb::MinInt4 << "\n";
-      
-      if (resno == mmdb::MinInt4) {
-	 std::cout << "      residue with resno MinInt4\n";
-      } else { 
-	 for (int i=0; i<nSelAtoms; i++) { 
-	    std::cout << "      " << local_SelAtom[i] << "\n";
+      if (false) { // debugging.
+	 std::cout << "There were " << nSelAtoms << " atoms in that residue:\n";
+	 std::cout << "debgu:: full_atom_spec_to_atom_index() resno " << resno
+		   << " (cf MinInt4) " << mmdb::MinInt4 << "\n";
+	 if (resno == mmdb::MinInt4) {
+	    std::cout << "      residue with resno MinInt4\n";
+	 } else { 
+	    for (int i=0; i<nSelAtoms; i++) { 
+	       std::cout << "      " << local_SelAtom[i] << "\n";
+	    }
 	 }
       }
 
@@ -4324,7 +4366,7 @@ molecule_class_info_t::replace_coords(const atom_selection_container_t &asc,
    make_backup();
 
    // debug::
-   if (false) { 
+   if (false) {
       std::cout << "DEBUG:: --------------- replace_coords replacing "
 		<< asc.n_selected_atoms << " atoms " << std::endl;
       for (int i=0; i<asc.n_selected_atoms; i++) {
@@ -7317,9 +7359,37 @@ molecule_class_info_t::n_residues() const {
 	    r += nres;
 	 }
       }
+   }
+   return r;
+}
+
+int
+molecule_class_info_t::n_atoms() const {
+
+   int r = -1;
+   if (atom_sel.n_selected_atoms > 0) {
+      r = 0;
+      for(int imod = 1; imod<=atom_sel.mol->GetNumberOfModels(); imod++) {
+	 mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
+	 mmdb::Chain *chain_p;
+	 int n_chains = model_p->GetNumberOfChains();
+	 for (int ichain=0; ichain<n_chains; ichain++) {
+	    chain_p = model_p->GetChain(ichain);
+	    int nres = chain_p->GetNumberOfResidues();
+	    for (int ires=0; ires<nres; ires++) {
+	       mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+	       int n_atoms = residue_p->GetNumberOfAtoms();
+	       for (int iat=0; iat<n_atoms; iat++) {
+		  mmdb::Atom *at = residue_p->GetAtom(iat);
+		  if (! at->Het)
+		     r++;
+	       }
+	    }
+	 }
+      }
    } 
    return r;
-} 
+}
 
 
 
@@ -7836,12 +7906,13 @@ molecule_class_info_t::add_multiple_dummies(mmdb::Chain *chain_p,
       res_p->seqNum = i + 1;
       res_p->SetResName("DUM");
 
-      std::cout << atom_p << " added to molecule" << std::endl;
+      // std::cout << atom_p << " added to molecule" << std::endl;
    }
 
 
-   std::cout << "DEBUG:: add_multiple_dummies finishing.. "
-	     << pos_position.size() << std::endl;
+   if (false)
+      std::cout << "DEBUG:: add_multiple_dummies finishing.. "
+		<< pos_position.size() << std::endl;
    
    // Actually, we want to run this code when there are no new guide
    // points too.  This sets atom_sel.SelectionHandle properly, which
@@ -8688,12 +8759,36 @@ molecule_class_info_t::next_residue_number_in_chain(mmdb::Chain *w,
 	    if (residue_p->seqNum > max_res_no) {
 	       max_res_no = residue_p->seqNum;
 	       if (new_res_no_by_hundreds) {
-		  int res_no = coot::util::round_up_by_hundreds(max_res_no+1);
-		  p = std::pair<short int, int>(1, res_no+1);
+		  if (max_res_no < 9999) {
+		     int res_no = coot::util::round_up_by_hundreds(max_res_no+1);
+		     p = std::pair<short int, int>(1, res_no+1);
+		  }
 	       } else {
-		  p = std::pair<short int, int>(1, max_res_no+1);
+		  if (max_res_no < 9999) {
+		     p = std::pair<short int, int>(1, max_res_no+1);
+		  }
 	       }
 	    }
+	 }
+	 if (! p.first) {
+	    //  first the first space starting from the front
+	    int test_resno_start = 1001;
+	    bool is_clear = false;
+	    while (! is_clear) {
+	       is_clear = true;
+	       for (int iser=0; iser<nres; iser++) {
+		  int resno_res = w->GetResidue(iser)->seqNum;
+		  if (resno_res >= test_resno_start) {
+		     if (resno_res <= (test_resno_start+10)) {
+			is_clear = false;
+		     }
+		  }
+		  if (! is_clear)
+		     break;
+	       }
+	       test_resno_start += 100;
+	    }
+	    p = std::pair<short int, int> (1, test_resno_start);
 	 }
       }
    }

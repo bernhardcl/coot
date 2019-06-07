@@ -481,9 +481,17 @@ class graphics_info_t {
    static float rotation_centre_y;
    static float rotation_centre_z;
 
-   static float old_rotation_centre_x;
-   static float old_rotation_centre_y;
-   static float old_rotation_centre_z;
+   static coot::Cartesian old_rotation_centre;
+   static void set_old_rotation_centre(const coot::Cartesian &rc) {
+     old_rotation_centre = rc;
+   }
+   static coot::Cartesian get_old_rotation_centre() {
+     return old_rotation_centre;
+   }
+   // delete these when working
+   // static float old_rotation_centre_x;
+   // static float old_rotation_centre_y;
+   // static float old_rotation_centre_z;
 
    static long int T0; 
    static long int Frames;
@@ -957,9 +965,9 @@ public:
       lsq_plane_atom_positions = new std::vector<clipper::Coord_orth>;
 
       directory_for_fileselection = "";
-#if (GTK_MAJOR_VERSION > 1)
+
       directory_for_filechooser = "";
-#endif // GTK_MAJOR_VERSION
+
       baton_next_ca_options = new std::vector<coot::scored_skel_coord>;
       baton_previous_ca_positions = new std::vector<clipper::Coord_orth>;
 
@@ -1629,11 +1637,17 @@ public:
    // Those coordinates will get used in draw() to centre on that
    // atom. 
    //
-   void setRotationCentre(int atom_index, int imol); 
+   void setRotationCentre(int atom_index, int imol);
 
-   void setRotationCentre(coot::Cartesian centre); 
+   // if dir is true, we are going forward
+   void reorienting_next_residue(bool dir);
+   static bool reorienting_next_residue_mode;
+
+   void setRotationCentre(coot::Cartesian centre);
    void setRotationCentreAndZoom(coot::Cartesian centre,
-				 float target_zoom); 
+				 float target_zoom);
+   void setRotationCentreSimple(const coot::Cartesian &c);
+
 
    // old style: soon to be redundent
    void setRotationCentre(const symm_atom_info_t &symm_atom_info);
@@ -1893,19 +1907,6 @@ public:
 
    static void on_go_to_atom_residue_tree_selection_changed_gtk1(GtkList *gtklist,
 								 gpointer user_data);
-#if (GTK_MAJOR_VERSION == 1) || defined (GTK_ENABLE_BROKEN)
-
-   static int go_to_atom_residue_tree_signal_handler_event_gtk1(GtkWidget *widget, 
-								GdkEventButton *event, 
-								gpointer func_data);
-   static int cb_chain_tree_itemsignal( GtkWidget *item,
-					GdkEventButton *event, 
-					gpointer func_data);
-   static int go_to_atom_atom_list_signal_handler_event_gtk1(GtkWidget *widget, 
-							     GdkEventButton *event, 
-							     gpointer func_data);
-
-#else 
    // -------------------- Gtk2 code -----------------------------
    static void on_go_to_atom_residue_tree_selection_changed (GtkTreeView *gtklist,
 							     gpointer user_data);
@@ -1936,7 +1937,6 @@ public:
 // BL says:: put my gtk2 stuff in here too:
    static int gtk2_file_chooser_selector_flag;
    static int gtk2_chooser_overwrite_flag;
-#endif // #if (GTK_MAJOR_VERSION == 1) || defined (GTK_ENABLE_BROKEN)
 
    void apply_go_to_atom_from_widget(GtkWidget *widget); 
    static void pointer_atom_molecule_menu_item_activate(GtkWidget *item, 
@@ -2939,12 +2939,11 @@ public:
    void set_file_for_save_fileselection(GtkWidget *fileselection) const;
 
    // for file_chooser
-#if (GTK_MAJOR_VERSION > 1)
+
    void set_directory_for_filechooser(GtkWidget *fileselection) const;
    void save_directory_from_filechooser(const GtkWidget *fileselection);
    void save_directory_for_saving_from_filechooser(const GtkWidget *fileselection);
    void set_file_for_save_filechooser(GtkWidget *fileselection) const;
-#endif
 
    // saving temporary files (undo)
    //
@@ -2978,7 +2977,7 @@ public:
    static short int draw_baton_flag;
    static short int baton_mode; // if set, rotation moves the baton, not the view
    static short int baton_tmp_atoms_to_new_molecule; 
-   static void baton_object();
+   static void draw_baton_object();
    // return a boolean, shall we really draw the baton or not (for
    // example, we don't want to do that if there is no skeletonized
    // map
@@ -3527,6 +3526,8 @@ public:
    // ----- merge molecules ------
    static int merge_molecules_master_molecule;
    static std::vector<int> *merge_molecules_merging_molecules;
+   static coot::residue_spec_t merge_molecules_ligand_spec; // JED feature
+   void set_merge_molecules_ligand_spec(const coot::residue_spec_t &spec_in);
 
    // ------ change chain ids:
    static int change_chain_id_molecule;
@@ -3578,7 +3579,7 @@ public:
    void omega_graphs(int imol);
    coot::rotamer_graphs_info_t rotamer_graphs(int imol); // give results back to scripting layer
    void density_fit_graphs(int imol);
-   static GtkWidget *wrapped_create_diff_map_peaks_dialog(const std::vector<std::pair<clipper::Coord_orth, float> > &centres, float map_sigma);
+   static GtkWidget *wrapped_create_diff_map_peaks_dialog(const std::vector<std::pair<clipper::Coord_orth, float> > &centres, float map_sigma, const std::string &dialog_title);
    // the buttons callback for above:
    static void on_diff_map_peak_button_selection_toggled (GtkButton       *button,
 							  gpointer         user_data);
@@ -3643,6 +3644,8 @@ public:
    void show_hide_toolbar_icon_pos(int pos, int show_hide_flag, int toolbar_index);
    std::vector<int> get_model_toolbar_icons_list();
    std::vector<int> get_main_toolbar_icons_list();
+   void add_to_preferences(const std::string &file_name, const std::string &contents) const;
+   std::string get_preferences_directory() const;
 
    // --- remote controlled coot: ----
    static int try_port_listener;
@@ -3758,6 +3761,9 @@ public:
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec(int imol);
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec_internal(int imol);
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec_simple();
+   // direct for immediate usage, imol and atom,
+   // return (-1, null) on not found
+   std::pair<int, mmdb::Atom *> get_active_atom() const;
 
    // this can return -1 if there is no active atom molecule.
    int copy_active_atom_molecule();
@@ -4074,6 +4080,10 @@ string   static std::string sessionid;
    static double geman_mcclure_alpha;
 
    static bool update_maps_on_recentre_flag;
+
+   static float ca_bonds_loop_param_1;
+   static float ca_bonds_loop_param_2;
+   static float ca_bonds_loop_param_3;
 
    static pair<bool,float> coords_centre_radius;  // should the display radius limit be applied? And
                                                   // if so, what is it? (say 20A)

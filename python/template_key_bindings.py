@@ -42,6 +42,14 @@ def key_binding_func_2():
         fill_partial_residue(imol, chain_id, res_no, ins_code)
 add_key_binding("Fill Partial", "k", lambda: key_binding_func_2())
 
+def delete_residue_sidechain_key():
+    with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
+                               aa_ins_code, aa_atom_name, aa_alt_conf]:
+        delete_residue_sidechain(aa_imol, aa_chain_id, aa_res_no,
+                                 aa_ins_code, aa_alt_conf)
+add_key_binding("Delete Residue Sidechain", "K",
+                lambda: delete_residue_sidechain_key())
+
 def rotamer_dialog_for_ar():
     with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                aa_ins_code, aa_atom_name, aa_alt_conf]:
@@ -107,6 +115,10 @@ def edit_chi_angles_key_func():
         set_moving_atom_move_chis()
         set_graphics_edit_current_chi(1)
 add_key_binding("Edit Chi Angles", "X", lambda: edit_chi_angles_key_func())
+
+# BL says:: I like to keep edit chi, so use "Y" for something potentially
+# more useful (according to Paule)
+add_key_binding("Just One or Next Map", "Y", lambda: just_one_or_next_map())
 
 def jiggle_fit_residue_key():
     with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,

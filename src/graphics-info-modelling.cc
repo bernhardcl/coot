@@ -783,6 +783,25 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	 std::pair<mmdb::Manager *, std::vector<mmdb::Residue *> > residues_mol_and_res_vec =
 	    create_mmdbmanager_from_res_vector(residues, imol, mol, residues_alt_conf);
 
+	 if (false) { // debug
+	    mmdb::Manager *residues_mol = residues_mol_and_res_vec.first;
+	    int imod = 1;
+	    mmdb::Model *model_p = residues_mol->GetModel(imod);
+	    if (model_p) {
+	       int n_chains = model_p->GetNumberOfChains();
+	       for (int ichain=0; ichain<n_chains; ichain++) {
+		  mmdb::Chain *chain_p = model_p->GetChain(ichain);
+		  int nres = chain_p->GetNumberOfResidues();
+		  for (int ires=0; ires<nres; ires++) {
+		     mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+		     std::cout << "^^^   residue " << coot::residue_spec_t(residue_p) << " residue "
+			       << residue_p << " chain " << residue_p->chain << " index "
+			       << residue_p->index << std::endl;
+		  }
+	       }
+	    }
+	 }
+
 	 // We only want to act on these new residues and molecule, if
 	 // there is something there.
 	 // 
@@ -1162,7 +1181,6 @@ graphics_info_t::create_mmdbmanager_from_res_vector(const std::vector<mmdb::Resi
 	 }
       }
       
-      
 
 
       short int whole_res_flag = 0;
@@ -1244,6 +1262,28 @@ graphics_info_t::create_mmdbmanager_from_res_vector(const std::vector<mmdb::Resi
 	    r->seqNum = flankers_in_reference_mol[ires]->GetSeqNum();
 	    r->SetResName(flankers_in_reference_mol[ires]->GetResName());
 	    n_flanker++;
+	 }
+      }
+   }
+
+   // super-critical for correct peptide bonding in refinement!
+   //
+   coot::util::pdbcleanup_serial_residue_numbers(new_mol);
+
+   if (false) {
+      int imod = 1;
+      mmdb::Model *model_p = new_mol->GetModel(imod);
+      if (model_p) {
+	 int n_chains = model_p->GetNumberOfChains();
+	 for (int ichain=0; ichain<n_chains; ichain++) {
+	    mmdb::Chain *chain_p = model_p->GetChain(ichain);
+	    int nres = chain_p->GetNumberOfResidues();
+	    for (int ires=0; ires<nres; ires++) {
+	       mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+	       std::cout << "create_mmdb..  ^^^ " << coot::residue_spec_t(residue_p) << " "
+			 << residue_p << " index " << residue_p->index
+			 << std::endl;
+	    }
 	 }
       }
    }
@@ -4188,6 +4228,9 @@ graphics_info_t::delete_residue_range(int imol,
       }
       delete_residues_from_geometry_graphs(imol, res_specs);
 
+      if (! is_valid_model_molecule(imol))
+	 delete_molecule_from_from_display_manager(imol, false);
+
       if (delete_item_widget) {
 	 GtkWidget *checkbutton = lookup_widget(graphics_info_t::delete_item_widget,
 						"delete_item_keep_active_checkbutton");
@@ -4549,6 +4592,11 @@ graphics_info_t::tabulate_geometric_distortions(const coot::restraints_container
 	    std::string s = "geman-mcclure " + coot::util::float_to_string(gd.distortion_score);
 	    for (unsigned int iat=0; iat<gd.atom_indices.size(); iat++)
 	       s += " " + rr.get_atom_spec(gd.atom_indices[iat]).format();
+	    s += " indices: ";
+	    for (unsigned int iat=0; iat<gd.atom_indices.size(); iat++)
+	       s += " " + coot::util::int_to_string(gd.atom_indices[iat]);
+	    s += " target: ";
+	    s += coot::util::float_to_string(rest.target_value);
 	    rest_info.push_back(std::pair<double, std::string> (gd.distortion_score, s));
 	 }
       }

@@ -1488,7 +1488,7 @@
 
 ;; geometry is an improper list of ints.
 ;; 
-;; return the h-box of the buttons.
+;; return a list of (h-box-buttons window)
 ;;
 ;; a button is a list of (label callback-thunk text-description)
 ;; where text-description is an option arg (can be omitted)
@@ -1500,7 +1500,7 @@
 
 ;; geometry is an improper list of ints.
 ;; 
-;; return the h-box of the buttons.
+;; return a list of (h-box-buttons window)
 ;;
 ;; a button is a list of (label callback-thunk text-description)
 ;;
@@ -1560,7 +1560,7 @@
 			  (lambda args
 			    (set! inside-vbox #f)))
       (gtk-widget-show-all window)
-      inside-vbox))
+      (list inside-vbox window)))
 
 ;; This is exported outside of the box-of-buttons gui because the
 ;; clear-and-add-back function (e.g. from using the check button)
@@ -3130,22 +3130,22 @@
 	 (inside-vbox  (gtk-vbox-new #f 2))
 	 (label (gtk-label-new "\nSolvent molecules added to molecule: "))
 	 (menu (gtk-menu-new))
-	 (frame-for-option-menu (gtk-frame-new ""))
-	 (vbox-for-option-menu (gtk-vbox-new #f 2))
+	 (frame-for-option-menu (gtk-frame-new " Choose Molecule "))
+	 (vbox-for-option-menu (gtk-vbox-new #f 6))
 	 (molecule-option-menu (gtk-option-menu-new))
 	 (model-list (fill-option-menu-with-coordinates-mol-options menu))
 	 (add-new-button (gtk-button-new-with-label "  Add a new Residue Type..."))
 	 (h-sep (gtk-hseparator-new))
 	 (close-button (gtk-button-new-with-label "  Close  ")))
     
-    (gtk-window-set-default-size window 250 400)
+    (gtk-window-set-default-size window 250 500)
     (gtk-window-set-title window "Solvent Ligands")
     (gtk-container-border-width window 8)
     (gtk-container-add window outside-vbox)
     (gtk-box-pack-start outside-vbox label #f #f 2)
     (gtk-container-add frame-for-option-menu vbox-for-option-menu)
-    (gtk-box-pack-start vbox-for-option-menu molecule-option-menu #f #f 2)
-    (gtk-container-border-width frame-for-option-menu 4)
+    (gtk-box-pack-start vbox-for-option-menu molecule-option-menu #f #f 8)
+    (gtk-container-border-width frame-for-option-menu 6)
     (gtk-box-pack-start outside-vbox frame-for-option-menu #f #f 2)
     (gtk-box-pack-start outside-vbox scrolled-win #t #t 0)
     (gtk-scrolled-window-add-with-viewport scrolled-win inside-vbox)
@@ -3918,7 +3918,7 @@
 									       map-file-name-stub
 									       ".mtz"))
 				   (log-file-name (string-append
-						   "refmac-sharp"
+						   "refmac-multisharp-"
 						   map-file-name-stub
 						   ".log")))
 
@@ -3931,7 +3931,7 @@
 				    (format #t "active-item-imol: ~s~%" active-item-imol)
 
 				    (let* ((step-size (/ max-b n-levels))
-					   (numbers-string (apply string-append (map (lambda(i) 
+					   (numbers-string (apply string-append (map (lambda(i)
 										       (let ((lev (* step-size (+ i 1))))
 											 (string-append
 											  (number->string lev) " ")))
@@ -3943,20 +3943,33 @@
 					    (data-lines (list "MODE SFCALC"
 							      blur-string
 							      sharp-string
-							      "END")))
-					(let ((s (goosh-command "refmac5"
-								cmd-line-args
-								data-lines
-								log-file-name
-								#f)))
-					  (if (ok-goosh-status? s)
-					      (begin
-						(format #t "s: ~s~%" s)
-						(if (file-exists? "starting-map.mtz")
-						    (begin
-						      (rename-file  "starting-map.mtz" refmac-output-mtz-file-name)
-						      ;; maybe offer a read-mtz dialog now
-						      )))))))))
+							      "END"))
+					    (this-dir (getcwd)))
+					(if (not (directory-is-modifiable? this-dir))
+					    (info-dialog "WARNING:: Current directory is not writable")
+					    (let ((s (goosh-command "refmac5"
+								    cmd-line-args
+								    data-lines
+								    log-file-name
+								    #f)))
+					      (if (not (ok-goosh-status? s))
+
+						  (begin
+						    (info-dialog "WARNING:: refmac5 failed"))
+
+						  ;; Happy path
+						  (begin
+						    (format #t "s: ~s~%" s)
+						    (if (not (file-exists? "starting_map.mtz"))
+							(begin
+							  (format #t "WARNING:: starting_map.mtz does not exist~%"))
+							(begin
+							  (format #t "INFO renaming starting_map.mtz to ~s~%"
+								  refmac-output-mtz-file-name)
+							  (rename-file  "starting_map.mtz" refmac-output-mtz-file-name)
+							  ;; offer a read-mtz dialog
+							  (manage-column-selector refmac-output-mtz-file-name)
+							  ))))))))))
 
 			      (gtk-widget-destroy window))))
 

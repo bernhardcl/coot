@@ -102,6 +102,27 @@
 
 
 
+(greg-testcase "Merge molecules of a ligand with a spec" #t
+   (lambda ()
+
+     (let ((imol (greg-pdb "tutorial-modern.pdb"))
+	   (imol-lig (get-monomer "3GP")))
+
+       (let ((spec (list "L" 1 "")))
+
+	 (set-merge-molecules-ligand-spec spec)
+	 (merge-molecules (list imol-lig) imol)
+
+	 ;; now check that L1 exists in imol
+
+	 ;; residue-spec->residue-name expects a 4-ele spec. Hmm.	 
+	 (let ((rn (residue-spec->residue-name imol (cons #t spec))))
+	   (if (not (string? rn))
+	       #f
+	       (string=? rn "3GP")))))))
+
+
+
 (greg-testcase "Move and Refine Ligand test" #t 
    (lambda ()
 
@@ -242,49 +263,51 @@
 					       (format #t "fail to move atom back to start d2~%"))
 					     #t)))))))))))))))))
 
-(greg-testcase "Test dipole" #t
-   (lambda ()
+;; no partial charges in the dictionary now.
+;;
+;(greg-testcase "Test dipole" #t
+;   (lambda ()
 
-     (let ((imol (greg-pdb "dipole-residues.pdb")))
+;     (let ((imol (greg-pdb "dipole-residues.pdb")))
 
-       (if (not (valid-model-molecule? imol))
-           (begin
-             (format #t "dipole-residues.pdb not found~%")
-             #f)
+;       (if (not (valid-model-molecule? imol))
+;           (begin
+;             (format #t "dipole-residues.pdb not found~%")
+;             #f)
 
-           (let* ((residue-specs
-                   (list
-                    (list "A" 1 "")
-                    (list "A" 2 "")
-                    (list "A" 3 "")))
-                  (dipole (add-dipole-for-residues imol residue-specs)))
+;           (let* ((residue-specs
+;                   (list
+;                    (list "A" 1 "")
+;                    (list "A" 2 "")
+;                    (list "A" 3 "")))
+;                  (dipole (add-dipole-for-residues imol residue-specs)))
 
-             (if (not dipole)
-                 (begin
-                   (format #t "bad dipole ~s~%" dipole)
-                   #f)
-                 (let ((d (car dipole))
-                       (dip (cadr dipole)))
+;             (if (not dipole)
+;                 (begin
+;                   (format #t "bad dipole ~s~%" dipole)
+;                   #f)
+;                 (let ((d (car dipole))
+;                       (dip (cadr dipole)))
 
-                   (let ((dip-x (list-ref dip 0))
-                         (dip-y (list-ref dip 1))
-                         (dip-z (list-ref dip 2)))
+;                   (let ((dip-x (list-ref dip 0))
+;                         (dip-y (list-ref dip 1))
+;                         (dip-z (list-ref dip 2)))
 
-                     (format #t "info:: dipole components ~s ~%" dip)
+;                     (format #t "info:: dipole components ~s ~%" dip)
 
-                     (if (not (and (close-float? dip-y 0)
-                                   (close-float? dip-z 0)))
-                         (begin
-                           (format #t "bad dipole y z components ~s ~s~%"
-                                   dip-y dip-z)
-                           #f)
+;                     (if (not (and (close-float? dip-y 0)
+;                                   (close-float? dip-z 0)))
+;                         (begin
+;                           (format #t "bad dipole y z components ~s ~s~%"
+;                                   dip-y dip-z)
+;                           #f)
 			 
-			 ;; dipole points in the negative x direction
-                         (if (and (< dip-x 0) 
-                                  (> dip-x -20))
+;			 ;; dipole points in the negative x direction
+;                         (if (and (< dip-x 0) 
+;                                  (> dip-x -20))
 
-                             #t
-                             #f))))))))))
+;                             #t
+;                             #f))))))))))
 
 
 (greg-testcase "Reading new dictionary restraints replaces" ;; not adds
@@ -398,3 +421,24 @@
 				     atoms-info)
 			   passes))))))))))
 
+
+;; FLEV will not make a PNG if it is not compiled with 
+;; C++-11 - and that is OK for 0.8.9.x.
+;;
+; (greg-testcase "FLEV makes a PNG" #t
+;    (lambda ()
+
+;      (let ((fn "test-flev-greg-testcase.png"))
+
+;        (if (file-exists? fn)
+; 	   (delete-file fn))
+
+;        (let ((imol (greg-pdb "tutorial-modern.pdb"))
+; 	     (imol-ligand (get-monomer "3GP")))
+	 
+; 	 (set-rotation-centre 54 10 20)
+; 	 (move-molecule-to-screen-centre imol-ligand)
+; 	 (set-merge-molecules-ligand-spec (list "L" 1 ""))
+; 	 (merge-molecules (list imol-ligand) imol)
+; 	 (fle-view-with-rdkit-to-png imol "L" 1 "" 4.8 fn)
+; 	 (file-exists? fn)))))
