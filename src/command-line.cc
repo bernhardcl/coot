@@ -26,14 +26,13 @@
 //           do we need python here at all?!
 #endif
 
-#include "compat/coot-sysdep.h"
-
-
 #ifdef _MSC_VER
 #include <windows.h>
 #else
 #include <unistd.h> // for getopt(3)
 #endif
+
+#include "compat/coot-sysdep.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE

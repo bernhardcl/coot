@@ -19,6 +19,8 @@
  * 02110-1301, USA
  */
 
+#include "compat/coot-sysdep.h"
+
 #include <vector>
 #include <iostream>
 #include <math.h>

@@ -34,6 +34,8 @@
 #include <vector>
 #endif // HAVE_VECTOR
 
+#include "compat/coot-sysdep.h"
+
 // need gtk things
 #include <gtk/gtk.h>
 
@@ -66,7 +68,6 @@
 #include "ccp4mg-utils/mgtree.h"
 #include "pick.h"
 
-#include "compat/coot-sysdep.h"
 #include "command-arg.hh"
 
 #include "ligand/rotamer.hh"

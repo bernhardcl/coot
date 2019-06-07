@@ -525,6 +525,7 @@ main(int argc, char *argv[]) {
 
 #else
 
+#include <iostream>
 #include <gtk/gtk.h>
 // Dummy definitions for stand alone version
 extern "C" {

@@ -20,10 +20,22 @@
  */
 
 #if defined (WINDOWS_MINGW) || defined (_MSC_VER)
-#ifndef usleep
+#ifdef sleep
+#sleep
+#endif
+#ifdef usleep
+#usleep
+#endif
+#if !defined (usleep) || !defined (sleep)
+#ifndef Sleep
 #include <windows.h>
-#define sleep(t) Sleep(1000*t)
+#endif /* Sleep */
+#ifndef usleep
 #define usleep(t) Sleep(t/1000)
+#endif /* usleep */
+#ifndef sleep
+#define sleep(t) Sleep(1000*t)
+#endif /* sleep */
 #endif /* usleep */
 #endif /* windows */
 
