@@ -36,6 +36,8 @@
 
 enum {CONTOUR_UP, CONTOUR_DOWN}; 
 
+#include "compat/coot-sysdep.h"
+
 // needs:
 
 //#include "mmdb_manager.h"
@@ -48,7 +50,6 @@ enum {CONTOUR_UP, CONTOUR_DOWN};
 #else
 #   include <GL/gl.h>
 #endif
-
 
 #include "clipper/ccp4/ccp4_map_io.h"
 

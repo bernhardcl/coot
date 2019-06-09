@@ -32,8 +32,6 @@
 #include <unistd.h> // for getopt(3)
 #endif
 
-#include "compat/coot-sysdep.h"
-
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -50,6 +48,8 @@
 // for whatever reason (getopt) include python here for windows
 #include "Python.h"  
 #endif //WINDOWS_MINGW
+
+#include "compat/coot-sysdep.h"
 
 #include <iostream>
 #include <string>
