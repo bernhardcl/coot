@@ -90,10 +90,12 @@ coot::restraints_container_t::make_restraints_ng(int imol,
       // the non-threaded version has a different limit on the
       // non_bonded_contacts_atom_indices (so, out of range if you use it?)
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
       if (! thread_pool_p) {
          std::cout << "--------- ERROR:: - thread pool was not set! ---------" << std::endl;
          // and yet we continue... that's bad news.
       }
+#endif
       make_non_bonded_contact_restraints_using_threads_ng(imol, geom);
       auto tp_5 = std::chrono::high_resolution_clock::now();
 
@@ -125,8 +127,10 @@ coot::restraints_container_t::make_restraints_ng(int imol,
       make_helix_pseudo_bond_restraints_from_res_vec_auto();
 
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    make_df_restraints_indices();
    make_distortion_electron_density_ranges();
+#endif
 
    // info();  - are the NBCs correct?
 
@@ -726,6 +730,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_using_threads_n
    std::atomic<unsigned int> done_count(0);
 
    auto tp_3 = std::chrono::high_resolution_clock::now();
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    for (std::size_t i=0; i<n_threads; i++) {
       thread_pool_p->push(make_non_bonded_contact_restraints_workpackage_ng,
 			  imol,
@@ -745,6 +750,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_using_threads_n
 			  &(nbc_restraints[i]),
 			  std::ref(done_count));
    }
+#endif
 
    auto tp_4 = std::chrono::high_resolution_clock::now();
 
@@ -1064,8 +1070,10 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_ng(int imol,
 
       }
    }
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    make_df_restraints_indices();
    make_distortion_electron_density_ranges();
+#endif
 
 }
 

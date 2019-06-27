@@ -41,7 +41,9 @@ coot::get_residue(const coot::residue_spec_t &res_spec, mmdb::Manager *mol) {
    return res;
 }
 
+/* BL says:: already defined in coot-utils/coot-coord-utils.cc
 clipper::Coord_orth
 coot::co(mmdb::Atom *at) {
    return clipper::Coord_orth(at->x, at->y, at->z);
 }
+*/

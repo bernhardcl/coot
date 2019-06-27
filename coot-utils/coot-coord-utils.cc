@@ -3386,6 +3386,9 @@ coot::util::add_atom(mmdb::Residue *res,
 
 
 
+/* BL says:: 
+ * Already defined in geometry/mol-utils.cc/hh so remove here
+ *
 std::vector<std::string>
 coot::util::get_residue_alt_confs(mmdb::Residue *res) {
 
@@ -3407,6 +3410,7 @@ coot::util::get_residue_alt_confs(mmdb::Residue *res) {
    }
    return v;
 } 
+*/
 
       
 

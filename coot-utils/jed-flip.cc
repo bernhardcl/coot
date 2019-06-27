@@ -1,4 +1,6 @@
 
+#include "compat/coot-sysdep.h"
+
 #include "jed-flip.hh"
 #include "atom-selection-container.hh"
 #include "contact-info.hh"

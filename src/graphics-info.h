@@ -28,6 +28,7 @@
 #ifndef GRAPHICS_INFO_H
 #define GRAPHICS_INFO_H
 
+#include "compat/coot-sysdep.h"
 
 #ifndef HAVE_VECTOR
 #define HAVE_VECTOR

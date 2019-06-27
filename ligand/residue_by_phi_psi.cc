@@ -21,6 +21,8 @@
 
 #include <fstream>
 
+#include "compat/coot-sysdep.h"
+
 #include "utils/coot-utils.hh"
 // no dependency on coords files
 // #include "coords/mmdb-extras.h"
