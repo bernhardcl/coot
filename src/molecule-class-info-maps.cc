@@ -3993,7 +3993,12 @@ molecule_class_info_t::update_map_from_mtz_if_changed(const updating_map_params_
 	 } else {
 	    // happy path
 	    // ump.ctime = s.st_ctimespec; // mac version?
+#ifndef WINDOWS_MINGW
 	    ump.ctime = s.st_ctim;
+#else
+	    ump.ctime.tv_sec = s.st_ctime;
+	    ump.ctime.tv_nsec = 0.;
+#endif
 	 }
       }
 
