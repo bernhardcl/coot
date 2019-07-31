@@ -22,6 +22,7 @@
 
 
 #include <thread>
+#include <iomanip>
 
 #include "clipper/core/map_interp.h"
 #include "clipper/core/hkl_compute.h"
@@ -467,11 +468,44 @@ coot::util::make_rtop_orth_for_jiggle_atoms(float jiggle_trans_scale_factor,
 
 }
 
-// needed?
-#include "atom-selection-container.hh"
-#include "coords/mmdb-crystal.h"
-
 typedef clipper::NXmap<float>::Map_reference_index NRI;
+typedef clipper::Xmap<float>::Map_reference_index  MRI;
+
+std::vector<std::pair<clipper::Xmap<float>::Map_reference_index,
+		      clipper::Xmap<float>::Map_reference_index> >
+coot::make_map_reference_index_start_stops(const clipper::Xmap<float> &xmap, int n_threads_in) {
+
+   unsigned int n_threads = n_threads_in;
+   std::vector<std::pair<MRI, MRI> > map_ref_start_stops;
+   bool debug = true;
+   unsigned int count = 0;
+   clipper::Xmap_base::Map_reference_index ix;
+   for (ix = xmap.first(); !ix.last(); ix.next())
+      count++;
+   unsigned int n_per_thread = count/n_threads;
+   if (n_per_thread * n_threads < count)
+      n_per_thread += 1;
+   unsigned int i_count = 0;
+   MRI start_ix = xmap.first();
+   MRI stop_ix;
+   for (ix = xmap.first(); !ix.last(); ix.next()) {
+      if (i_count == n_per_thread) {
+	 stop_ix =  ix; // first out of range
+	 std::pair<MRI, MRI> p(start_ix, stop_ix);
+	 map_ref_start_stops.push_back(p);
+	 start_ix = ix;
+	 i_count = 0;
+      } else {
+	 i_count++;
+      }
+   }
+   if (! map_ref_start_stops.back().second.last()) {
+      std::pair<MRI, MRI> p(start_ix, ix);
+      map_ref_start_stops.push_back(p);
+   }
+
+   return map_ref_start_stops;
+}
 
 std::vector<std::pair<NRI, NRI> >
 coot::make_map_reference_index_start_stops(const clipper::NXmap<float> &nxmap, int n_threads) {

@@ -38,7 +38,7 @@ pkginclude_HEADERS = peak-search.hh coot-trim.hh \
         atom-overlaps.hh reduce.hh atom-selection-container.hh contact-info.hh plane-utils.hh \
         secondary-structure-headers.hh c-beta-deviations.hh jed-flip.hh lidia-core-functions.hh \
 	bonded-atoms.hh spherical-harmonics.hh helix-like.hh merge-atom-selections.hh \
-	contacts-by-bricks.hh amp-reso.hh
+	contacts-by-bricks.hh amp-reso.hh stack-and-pair.hh
 
 pkgincludedir = $(includedir)/coot/coot-utils
 
@@ -65,7 +65,7 @@ libcoot_coord_utils_la_SOURCES = coot-coord-utils.cc \
 	atom-overlaps.cc reduce.cc atom-selection-container.cc contact-info.cc coot-shelx-ins.cc \
 	secondary-structure-headers.cc plane-utils.cc c-beta-deviations.cc lidia-core-functions.cc \
 	atom-tools.cc bonded-atoms.cc bricks.cc helix-like.cc merge-atom-selections.cc \
-	contacts-by-bricks.cc
+	contacts-by-bricks.cc stack-and-pair.cc
 
 
 #    $(top_builddir)/mini-mol/libcoot-mini-mol.la 
@@ -78,7 +78,7 @@ libcoot_coord_utils_la_LIBADD = \
     $(GSL_LIBS) $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(L_BOOST_PYTHON) $(PYTHON_LIBS)
 
 
-libcoot_coord_utils_la_LDFLAGS = $(SHARED_LDFLAGS)
+libcoot_coord_utils_la_LDFLAGS = $(SHARED_LDFLAGS) $(CLIPPER_LIBS) $(MMDB_LIBS)
 
 # shelx
 # libcoot_shelx_la_SOURCES = coot-shelx-ins.cc
@@ -133,7 +133,7 @@ libcoot_map_heavy_la_LDFLAGS = $(SHARED_LDFLAGS)
 #
 check_PROGRAMS = test-h-bonds testshelxreader test-coot-utils test-hole test-elastic test-spherical glyco-torsions \
 	test-tt-morph test-coot-probe test-chem-feat test-cod-atom-types dictionary-atom-types cod-db-access \
-	test-emma
+	test-emma test-convolute
 
 
 # test_zo_chi_table_SOURCES = test-zo-chi-table.cc
@@ -158,9 +158,11 @@ test_emma_SOURCES = test-emma.cc
 test_emma_LDADD =  libcoot-map-utils.la \
 	$(top_builddir)/coords/libcoot-coords.la
 
-#	$(top_builddir)/geometry/libcoot-geometry.la 
-#       $(top_builddir)/mini-mol/libcoot-mini-mol.la 
-#       $(top_builddir)/utils/libcoot-utils.la
+test_convolute_SOURCES = test-convolute.cc
+test_convolute_LDADD = \
+        ./libcoot-map-utils.la \
+	./libcoot-map-heavy.la \
+	$(top_builddir)/coords/libcoot-coords.la
 
 # other test binaries may need to be linked like this too
 test_coot_utils_SOURCES = test-utils.cc

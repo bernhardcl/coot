@@ -4705,12 +4705,35 @@ coot::util::occupancy_sum(mmdb::PAtom *atoms, int n_atoms) {
 
 short int
 coot::util::is_nucleotide(mmdb::Residue *residue_p) {
-   
+
+   // Ancient function!
+
    short int nuc = 0;
 
    if (residue_p) { 
       std::string type(residue_p->name); // all spaces cut
 
+      if (type == "A") {
+	 nuc = 1;
+      } else {
+	 if (type == "C") {
+	    nuc = 1;
+	 } else {
+	    if (type == "G") {
+	       nuc = 1;
+	    } else {
+	       if (type == "T") {
+		  nuc = 1;
+	       } else {
+		  if (type == "U") {
+		     nuc = 1;
+		  }
+	       }
+	    }
+	 }
+      }
+      if (nuc) return nuc;
+      
       if (type == "Ad") { 
 	 nuc = 1;
       } else { 
@@ -8916,7 +8939,7 @@ coot::util::print_secondary_structure_info(mmdb::Model *model_p) {
    int nhelix = model_p->GetNumberOfHelices();
    int nsheet = model_p->GetNumberOfSheets();
    std::cout << "INFO:: There are " << nhelix << " helices and "
-	     << nsheet << " sheets\n";
+             << nsheet << " sheets\n";
    mmdb::PHelix helix_p;
    mmdb::PSheet sheet_p;
    mmdb::PStrand strand_p;
@@ -8931,7 +8954,7 @@ coot::util::print_secondary_structure_info(mmdb::Model *model_p) {
 		   << " " << helix_p->endChainID << " " << helix_p->endSeqNum << " "
 		   << helix_p->length << " " << helix_p->comment << std::endl;
       } else {
-	 std::cout << "ERROR: no helix!?" << std::endl;
+         std::cout << "ERROR: no helix!?" << std::endl;
       }
    }
    std::cout << "               Sheet info: " << std::endl;

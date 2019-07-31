@@ -48,25 +48,11 @@
 #include <gdk/gdkgldrawable.h>
 #include <gtk/gtkgl.h>
 
-#ifdef HAVE_CXX_THREAD
-#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 #include <utils/ctpl.h>
-#endif // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
-#endif // HAVE_CXX_THREAD
 
 #ifdef USE_MOLECULES_TO_TRIANGLES
-#ifdef HAVE_CXX11
 #include <CXXClasses/RendererGLSL.hpp>
-#endif // HAVE_CXX11
 #endif // USE_MOLECULES_TO_TRIANGLES
-
-#ifdef WII_INTERFACE_WIIUSE
-#include "wiiuse.h"
-#endif // WII_INTERFACE_WIIUSE
-
-#ifdef WII_INTERFACE
-#include "cwiid.h"
-#endif 
 
 #include "clipper/core/xmap.h"
 
@@ -907,36 +893,7 @@ public:
    enum { USE_PYTHON_STATE_COMMANDS = 2, USE_SCM_STATE_COMMANDS = 1 };
 
    // 
-   void initialize_molecules() { 
-     
-      // I don't like the way that this is currently done. 
-      // 
-      // I would like to pass i, the molecule number to the constuctor.
-      // How do I do that?      You can't.
-      // 
-      // Actually you can, just use it as you would a constructor.
-      //
-      // std::cout << "initializing molecules..."; 
-      // molecules = new molecule_class_info_t[n_molecules_max];
-     // std::cout << "done" << std::endl;
-/*       for (int i=0; i<n_molecules_max; i++) { */
-/*          molecules[i].set_mol_number(i);  */
-/*       } */
-
-/* Old style array of molecules code */
-/*       for (int i=0; i<n_molecules_max; i++) { */
-/* 	 dynarama_is_displayed[i]      = NULL; */
-/* 	 sequence_view_is_displayed[i] = NULL; */
-/* 	 geometry_graph[i]             = NULL; */
-/* 	 b_factor_variance_graph[i]    = NULL; */
-/* 	 residue_density_fit_graph[i]  = NULL; */
-/* 	 omega_distortion_graph[i]     = NULL; */
-/* 	 rotamer_graph[i]              = NULL; */
-/* 	 ncs_diffs_graph[i]            = NULL; */
-/*       } */
-
-   }
-
+   void initialize_molecules() { }
 
    void init();
 
@@ -3760,7 +3717,7 @@ string   static std::string sessionid;
    static std::pair<std::string, std::string> db_userid_username;
 #endif
 
-   static std::vector<coot::view_info_t> *views;
+   static std::vector<coot::view_info_t> views;
    static float views_play_speed;
 
    static std::string movie_file_prefix;
@@ -4016,17 +3973,11 @@ string   static std::string sessionid;
   void set_python_draw_function(const std::string &f) { python_draw_function_string = f; }
 #endif // USE_PYTHON
 
-#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
-#ifdef HAVE_CXX_THREAD
    static ctpl::thread_pool static_thread_pool;
-#endif // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
-#endif
 
 #ifdef USE_MOLECULES_TO_TRIANGLES
-#ifdef HAVE_CXX11
    static std::shared_ptr<Renderer> mol_tri_renderer;
    static std::shared_ptr<SceneSetup>   mol_tri_scene_setup;
-#endif
 #endif // USE_MOLECULES_TO_TRIANGLES
 
 };

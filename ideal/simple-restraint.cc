@@ -2353,6 +2353,10 @@ coot::electron_density_score_from_restraints_using_atom_index_range(int thread_i
 
    if (restraints_p->include_map_terms() == 1) {
 
+      if (false)
+	 std::cout << "debug:: " << __FUNCTION__ << "() range: "
+		   << atom_index_range.first << " " << atom_index_range.second << std::endl;
+
       for (unsigned int iat=atom_index_range.first; iat<atom_index_range.second; iat++) {
 
 	 // we get a crash around here. Protect from wrong index into v vector
@@ -3014,7 +3018,7 @@ coot::restraints_container_t::make_helix_pseudo_bond_restraints() {
 
    // somewhat hacky
    if (from_residue_vector) {
-      make_helix_pseudo_bond_restraints_from_res_vec(EVERYTHING_HELICAL);
+      make_helix_pseudo_bond_restraints_from_res_vec();
       return;
    }
 
@@ -3113,9 +3117,8 @@ coot::restraints_container_t::make_helix_pseudo_bond_restraints_from_res_vec_aut
    float pseudo_bond_esd = 0.05;
    unsigned int n_helical_restraints = 0;
 
-#ifdef HAVE_CXX_THREAD
    auto tp_0 = std::chrono::high_resolution_clock::now();
-#endif
+
    // somehow sometimes the residues of residue_vec can be null here
 
    std::vector<mmdb::Residue *> sorted_residues;
@@ -3275,11 +3278,11 @@ coot::restraints_container_t::make_helix_pseudo_bond_restraints_from_res_vec_aut
 
    }
    std::cout << "INFO:: added " << n_helical_restraints << " helical restraints" << std::endl;
-#ifdef HAVE_CXX_THREAD
+
    auto tp_1 = std::chrono::high_resolution_clock::now();
    auto d10 = std::chrono::duration_cast<std::chrono::microseconds>(tp_1 - tp_0).count();
    std::cout << "INFO:: Timing for auto-helix " << d10 << " microseconds" << std::endl;
-#endif // HAVE_CXX_THREAD
+
 }
 
 
@@ -3287,9 +3290,9 @@ coot::restraints_container_t::make_helix_pseudo_bond_restraints_from_res_vec_aut
 // or EVERYTHING_HELICAL - add helix restrains to residue with the same chain id and in a residue range
 // that matches a H-bonded residue pair of a helix.
 void
-coot::restraints_container_t::make_helix_pseudo_bond_restraints_from_res_vec(restraint_addition_mode_t restraint_addition_mode) {
+coot::restraints_container_t::make_helix_pseudo_bond_restraints_from_res_vec() {
 
-   // Note to slef restraint_addition_mode is no longer used/checked in this function -
+   // Note to self: restraint_addition_mode is no longer used/checked in this function -
    // it can be removed from the call (was an experiment)
 
    // this doesn't do the right thing if there are insertion codes. Maybe I could check for that
@@ -3693,15 +3696,15 @@ coot::restraints_container_t::make_monomer_restraints_by_residue(int imol, mmdb:
 
       if (i_no_res_atoms > 0) {
 
-      if (util::is_standard_amino_acid_name(pdb_resname))
-         local += add_N_terminal_residue_bonds_and_angles_to_hydrogens(residue_p);
+	 if (util::is_standard_amino_acid_name(pdb_resname))
+	    local += add_N_terminal_residue_bonds_and_angles_to_hydrogens(residue_p);
 
-      if (restraints_usage_flag & BONDS_MASK)
-         local.n_bond_restraints += add_bonds(idr, res_selection, i_no_res_atoms,
+	 if (restraints_usage_flag & BONDS_MASK)
+	    local.n_bond_restraints += add_bonds(idr, res_selection, i_no_res_atoms,
 						 residue_p, geom);
 
-      if (restraints_usage_flag & ANGLES_MASK)
-         local.n_angle_restraints += add_angles(idr, res_selection, i_no_res_atoms,
+	 if (restraints_usage_flag & ANGLES_MASK)
+	    local.n_angle_restraints += add_angles(idr, res_selection, i_no_res_atoms,
 						   residue_p, geom);
 
 	 if (restraints_usage_flag & TORSIONS_MASK) {

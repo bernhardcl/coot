@@ -30,8 +30,6 @@
 #include "emma.hh"
 #include "peak-search.hh"
 #include "xmap-stats.hh" // needed?
-#include "coords/mmdb.h"
-
 
 void
 coot::util::emma::sfs_from_boxed_molecule(mmdb::Manager *mol_orig, float border) {
@@ -61,7 +59,6 @@ coot::util::emma::sfs_from_boxed_molecule(mmdb::Manager *mol_orig, float border)
       double y_range = e.second.y() - e.first.y();
       double z_range = e.second.z() - e.first.z();
 
-      centre = centre_of_molecule(mol);
       std::cout << "DEBUG:: molecule  centre after recentering: "
 		<< centre.first << " " << centre.second.format() << std::endl;
 
@@ -399,8 +396,9 @@ coot::util::spherically_averaged_molecule(const atom_selection_container_t &asc,
    std::vector<std::pair<double, double> > vp;
 
    std::pair<clipper::Coord_orth, clipper::Coord_orth> e = extents(asc.mol);
-   coot::Cartesian cc = centre_of_molecule(asc);
-   clipper::Coord_orth c(cc.x(), cc.y(), cc.z());
+   std::pair<bool, clipper::Coord_orth> cc = centre_of_molecule(asc.mol);
+   if (!cc.first) return vp;
+   clipper::Coord_orth c = cc.second;
 
    double diag_len_sqrd = (e.second - e.first).lengthsq();
    double diag_len = sqrt(diag_len_sqrd);
@@ -436,10 +434,11 @@ coot::util::make_phi_thetas(unsigned int n_pts) {
 
    // ideally I should push these around so that they are equidistant
    //
+   double recip = 1.0/static_cast<double> (RAND_MAX);
    for (std::size_t i=0; i<n_pts; i++) {
-      double theta = 2 * M_PI * random();   // longitude
-      double phi = acos(2.0*random()-1.0);  // latitude
-      v.push_back(phitheta(phi, theta));
+      double theta = 2 * M_PI * random() * recip; // longitude
+      double phi = acos(2.0*random()*recip-1.0);  // latitude
+      v.push_back(std::pair<double, double>(phi, theta));
    }
 
    return v;
@@ -457,9 +456,10 @@ coot::util::average_of_sample_map_at_sphere_points(clipper::Coord_orth &centre,
    for (std::size_t i=0; i<phi_thetas.size(); i++) {
       const double &phi   = phi_thetas[i].first;
       const double &theta = phi_thetas[i].second;
-      clipper::Coord_orth pt(r*cos(theta)*sin(phi),
-			     r*sin(theta)*sin(phi),
-			     r*cos(phi));
+      clipper::Coord_orth pt(radius * cos(theta) * sin(phi),
+			     radius * sin(theta) * sin(phi),
+			     radius * cos(phi));
+      //std::cout << "phi " << phi << " theta " << theta  << " pt: " << pt.format() << std::endl;
       pt += centre;
       sum += density_at_point_by_linear_interpolation(xmap, pt);
    }
