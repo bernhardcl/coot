@@ -970,12 +970,8 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
       last_restraints->add_map(geometry_vs_map_weight);
 
    unsigned int n_threads = coot::get_max_number_of_threads();
-#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
-#ifdef HAVE_CXX_THREAD
    if (n_threads > 0)
       last_restraints->thread_pool(&static_thread_pool, n_threads);
-#endif
-#endif
 
    if (true)
       std::cout << "---------- debug:: in generate_molecule_and_refine() "

@@ -2580,7 +2580,6 @@ coot::restraints_container_t::set_dist_crit_for_bonded_pairs(float dist) {
    dist_crit_for_bonded_pairs = dist;
 }
 
-#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 int
 coot::restraints_container_t::something_like_make_restraints(
                                               // int imol
@@ -2598,7 +2597,6 @@ coot::restraints_container_t::something_like_make_restraints(
    return df_by_thread_results_size();
 
 }
-#endif // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
 
 // We need to fill restraints_vec (which is a vector of
