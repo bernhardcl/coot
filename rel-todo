@@ -1,6 +1,13 @@
 
    For Release 0.8.9.3
 
+   o what is the map grid? Tell me in the map preferences.
+
+   o add a function to set the window title (dont' for get to check
+     for use-graphics)
+
+   o Refinement on an alt conf should refine just the atoms with that alt conf.
+
    o Read in a PDB file that has a TER. Write it out as a mmCIF. It has a blank atom at the
      end - it should not [Nigel Moriarty]. mmdb bug? ::: 1
 
@@ -98,10 +105,6 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 ----
 
    For Release 0.8.9.2
-
-   o edit chi angles gives the wrong chi angles for chi2? update_residue_by_chi_change() uses
-     tree.rotate_about() with 2 atoms as the arguments.  tree should preferentially
-     choose N as the base atom, if it is an option. Also, CG1 rather than CG2.
 
    o validation outliers gui in the release, in the gui.
 
