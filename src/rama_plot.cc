@@ -336,9 +336,7 @@ coot::rama_plot::init_internal(const std::string &mol_name,
 
 #ifdef HAVE_GOOCANVAS
 
-   // or just use?!
-   // fixed_font_str = "Sans 9"
-   fixed_font_str = coot::get_fixed_font();
+   fixed_font_str = "Sans 9";
 
    dragging = FALSE;
    drag_x = 0;
@@ -770,7 +768,10 @@ coot::rama_plot::setup_background(bool blocks, bool isolines, bool print_image) 
 // in c++11 array<int, 5> fillarr(int arr[])
 guint
 coot::rama_plot::get_intermediate_bg_colour(guint start_colour[4],
-guint end_colour[4], float prob_min, float prob_max, float probability) {
+                                            guint end_colour[4],
+                                            float prob_min, float prob_max,
+                                            float probability,
+                                            int quad_channel) {
 
    static guint new_colour[4];
    float x;
@@ -779,8 +780,12 @@ guint end_colour[4], float prob_min, float prob_max, float probability) {
    x = (probability - prob_min) / (prob_max - prob_min);
 
    for (unsigned int i=0; i<4; i++) {
-      new_colour[i] = (int)((1. - x) * (float)start_colour[i] +
-                            x * (float)end_colour[i]);
+      if (i == quad_channel)
+         new_colour[i] = (int)((1. - sqrt(x)) * (float)start_colour[i] +
+                               sqrt(x) * (float)end_colour[i]);
+      else
+         new_colour[i] = (int)((1. - x) * (float)start_colour[i] +
+                               x * (float)end_colour[i]);
    }
 
    // do some byte shift
@@ -836,6 +841,7 @@ coot::rama_plot::make_background(const clipper::Ramachandran rama_type,
          d2step = clipper::Util::d2rad(step);
          doit = 0;
 
+         guint bg_colour_start [4] = {255, 240, 220, 255};
          if ( rama_type.favored(x,y) ) {
             colour = "grey";
             colour = "red";
@@ -846,13 +852,13 @@ coot::rama_plot::make_background(const clipper::Ramachandran rama_type,
             colour = "LightSalmon";
             colour = "MistyRose";
 
-            guint bg_colour_start [4] = {255, 228, 225, 255}; // misty rose
-            guint bg_colour_end [4] = {255, 0, 255, 255};
+            guint bg_colour_end [4] = {210, 150, 190, 255};
 
             bg_colour_rgba = get_intermediate_bg_colour(bg_colour_start, bg_colour_end,
                                                         rama_threshold_preferred,
                                                         max_prob,
-                                                        rama_type.probability(x,y));
+                                                        rama_type.probability(x,y),
+                                                        1);
 
             item = goo_canvas_rect_new(bg_group,
                                        i+0.0,
@@ -875,13 +881,14 @@ coot::rama_plot::make_background(const clipper::Ramachandran rama_type,
                colour = "LightYellow2";
 
 //               guint bg_colour_start2 [4] = {255, 255, 153, 255}; // LightYellow2
-               guint bg_colour_start2 [4] = {255, 255, 240, 255};
-               guint bg_colour_end2 [4] = {255, 255, 140, 255};
+               guint bg_colour_start2 [4] = {255, 255, 255, 255};
+               //guint bg_colour_end2 [4] = bg_colour_start;
 
-               bg_colour_rgba = get_intermediate_bg_colour(bg_colour_start2, bg_colour_end2,
+               bg_colour_rgba = get_intermediate_bg_colour(bg_colour_start2, bg_colour_start,
                                                            rama_threshold_allowed,
                                                            rama_threshold_preferred,
-                                                           rama_type.probability(x,y));
+                                                           rama_type.probability(x,y),
+                                                           2);
 
                item = goo_canvas_rect_new(bg_group,
                                           i+0.0,
@@ -1188,7 +1195,8 @@ coot::rama_plot::make_isolines(const clipper::Ramachandran rama_type, GooCanvasI
             item = goo_canvas_polyline_new_line(bg_group,
                                                 x1,y1,
                                                 x2,y2,
-                                                "stroke-color", "black",
+//                                                "stroke-color", "black",
+                                                "stroke-color", "grey60",
                                                 "line-width", 0.5,
 				NULL);
          }
@@ -1277,12 +1285,14 @@ coot::rama_plot::basic_white_underlay() {
    GooCanvasItem *item;
 
    float corner;
+
    if (psi_axis_mode == PSI_CLASSIC) {
       corner = -180.0;
    } else {
       corner = -240.0;
    }
-   // FIMXE:: think if not an outline on top later
+   // we dont do an outline around the white canvas
+   // but make a box later
    item = goo_canvas_rect_new(root,
             -180.0,
             corner,
@@ -1290,6 +1300,7 @@ coot::rama_plot::basic_white_underlay() {
             360.0,
             "fill-color", "white",
             "stroke-color", "black",
+            "line-width", 0.0,
             NULL);  
    // 12/12/18 was grey97
    // orig grey 90; grey 100 is white; 95 was good
@@ -1337,6 +1348,8 @@ coot::rama_plot::black_border() {
    border_group = goo_canvas_group_new(root, NULL);
 
    float psi_start, psi_end;
+   // now we make the black box around the canvas.
+   float line_thickness = 2.0;
    
    // maybe make these global!?
    if (psi_axis_mode == PSI_CLASSIC) {
@@ -1363,7 +1376,7 @@ coot::rama_plot::black_border() {
                                      TRUE, 0,
                                      "points", points,
                                      "stroke-color", "black",
-                                     "line-width", 2.0,
+                                     "line-width", line_thickness,
             NULL);
       goo_canvas_points_unref (points);
 
