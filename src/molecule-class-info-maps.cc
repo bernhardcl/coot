@@ -946,8 +946,7 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
       mol_name += g.float_to_string(high_reso_limit);
    }
    
-   initialize_map_things_on_read_molecule(mol_name,
-					  is_diff_map,
+   initialize_map_things_on_read_molecule(mol_name, is_diff_map, is_anomalous_flag,
 					  g.swap_difference_map_colours);
    
    // If use weights, use both strings, else just use the first
@@ -955,8 +954,8 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
 
    if (p.first.length() == 0) { // mechanism to signal an error
       std::cout << "ERROR:: fill_map.. - There was a column label error.\n";
-   } else { 
-      
+   } else {
+
       if (use_weights) {
 	 // 	 std::cout << "DEBUG:: Importing f_sigf_data: " << p.first << std::endl;
 	 mtzin.import_hkl_data( f_sigf_data, p.first );
@@ -971,11 +970,11 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
 	 mtzin.import_hkl_data(fphidata, p.first);
 	 mtzin.close_read();
       }
-   
+
       long T1 = glutGet(GLUT_ELAPSED_TIME);
 
       int n_reflections = fphidata.num_obs();
-      std::cout << "Number of OBSERVED reflections: " << n_reflections << "\n";
+      std::cout << "INFO:: Number of observed reflections: " << n_reflections << "\n";
       if (n_reflections <= 0) {
 	 std::cout << "WARNING:: No reflections in mtz file!?" << std::endl;
       } else { 
@@ -1002,7 +1001,7 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
 				   fphidata.cell(),
 				   fft_reso,
 				   map_sampling_rate);
-	 cout << "INFO grid sampling..." << gs.format() << endl; 
+	 cout << "INFO:: grid sampling..." << gs.format() << endl; 
 	 xmap.init( fphidata.spacegroup(), fphidata.cell(), gs); // 1.5 default
 	 // 	 cout << "Grid..." << xmap.grid_sampling().format() << "\n";
    
@@ -1078,7 +1077,6 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
 	 // update_map_colour_menu_manual(g.n_molecules, name_.c_str()); 
 	 // update_map_scroll_wheel_menu_manual(g.n_molecules, name_.c_str()); 
 
-
 	 update_map();
 	 long T5 = glutGet(GLUT_ELAPSED_TIME);
 	 std::cout << "INFO:: " << float(T5-T4)/1000.0 << " seconds for contour map\n";
@@ -1086,9 +1084,9 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
 
 	 // save state strings
 
-	    std::string cwd = coot::util::current_working_dir();
-	    std::string f1  = coot::util::intelligent_debackslash(mtz_file_name);
-	    std::string f2  = coot::util::relativise_file_name(f1, cwd);
+	 std::string cwd = coot::util::current_working_dir();
+	 std::string f1  = coot::util::intelligent_debackslash(mtz_file_name);
+	 std::string f2  = coot::util::relativise_file_name(f1, cwd);
 	 if (have_sensible_refmac_params) {
 	    save_state_command_strings_.push_back("make-and-draw-map-with-refmac-params");
 	    save_state_command_strings_.push_back(single_quote(f2));
@@ -1152,8 +1150,6 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
 	 }
       }
    }
-   // std::cout << "DEBUG:: finishing map_fill_from_mtz_with_reso_limits, imol_no is "
-   // << imol_no << std::endl;
 }
 
 
@@ -1194,7 +1190,7 @@ molecule_class_info_t::map_fill_from_cns_hkl(std::string cns_file_name,
 
 	 
       initialize_map_things_on_read_molecule(mol_name,
-					     is_diff_map,
+					     is_diff_map, false,
 					     g.swap_difference_map_colours);
       long T1 = glutGet(GLUT_ELAPSED_TIME);
 
@@ -1704,9 +1700,10 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
      file.close_read();
    }
 
-   if (bad_read == false) {
+   if (! bad_read) {
 
-      initialize_map_things_on_read_molecule(filename, is_diff_map_flag, 
+      bool is_anomalous_flag = false;
+      initialize_map_things_on_read_molecule(filename, is_diff_map_flag, is_anomalous_flag,
 					     graphics_info_t::swap_difference_map_colours);
 
       mean_and_variance<float> mv = map_density_distribution(xmap, 40, true, true);
@@ -1825,7 +1822,7 @@ molecule_class_info_t::new_map(const clipper::Xmap<float> &map_in, std::string n
    xmap = map_in; 
    // the map name is filled by using set_name(std::string)
    // sets name_ to name_in:
-   initialize_map_things_on_read_molecule(name_in, 0, 0); // not a diff_map
+   initialize_map_things_on_read_molecule(name_in, false, false, false); // not a diff_map
 
    mean_and_variance<float> mv = map_density_distribution(xmap, 40, true); 
 
@@ -1921,7 +1918,7 @@ molecule_class_info_t::make_map_from_phs_using_reso(std::string phs_filename,
    
   std::string mol_name = phs_filename; 
 
-  initialize_map_things_on_read_molecule(mol_name, 0, 0); // not diff map
+  initialize_map_things_on_read_molecule(mol_name, false, false, false); // not diff map
 
   std::cout << "initializing map..."; 
   xmap.init(mydata.spacegroup(), 
@@ -2084,7 +2081,7 @@ molecule_class_info_t::calculate_sfs_and_make_map(int imol_no_in,
 						  atom_selection_container_t SelAtom,
 						  short int is_2fofc_type) {
 
-   initialize_map_things_on_read_molecule(mol_name, 0, 0); // not diff map
+   initialize_map_things_on_read_molecule(mol_name, false, false, false); // not diff map
    
    std::cout << "calculating structure factors..." << std::endl;
 
@@ -2471,7 +2468,7 @@ molecule_class_info_t::make_map_from_cif_sigmaa(int imol_no_in,
 	    // xmap.fft_from( fphidata );       // generate Fc alpha-c map
 	    xmap.fft_from( map_fphidata );       // generate sigmaA map 20050804
 	    cout << "done." << endl;
-	    initialize_map_things_on_read_molecule(mol_name, is_diff, 0);
+	    initialize_map_things_on_read_molecule(mol_name, is_diff, false, false);
 	    // now need to fill contour_level, xmap_is_diff_map xmap_is_filled
 	    if (is_diff)
 	       xmap_is_diff_map = 1;
@@ -2578,8 +2575,9 @@ molecule_class_info_t::make_map_from_cif_nfofc(int imol_no_in,
 	 if (map_type == molecule_map_type::TYPE_FO_ALPHA_CALC) {
 	    mol_name += " Fo ac";
 	 }
-	 
-	 initialize_map_things_on_read_molecule(mol_name, is_diff_map_flag,
+
+	 bool is_anomalous_flag = false;
+	 initialize_map_things_on_read_molecule(mol_name, is_diff_map_flag, is_anomalous_flag,
 						swap_difference_map_colours);
 	
 	 cout << "initializing map..."; 
@@ -2786,7 +2784,7 @@ molecule_class_info_t::make_map_from_phs(const clipper::Spacegroup &sg,
 
       std::string mol_name = phs_filename; 
 
-      initialize_map_things_on_read_molecule(mol_name, 0, 0); // not diff map
+      initialize_map_things_on_read_molecule(mol_name, false, false, false); // not diff map
 
       cout << "initializing map..."; 
       xmap.init(mydata.spacegroup(), 
@@ -3414,4 +3412,86 @@ molecule_class_info_t::get_contours(float contour_level,
       }
    }
    return r;
+}
+
+// static
+int
+molecule_class_info_t::watch_mtz(gpointer data) {
+
+   int status = 1; // continue
+
+   updating_map_params_t *ump = static_cast<updating_map_params_t *>(data);
+   const updating_map_params_t &rump = *ump;
+   status = graphics_info_t::molecules[rump.imol].update_map_from_mtz_if_changed(rump);
+   return status;
+}
+
+int
+molecule_class_info_t::update_map_from_mtz_if_changed(const updating_map_params_t &ump_in) {
+
+   int status = 1;
+   if (continue_watching_mtz) {
+      
+      bool update_it = false;
+
+      updating_map_params_t ump = ump_in;
+      struct stat s;
+      int status = stat(ump.mtz_file_name.c_str(), &s);
+      if (status != 0) {
+	 std::cout << "WARNING:: update_map_from_mtz_if_changed() Error reading "
+		   << ump.mtz_file_name << std::endl;
+      } else {
+	 if (!S_ISREG (s.st_mode)) {
+	    std::cout << "WARNING:: update_map_from_mtz_if_changed() not a reguular file: "
+		      << ump.mtz_file_name << std::endl;
+	    continue_watching_mtz = false;
+	 } else {
+	    // happy path
+	    // ump.ctime = s.st_ctimespec; // mac version?
+#ifndef WINDOWS_MINGW
+	    ump.ctime = s.st_ctim;
+#else
+	    ump.ctime.tv_sec = s.st_ctime;
+            ump.ctime.tv_nsec = 0.; // not available!? Lets hope not necessary
+#endif
+	 }
+      }
+
+      if (false)
+	 std::cout << "#### ctime comparision: was "
+		   << updating_map_previous.ctime.tv_sec << " " << updating_map_previous.ctime.tv_nsec
+		   << " now " << ump.ctime.tv_sec << " " << ump.ctime.tv_nsec
+		   << std::endl;
+
+      if (ump.ctime.tv_sec > updating_map_previous.ctime.tv_sec) {
+	 update_it = true;
+      } else {
+	 if (ump.ctime.tv_sec == updating_map_previous.ctime.tv_sec) {
+	    if (ump.ctime.tv_nsec > updating_map_previous.ctime.tv_nsec) {
+	       update_it = true;
+	    }
+	 }
+      }
+      if (update_it) {
+
+	 // map_fill_from_mtz(ump) ?
+
+	 // updating maps shouldn't update (add to) the Display Manager.
+
+	 std::string cwd = coot::util::current_working_dir();
+	 map_fill_from_mtz(ump.mtz_file_name,
+			   cwd,
+			   ump.f_col,
+			   ump.phi_col,
+			   ump.weight_col,
+			   ump.use_weights,
+			   ump.is_difference_map,
+			   graphics_info_t::map_sampling_rate);
+	 updating_map_previous = ump;
+	 graphics_info_t::graphics_draw();
+      }
+   } else {
+      status = 0;
+   }
+   return status;
 }

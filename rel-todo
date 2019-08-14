@@ -1,28 +1,224 @@
 
+   For Release 0.8.9.3
+
+   o what is the map grid? Tell me in the map preferences.
+
+   o add a function to set the window title (dont' for get to check
+     for use-graphics)
+
+   o Refinement on an alt conf should refine just the atoms with that alt conf.
+
+   o Read in a PDB file that has a TER. Write it out as a mmCIF. It has a blank atom at the
+     end - it should not [Nigel Moriarty]. mmdb bug? ::: 1
+
+* It is still there in Coot. It's most probably an MMDB bug. How to test this issue with
+  a CCP4 program? I can't get coord_conv to work.
+
+   o Huw (from York) sent a message about pygtk usage. Needs to be incorportated. ::: 1
+
+   o Fix up dialog in RCrane, like above hopefully.  ::: 1
+
+   o other people running the crash catcher. Is it sufficiently robust? coot-experimental?
+     Run the hal-built binary on pc4
+
+
+
+
+   o read pdb3siu.ent and write it out as a cif. ::: 2
+
+* Fixed.
+
+   o add a property/timeout to a map (or model) that looks at a file and if it gets updated
+     then it recreates itself from that file.
+
+* Done
+
+   o Add a residue to a residue that has a TER. The TER is kept on the added-to-residue.
+     It should not be. [Christine Gee] ::: 1
+
+* Fixed already.
+
+   o Refine a bit of distorted RNA: Marc Leibundgut 26/06/2019.
+
+* Won't fix in 0.8.9.x.
+
+   o crash: Use CCP4 Coot, Accept Baton Atom then JED flip. ::: 0.5
+
+* Can't reproduce.
+
+   o Patterson for Randy
+
+* Done.
+
+   o Make a "I like the graphics size and position" - like for dialogs.
+
+* Done.
+
+   o backup format change to mmdb-binary.
+
+* It is now cif if input was cif = that will do for now.
+
+   o Find Ligands: if the ligand was not specified, don't dismiss the dialog (unless there are
+     no ligands)
+
+* Done.
+
+   o density fit graph should say both the map and the model in the title
+
+* Done.
+
+   o Refine residues with alt confs (e.g. A71)
+
+* Done.
+
+   o Message from Charles:
+
+Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
+0   libcoot-geometry.0.dylib 0x0000000101816419 coot::operator<<(std::ostream&, coot::residue_spec_t const&) + 9
+
+* Done
+
+   o Torsion general - message if atoms are not in the same residue
+
+   o Torsion general - message if atoms were double-picked
+
+   o validation outliers gui should order by residue number, box badness indicator?
+
+   o validation outliers gui "don't show me this again" button/mechanism
+
+   o Fetch molecule favipiravir doesn't work
+
+* It does now.
+
+   o fix the colours of (say) 5vic in Calpha Backbone mode
+
+* Done.
+
+   o refine residue ranges with ins codes (antibodies)
+
+* Seriously consider not doing this - it is terrible spaghetti - and works in the 0.9 rewrite.
+
+   o Make the ligand fitting progress bar work for the fitting part (use 2 progress bars?)
+
+* Punt. Nice to have, but too much rewiring. Sorry Keith.
+
+----
+
    For Release 0.8.9.2
 
+   o validation outliers gui in the release, in the gui.
 
-   o Add distance restraint - does that work? - What about helical restraints?
-     Test with a distorted model in a very low resolution map.
+   o Fetch molecule favipiravir doesn't work
 
-   o add symmetry and try povray - crash?
+   o fix the colours of (say) 5vic in Calpha Backbone mode
 
-   o raster3d should show symmetry?
+   o Dock sequence?
 
-   o what has happened to RCrane?
+* Hmm...
 
-   o When merging a ligand - allow the ligand to be in user-specified chain.
-     Maybe a menu item "Merge this ligand" which uses new function 
-     merge_ligand(imol, current_residue_spec, into_mol, new_residue_spec)
+   o read in a phs file - can you scroll the map? No, but + and - work.
 
-   o Randy: origin removed patterson: what's next to fix?
+* Done.
 
-   o Make a trivial ligand in the ligand builder, run acedrg. make an incorrect ligand
-     (valence error) and run acedrg - the previous ligand gets imported.
+   o add --command in --help
 
-     -> Apply button should grey out if there is no SMILES string (perhaps)
+* Done.
 
-   o I don't like the double call to make_bonds() (it's in CA mode at least). Get rid of it.
+   o make the screen output of peak-search give the Nsigma also.  BR
+
+* Done.
+
+   o All symmetry to always be on (add a setting to ~/.coot-preferences)
+
+* Done.
+
+   o Difference map Peak search results came from which map? Put it in the titlebar
+     EJD
+
+* Done.
+
+   o make anamalous maps non-red/green
+
+ * Done.
+
+   o twisted peptide/geometry omega added to validation outlier dialog.
+     does cis_peptides(imol) do what is needed?
+
+* Fixed.
+
+   o can you make a stand-alone doxygen version of the python documentation?
+
+* In part - python files need to be added.
+
+   o Does align and mutate work?
+
+* It does now.
+
+   o multisharpen in a directory not writable. Give a better error message
+
+* Done.
+
+   o delete is_sane_inter_residue_distance debug
+
+* Done.
+
+   o Copy Fragment (new_molecule_by_atom_selection()) should copy links too.
+
+* Done.
+
+   o Andreas K:
+
+   > Coot now adds new ligands to the chain of the corresponding protein. Refmac5 (5.8.0238) then adds two TER
+   > records to that chain, one after the protein and one after the ligand. When now adding a C-terminal residue
+   > in Coot, it will not remove the original TER record after the protein
+
+* Can't reproduce.
+
+   o something for the trip: The acedrg link dialog needs to be able to delete a bond
+     and change a bond order
+     Needs to be done in python too
+
+* Done for the moment, needs Bernie to do python version.
+
+   o Phosphorylate this residue on a SER. New dictionary problems? Problem is in refinement part. OXT?
+     What happens if there is no map? We should get a regularized model.
+
+* Done.
+
+   o Add residue type to the validation outlier ramachandran outlier button
+     (should the rama plot and the rama outlier have the same criterion?)
+     Needs to be done in python too
+
+* Done - needs python update.
+
+   o loops: when the gap between residue number is small but the gap is large, we
+     need to be able to represent that differently. With big red discs - or something.
+     John Berrisford.
+
+* Done.
+
+   o OC: Using delelete residue range for all residues in the moleucle should delete the
+     molecule from the display manager.
+
+* Done
+
+   o fill and use go_to_ligand_non_interesting_comp_ids: add_non_interesting_ligand_type().
+
+* Punt
+
+   o Map Dialog, Setting 8 rmsd should move the block in the graph below.
+
+* Punt
+
+   o check for double ligands and/or nan atoms when using set_merge_molecules_ligand_spec().
+     Add it to the test (do I have a test already?)
+     Check that the returned value corresponds to the new ligand: L 1
+
+* Done.
+
+   o Try rotate/translate on a chain by picking C4',B in B 2 of 2H0N
+
+   o update the copyright in the about dialog?
 
 ------
 
@@ -392,3 +588,93 @@ command "cprodrg" not found
    o 1abr 140B "Delete all carbohydrate" fail
 
 * Insertion codes!
+
+   o multiple maps - undefined refinement map - jiggle fit this molecule needs an dialog alert.
+
+* Done.
+
+   o When merging a ligand - allow the ligand to be in user-specified chain.
+     Maybe a menu item "Merge this ligand" which uses new function
+     merge_ligand(imol, current_residue_spec, into_mol, new_residue_spec)
+
+* Done. Even added a test.
+
+   o Make a trivial ligand in the ligand builder, run acedrg. make an incorrect ligand
+     (valence error) and run acedrg - the previous ligand gets imported.
+
+     -> Apply button should grey out if there is no SMILES string (perhaps)
+
+* Done.
+
+   o add-terminal-residue should do not make intermediate atoms and not do a rigid body fit.
+     Use --no-startup-scripts to help test this.
+
+* The second of those was already so, immediate addition mode changed.
+
+   o Carmen question: ?
+
+       If you are on the keyboard and doing rotamer, can you accept it with Enter?
+       No.
+       Fix it then.
+
+* Done.
+
+       Adding solvent molecules - add it to the right molecule - make the spacing bigger to make the widget bigger.
+
+* Done.
+
+   o Draw hydrogens is not respected in colour-by-chain mode.
+
+* I wonder what I meant. It was respected, but colour-by-secondary-structure was not. I had been looking at the
+  refinement build, which has (had?) different arguments. Fixed.
+
+   o Add a test that fle_view with_png output makes a sensible file.
+
+* Done
+
+   o Add distance restraint - does that work? - What about helical restraints?
+     Test with a distorted model in a very low resolution map.
+
+* It's working fine. There needs to be a lot of them to make a serious impact on the refinement.
+
+   o what has happened to RCrane?
+
+* It has moved to Calculate
+
+   o I don't like the double call to make_bonds() (it's in CA mode at least). Get rid of it.
+
+* I don't see it.
+
+   o OXT in residue type LYS fle_view_with_rditk() failure.
+     New monomer library!?
+
+* Punt.
+
+   o Randy: origin removed patterson: what's next to fix?
+
+Punt.
+
+   o compare the origins of a rebox and maps from the EMDB - look for nxstart etc differences
+     use mrcfile for convenience.
+
+* Punt.
+
+   o CryoEM tutorial says "choose a sensible weight for the map" - how do we do that Paul?
+
+* Is this really a problem - if so, punt.
+
+   o add symmetry and try povray - crash?
+
+* Punt.
+
+   o raster3d should show symmetry?
+
+* Punt.
+
+   o can you add a download for EMDB bundles?
+
+* Punt.
+
+   o does normal/old/standard cis-trans update the bonds?
+
+* Yes

@@ -156,7 +156,7 @@ std::vector<std::string> graphics_info_t::command_line_accession_codes;
 
 std::vector<coot::lsq_range_match_info_t> *graphics_info_t::lsq_matchers;
 std::vector<coot::generic_text_object_t> *graphics_info_t::generic_texts_p = 0;
-std::vector<coot::view_info_t> *graphics_info_t::views = 0;
+std::vector<coot::view_info_t> graphics_info_t::views;
 bool graphics_info_t::do_expose_swap_buffers_flag = 1;
 
 #ifdef HAVE_CXX_THREAD
@@ -258,9 +258,10 @@ double graphics_info_t::mouse_begin_y = 0.0;
 float  graphics_info_t::rotation_centre_x = 0.0;
 float  graphics_info_t::rotation_centre_y = 0.0;
 float  graphics_info_t::rotation_centre_z = 0.0;
-float  graphics_info_t::old_rotation_centre_x = 0.0;
-float  graphics_info_t::old_rotation_centre_y = 0.0;
-float  graphics_info_t::old_rotation_centre_z = 0.0;
+// float  graphics_info_t::old_rotation_centre_x = 0.0;
+// float  graphics_info_t::old_rotation_centre_y = 0.0;
+// float  graphics_info_t::old_rotation_centre_z = 0.0;
+coot::Cartesian graphics_info_t::old_rotation_centre(0,0,0);
 float  graphics_info_t::zoom                = 100;
 int    graphics_info_t::smooth_scroll       =   1; // flag: default is ..
 int    graphics_info_t::smooth_scroll_steps =  40;
@@ -933,7 +934,7 @@ int       graphics_info_t::imol_rigid_body_refine = 0;
 
 // terminal residue define
 short int graphics_info_t::in_terminal_residue_define = 0;
-short int graphics_info_t::add_terminal_residue_immediate_addition_flag = 0;
+short int graphics_info_t::add_terminal_residue_immediate_addition_flag = 1;
 short int graphics_info_t::add_terminal_residue_do_post_refine = 0;
 float graphics_info_t::terminal_residue_addition_direct_phi = -135.0;
 float graphics_info_t::terminal_residue_addition_direct_psi =  135.0;
@@ -1010,8 +1011,7 @@ int         graphics_info_t::align_and_mutate_imol;
 std::string graphics_info_t::align_and_mutate_chain_from_optionmenu;
 int         graphics_info_t::nsv_canvas_pixel_limit = 22500;
 
-// Bob recommends:
-mmdb::realtype    graphics_info_t::alignment_wgap   = -0.5; // was -3.0;
+mmdb::realtype    graphics_info_t::alignment_wgap   = -3.0; // was -0.5 (Bob) // was -3.0;
 mmdb::realtype    graphics_info_t::alignment_wspace = -0.4;
 
 //
@@ -1230,6 +1230,7 @@ float graphics_info_t::bond_thickness_intermediate_atoms = 5; // thick white ato
 // merge molecules
 int graphics_info_t::merge_molecules_master_molecule = -1;
 std::vector<int> *graphics_info_t::merge_molecules_merging_molecules;
+coot::residue_spec_t graphics_info_t::merge_molecules_ligand_spec;
 
 // change chain ids:
 int graphics_info_t::change_chain_id_molecule = -1;
@@ -1356,7 +1357,7 @@ float graphics_info_t::mogul_max_badness = 5.0;   // The z value colour at which
 bool graphics_info_t::linked_residue_fit_and_refine_state = true;
 
 //
-bool graphics_info_t::allow_duplseqnum = false;
+bool graphics_info_t::allow_duplseqnum = true; // 20181214-PE - I presume that this is safe now?
 
 std::map<std::string, std::string> graphics_info_t::extensions_registry;
 
@@ -3188,6 +3189,13 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
 	 }
 	 graphics_info_t::accept_reject_dialog = 0;
       }
+
+      if (graphics_info_t::rotamer_dialog) {
+	 accept_regularizement();
+	 gtk_widget_destroy(graphics_info_t::rotamer_dialog);
+	 set_graphics_rotamer_dialog(NULL);
+      }
+
       handled = TRUE;
       break;
 
@@ -4518,6 +4526,7 @@ void handle_scroll_density_level_event(int scroll_up_down_flag) {
    }
 
    int s = info.scroll_wheel_map;
+
    if (scroll_up_down_flag == 1) {
       if (graphics_info_t::do_scroll_by_wheel_mouse_flag) { 
 	 if (s>=0) {

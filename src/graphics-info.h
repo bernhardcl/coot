@@ -480,9 +480,17 @@ class graphics_info_t {
    static float rotation_centre_y;
    static float rotation_centre_z;
 
-   static float old_rotation_centre_x;
-   static float old_rotation_centre_y;
-   static float old_rotation_centre_z;
+   static coot::Cartesian old_rotation_centre;
+   static void set_old_rotation_centre(const coot::Cartesian &rc) {
+     old_rotation_centre = rc;
+   }
+   static coot::Cartesian get_old_rotation_centre() {
+     return old_rotation_centre;
+   }
+   // delete these when working
+   // static float old_rotation_centre_x;
+   // static float old_rotation_centre_y;
+   // static float old_rotation_centre_z;
 
    static long int T0; 
    static long int Frames;
@@ -1005,7 +1013,7 @@ public:
       generic_texts_p = new std::vector<coot::generic_text_object_t>;
 
       // views
-      views = new std::vector<coot::view_info_t>;
+      // views = new std::vector<coot::view_info_t>;
 
       // glob extensions:
       coordinates_glob_extensions = new std::vector<std::string>;
@@ -1628,15 +1636,17 @@ public:
    // Those coordinates will get used in draw() to centre on that
    // atom. 
    //
-   void setRotationCentre(int atom_index, int imol); 
+   void setRotationCentre(int atom_index, int imol);
 
    // if dir is true, we are going forward
    void reorienting_next_residue(bool dir);
    static bool reorienting_next_residue_mode;
 
-   void setRotationCentre(coot::Cartesian centre); 
+   void setRotationCentre(coot::Cartesian centre);
    void setRotationCentreAndZoom(coot::Cartesian centre,
-				 float target_zoom); 
+				 float target_zoom);
+   void setRotationCentreSimple(const coot::Cartesian &c);
+
 
    // old style: soon to be redundent
    void setRotationCentre(const symm_atom_info_t &symm_atom_info);
@@ -3515,6 +3525,8 @@ public:
    // ----- merge molecules ------
    static int merge_molecules_master_molecule;
    static std::vector<int> *merge_molecules_merging_molecules;
+   static coot::residue_spec_t merge_molecules_ligand_spec; // JED feature
+   void set_merge_molecules_ligand_spec(const coot::residue_spec_t &spec_in);
 
    // ------ change chain ids:
    static int change_chain_id_molecule;
@@ -3566,7 +3578,7 @@ public:
    void omega_graphs(int imol);
    coot::rotamer_graphs_info_t rotamer_graphs(int imol); // give results back to scripting layer
    void density_fit_graphs(int imol);
-   static GtkWidget *wrapped_create_diff_map_peaks_dialog(const std::vector<std::pair<clipper::Coord_orth, float> > &centres, float map_sigma);
+   static GtkWidget *wrapped_create_diff_map_peaks_dialog(const std::vector<std::pair<clipper::Coord_orth, float> > &centres, float map_sigma, const std::string &dialog_title);
    // the buttons callback for above:
    static void on_diff_map_peak_button_selection_toggled (GtkButton       *button,
 							  gpointer         user_data);
@@ -3631,6 +3643,8 @@ public:
    void show_hide_toolbar_icon_pos(int pos, int show_hide_flag, int toolbar_index);
    std::vector<int> get_model_toolbar_icons_list();
    std::vector<int> get_main_toolbar_icons_list();
+   void add_to_preferences(const std::string &file_name, const std::string &contents) const;
+   std::string get_preferences_directory() const;
 
    // --- remote controlled coot: ----
    static int try_port_listener;
@@ -3905,7 +3919,7 @@ string   static std::string sessionid;
    static std::pair<std::string, std::string> db_userid_username;
 #endif
 
-   static std::vector<coot::view_info_t> *views;
+   static std::vector<coot::view_info_t> views;
    static float views_play_speed;
 
    static std::string movie_file_prefix;

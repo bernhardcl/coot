@@ -522,6 +522,46 @@ void check_chiral_volumes(int imol) {
    } 
 }
 
+#ifdef USE_GUILE
+SCM chiral_volume_errors_scm(int imol) {
+
+   SCM r = SCM_BOOL_F;
+   if (is_valid_model_molecule(imol)) {
+      r = SCM_EOL;
+      graphics_info_t g;
+      std::pair<std::vector<std::string>, std::vector<coot::atom_spec_t> > v = g.molecules[imol].bad_chiral_volumes();
+      std::cout << "::::: here with v.second.size() " << v.second.size() << std::endl;
+      for (std::size_t i=0; i<v.second.size(); i++) {
+	 SCM atom_spec_scm = atom_spec_to_scm(v.second[i]);
+	 r = scm_cons(atom_spec_scm, r);
+      }
+      r = scm_reverse(r);
+   }
+   return r;
+
+}
+#endif /* USE_GUILE */
+
+#ifdef USE_PYTHON
+PyObject *chiral_volume_errors_py(int imol) {
+
+   PyObject *r = Py_False;
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t g;
+      std::pair<std::vector<std::string>, std::vector<coot::atom_spec_t> > v = g.molecules[imol].bad_chiral_volumes();
+      r = PyList_New(v.second.size());
+      for (std::size_t i=0; i<v.second.size(); i++) {
+	 PyObject *atom_spec_py = atom_spec_to_py(v.second[i]);
+	 PyList_SetItem(r, i, atom_spec_py);
+      }
+   }
+   if (PyBool_Check(r))
+     Py_INCREF(r);
+   return r;
+}
+#endif	/* USE_PYTHON */
+
+
 
 
 void set_fix_chiral_volumes_before_refinement(int istate) {
@@ -1070,15 +1110,19 @@ difference_map_peaks(int imol, int imol_coords,
 	       gtk_widget_show(w);
 	    }
 	 } else {
+	    float map_sigma = graphics_info_t::molecules[imol].map_sigma();
 	    if (graphics_info_t::use_graphics_interface_flag) { 
-	       float map_sigma = graphics_info_t::molecules[imol].map_sigma();
-	       GtkWidget *w = graphics_info_t::wrapped_create_diff_map_peaks_dialog(centres, map_sigma);
+	       std::string title = "Difference Map Peaks Dialog From Map No. ";
+	       title += coot::util::int_to_string(imol);
+	       GtkWidget *w = graphics_info_t::wrapped_create_diff_map_peaks_dialog(centres, map_sigma, title);
 	       gtk_widget_show(w);
 	    }
 
 	    std::cout << "\n   Found these peak positions:\n";
 	    for (unsigned int i=0; i<centres.size(); i++) {
-	       std::cout << "   " << i << " " << centres[i].second << " "
+	       std::cout << "   " << i << " dv: "
+			 << centres[i].second << " n-rmsd: "
+			 << centres[i].second/map_sigma << " "
 			 << centres[i].first.format() << std::endl;
 	    }
 	    std::cout << "\n   Found " << centres.size() << " peak positions:\n";
@@ -2514,7 +2558,8 @@ PyObject *all_molecule_ramachandran_score_py(int imol) {
 	     rs.scores[ii].residue_next) {
 	    PyObject *phi_py = PyFloat_FromDouble(rs.scores[ii].phi_psi.phi());
 	    PyObject *psi_py = PyFloat_FromDouble(rs.scores[ii].phi_psi.psi());
-	    PyObject *phi_psi_py = PyList_New(2);
+       PyObject *residue_score_py = PyFloat_FromDouble(rs.scores[ii].score);
+       PyObject *phi_psi_py = PyList_New(2);
 	    PyObject *res_names_py = PyList_New(3);
 	    PyList_SetItem(phi_psi_py, 0, phi_py);
 	    PyList_SetItem(phi_psi_py, 1, psi_py);
@@ -2523,7 +2568,7 @@ PyObject *all_molecule_ramachandran_score_py(int imol) {
 	    PyList_SetItem(res_names_py, 2, PyString_FromString(rs.scores[ii].residue_next->GetResName()));
 	    PyList_SetItem(info_for_residue_py, 0, phi_psi_py);
 	    PyList_SetItem(info_for_residue_py, 1, residue_spec_py);
-	    PyList_SetItem(info_for_residue_py, 2, a_py);
+       PyList_SetItem(info_for_residue_py, 2, residue_score_py);
 	    PyList_SetItem(info_for_residue_py, 3, res_names_py);
 	    PyList_SetItem(info_by_residue_py, ii, info_for_residue_py);
 	 } else {
@@ -2605,6 +2650,43 @@ int clashes_with_symmetry(int imol, const char *chain_id, int res_no, const char
    }
    return r;
 }
+
+#include "analysis/b-factor-histogram.hh"
+#include "goograph/goograph.hh"
+
+//! B-factor distribution histogram
+void b_factor_distribution_graph(int imol) {
+
+   if (is_valid_model_molecule(imol)) {
+      mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;
+      coot::b_factor_histogram b(mol);
+      b.model();
+      std::vector<std::pair<double, double> > data  = b.get_data();
+      std::vector<std::pair<double, double> > model = b.get_model();
+
+      coot::goograph* g = new coot::goograph();
+      int trace_data  = g->trace_new();
+      int trace_model = g->trace_new();
+
+      g->set_trace_type(trace_data, coot::graph_trace_info_t::PLOT_TYPE_BAR);
+      g->set_trace_colour(trace_data, "#88bb88");
+      g->set_data(trace_data, data);
+
+      // Don't draw the model until it is correctly calculated
+      // g->set_trace_type(trace_model, coot::graph_trace_info_t::PLOT_TYPE_LINE);
+      // g->set_trace_colour(trace_model, "#333333");
+      // g->set_data(trace_model, model);
+
+      g->set_plot_title("B-factor histogram");
+      // g->set_extents(coot::goograph::X_AXIS, 0,  140);
+      // g->set_extents(coot::goograph::Y_AXIS, 0, 2000);
+
+      g->draw_graph();
+      g->show_dialog();
+
+   }
+}
+
 
 
 #endif // USE_PYTHON

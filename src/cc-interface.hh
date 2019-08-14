@@ -40,8 +40,13 @@
 
 #include "coords/phenix-geo.hh"
 
+/*! \file
+  \brief Coot Scripting Interface - General (C++ functions)
+*/
+
 namespace coot {
 
+   //! alias path
    class alias_path_t {
    public:
       int index;
@@ -54,7 +59,7 @@ namespace coot {
       }
    };
 
-   // pisa internal function
+   //! pisa internal function
    //
    class pisa_interface_bond_info_t {
    public:
@@ -134,9 +139,11 @@ int set_go_to_atom_from_spec(const coot::atom_spec_t &atom_spec);
 int set_go_to_atom_from_res_spec(const coot::residue_spec_t &spec);
 #ifdef USE_GUILE
 int set_go_to_atom_from_res_spec_scm(SCM residue_spec);
+int set_go_to_atom_from_atom_spec_scm(SCM residue_spec);
 #endif 
 #ifdef USE_PYTHON
 int set_go_to_atom_from_res_spec_py(PyObject *residue_spec);
+int set_go_to_atom_from_atom_spec_py(PyObject *residue_spec);
 #endif 
 
 
@@ -293,6 +300,7 @@ std::string refmac_name(int imol);
 /*  ------------------------------------------------------------------- */
 
 namespace coot {
+   //! str mtime for for attributes
    class str_mtime {
    public:
       str_mtime(std::string file_in, time_t mtime_in) {
@@ -304,7 +312,7 @@ namespace coot {
       std::string file;
    };
    
-   // trivial helper function
+   //! trivial helper function for file attributes
    class file_attribs_info_t {
    public:
       std::string directory_prefix;
@@ -746,6 +754,16 @@ std::string atom_info_as_text_for_statusbar(int atom_index, int imol,
 //! \{
 
 //! \brief
+//! a utility to return the specs of all the residues, each spec prefixed by the serial number
+#ifdef USE_GUILE
+SCM all_residues_with_serial_numbers_scm(int imol);
+#endif
+#ifdef USE_PYTHON
+PyObject *all_residues_with_serial_numbers_py(int imol);
+#endif
+
+
+//! \brief
 //! regularize the given residues
 //!
 void regularize_residues(int imol, const std::vector<coot::residue_spec_t> &residues);
@@ -832,7 +850,10 @@ SCM find_blobs_scm(int imol_model, int imol_map, float cut_off_density_level);
 #endif 
 #ifdef USE_PYTHON
 PyObject *find_blobs_py(int imol_model, int imol_map, float cut_off_density_level);
-#endif 
+#endif
+
+//! B-factor distribution histogram
+void b_factor_distribution_graph(int imol);
 
 /*  ----------------------------------------------------------------------- */
 /*                  water chain                                             */

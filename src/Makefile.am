@@ -125,6 +125,7 @@ coot_wrap_guile_pre.cc:      $(top_srcdir)/src/c-interface.h    \
 			     $(top_srcdir)/src/c-interface-generic-objects.h \
                              $(top_srcdir)/src/sdf-interface.hh \
                              $(top_srcdir)/src/cfc.hh \
+                             $(top_srcdir)/src/curlew.h \
                              $(top_srcdir)/src/curlew.hh \
                              $(top_srcdir)/src/cmtz-interface.hh \
                              $(top_srcdir)/src/c-interface-mogul.hh
@@ -146,6 +147,7 @@ coot_wrap_python_pre.cc: $(top_srcdir)/src/c-interface.h      \
                          $(top_srcdir)/src/c-interface-ligands-swig.hh \
 			 $(top_srcdir)/src/sdf-interface.hh   \
                          $(top_srcdir)/src/cfc.hh \
+                         $(top_srcdir)/src/curlew.h \
                          $(top_srcdir)/src/curlew.hh \
                          $(top_srcdir)/src/c-interface-mogul.hh
 	swig -o $@ -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CFLAGS) $(PYTHON_CFLAGS)  $(USE_LIBCURL) -I$(top_srcdir)/src  -I$(top_srcdir) -shadow -python -c++ $(top_srcdir)/src/coot.i
@@ -162,6 +164,7 @@ AM_CFLAGS = \
 	$(WITH_GUILE_CFLAGS)	\
 	$(USE_GUILE_GTK) 	\
 	$(GUILE_CFLAGS)		\
+	$(PYTHON_CPPFLAGS)	\
 	$(PYTHON_CFLAGS)
 
 # must have GUILE and GUILE_GTK flags before $(INCLUDES), and this 
@@ -180,6 +183,7 @@ AM_CXXFLAGS = \
 	$(WITH_GUILE_CFLAGS)	\
 	$(USE_GUILE_GTK) 	\
 	$(GUILE_CFLAGS)		\
+	$(PYTHON_CPPFLAGS)	\
 	$(PYTHON_CFLAGS)	\
 	$(COOT_WINDOWS_CFLAGS) 	\
 	$(COOT_GSL_FLAGS) $(OPENMP_CFLAGS)
@@ -374,6 +378,7 @@ coot_bin_SOURCES = \
 	coot-setup-python.hh     \
 	coot-version.hh          \
 	coot_wrap_guile.cc       \
+        curlew.h                 \
         curlew.hh                \
         dots-representation.hh   \
 	drag-and-drop.hh         \
@@ -510,6 +515,8 @@ coot_bin_SOURCES = \
 	atom-selection.hh 	 \
 	ncs.hh 		         \
 	model-view.hh 		 \
+	updating-map-params.hh   \
+	updating-coordinates-molecule-parameters.hh \
 	view.hh 		 \
 	view.cc 		 \
 	new-centre.hh            \

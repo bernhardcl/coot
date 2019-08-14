@@ -7388,6 +7388,32 @@ $ apt-get install librsvg2-dev
 
 (maybe it was not the dev package but the libs/common that solved it, librsvg2-common)
 
+
+
+----
+Wed 20 Feb 2019 16:07:02 PST
+
+
+$ ls ~/ccp4/ccp4-src-2015-02-05%/ccp4-6.5/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache
+$ ls "/Users/pemsley/ccp4/ccp4-src-2015-02-05/ccp4-6.5/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-svg.so"
+$ otool -L "/Users/pemsley/ccp4/ccp4-src-2015-02-05/ccp4-6.5/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-svg.so"
+
+fragment of loaders.cache:
+
+"/Users/pemsley/ccp4/ccp4-src-2015-02-05/ccp4-6.5/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-ras.so"
+"ras" 4 "gdk-pixbuf" "The Sun raster image format" "LGPL"
+"image/x-cmu-raster" "image/x-sun-raster" ""
+"ras" ""
+"Y\246j\225" "" 100
+
+"/Users/pemsley/ccp4/ccp4-src-2015-02-05/ccp4-6.5/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-svg.so"
+"svg" 2 "gdk-pixbuf" "Scalable Vector Graphics" "LGPL"
+"image/svg+xml" "image/svg" "image/svg-xml" "image/vnd.adobe.svg+xml" "text/xml-svg" ""
+"svg" ""
+" <svg" "*    " 100
+" <!DOCTYPE svg" "*             " 100
+
+
 ----
 
    using lldb:
@@ -8323,7 +8349,7 @@ Article (PDF Available) Proceedings of the National Academy of Sciences 114(12):
 The HIV-1 envelope glycoprotein structure: nailing down a moving target
 Article
 Jan 2017IMMUNOL REV
-Andrew B WardIan A Wilson
+Andrew B Ward Ian A Wilson
 
 
 
@@ -8455,6 +8481,8 @@ Tue  4 Sep 2018 16:15:01 BST
 
    Fitting to maps described here?
 
+   Fit in map:
+   https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/midas/fitmap.html
 
 ---
 Fri 21 Sep 2018 10:49:26 BST
@@ -8532,7 +8560,6 @@ Thu 27 Sep 2018 15:58:58 BST
     ligand validation meeting: what should we do with ligands from pandda - they will
     seem to be rubbish by conventional metrics.
 
-
 ----
 Sun 14 Oct 2018 17:10:02 BST
 
@@ -8562,3 +8589,375 @@ Sun 11 Nov 2018 16:32:37 GMT
        prediction of specificity and structure for proteins and protein-protein complexes.
        J Mol Biol. 2003;326:1239–1259.
 
+---
+Sun 25 Nov 2018 12:26:00 BRST
+
+   porting pygtk to python3  PyGI+GTK PyGObject Introspection
+   https://wiki.gnome.org/action/show/Projects/PyGObject/IntrospectionPorting?action=show&redirect=PyGObject%2FIntrospectionPorting
+
+
+---
+Tue 11 Dec 2018 02:47:48 GMT
+
+   differential equation solver
+
+https://github.com/sheljohn/osd
+
+---
+Tue 18 Dec 2018 03:42:49 GMT
+
+   svg problem maybe compile gtk-pixbuf2 with --enable-relocations
+
+   https://github.com/Alexpux/MINGW-packages/issues/818
+
+   This is most probably caused by wrong /usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders.cache file. Try:
+   gdk-pixbuf-query-loaders > $prfx/gdk-pixbuf-2.0/2.10.0/loaders.cache
+   to regenerate it.
+
+----
+Sun 16 Dec 2018 14:48:21 GMT
+
+   set_thread *is* run just once at the start of ctpl.h.
+
+---
+Sun  6 Jan 2019 14:57:30 GMT
+
+   check my blob
+
+   https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty626/5055122
+
+---
+Sun  6 Jan 2019 15:15:22 GMT
+
+   module opticspy does Zernike moments
+
+---
+Tue  8 Jan 2019 14:42:58 GMT
+
+   Here is homebrew's patch for Python
+
+   https://github.com/Homebrew/homebrew-core/blob/master/Formula/python.rb
+
+
+---
+Wed  9 Jan 2019 02:25:27 GMT
+
+   lots of click sounds (just the job?)
+
+   https://freesound.org/people/Jaszunio15/
+
+---
+Wed  9 Jan 2019 15:05:52 GMT
+
+   fragment-based folding
+
+   http://www0.cs.ucl.ac.uk/staff/D.Jones/t42morph.html
+
+---
+Wed  9 Jan 2019 15:09:38 GMT
+
+   Dan Rigdeon talk:
+
+   quark server: fragment based modelling
+
+   https://zhanglab.ccmb.med.umich.edu/QUARK/
+
+   https://onlinelibrary.wiley.com/doi/full/10.1002/prot.24065
+
+   also
+
+   confold2 (not fragment based)
+
+---
+Sun 13 Jan 2019 07:56:23 GMT
+
+  CUDA
+  https://www.sharcnet.ca/help/index.php/CUDA_tips_and_tricks#Overview
+
+---
+Fri 25 Jan 2019 20:54:54 GMT
+
+Software Violations in Binary Code
+https://nixos.org/~eelco/pubs/clones-msr2011-final.pdf
+
+
+----
+Tue  5 Feb 2019 11:44:27 PST
+
+  gettext problems in cj build gtkglext (glib)
+
+  configuration of glib failed because it couldn't find gettext (perhaps msgfmt, actually)
+  That was because cj build didn't install the msgfmt file.
+
+  The solution was to put the directory for msgfmt in the path before running cj (and that
+  directory was provided by homebrew).
+
+  A better solution is for cj to install msgfmt and put the directory into which it installs
+  it into the path itself.
+
+----
+Mon 11 Feb 2019 13:05:44 PST
+
+   compiling readline from  source
+
+https://stackoverflow.com/questions/26670417/how-to-compile-readline-from-source
+
+ldd -r /mypath/lib/libreadline.so.6.2
+        linux-vdso.so.1 =>  (0x00007ffffb186000)
+        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f450c62f000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f450cc07000)
+undefined symbol: UP    (/mypath/lib/libreadline.so.6.2)
+undefined symbol: PC    (/mypath/lib/libreadline.so.6.2)
+undefined symbol: BC    (/mypath/lib/libreadline.so.6.2)
+
+--with-curses'
+    This tells readline that it can find the termcap library functions
+    (tgetent, et al.) in the curses library, rather than a separate
+    termcap library.  Readline uses the termcap functions, but does not
+    link with the termcap or curses library itself, allowing applications
+    which link with readline the to choose an appropriate library.
+    This option tells readline to link the example programs with the
+    curses library rather than libtermcap.
+
+make SHLIB_LIBS=/mypath/libncurses.so
+
+
+----
+Sat 16 Feb 2019 06:02:48 PST
+
+LBFGS insights:
+https://www12.cs.fau.de/edu/map/ss12/talks/lbfgs_map_superresolution.pdf
+
+   Does changing the Rama weight make our function more like a rosenbrock function?
+
+   http://en.wikipedia.org/wiki/Rosenbrock_function
+
+---
+Sun 10 Mar 2019 12:39:28 GMT
+
+   use pip to install xmltramp2 to use muscle.py
+
+   https://raw.githubusercontent.com/ebi-wp/webservice-clients/master/python/muscle.py
+
+
+---
+Tue 12 Mar 2019 17:34:23 GMT
+
+ Is this what I need to test that svg works? (found in gtk3-opengl/Makefile)
+ 
+ rsvg-convert --format png --output $@ $^
+
+
+---
+Mon 29 Apr 2019 12:23:07 BST
+
+   o Converting to GTK3: At some stage Use define (GTK_DISABLE_DEPRECATED) in the gtk2 build
+     gtk_combo_box_get_active_text is deprecated
+
+ * Deprecated: 2.24: If you used this with a #GtkComboBox constructed with 
+ * gtk_combo_box_new_text() then you should now use #GtkComboBoxText and 
+ * gtk_combo_box_text_get_active_text() instead. Or if you used this with a
+ * #GtkComboBoxEntry then you should now use #GtkComboBox with 
+ * #GtkComboBox:has-entry as %TRUE and use
+ * gtk_entry_get_text (GTK_ENTRY (gtk_bin_get_child (GTK_BIN (combobox)))).
+
+---
+Mon 29 Apr 2019 12:37:01 BST
+
+  GPU Optimizations for games:
+
+  https://gist.github.com/silvesthu/505cf0cbf284bb4b971f6834b8fec93d
+
+  interesting stuff
+
+---
+Tue 30 Apr 2019 15:30:25 BST
+
+   rtx/Vulkan with Linux:
+
+   https://iorange.github.io/p01/HappyTriangle.html
+
+   Good stuff - not sure how to get the vulkan directory :-)
+
+   Vulkan Fish! and other things:
+   https://developer.nvidia.com/gameworks-vulkan-and-opengl-samples
+
+---
+Tue  7 May 2019 00:16:49 BST
+
+   deprecated gtk:
+
+-  box_main = gtk_vbox_new (FALSE, 10);
++  box_main = gtk_box_new (GTK_ORIENTATION_VERTICAL, 10);
+
+
+---
+Fri 10 May 2019 05:51:46 BST
+
+   Oh boy:
+
+   On Mac OS X, GTK3+ is only native
+   On Mac OS X, GTK3+ has no connection to OpenGL
+
+   https://apple.stackexchange.com/questions/205404/how-can-i-get-gdk-x11-3-0-on-os-x
+   https://mail.gnome.org/archives/gtk-list/2017-January/msg00020.html
+
+
+---
+Fri 10 May 2019 17:01:54 BST
+
+   It might be that wxFormBuilder can generate C++ from glade-3 output.
+
+---
+Sun 12 May 2019 14:38:04 BST
+
+   Lots of good stuff about how to work with GTK3 on Mac OS X:
+
+   https://wiki.gnome.org/Projects/GTK/OSX
+
+---
+Wed 22 May 2019 11:34:42 BST
+
+    look at this:
+
+    https://wiki.fysik.dtu.dk/ase/
+
+    and this:
+
+    https://www.macinchem.org/blog/files/90966f824efe7fbbf2f0b4f56526b658-2202.php
+    LigandScout 4.2 Released
+
+---
+Thu 23 May 2019 10:38:58 BST
+
+   Javascript viewers:
+
+   https://www.macinchem.org/scientificsoftware/jsmolviewers.php
+
+   https://biasmv.github.io/pv/demo.html # outlined
+
+---
+Fri 24 May 2019 18:12:50 BST
+
+   flatpak for GNOME:
+
+   https://wiki.gnome.org/Newcomers/BuildProject
+
+   Build GTK4 and test Vulkan
+
+---
+Mon 27 May 2019 01:38:52 CEST
+
+   using Vulkan and glm and glfw for pretty pictures:
+
+   https://www.reddit.com/r/vulkan/comments/brvdan/the_story_of_optimizing_a_vulkan_program/
+
+
+----
+Wed  1 May 16:03:37 BST 2019
+
+   https://stackoverflow.com/questions/4305911/opengl-depth-sorting
+   https://stackoverflow.com/questions/6352908/opengl-transparency-translucency?noredirect=1&lq=1
+   http://developer.download.nvidia.com/SDK/10/opengl/src/dual_depth_peeling/doc/DualDepthPeeling.pdf
+   http://www.humus.name/index.php?page=3D&ID=61
+   https://community.khronos.org/t/easy-depth-sorting-almost-maybe/59832
+
+
+----
+Tue  7 May 17:38:42 BST 2019
+
+   SAXS tutorial/envelope info
+   https://situs.biomachina.org/tutorial_saxs.html
+
+
+---
+Thu 13 Jun 2019 08:24:13 BST
+
+   Ray tracing - ends with glass duck
+   https://github.com/ssloy/tinyraytracer/wiki/Part-1:-understandable-raytracing
+
+---
+Wed 19 Jun 2019 15:38:48 CDT
+
+   To solve the canberra problem:
+
+   sudo apt install libcanberra-gtk-module libcanberra-gtk3-module
+
+
+---
+Thu 20 Jun 2019 15:41:02 CDT
+
+   focus follow mouse:
+
+   gsettings set org.gnome.desktop.wm.preferences focus-mode 'sloppy'
+
+
+---
+Fri 21 Jun 2019 14:31:08 CDT
+
+   o phenix ncs-from-map:
+
+     https://www.phenix-online.org/documentation/reference/find_ncs_from_density.html
+
+
+---
+Fri 21 Jun 2019 14:59:40 CDT
+
+   Conan: the C / C++ Package Manager for Developers
+
+   open source, decentralized and multi-platform package manager to create and
+   share all your native binaries.
+
+---
+
+Mon  8 Jul 18:12:26 BST 2019
+
+  Jiffies, linux ticks, Hz
+
+  $ getconf CLK_TCK
+
+
+---
+Mon 24 Jun 2019 09:41:38 CDT
+
+   PDBe: ccdutils rdkit library
+
+---
+Mon 24 Jun 2019 10:14:03 CDT
+
+   Pavel lecture:
+
+   o 3noq real Rama outlier
+     5a9z lots of Rama outliers.
+     Voth and Shing 2007 for Hydrogen bond definition
+
+---
+Mon 24 Jun 2019 10:15:05 CDT
+
+   o Mac OSX and Gtk: John Ralls https://discourse.gnome.org/t/say-hello-thread/82/35
+
+
+---
+Mon 24 Jun 2019 10:15:28 CDT
+
+   o Dominika OS: Ubuntu 16.04
+
+
+---
+Wed  3 Jul 2019 04:21:00 BST
+
+   o 26S Proteosome EMDB-4002
+
+---
+Tue 16 Jul 22:59:11 BST 2019
+
+   what is this?
+
+   https://github.com/exokitxr/exokit
+
+---
+Fri 26 Jul 20:51:17 BST 2019
+
+   o OpenGL tutorials: including SSAO:
+
+     http://ogldev.atspace.co.uk/

@@ -3408,7 +3408,13 @@ coot::util::create_mmdbmanager_from_res_selection(mmdb::Manager *orig_mol,
 // 
 std::pair<bool, mmdb::Manager *>
 coot::util::create_mmdbmanager_from_residue_vector(const std::vector<mmdb::Residue *> &res_vec,
-						   mmdb::Manager *old_mol) {
+						   mmdb::Manager *old_mol,
+						   const std::pair<bool,std::string> &use_alt_conf) {
+
+   // If use_alt_conf first is true then
+   //    if use_alt_conf second is not blank
+   // then copy atoms that have blank alt conf and those
+   // with altconfs that match use_alt_conf.second.
 
    // So, first make a vector of residue sets, one residue set for each chain.
    std::vector<coot::util::chain_id_residue_vec_helper_t> residues_of_chain;
@@ -3478,7 +3484,8 @@ coot::util::create_mmdbmanager_from_residue_vector(const std::vector<mmdb::Resid
       chain_p->SetChainID(residues_of_chain[ich].chain_id.c_str());
       for (unsigned int ires=0; ires<residues_of_chain[ich].residues.size(); ires++) { 
 	 mmdb::Residue *residue_p = 
-            coot::util::deep_copy_this_residue(residues_of_chain[ich].residues[ires]);
+            coot::util::deep_copy_this_residue(residues_of_chain[ich].residues[ires],
+					       use_alt_conf);
 	 chain_p->AddResidue(residue_p);
       }
       model_p->AddChain(chain_p);
@@ -3574,16 +3581,18 @@ mmdb::Manager *coot::util::create_mmdbmanager_from_points(const std::vector<clip
 void
 coot::util::pdbcleanup_serial_residue_numbers(mmdb::Manager *mol) {
 
-   for(int imod = 1; imod<=mol->GetNumberOfModels(); imod++) {
-      mmdb::Model *model_p = mol->GetModel(imod);
-      if (model_p) {
-	 int n_chains = model_p->GetNumberOfChains();
-	 for (int ichain=0; ichain<n_chains; ichain++) {
-	    mmdb::Chain *chain_p = model_p->GetChain(ichain);
-	    int nres = chain_p->GetNumberOfResidues();
-	    for (int ires=0; ires<nres; ires++) {
-	       mmdb::Residue *residue_p = chain_p->GetResidue(ires);
-	       residue_p->index = ires;
+   if (mol) {
+      for(int imod = 1; imod<=mol->GetNumberOfModels(); imod++) {
+	 mmdb::Model *model_p = mol->GetModel(imod);
+	 if (model_p) {
+	    int n_chains = model_p->GetNumberOfChains();
+	    for (int ichain=0; ichain<n_chains; ichain++) {
+	       mmdb::Chain *chain_p = model_p->GetChain(ichain);
+	       int nres = chain_p->GetNumberOfResidues();
+	       for (int ires=0; ires<nres; ires++) {
+		  mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+		  residue_p->index = ires;
+	       }
 	    }
 	 }
       }
@@ -3892,9 +3901,64 @@ coot::util::create_mmdbmanager_from_atom_selection_straight(mmdb::Manager *orig_
    if (sg) { 
      atoms_mol->SetSpaceGroup(sg);
    }
+
+   transfer_links(orig_mol ,atoms_mol);
    atoms_mol->FinishStructEdit();
    return atoms_mol;
 }
+
+// transfer links from mol_orig to mol_new
+void
+coot::util::transfer_links(mmdb::Manager *mol_orig, mmdb::Manager *mol_new) {
+
+   // c.f. create_mmdbmanager_from_residue_vector
+
+   if (! mol_orig) return;
+   if (! mol_new) return;
+
+   int n_models = mol_orig->GetNumberOfModels();
+   for (int imod=1; imod <= n_models; imod++) {
+      mmdb::Model *model_p = mol_orig->GetModel(imod);
+      if (model_p) {
+	 mmdb::Model *new_model_p = mol_new->GetModel(imod);
+	 if (new_model_p) {
+	    int n_links = model_p->GetNumberOfLinks();
+	    for (int i=1; i<=n_links; i++) {
+	       mmdb::Link *ref_link = model_p->GetLink(i);
+	       if (ref_link) {
+		  // If there is an atom in new_mol that corresponds to this link,
+		  // then copy the link and add it to new_mol
+		  std::pair<atom_spec_t, atom_spec_t> linked_atoms = link_atoms(ref_link, model_p);
+		  // are those atoms in (new) mol?
+		  mmdb::Atom *at_1 = get_atom(linked_atoms.first,  mol_new);
+		  mmdb::Atom *at_2 = get_atom(linked_atoms.second, mol_new);
+		  if (at_1 && at_2) {
+		     // add this link to mol
+		     mmdb::Link *link = new mmdb::Link; // sym ids default to 1555 1555
+
+		     strncpy(link->atName1,  at_1->GetAtomName(), 19);
+		     strncpy(link->aloc1,    at_1->altLoc, 9);
+		     strncpy(link->resName1, at_1->GetResName(), 19);
+		     strncpy(link->chainID1, at_1->GetChainID(), 9);
+		     strncpy(link->insCode1, at_1->GetInsCode(), 9);
+		     link->seqNum1         = at_1->GetSeqNum();
+
+		     strncpy(link->atName2,  at_2->GetAtomName(), 19);
+		     strncpy(link->aloc2,    at_2->altLoc, 9);
+		     strncpy(link->resName2, at_2->GetResName(), 19);
+		     strncpy(link->chainID2, at_2->GetChainID(), 9);
+		     strncpy(link->insCode2, at_2->GetInsCode(), 9);
+		     link->seqNum2         = at_2->GetSeqNum();
+
+		     new_model_p->AddLink(link);
+		  }
+	       }
+	    }
+	 }
+      }
+   }
+}
+
 
 // Beware This destroys (inverts) the atom selection as passed.
 mmdb::Manager *
@@ -3967,7 +4031,7 @@ coot::util::deep_copy_this_residue_add_chain(mmdb::Residue *residue,
 					     bool attach_to_new_chain_flag) {
 
    mmdb::Residue *rres = NULL;
-   if (residue) { 
+   if (residue) {
       rres = new mmdb::Residue;
       mmdb::Chain   *chain_p = NULL;
       if (attach_to_new_chain_flag) { 
@@ -4005,7 +4069,7 @@ coot::util::deep_copy_this_residue(mmdb::Residue *residue) {
 
    mmdb::Residue *rres = NULL;
 
-   if (residue) { 
+   if (residue) {
       rres = new mmdb::Residue;
       rres->seqNum = residue->GetSeqNum();
       strcpy(rres->name, residue->name);
@@ -4027,6 +4091,54 @@ coot::util::deep_copy_this_residue(mmdb::Residue *residue) {
    }
    return rres;
 }
+
+// As above but use the alt conf flags to filter copied atoms.
+// Can return 0 if there are no atoms copied
+//
+// If use_alt_conf first is true then
+//    if use_alt_conf second is not blank
+// then copy atoms that have blank alt conf and those
+// with altconfs that match use_alt_conf.second.
+mmdb::Residue *
+coot::util::deep_copy_this_residue(mmdb::Residue *residue,
+				   const std::pair<bool,std::string> &use_alt_conf) {
+
+   mmdb::Residue *rres = NULL;
+
+   if (residue) {
+      rres = new mmdb::Residue;
+      rres->seqNum = residue->GetSeqNum();
+      strcpy(rres->name, residue->name);
+      // BL says:: should copy insCode too, maybe more things...
+      strncpy(rres->insCode, residue->GetInsCode(), 3);
+
+      mmdb::PPAtom residue_atoms = 0;
+      int nResidueAtoms;
+      residue->GetAtomTable(residue_atoms, nResidueAtoms);
+      mmdb::Atom *atom_p;
+
+      for(int iat=0; iat<nResidueAtoms; iat++) {
+	 mmdb::Atom *at = residue_atoms[iat];
+	 if (! at->isTer()) {
+
+	    if (use_alt_conf.first) {
+	       std::string alt_conf = at->altLoc;
+	       if (! alt_conf.empty())
+		  if (alt_conf != use_alt_conf.second)
+		     continue;
+	    }
+	    atom_p = new mmdb::Atom;
+	    atom_p->Copy(residue_atoms[iat]);
+	    rres->AddAtom(atom_p);
+	 }
+      }
+
+      // should I check the number of added atoms before returning rres? Hmm.
+   }
+
+   return rres;
+}
+
 
 
 // Note, we also create a chain and add this residue to that chain.
@@ -4694,9 +4806,14 @@ coot::util::sort_residues_by_seqno(mmdb::PResidue *residues,
    // 
    std::vector<std::pair<mmdb::Residue *, int> >::iterator start = v.begin();
    std::vector<std::pair<mmdb::Residue *, int> >::iterator end   = v.end();
-   std::sort(start, end, coot::util::compare_residues);
+   std::sort(start, end, util::compare_residues);
    // sort(start, end) for things that have implicit comparison function.
-      
+
+   if (false) {
+      for (unsigned int i=0; i<v.size(); i++)
+         std::cout << " sorted " << residue_spec_t(v[i].first) << " " << v[i].second << std::endl;
+   }
+
    return v;
 }
 
@@ -4716,9 +4833,9 @@ coot::util::compare_residues(const std::pair<mmdb::Residue *, int> &a,
 	 std::string ins1(a.first->GetInsCode());
 	 std::string ins2(b.first->GetInsCode());
 	 if (ins1 > ins2) {
-	    return 0;
+	    return 1;
 	 } else {
-	    return 1; // check
+	    return 0; // now checked
 	 }
       }
    }

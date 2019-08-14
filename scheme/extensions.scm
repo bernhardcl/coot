@@ -53,8 +53,16 @@
       (add-simple-coot-menu-menuitem 
        menu "Highly coordinated waters..."
        (lambda ()
-	 (water-coordination-gui)))))
+	 (water-coordination-gui)))
 
+		(add-simple-coot-menu-menuitem
+		 menu "Validation Outliers"
+		 (lambda ()
+			(using-active-atom
+			 (let ((imol-map (imol-refinement-map)))
+				(if (not (valid-map-molecule? imol-map))
+					 (add-status-bar-text "Refinement Map is currently not set")
+					 (validation-outliers-dialog aa-imol imol-map))))))))
 
 
 (define (add-module-user-defined-restraints)
@@ -1543,6 +1551,10 @@
 	 (lambda ()
 	   (set-refinement-immediate-replacement 0)))
 
+   (add-simple-coot-menu-menuitem
+       submenu-settings "Save Graphics Size and Position"
+	    (lambda ()
+			 (graphics-window-size-and-position-to-preferences)))
 
 	(add-simple-coot-menu-menuitem
 	 submenu-settings "Save Dialog Positions..."

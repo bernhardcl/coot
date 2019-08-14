@@ -249,6 +249,63 @@
 (define (model-molecule-number-list)
   (filter valid-model-molecule? (molecule-number-list)))
 
+
+
+;; c.f. graphics_info_t::undisplay_all_model_molecules_except(int imol)
+(define (undisplay-all-maps-except imol-map)
+
+  (format #t "undisplay-all-maps-except imol-map: ~s~%" imol-map)
+
+  (let ((map-list (map-molecule-list)))
+    (for-each (lambda (imol)
+		(if (not (= imol imol-map))
+		    (set-map-displayed imol 0)))
+	      map-list)
+    (set-map-displayed imol-map 1)))
+
+
+(define (just-one-or-next-map)
+
+  ;; return an index or #f, lst must be a list
+  (define (find-in-list item lst)
+    (let loop ((idx 0))
+      (cond
+       ((= (length lst) idx) #f)
+       ((eq? (list-ref lst idx) item) idx)
+       (else
+	(loop (+ idx 1))))))
+
+  (define (next-map current-map-number map-number-list)
+    (let ((current-idx (find-in-list current-map-number map-number-list))
+	  (l (length map-number-list)))
+      (format #t "current-idx: ~s from list map-number-list ~s~%" current-idx map-number-list)
+      (if (number? current-idx)
+	  (let ((next-index (if (= (+ current-idx 1) l)
+				0
+				(+ current-idx 1))))
+	    (list-ref map-number-list next-index))
+	  (list-ref map-number-list 0))))
+
+  (let ((map-list (map-molecule-list)))
+    (let ((current-displayed-maps
+	   (filter (lambda(imol)
+		     (= (map-is-displayed imol) 1))
+		   map-list)))
+      (let ((n-displayed (length current-displayed-maps)))
+
+      ;; if nothing is displayed, display the first map in map-list
+      ;; if one map is displayed, display the next map in map-list
+      ;; if more than one map is displayed, display only the last map
+      ;;    in the current-displayed-maps
+
+      (cond
+       ((= n-displayed 0) (if (> (length map-list) 0)
+			      (undisplay-all-maps-except (car map-list))))
+       ((= n-displayed 1) (if (> (length map-list) 1)
+			      (undisplay-all-maps-except (next-map (car current-displayed-maps)
+								   map-list))))
+       (else (undisplay-all-maps-except (car (reverse current-displayed-maps)))))))))
+
 ;; first n fields of ls. if length ls is less than n, return ls.
 ;; if ls is not a list, return ls.  If n is negative, return ls.
 ;; 
@@ -418,6 +475,17 @@
 	  (list-ref rs 3)
 	  #f))))
 
+(define (residue-specs-match? spec-1 spec-2)
+  (if (string=? (residue-spec->chain-id spec-1)
+		(residue-spec->chain-id spec-2))
+      (if (= (residue-spec->res-no spec-1)
+	     (residue-spec->res-no spec-2))
+	  (if (string=? (residue-spec->ins-code spec-1)
+			(residue-spec->ins-code spec-2))
+	      #t)
+	  #f)
+      #f))
+
 (define (atom-spec->imol atom-spec)
   (if (not (list? atom-spec))
       #f
@@ -431,6 +499,27 @@
 		(list-ref spec 1)
 		(list-ref spec 2)
 		(list-ref spec 3)))
+
+;; for sorting residue specs
+(define (residue-spec-less-than spec-1 spec-2)
+  (let ((chain-id-1 (residue-spec->chain-id spec-1))
+	(chain-id-2 (residue-spec->chain-id spec-2)))
+    (if (string<? chain-id-2 chain-id-1)
+	#t
+	(let ((rn-1 (residue-spec->res-no spec-1))
+	      (rn-2 (residue-spec->res-no spec-2)))
+	  (if (< rn-2 rn-1)
+	      #t
+	      (let ((ins-code-1 (residue-spec->ins-code spec-1))
+		    (ins-code-2 (residue-spec->ins-code spec-2)))
+		(string<? ins-code-2 ins-code-1)))))))
+
+(define (residue-spec->string spec)
+  (string-append
+   (residue-spec->chain-id spec)
+   " "
+   (number->string (residue-spec->res-no spec))
+   (residue-spec->ins-code spec)))
 
 
 ;; Return a list of molecules that are maps
@@ -482,6 +571,12 @@
   (let ((result (is-nucleotide-chain-p imol chain-id)))
     (= result 1)))
 
+
+(define (delete-residue-by-spec imol spec)
+  (delete-residue imol
+		  (residue-spec->chain-id spec)
+		  (residue-spec->res-no   spec)
+		  (residue-spec->ins-code spec)))
 
 ;;; No! don't define this.  It is misleading.  It can return 0, which
 ;;; is true!  use instead valid-model-molecule?
@@ -1726,6 +1821,20 @@
 (define (atom-specs imol chain-id resno ins-code atom-name alt-conf)
   (atom-info-string imol chain-id resno ins-code atom-name alt-conf))
 
+(define (atom-spec->string spec)
+
+  (string-append
+   (atom-spec->chain-id spec)
+   " "
+   (number->string (atom-spec->res-no spec))
+   (atom-spec->ins-code spec)
+   " "
+   (atom-spec->atom-name spec)
+   (let ((al (atom-spec->alt-loc spec)))
+     (if (= (string-length al) 0)
+	 ""
+	 (string-append " " al)))))
+
 (define (atom-spec->residue-spec atom-spec)
   (list-head (cddr atom-spec) 3))
 
@@ -2005,44 +2114,45 @@
 ;; start, ie. (list return-value chain-id res-no ins-code)
 ;; 
 (define (residues-matching-criteria imol residue-test-func)
-  
-  (reverse 
-   (let f ((chain-list (chain-ids imol))
-	   (seq-residue-list #f)
-	   (alt-conf-residue-list '()))
 
-     ;; "double-shuffle" for starting a new chain...
-     (cond
-      ((null? chain-list) alt-conf-residue-list)
-      ((null? seq-residue-list) (f (cdr chain-list)
-				   #f
-				   alt-conf-residue-list))
-      ((eq? #f seq-residue-list) (f chain-list
-				    (number-list 0 (- (chain-n-residues 
-						       (car chain-list) imol) 1))
-				    alt-conf-residue-list))
-      (else 
-       (let* ((chain-id (car chain-list))
-	      (serial-number (car seq-residue-list))
-	      (res-no (seqnum-from-serial-number imol chain-id (car seq-residue-list)))
-	      (ins-code (insertion-code-from-serial-number imol chain-id serial-number)))
+  ;; these specs are prefixed by the serial number
+  (let loop ((molecule-residue-specs (all-residues-with-serial-numbers imol))
+	     (matchers '()))
 
-	 (let ((r (residue-test-func chain-id
-				     res-no
-				     ins-code
-				     serial-number)))
-	   (cond
-	    ((eq? r #f) (f chain-list (cdr seq-residue-list) alt-conf-residue-list))
-	    (else
-	     (f chain-list
-		(cdr seq-residue-list)
-		(cons (list r chain-id res-no ins-code) 
-		      alt-conf-residue-list)))))))))))
+      (cond
+       ((null? molecule-residue-specs)
+	(reverse matchers))
+       (else
+	(let ((rs (cdr (car molecule-residue-specs))))
+	  (if (residue-test-func (residue-spec->chain-id rs)
+				 (residue-spec->res-no rs)
+				 (residue-spec->ins-code rs)
+				 (car (car molecule-residue-specs)))
+	      (loop (cdr molecule-residue-specs) (cons rs matchers))
+	      (loop (cdr molecule-residue-specs) matchers)))))))
 
+;; now this is in the API
+;;
 ;; Return residue specs for all residues in imol (each spec is preceeded by #t)
 ;; 
+;; (define (all-residues imol)
+;;  (residues-matching-criteria imol (lambda (chain-id resno ins-code serial) #t)))
+;;
 (define (all-residues imol)
-  (residues-matching-criteria imol (lambda (chain-id resno ins-code serial) #t)))
+  (let ((l (all-residues-with-serial-numbers imol)))
+    (if (not (list? l))
+	l
+	(map cdr l))))
+
+(define (all-residues-sans-water imol)
+  (residues-matching-criteria imol (lambda (chain-id res-no ins-code serial)
+				     (let ((rn (residue-name imol chain-id res-no ins-code)))
+				       (not (string=? rn "HOH"))))))
+
+;; Return a list of all the residues in the chain
+;; 
+(define (residues-in-chain imol chain-id-in)
+  (residues-matching-criteria imol (lambda (chain-id resno ins-code serial) (string=? chain-id chain-id-in))))
 
   
 ;; Return a list of all residues that have alt confs: where a residue
@@ -2100,8 +2210,8 @@
   ;; atom-spec example (list "A" 7 "" " SG " "")
   (cond
    ((null? atom-spec) #f)
-   ((= (length atom-spec) 5)
-    (list-ref atom-spec 0))
+   ((= (length atom-spec) 5) (list-ref atom-spec 0))
+   ((= (length atom-spec) 6) (list-ref atom-spec 1))
    (else
     #f)))
 
@@ -2110,8 +2220,8 @@
   ;; atom-spec example (list "A" 7 "" " SG " "")
   (cond
    ((null? atom-spec) #f)
-   ((= (length atom-spec) 5)
-    (list-ref atom-spec 1))
+   ((= (length atom-spec) 5) (list-ref atom-spec 1))
+   ((= (length atom-spec) 6) (list-ref atom-spec 2))
    (else
     #f)))
 
@@ -2120,8 +2230,8 @@
   ;; atom-spec example (list "A" 7 "" " SG " "")
   (cond
    ((null? atom-spec) #f)
-   ((= (length atom-spec) 5)
-    (list-ref atom-spec 2))
+   ((= (length atom-spec) 5) (list-ref atom-spec 2))
+   ((= (length atom-spec) 6) (list-ref atom-spec 3))
    (else
     #f)))
 
@@ -2130,8 +2240,8 @@
   ;; atom-spec example (list "A" 7 "" " SG " "")
   (cond
    ((null? atom-spec) #f)
-   ((= (length atom-spec) 5)
-    (list-ref atom-spec 3))
+   ((= (length atom-spec) 5) (list-ref atom-spec 3))
+   ((= (length atom-spec) 6) (list-ref atom-spec 4))
    (else
     #f)))
 
@@ -2140,10 +2250,11 @@
   ;; atom-spec example (list "A" 7 "" " SG " "")
   (cond
    ((null? atom-spec) #f)
-   ((= (length atom-spec) 5)
-    (list-ref atom-spec 4))
+   ((= (length atom-spec) 5) (list-ref atom-spec 4))
+   ((= (length atom-spec) 6) (list-ref atom-spec 5))
    (else
     #f)))
+
 
 ;; simple extraction function
 (define (res-spec->chain-id res-spec)
@@ -2178,7 +2289,6 @@
    (else 
     #f)))
     
-
 
 ;; Return #f if no atom can be found given the spec else return a list
 ;; consisting of the atom name and alt-conf specifier.  
@@ -2299,6 +2409,49 @@
 ;; 
 (define (mutate-by-overlap imol chain-id-in resno tlc)
 
+  ;; residue is standard residues or phosphorylated version?
+  ;;
+  (define (is-amino-acid? imol chain-id res-no)
+
+    (let ((rn (residue-name imol chain-id res-no "")))
+      (if (not (string? rn))
+	  #f
+	  (or (string=? rn "ALA")
+	      (string=? rn "ARG")
+	      (string=? rn "ASN")
+	      (string=? rn "ASP")
+	      (string=? rn "CYS")
+	      (string=? rn "GLY")
+	      (string=? rn "GLU")
+	      (string=? rn "GLN")
+	      (string=? rn "PHE")
+	      (string=? rn "HIS")
+	      (string=? rn "ILE")
+	      (string=? rn "LEU")
+	      (string=? rn "LYS")
+	      (string=? rn "MET")
+	      (string=? rn "PRO")
+	      (string=? rn "SER")
+	      (string=? rn "TYR")
+	      (string=? rn "THR")
+	      (string=? rn "VAL")
+	      (string=? rn "TRP")
+	      (string=? rn "SEP")
+	      (string=? rn "PTR")
+	      (string=? rn "TPO")))))
+
+  ;;
+  (define (overlap-by-main-chain imol-mov chain-id-mov res-no-mov ins-code-mov
+				 imol-ref chain-id-ref res-no-ref ins-code-ref)
+
+    (format #t "debug:: in overlap-by-main-chain:: ---------------- imol-mov: ~s imol-ref: ~s~%" imol-mov imol-ref)
+    (clear-lsq-matches)
+    (for-each (lambda (atom-name)
+		(add-lsq-atom-pair (list chain-id-ref res-no-ref ins-code-ref atom-name "")
+				   (list chain-id-mov res-no-mov ins-code-mov atom-name "")))
+	      (list " CA " " N  " " C  "))
+    (apply-lsq-matches imol-ref imol-mov))
+
   ;; get-monomer-and-dictionary, now we check to see if we have a
   ;; molecule already loaded that matches this residue, if we have,
   ;; then use it.
@@ -2326,7 +2479,7 @@
 	      (format #t "we have dict and model for tlc already~%")
 	      have-tlc-molecule)))))
 
-  ;; 
+  ;;
   (define (mutate-it)
     (let ((imol-ligand (get-monomer-and-dictionary tlc)))
       (if (not (valid-model-molecule? imol-ligand))
@@ -2335,24 +2488,31 @@
 	  (begin
 	    (delete-residue-hydrogens imol-ligand "A" 1 "" "")
 	    (delete-atom imol-ligand "A" 1 "" " OXT" "")
-	    (overlap-ligands imol-ligand imol chain-id-in resno)
+	    (if (and (is-amino-acid? imol-ligand "A" 1)
+		     (is-amino-acid? imol chain-id-in resno))
+		(overlap-by-main-chain imol-ligand "A" 1 "" imol chain-id-in resno "")
+		(overlap-ligands imol-ligand imol chain-id-in resno))
+
 	    (match-ligand-torsions imol-ligand imol chain-id-in resno)
 	    (delete-residue imol chain-id-in resno "")
 	    (let* ((new-chain-id-info (merge-molecules (list imol-ligand) imol))
-		   (nov (format #t "new-chain-id-info: ~s~%" new-chain-id-info)))
+		   (nov (format #t "DEBUG:: ------ new-chain-id-info: ~s~%" new-chain-id-info)))
 	      (let ((merge-status (car new-chain-id-info)))
+		(format #t "DEBUG:: ------ merge-status: ~s~%" merge-status)
 		(if (= merge-status 1)
 		    (let* ((new-res-spec (car (car (cdr new-chain-id-info))))
 			   (new-chain-id (residue-spec->chain-id new-res-spec)))
-		      (format #t "debug:: new-res-spec: ~s~%" new-res-spec)
-		      (format #t "debug:: change-residue-number to ~s~%" resno)
+		      (format #t "debug:: ------ new-res-spec: ~s~%" new-res-spec)
+		      (format #t "debug:: ------ change-residue-number to ~s~%" resno)
 		      (change-residue-number imol
 					     (residue-spec->chain-id new-res-spec)
 					     (residue-spec->res-no   new-res-spec)
 					     (residue-spec->ins-code new-res-spec)
 					     resno "")
+		      
+		      (format #t "debug:: ------ chain ids : ~s ~s~%" new-chain-id chain-id-in)
 		      (if (not (string=? new-chain-id chain-id-in))
-			  (change-chain-id imol new-chain-id chain-id-in 1 resno resno))
+			  (change-chain-id imol new-chain-id chain-id-in 0 resno resno))
 
 		      (let ((replacement-state (refinement-immediate-replacement-state))
 			    (imol-map (imol-refinement-map)))
@@ -2366,11 +2526,11 @@
 					      ((string=? tlc "TPO") (list " CB " " OG1"))
 					      (else 
 					       #f))))
-			      (refine-zone imol chain-id-in resno resno "")
+			      ;; (refine-zone imol chain-id-in resno resno "")
 			      (if dir-atoms
 				  (spin-search imol-map imol chain-id-in resno "" 
 					       dir-atoms spin-atoms))
-			      (refine-zone imol chain-id-in resno resno "")
+			      ;; (refine-zone imol chain-id-in resno resno "")
 			      ))
 			(accept-regularizement)
 			(set-refinement-immediate-replacement replacement-state))

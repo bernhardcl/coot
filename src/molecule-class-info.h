@@ -119,6 +119,8 @@ namespace molecule_map_type {
 #include "atom-name-bits.hh"
 #include "rama-rota-score.hh"
 #include "merge-molecule-results-info-t.hh"
+#include "updating-map-params.hh"
+#include "updating-coordinates-molecule-parameters.hh"
 
 namespace coot {
 
@@ -797,6 +799,9 @@ public:        //                      public
 
       // single model view
       single_model_view_current_model_number = 0; // all models
+
+      // mtz updating
+      continue_watching_mtz = false;
    }
 
    int handle_read_draw_molecule(int imol_no_in,
@@ -965,7 +970,8 @@ public:        //                      public
    void zero_occupancy_spots() const;
    void deuterium_spots() const;
    void set_occupancy_residue_range(const std::string &chain_id, int ires1, int ires2, float occ_val);
-   void cis_peptide_markups() const;
+   void draw_cis_peptide_markups() const;
+   void draw_bad_CA_CA_dist_spots() const;
    
 
    void set_b_factor_residue_range(const std::string &chain_id, int ires1, int ires2, float b_val);
@@ -1116,8 +1122,10 @@ public:        //                      public
 
    void initialize_on_read_molecule(); 
    
-   void initialize_map_things_on_read_molecule(std::string name, int is_diff_map, 
-					       short int swap_difference_map_colours);
+   void initialize_map_things_on_read_molecule(std::string name,
+					       bool is_diff_map,
+					       bool is_anomalous_map,
+					       bool swap_difference_map_colours);
    void initialize_coordinate_things_on_read_molecule(std::string name);
    void initialize_coordinate_things_on_read_molecule_internal(std::string name,
 							       short int is_undo_or_redo);
@@ -1957,6 +1965,9 @@ public:        //                      public
    // return the number of residues in the molecule. return -1 on error.
    int n_residues() const;
 
+   // return the number of atoms in the molecule. return -1 on error.
+   int n_atoms() const;
+
    // Fourier stuff
    std::string Fourier_f_label()      const { return fourier_f_label; }
    std::string Fourier_phi_label()    const { return fourier_phi_label; }
@@ -2299,7 +2310,10 @@ public:        //                      public
    coot::ray_trace_molecule_info fill_raster_map_info(short int lev) const;
    coot::ray_trace_molecule_info fill_raster_additional_info() const;
 
-   // return a list of bad chiral volumes for this molecule:
+   // return a list of bad chiral volumes for this molecule
+   // (first is a vector of bad chiral volume types (residues for which we don't have
+   //  a dictionary).
+   //
    std::pair<std::vector<std::string>, std::vector<coot::atom_spec_t> > bad_chiral_volumes() const;
 
    // a other function
@@ -2346,6 +2360,10 @@ public:        //                      public
    std::pair<int, std::vector<merge_molecule_results_info_t> > merge_molecules(const std::vector<atom_selection_container_t> &add_molecules);
    std::pair<bool, std::vector<std::string> > try_add_by_consolidation(mmdb::Manager *adding_mol);
    bool merge_molecules_just_one_residue_homogeneous(atom_selection_container_t molecule_to_add);
+   // try to add the ligand at the given spec, if not (say the spec was not filled or there
+   // was already a ligand at the given spec) then return false.
+   bool merge_molecules_just_one_residue_at_given_spec(atom_selection_container_t molecule_to_add,
+						       coot::residue_spec_t target_spec);
    std::pair<bool, coot::residue_spec_t> merge_ligand_to_near_chain(mmdb::Manager *mol); // return success status and spec if new residue if possible.
 
    int renumber_residue_range(const std::string &chain_id,
@@ -3017,6 +3035,8 @@ public:        //                      public
    
    std::vector<coot::residue_spec_t> get_residues_by_type(const std::string &residue_type) const;
 
+   std::vector<coot::residue_spec_t> all_residues() const;
+
    std::vector<coot::residue_spec_t> het_groups() const;
 
    // return null on failure.  seq_trip is something like "ACE".
@@ -3165,6 +3185,15 @@ public:        //                      public
    mean_and_variance<float> map_histogram_values;
    mean_and_variance<float> set_and_get_histogram_values(unsigned int n_bins); // fill above
 
+   static int watch_mtz(gpointer data); // return 0 to stop watching
+   bool continue_watching_mtz;
+   updating_map_params_t updating_map_previous;
+   int update_map_from_mtz_if_changed(const updating_map_params_t &rump);
+
+   static int watch_coordinates_file(gpointer data);
+   bool continue_watching_coordinates_file;
+   updating_coordinates_molecule_parameters_t updating_coordinates_molecule_previous;
+   int update_coordinates_molecule_if_changed(const updating_coordinates_molecule_parameters_t &p);
 
 };
 

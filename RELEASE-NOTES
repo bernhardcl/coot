@@ -1,5 +1,29 @@
 
-  Pre-Release 0.8.9.2
+  Pre-Release 0.8.9.3
+
+  o FEATURE: Add a menu item to save graphics window size and position
+
+  o FEATURE: make_updating_model_molecule() and make_updating_map() added to the API.
+
+  o CHANGE:  Give the map number in the title bar of the density fit validation graph [EJD]
+
+  o CHANGE:  Don't dismiss the ligands dialog if the search was made with 0 ligands (QoL)
+
+  o CHANGE:  Symmetry Dialog changes are applied immediately - after the guidelines
+
+  o CHANGE:  Curlew has a place on the File menu
+
+  o BUG-FIX: Fix crash on merge molecules
+
+  o BUG-FIX: Refinement of residues with alt-confs improved
+
+  o BUG-FIX: Fix indexing of reflection in FFT for Patterson from Intensities [Randy Read]
+
+  o BUG-FIX: Fix colour of the first molecule in CA/Backbone mode [Ronan]
+
+-----
+
+  Release 0.8.9.2
 
   o FEATURE: LINK info added to header browser
 
@@ -47,8 +71,15 @@
 
   o CHANGE:  CA Zone -> Mainchain builds in both directions
 
+  o CHANGE:  Alignment gap penalty changed to -3.0
+
+  o CHANGE:  Merging a ligand molecule now adds the ligand to the closest chain - unless
+             a merging molecule ligand has been specified
+
   o BUG-FIX: the H atom in a peptide is now moved along with the other peptide atoms
              on a cis->trans conversion (and vice versa)
+
+  o BUG-FIX: align-and-mutate occasional reversing of residues fixed [Rob Kirchdoerfer]
 
   O BUG-FIX: Using PDB-REDO now loads an anomalous map also (if possible) [Robbie Joosten]
 

@@ -1449,29 +1449,28 @@
 
     (define (local-view-name)
       (let loop ((view-count 0))
-	(let ((str (string-append "View"
-				  (if (> view-count 0)
-				      (string-append "-"
-						     (number->string view-count))
-				      ""))))
-	  ;; now is a view already called str?
-	  (let iloop ((jview 0))
-	    (let ((jview-name (view-name jview)))
+        (let ((str (string-append "View"
+                                  (if (> view-count 0)
+                                      (string-append "-" (number->string view-count))
+                                      ""))))
+          ;; now is a view already called str?
+          (let iloop ((jview 0))
+            (let ((jview-name (view-name jview)))
 
-	      (cond 
-	       ((>= jview (n-views)) str)
-	       ((eq? #f jview-name) str)
-	       ((string=? str jview-name) (loop (+ view-count 1)))
-	       (else
-		(iloop (+ jview 1)))))))))
+              (cond
+               ((>= jview (n-views)) str)
+               ((eq? #f jview-name) str)
+               ((string=? str jview-name) (loop (+ view-count 1)))
+               (else
+                (iloop (+ jview 1)))))))))
 
     ;; main line
     ;; 
     (let ((view-name (local-view-name)))
       (generic-single-entry "View Name: " view-name " Add View " 
-			    (lambda (text)
-			      (let ((new-view-number (add-view-here text)))
-				(add-view-to-views-panel text new-view-number)))))))
+                            (lambda (text)
+                              (let ((new-view-number (add-view-here text)))
+                                (add-view-to-views-panel text new-view-number)))))))
 				
 
 ;; 
@@ -1479,16 +1478,14 @@
 
   (if *views-dialog-vbox*
       (let ((button (gtk-button-new-with-label view-name)))
-	(gtk-signal-connect button "clicked" (lambda ()
-					       (go-to-view-number 
-						view-number 0)))
-	(gtk-box-pack-start *views-dialog-vbox* button #f #f 2)
-	(gtk-widget-show button))))
+        (gtk-signal-connect button "clicked" (lambda () (go-to-view-number view-number 0)))
+        (gtk-box-pack-start *views-dialog-vbox* button #f #f 2)
+        (gtk-widget-show button))))
 
 
 ;; geometry is an improper list of ints.
 ;; 
-;; return the h-box of the buttons.
+;; return a list of (h-box-buttons window)
 ;;
 ;; a button is a list of (label callback-thunk text-description)
 ;; where text-description is an option arg (can be omitted)
@@ -1500,7 +1497,7 @@
 
 ;; geometry is an improper list of ints.
 ;; 
-;; return the h-box of the buttons.
+;; return a list of (h-box-buttons window)
 ;;
 ;; a button is a list of (label callback-thunk text-description)
 ;;
@@ -1560,7 +1557,7 @@
 			  (lambda args
 			    (set! inside-vbox #f)))
       (gtk-widget-show-all window)
-      inside-vbox))
+      (list inside-vbox window)))
 
 ;; This is exported outside of the box-of-buttons gui because the
 ;; clear-and-add-back function (e.g. from using the check button)
@@ -1663,47 +1660,47 @@
   (lambda ()
 
     (let* ((number-of-views (n-views))
-	   (buttons 
+           (buttons
 
-	    (let loop ((button-number 0)
-		       (ls '()))
+            (let loop ((button-number 0)
+                       (ls '()))
 
-	      (cond 
-	       ((= number-of-views button-number) (reverse ls))
-	       (else 
-		(let ((button-label (view-name button-number)))
-		  (if button-label
-		      (let ((desciption (view-description button-number)))
-			(if (eq? #f desciption)
-			    (loop (+ button-number 1) 
-				  (cons 
-				   (list button-label
-					 (lambda ()
-					   (go-to-view-number button-number 0)))
-				   ls))
-			    (loop (+ button-number 1)
-				  (cons 
-				   (list button-label
-					 (lambda ()
-					   (go-to-view-number button-number 0))
-					 desciption)
-					ls))))
+              (cond
+               ((= number-of-views button-number) (reverse ls))
+               (else
+                (let ((button-label (view-name button-number)))
+                  (if button-label
+                      (let ((desciption (view-description button-number)))
+                        (if (eq? #f desciption)
+                            (loop (+ button-number 1)
+                                  (cons
+                                   (list button-label
+                                         (lambda ()
+                                           (go-to-view-number button-number 0)))
+                                   ls))
+                            (loop (+ button-number 1)
+                                  (cons
+                                   (list button-label
+                                         (lambda ()
+                                           (go-to-view-number button-number 0))
+                                         desciption)
+                                   ls))))
 
-		      (loop (+ button-number 1) ls))))))))
+                      (loop (+ button-number 1) ls))))))))
       (let ((all-buttons
-	     (if (> (length buttons) 1)
-		 (let ((view-button (list "  Play Views " 
-					  (lambda ()
-					    (go-to-first-view 1)
-					    (usleep 100000)
-					    (play-views)))))
-		   (reverse (cons view-button (reverse buttons))))
-		 buttons)))
-      
-	(let ((views-vbox
-	       (dialog-box-of-buttons " Views " (cons 200 140) all-buttons "  Close  ")))
+             (if (> (length buttons) 1)
+                 (let ((view-button (list "  Play Views "
+                                          (lambda ()
+                                            (go-to-first-view 1)
+                                            (usleep 100000)
+                                            (play-views)))))
+                   (reverse (cons view-button (reverse buttons))))
+                 buttons)))
 
-	  (set! *views-dialog-vbox* views-vbox))))))
+        (let ((views-vbox
+               (dialog-box-of-buttons " Views " (cons 200 140) all-buttons "  Close  ")))
+
+          (set! *views-dialog-vbox* views-vbox))))))
 
    
 ;   (* nudge (apply + (map * (list-ref tvm 0) ori)))
@@ -1734,7 +1731,7 @@
 		;; rc + tvm*nudge
 		(apply set-rotation-centre 
 		       (map + rc (screen-coords-nudge tvm nudge axes))))))
-	 (buttons 
+	 (buttons
 	  (list 
 	   (list "Nudge +X" (lambda () (f (list  1 0 0))))
 	   (list "Nudge -X" (lambda () (f (list -1 0 0))))
@@ -2459,7 +2456,7 @@
 	     *key-bindings*))))
       
       (let loop ((items scm+py-keybindings))
-	(cond 
+	(cond
 	 ((null? items) 'done)
 	 (else 
 	  (if (string? (list-ref (car items) 3)) 
@@ -2471,7 +2468,7 @@
 	  (loop (cdr items)))))
       
       (let loop ((items (map (lambda (x) (cons 'dum x)) std-key-bindings)))
-	(cond 
+	(cond
 	 ((null? items) 'done)
 	 (else 
 	  (box-for-binding (car items) std-frame-vbox #f)
@@ -2568,9 +2565,9 @@
 	(insert-string "  Yep - there really is no news\n" text-2))
 	
       ; (format #t "coot-news-info called with args: ~s~%" args)
-      (cond 
+      (cond
        ((= (length args) 1)
-	  (cond 
+	  (cond
 	   ((eq? (car args) 'stop) (stop))
 	   ((eq? (car args) 'status)
 	    status)
@@ -3130,22 +3127,22 @@
 	 (inside-vbox  (gtk-vbox-new #f 2))
 	 (label (gtk-label-new "\nSolvent molecules added to molecule: "))
 	 (menu (gtk-menu-new))
-	 (frame-for-option-menu (gtk-frame-new ""))
-	 (vbox-for-option-menu (gtk-vbox-new #f 2))
+	 (frame-for-option-menu (gtk-frame-new " Choose Molecule "))
+	 (vbox-for-option-menu (gtk-vbox-new #f 6))
 	 (molecule-option-menu (gtk-option-menu-new))
 	 (model-list (fill-option-menu-with-coordinates-mol-options menu))
 	 (add-new-button (gtk-button-new-with-label "  Add a new Residue Type..."))
 	 (h-sep (gtk-hseparator-new))
 	 (close-button (gtk-button-new-with-label "  Close  ")))
     
-    (gtk-window-set-default-size window 250 400)
+    (gtk-window-set-default-size window 250 500)
     (gtk-window-set-title window "Solvent Ligands")
     (gtk-container-border-width window 8)
     (gtk-container-add window outside-vbox)
     (gtk-box-pack-start outside-vbox label #f #f 2)
     (gtk-container-add frame-for-option-menu vbox-for-option-menu)
-    (gtk-box-pack-start vbox-for-option-menu molecule-option-menu #f #f 2)
-    (gtk-container-border-width frame-for-option-menu 4)
+    (gtk-box-pack-start vbox-for-option-menu molecule-option-menu #f #f 8)
+    (gtk-container-border-width frame-for-option-menu 6)
     (gtk-box-pack-start outside-vbox frame-for-option-menu #f #f 2)
     (gtk-box-pack-start outside-vbox scrolled-win #t #t 0)
     (gtk-scrolled-window-add-with-viewport scrolled-win inside-vbox)
@@ -3918,7 +3915,7 @@
 									       map-file-name-stub
 									       ".mtz"))
 				   (log-file-name (string-append
-						   "refmac-sharp"
+						   "refmac-multisharp-"
 						   map-file-name-stub
 						   ".log")))
 
@@ -3931,7 +3928,7 @@
 				    (format #t "active-item-imol: ~s~%" active-item-imol)
 
 				    (let* ((step-size (/ max-b n-levels))
-					   (numbers-string (apply string-append (map (lambda(i) 
+					   (numbers-string (apply string-append (map (lambda(i)
 										       (let ((lev (* step-size (+ i 1))))
 											 (string-append
 											  (number->string lev) " ")))
@@ -3943,26 +3940,33 @@
 					    (data-lines (list "MODE SFCALC"
 							      blur-string
 							      sharp-string
-							      "END")))
-					(let ((s (goosh-command "refmac5"
-								cmd-line-args
-								data-lines
-								log-file-name
-								#f)))
-					  (if (not (ok-goosh-status? s))
+							      "END"))
+					    (this-dir (getcwd)))
+					(if (not (directory-is-modifiable? this-dir))
+					    (info-dialog "WARNING:: Current directory is not writable")
+					    (let ((s (goosh-command "refmac5"
+								    cmd-line-args
+								    data-lines
+								    log-file-name
+								    #f)))
+					      (if (not (ok-goosh-status? s))
 
-					      (begin
-						(info-dialog "WARNING:: refmac5 failed"))
+						  (begin
+						    (info-dialog "WARNING:: refmac5 failed"))
 
-					      ;; Happy path
-					      (begin
-						(format #t "s: ~s~%" s)
-						(if (file-exists? "starting-map.mtz")
-						    (begin
-						      (rename-file  "starting-map.mtz" refmac-output-mtz-file-name)
-						      ;; offer a read-mtz dialog
-						      (manage-column-selector refmac-output-mtz-file-name)
-						      )))))))))
+						  ;; Happy path
+						  (begin
+						    (format #t "s: ~s~%" s)
+						    (if (not (file-exists? "starting_map.mtz"))
+							(begin
+							  (format #t "WARNING:: starting_map.mtz does not exist~%"))
+							(begin
+							  (format #t "INFO renaming starting_map.mtz to ~s~%"
+								  refmac-output-mtz-file-name)
+							  (rename-file  "starting_map.mtz" refmac-output-mtz-file-name)
+							  ;; offer a read-mtz dialog
+							  (manage-column-selector refmac-output-mtz-file-name)
+							  ))))))))))
 
 			      (gtk-widget-destroy window))))
 
