@@ -3447,12 +3447,10 @@ molecule_class_info_t::update_map_from_mtz_if_changed(const updating_map_params_
 	    continue_watching_mtz = false;
 	 } else {
 	    // happy path
-	    // ump.ctime = s.st_ctimespec; // mac version?
-#ifndef WINDOWS_MINGW
-	    ump.ctime = s.st_ctim;
+#ifndef _POSIX_SOURCE
+	    ump.ctime = s.st_ctimespec; // mac?
 #else
-	    ump.ctime.tv_sec = s.st_ctime;
-            ump.ctime.tv_nsec = 0.; // not available!? Lets hope not necessary
+	    ump.ctime = s.st_ctim;
 #endif
 	 }
       }
