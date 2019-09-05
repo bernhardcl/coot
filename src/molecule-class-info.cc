@@ -9147,7 +9147,7 @@ molecule_class_info_t::update_coordinates_molecule_if_changed(const updating_coo
             ucp.ctime.tv_sec = s.st_ctime;
             ucp.ctime.tv_nsec = 0.; // not available!? Lets hope not necessary
 #else
-	    ucp.ctime = s.st_ctimespec; // Mac OX X?
+	    ucp.ctime = s.st_ctimespec; // Mac OS X?
 #endif // MINGW
 #else
 	    ucp.ctime = s.st_ctim;
