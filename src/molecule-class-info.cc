@@ -96,6 +96,13 @@
 #include "c-interface.h"
 
 
+int
+molecule_class_info_t::update_molecule(std::string file_name, std::string cwd) {
+
+   return handle_read_draw_molecule(imol_no,
+				    file_name, cwd,
+				    0, 0, true, false, bond_width, bonds_box_type, false);
+}
 
 
 
