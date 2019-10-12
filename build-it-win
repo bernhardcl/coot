@@ -3415,10 +3415,11 @@ if test -n "$build_curl" ; then
    echo BUILDING libidn:
 (
    libidn_version=1.15
-   ${WGET} http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/libidn/libidn-$libidn_version.tar.gz
+   libidn_version=2.2.0
+   ${WGET} http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/libidn/libidn2-$libidn_version.tar.gz
 
-   gzip -dc ${AUTOBUILD_SOURCES}/libidn-$libidn_version.tar.gz | tar xf -
-   cd libidn-$libidn_version
+   gzip -dc ${AUTOBUILD_SOURCES}/libidn2-$libidn_version.tar.gz | tar xf -
+   cd libidn2-$libidn_version
 
    ./configure  $generic_prefix
    if $MAKE ; then
@@ -3432,6 +3433,7 @@ if test -n "$build_curl" ; then
    #libcurl_version=7.19.7
    # libcurl_version=7.27.0
    libcurl_version=7.37.0
+   libcurl_version=7.66.0
    ${WGET} --no-check-certificate http://curl.haxx.se/download/curl-$libcurl_version.tar.gz
 
    gzip -dc ${AUTOBUILD_SOURCES}/curl-$libcurl_version.tar.gz | tar xf -
@@ -3443,7 +3445,7 @@ if test -n "$build_curl" ; then
    # we force the libidn libs at the front of LDFLAGS.  Problem found on RHEL4-64bit 
    # (lemur).
    #
-   ./configure  $generic_prefix --with-libidn=$install_top_dir LDFLAGS=-L$install_top_dir/lib
+   ./configure --with-winssl $generic_prefix --with-libidn=$install_top_dir LDFLAGS=-L$install_top_dir/lib
    if $MAKE ; then
       $MAKE install
    fi
