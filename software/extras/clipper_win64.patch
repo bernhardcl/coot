@@ -1,0 +1,42 @@
+--- clipper/core/clipper_sysdep.h.orig	2018-09-06 11:36:14.973068400 +0200
++++ clipper/core/clipper_sysdep.h	2018-09-06 13:41:03.381163100 +0200
+@@ -73,24 +73,25 @@
+ 
+ 
+ /* numeric types, for where they are critical */
++#include <cinttypes>
+ 
+ namespace clipper {
+   typedef float     ftype32;
+   typedef double    ftype64;
+-  typedef int       itype32;
+-  typedef unsigned int uitype32;
++  typedef int32_t       itype32;
++  typedef uint32_t uitype32;
+ # define CLIPPER_NAN_MASK_A_32 0x7f800000U
+ # define CLIPPER_NAN_MASK_B_32 0x007fffffU
+ # define CLIPPER_NULL_MASK_32  0x7fc00000U
+ #if defined(__osf__) || defined(__amd64__)
+-  typedef long itype64;
+-  typedef unsigned long uitype64;
++  typedef int64_t itype64;
++  typedef uint64_t uitype64;
+ # define CLIPPER_NAN_MASK_A_64 0x7ff0000000000000UL
+ # define CLIPPER_NAN_MASK_B_64 0x000fffffffffffffUL
+ # define CLIPPER_NULL_MASK_64  0x7ff8000000000000UL
+ #else
+-  typedef long long itype64;
+-  typedef unsigned long long uitype64;
++  typedef int64_t itype64;
++  typedef uint64_t uitype64;
+ # define CLIPPER_NAN_MASK_A_64 0x7ff0000000000000ULL
+ # define CLIPPER_NAN_MASK_B_64 0x000fffffffffffffULL
+ # define CLIPPER_NULL_MASK_64  0x7ff8000000000000ULL
+@@ -99,7 +100,6 @@
+ 
+ 
+ /* threading libraries and definitions */
+-
+ #ifndef CLIPPER_DISABLE_THREADS
+ 
+ #if defined(__WIN32__) || defined(_WIN32)
