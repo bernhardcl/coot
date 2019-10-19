@@ -21,6 +21,7 @@
  */
 
 #include <GraphMol/Substruct/SubstructMatch.h>
+#include <RDGeneral/versions.h>
 
 namespace coot {
 
@@ -88,6 +89,18 @@ namespace coot {
 				   const energy_lib_t &energy_lib,
 				   dictionary_residue_restraints_t *restraints);
    // which calls
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+   bool add_torsion_to_restraints(dictionary_residue_restraints_t *restraints,
+              const RDKit::ROMol &mol,
+              const RDKit::Atom* at_1,
+              const RDKit::Atom* at_2,
+              const RDKit::Atom* at_3,
+              const RDKit::Atom* at_4,
+              const RDKit::Bond *bond, // between atoms 2 and 3
+              unsigned int *tors_no,
+              unsigned int *const_no,
+              const energy_lib_t &energy_lib);
+#else
    bool add_torsion_to_restraints(dictionary_residue_restraints_t *restraints,
 				  const RDKit::ROMol &mol,
 				  const RDKit::ATOM_SPTR at_1,
@@ -98,6 +111,7 @@ namespace coot {
 				  unsigned int *tors_no,
 				  unsigned int *const_no,
 				  const energy_lib_t &energy_lib);
+#endif
 
 
    // alter restraints

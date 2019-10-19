@@ -214,7 +214,11 @@ coot::rdkit_mol_chem_comp_pdbx(const std::string &chem_comp_dict_file_name,
 	    if (false) {
 	       for (unsigned int iat=0; iat<m->getNumAtoms(); iat++) {
 		  // std::cout << "DEBUG:: rdkit_mol_chem_comp_pdbx(): testing atom " << iat << std::endl;
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+                RDKit::Atom* at_p = (*m)[iat];
+#else
 		  RDKit::ATOM_SPTR at_p = (*m)[iat];
+#endif
 		  try {
 		     std::string name;
 		     std::string cv;
@@ -332,10 +336,17 @@ coot::hydrogen_transformations(const RDKit::ROMol &mol) {
 	 
    for (unsigned int imatch_cooh=0; imatch_cooh<matches_cooh.size(); imatch_cooh++) {
       
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         RDKit::Atom* at_c  = (*r)[matches_cooh[imatch_cooh][0].second];
+         RDKit::Atom* at_o1 = (*r)[matches_cooh[imatch_cooh][1].second];
+         RDKit::Atom* at_o2 = (*r)[matches_cooh[imatch_cooh][2].second];
+         RDKit::Atom* at_h  = (*r)[matches_cooh[imatch_cooh][3].second];
+#else
       RDKit::ATOM_SPTR at_c  = (*r)[matches_cooh[imatch_cooh][0].second];
       RDKit::ATOM_SPTR at_o1 = (*r)[matches_cooh[imatch_cooh][1].second];
       RDKit::ATOM_SPTR at_o2 = (*r)[matches_cooh[imatch_cooh][2].second];
       RDKit::ATOM_SPTR at_h  = (*r)[matches_cooh[imatch_cooh][3].second];
+#endif
 
       std::string at_c_name, at_o1_name, at_o2_name, at_h_name;
 
@@ -343,9 +354,15 @@ coot::hydrogen_transformations(const RDKit::ROMol &mol) {
       at_o1->setProp("type_energy", "OC");
       at_o2->setProp("type_energy", "OC");
 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+      RDKit::Bond *bond_1 = r->getBondBetweenAtoms(at_c->getIdx(), at_o1->getIdx());
+      RDKit::Bond *bond_2 = r->getBondBetweenAtoms(at_c->getIdx(), at_o2->getIdx());
+      RDKit::Bond *bond_3 = r->getBondBetweenAtoms(at_h->getIdx(), at_o2->getIdx());
+#else
       RDKit::Bond *bond_1 = r->getBondBetweenAtoms(at_c.get()->getIdx(), at_o1.get()->getIdx());
       RDKit::Bond *bond_2 = r->getBondBetweenAtoms(at_c.get()->getIdx(), at_o2.get()->getIdx());
       RDKit::Bond *bond_3 = r->getBondBetweenAtoms(at_h.get()->getIdx(), at_o2.get()->getIdx());
+#endif
 
       if (bond_1) {
 	 if (bond_2) {
@@ -361,16 +378,29 @@ coot::hydrogen_transformations(const RDKit::ROMol &mol) {
       }
 
       // at_o2->setFormalCharge(-1); // not if the bonds are deloc/ONEANDAHALF.
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+      if (bond_3)
+    r->removeBond(at_o2->getIdx(), at_h->getIdx());
+      else
+    std::cout << "DEBUG:: hydrogen_transformations(): no bond_3 (O-H bond) found!" << std::endl;
+      atoms_to_be_deleted.push_back(at_h);
+   }
+#else
       if (bond_3)
 	 r->removeBond(at_o2.get()->getIdx(), at_h.get()->getIdx());
       else
 	 std::cout << "DEBUG:: hydrogen_transformations(): no bond_3 (O-H bond) found!" << std::endl;
       atoms_to_be_deleted.push_back(at_h.get());
    }
+#endif
 
    for (unsigned int imatch_n=0; imatch_n<matches_n.size(); imatch_n++) {
       unsigned int n_idx = matches_n[imatch_n][0].second;
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+      RDKit::Atom* at_n  = (*r)[n_idx];
+#else
       RDKit::ATOM_SPTR at_n  = (*r)[n_idx];
+#endif
       unsigned int degree = at_n->getDegree();
       at_n->setFormalCharge(+1);
 
@@ -467,6 +497,18 @@ coot::delocalize_guanidinos(RDKit::RWMol *mol) {
    
    for (unsigned int imatch=0; imatch<matches.size(); imatch++) {
 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         RDKit::Atom* at_n1  = (*mol)[matches[imatch][0].second];
+         RDKit::Atom* at_c   = (*mol)[matches[imatch][1].second];
+         RDKit::Atom* at_n2  = (*mol)[matches[imatch][2].second];
+         RDKit::Atom* at_n3  = (*mol)[matches[imatch][3].second];
+
+         std::cout << "INFO:: C hybridisation " << at_c->getHybridization() << std::endl;
+
+         RDKit::Bond *bond_1 = mol->getBondBetweenAtoms(at_c->getIdx(), at_n1->getIdx());
+         RDKit::Bond *bond_2 = mol->getBondBetweenAtoms(at_c->getIdx(), at_n2->getIdx());
+         RDKit::Bond *bond_3 = mol->getBondBetweenAtoms(at_c->getIdx(), at_n3->getIdx());
+#else
       RDKit::ATOM_SPTR at_n1  = (*mol)[matches[imatch][0].second];
       RDKit::ATOM_SPTR at_c   = (*mol)[matches[imatch][1].second];
       RDKit::ATOM_SPTR at_n2  = (*mol)[matches[imatch][2].second];
@@ -477,7 +519,8 @@ coot::delocalize_guanidinos(RDKit::RWMol *mol) {
       RDKit::Bond *bond_1 = mol->getBondBetweenAtoms(at_c.get()->getIdx(), at_n1.get()->getIdx());
       RDKit::Bond *bond_2 = mol->getBondBetweenAtoms(at_c.get()->getIdx(), at_n2.get()->getIdx());
       RDKit::Bond *bond_3 = mol->getBondBetweenAtoms(at_c.get()->getIdx(), at_n3.get()->getIdx());
-      
+#endif
+
       std::cout << "INFO:: C hybridisation " << at_c->getHybridization() << std::endl;
       
       if (bond_2) {

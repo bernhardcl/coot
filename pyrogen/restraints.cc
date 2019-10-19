@@ -104,7 +104,11 @@ coot::mogul_out_to_mmcif_dict_by_mol(const std::string &mogul_file_name,
    unsigned int n_atoms_non_hydrogen = 0;
 
    for (unsigned int iat=0; iat<n_atoms_all; iat++) { 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         RDKit::Atom* at_p = mol[iat];
+#else
       RDKit::ATOM_SPTR at_p = mol[iat];
+#endif
       if (at_p->getAtomicNum() != 1)
 	 n_atoms_non_hydrogen++;
       try {
@@ -504,8 +508,13 @@ coot::fill_with_energy_lib_bonds(const RDKit::ROMol &mol,
       const RDKit::Bond *bond_p = mol.getBondWithIdx(ib);
       int idx_1 = bond_p->getBeginAtomIdx();
       int idx_2 = bond_p->getEndAtomIdx();
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+      const RDKit::Atom* at_1 = mol[idx_1];
+      const RDKit::Atom* at_2 = mol[idx_2];
+#else
       RDKit::ATOM_SPTR at_1 = mol[idx_1];
       RDKit::ATOM_SPTR at_2 = mol[idx_2];
+#endif
       {
 	 // put the lighter atom first (so that we find "Hxx ."  rather than "N .")
 	 if (at_1->getAtomicNum() > at_2->getAtomicNum())
@@ -556,6 +565,18 @@ coot::fill_with_energy_lib_angles(const RDKit::ROMol &mol,
    unsigned int n_atoms = mol.getNumAtoms();
    std::map<std::string, bool> done_angle;
    for (unsigned int iat_1=0; iat_1<n_atoms; iat_1++) { 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         const RDKit::Atom* at_1 = mol[iat_1];
+         RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
+         boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_1);
+         while(nbr_idx_1 != end_nbrs_1){
+       const RDKit::Atom* at_2 = mol[*nbr_idx_1];
+
+       RDKit::ROMol::ADJ_ITER nbr_idx_2, end_nbrs_2;
+       boost::tie(nbr_idx_2, end_nbrs_2) = mol.getAtomNeighbors(at_2);
+       while(nbr_idx_2 != end_nbrs_2){
+          const RDKit::Atom* at_3 = mol[*nbr_idx_2];
+#else
       RDKit::ATOM_SPTR at_1 = mol[iat_1];
       RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
       boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_1);
@@ -566,6 +587,7 @@ coot::fill_with_energy_lib_angles(const RDKit::ROMol &mol,
 	 boost::tie(nbr_idx_2, end_nbrs_2) = mol.getAtomNeighbors(at_2);
 	 while(nbr_idx_2 != end_nbrs_2){
 	    const RDKit::ATOM_SPTR at_3 = mol[*nbr_idx_2];
+#endif
 	    if (at_3 != at_1) { 
 
 	       try {
@@ -641,6 +663,19 @@ coot::fill_with_energy_lib_torsions(const RDKit::ROMol &mol,
    bool debug = false;
    
    for (unsigned int iat_1=0; iat_1<n_atoms; iat_1++) { 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         const RDKit::Atom* at_1 = mol[iat_1];
+
+         RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
+         boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_1);
+         while(nbr_idx_1 != end_nbrs_1){
+       const RDKit::Atom* at_2 = mol[*nbr_idx_1];
+
+       RDKit::ROMol::ADJ_ITER nbr_idx_2, end_nbrs_2;
+       boost::tie(nbr_idx_2, end_nbrs_2) = mol.getAtomNeighbors(at_2);
+       while(nbr_idx_2 != end_nbrs_2){
+          const RDKit::Atom* at_3 = mol[*nbr_idx_2];
+#else
       RDKit::ATOM_SPTR at_1 = mol[iat_1];
 
       RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
@@ -652,6 +687,7 @@ coot::fill_with_energy_lib_torsions(const RDKit::ROMol &mol,
 	 boost::tie(nbr_idx_2, end_nbrs_2) = mol.getAtomNeighbors(at_2);
 	 while(nbr_idx_2 != end_nbrs_2){
 	    const RDKit::ATOM_SPTR at_3 = mol[*nbr_idx_2];
+#endif
 	    if (at_3 != at_1) {
 	       
 	       RDKit::ROMol::ADJ_ITER nbr_idx_3, end_nbrs_3;
@@ -662,13 +698,23 @@ coot::fill_with_energy_lib_torsions(const RDKit::ROMol &mol,
 	       // with the hydrogen atom.
 
 	       bool at_4_set = false;
-	       RDKit::ATOM_SPTR at_4 = mol[*nbr_idx_3]; // best so far, (maybe its at_2 though)
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+          const RDKit::Atom* at_4 = mol[*nbr_idx_3]; // best so far, (maybe its at_2 though)
+          if (at_4 != at_2 && at_4 != at_1)
+        at_4_set = true; // OK, it wasn't.
+
+          while (nbr_idx_3 != end_nbrs_3) {
+
+        const RDKit::Atom* at_4_trial = mol[*nbr_idx_3];
+#else
+          RDKit::ATOM_SPTR at_4 = mol[*nbr_idx_3]; // best so far, (maybe its at_2 though)
 	       if (at_4 != at_2 && at_4 != at_1)
 		  at_4_set = true; // OK, it wasn't.
 	       
 	       while (nbr_idx_3 != end_nbrs_3) {
 
 		  const RDKit::ATOM_SPTR at_4_trial = mol[*nbr_idx_3];
+#endif
 		  if (at_4_trial != at_2 && at_4_trial != at_1) {
 		     if (at_4_trial->getAtomicNum() != 1) {
 			// anything not hydrogen is good enough.
@@ -746,6 +792,19 @@ coot::fill_with_energy_lib_torsions(const RDKit::ROMol &mol,
 }
 
 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+bool
+coot::add_torsion_to_restraints(coot::dictionary_residue_restraints_t *restraints,
+            const RDKit::ROMol &mol,
+            const RDKit::Atom* at_1,
+            const RDKit::Atom* at_2,
+            const RDKit::Atom* at_3,
+            const RDKit::Atom* at_4,
+            const RDKit::Bond *bond, // between atoms 2 and 3
+            unsigned int *tors_no,
+            unsigned int *const_no,
+            const coot::energy_lib_t &energy_lib) {
+#else
 bool
 coot::add_torsion_to_restraints(coot::dictionary_residue_restraints_t *restraints,
 				const RDKit::ROMol &mol,
@@ -757,6 +816,7 @@ coot::add_torsion_to_restraints(coot::dictionary_residue_restraints_t *restraint
 				unsigned int *tors_no,
 				unsigned int *const_no,
 				const coot::energy_lib_t &energy_lib) {
+#endif
 
    bool added_state = false;
    bool debug = false;
@@ -804,7 +864,11 @@ coot::add_torsion_to_restraints(coot::dictionary_residue_restraints_t *restraint
 	 energy_lib_torsion tors =
 	    energy_lib.get_torsion(atom_type_2, atom_type_3);
 			      
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+    bool is_const = is_const_torsion(mol, at_2, at_3);
+#else
 	 bool is_const = is_const_torsion(mol, at_2.get(), at_3.get());
+#endif
 
 	 if (debug)
 	    std::cout << "    torsion between a " << atom_type_2 << " and a "
@@ -842,7 +906,11 @@ coot::add_torsion_to_restraints(coot::dictionary_residue_restraints_t *restraint
 	 double esd = 20;
 	 int period = 1;
 			      
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+    bool is_const = is_const_torsion(mol, at_2, at_3);
+#else
 	 bool is_const = is_const_torsion(mol, at_2.get(), at_3.get());
+#endif
 	 RDKit::Atom::HybridizationType ht_2 = at_2->getHybridization();
 	 RDKit::Atom::HybridizationType ht_3 = at_3->getHybridization();
 
@@ -966,7 +1034,11 @@ coot::add_chem_comp_atoms(const RDKit::ROMol &mol, coot::dictionary_residue_rest
    int iconf = 0;
    unsigned int n_atoms = mol.getNumAtoms();
    for (unsigned int iat=0; iat<n_atoms; iat++) { 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         const RDKit::Atom* at_p = mol[iat];
+#else
       RDKit::ATOM_SPTR at_p = mol[iat];
+#endif
       try {
 	 std::string name;
 	 std::string atom_type;
@@ -1042,7 +1114,11 @@ coot::add_chem_comp_aromatic_planes(const RDKit::ROMol &mol,
 	    for (unsigned int iat=0; iat<matches[imatch].size(); iat++) { 
 	       unsigned int atom_idx = matches[imatch][iat].second;
 	       try {
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+             const RDKit::Atom* at_p = mol[atom_idx];
+#else
 		  RDKit::ATOM_SPTR at_p = mol[atom_idx];
+#endif
 		  std::string atom_name;
 		  at_p->getProp("name", atom_name);
 		  std::cout << " " << atom_name;
@@ -1090,6 +1166,16 @@ coot::add_quartet_hydrogen_planes(const RDKit::ROMol &mol,
    // hydrogen of course).
    unsigned int n_atoms = mol.getNumAtoms();
    for (unsigned int iat_1=0; iat_1<n_atoms; iat_1++) { 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         const RDKit::Atom* at_1 = mol[iat_1];
+         if (at_1->getAtomicNum() == 1) {
+       std::vector<unsigned int> quartet_indices;
+
+       RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
+       boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_1);
+       while(nbr_idx_1 != end_nbrs_1){
+          const RDKit::Atom* at_centre = mol[*nbr_idx_1];
+#else
       RDKit::ATOM_SPTR at_1 = mol[iat_1];
       if (at_1->getAtomicNum() == 1) {
 	 std::vector<unsigned int> quartet_indices;
@@ -1098,6 +1184,7 @@ coot::add_quartet_hydrogen_planes(const RDKit::ROMol &mol,
 	 boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_1);
 	 while(nbr_idx_1 != end_nbrs_1){
 	    const RDKit::ATOM_SPTR at_centre = mol[*nbr_idx_1];
+#endif
 	       
 	    if (at_centre->getHybridization() == RDKit::Atom::SP2) {
 
@@ -1161,7 +1248,11 @@ coot::add_chem_comp_aromatic_plane_all_plane(const RDKit::MatchVectType &match,
    std::vector<std::string> plane_restraint_atoms; 
    try {
       for (unsigned int ii=0; ii<match.size(); ii++) {
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+            const RDKit::Atom* at_p = mol[match[ii].second];
+#else
 	 RDKit::ATOM_SPTR at_p = mol[match[ii].second];
+#endif
 
 	 // only add this atom to a plane restraint if it not
 	 // already in a plane restraint.  Test by failing to
@@ -1215,9 +1306,15 @@ coot::add_chem_comp_aromatic_plane_all_plane(const RDKit::MatchVectType &match,
 	       // 
 	       RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
 	       boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_p);
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+          std::vector<const RDKit::Atom*> attached_atoms;
+          while(nbr_idx_1 != end_nbrs_1) {
+        const RDKit::Atom* at_2 = mol[*nbr_idx_1];
+#else
 	       std::vector<RDKit::ATOM_SPTR> attached_atoms;
 	       while(nbr_idx_1 != end_nbrs_1) {
 		  const RDKit::ATOM_SPTR at_2 = mol[*nbr_idx_1];
+#endif
 		  // add if not a hydrogen or we are not doing quartet hydrogen planes
 		  if (at_2->getAtomicNum() != 1 || !quartet_hydrogen_planes)
 		     attached_atoms.push_back(at_2);
@@ -1281,7 +1378,11 @@ coot::add_chem_comp_aromatic_plane_quartet_planes(const RDKit::MatchVectType &ma
    int n_planes = 0;
    try {
       for (unsigned int ii=0; ii<match.size(); ii++) {
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+            const RDKit::Atom* at_p = mol[match[ii].second];
+#else
 	 RDKit::ATOM_SPTR at_p = mol[match[ii].second];
+#endif
 	 if (at_p->getAtomicNum() != 1) {
 
 	    if (0) {
@@ -1299,7 +1400,11 @@ coot::add_chem_comp_aromatic_plane_quartet_planes(const RDKit::MatchVectType &ma
 	    RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
 	    boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_p);
 	    while(nbr_idx_1 != end_nbrs_1){
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+             const RDKit::Atom* at_neighb = mol[*nbr_idx_1];
+#else
 	       const RDKit::ATOM_SPTR at_neighb = mol[*nbr_idx_1];
+#endif
 	       if (at_neighb->getAtomicNum() != 1) {
 		  quartet_indices.push_back(*nbr_idx_1);
 	       }
@@ -1359,7 +1464,11 @@ coot::add_chem_comp_aromatic_plane_quartet_planes(const RDKit::MatchVectType &ma
 	       //
 	       boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_p);
 	       while(nbr_idx_1 != end_nbrs_1){
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+                const RDKit::Atom* at_1 = mol[*nbr_idx_1];
+#else
 		  const RDKit::ATOM_SPTR at_1 = mol[*nbr_idx_1];
+#endif
 		  if (at_1->getAtomicNum() != 1) {
 
 		     RDKit::ROMol::ADJ_ITER nbr_idx_2, end_nbrs_2;
@@ -1393,7 +1502,11 @@ coot::add_chem_comp_aromatic_plane_quartet_planes(const RDKit::MatchVectType &ma
 	 const quartet_set &q = quartet_sets_vec[i];
 	 std::vector<std::string> atom_names;
 	 for (unsigned int iat=0; iat<4; iat++) { 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+          const RDKit::Atom* at = mol[q[iat]];
+#else
 	    const RDKit::ATOM_SPTR at = mol[q[iat]];
+#endif
 	    std::string name;
 	    at->getProp("name", name);
 	    atom_names.push_back(name);
@@ -1468,7 +1581,11 @@ coot::add_chem_comp_deloc_planes(const RDKit::ROMol &mol, coot::dictionary_resid
 	       for (unsigned int iat=0; iat<matches[imatch].size(); iat++) { 
 		  unsigned int atom_idx = matches[imatch][iat].second;
 		  try {
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+           const RDKit::Atom* at_p = mol[atom_idx];
+#else
 		     RDKit::ATOM_SPTR at_p = mol[atom_idx];
+#endif
 		     std::string atom_name;
 		     at_p->getProp("name", atom_name);
 		     std::cout << " " << atom_name;
@@ -1489,7 +1606,11 @@ coot::add_chem_comp_deloc_planes(const RDKit::ROMol &mol, coot::dictionary_resid
 	    try {
 	       std::vector<std::string> atom_names;
 	       for (unsigned int ii=0; ii<matches[imatch].size(); ii++) {
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+                const RDKit::Atom* at_p = mol[matches[imatch][ii].second];
+#else
 		  RDKit::ATOM_SPTR at_p = mol[matches[imatch][ii].second];
+#endif
 
 		  // Unlike aromatics, the atoms of this type of plane
 		  // can be in more than one plane.
@@ -1545,7 +1666,11 @@ coot::add_chem_comp_sp2_N_planes(const RDKit::ROMol &mol, coot::dictionary_resid
 	    try {
 	       std::vector<std::string> atom_names;
 	       for (unsigned int ii=0; ii<matches[imatch].size(); ii++) {
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+                const RDKit::Atom* at_p = mol[matches[imatch][ii].second];
+#else
 		  RDKit::ATOM_SPTR at_p = mol[matches[imatch][ii].second];
+#endif
 
 		  // Unlike aromatics, the atoms of this type of plane
 		  // can be in more than one plane.
@@ -1591,7 +1716,11 @@ coot::assign_chirals_mmcif_tags(const RDKit::ROMol &mol,
 
    unsigned int n_atoms = mol.getNumAtoms();
    for (unsigned int iat=0; iat<n_atoms; iat++) { 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         const RDKit::Atom* at_p = mol[iat];
+#else
       RDKit::ATOM_SPTR at_p = mol[iat];
+#endif
       try {
 	 std::string ch;
 	 std::string chiral_centre, n1, n2, n3;
@@ -1643,7 +1772,11 @@ coot::assign_chirals_rdkit_tags(const RDKit::ROMol &mol,
 
    unsigned int n_atoms = mol.getNumAtoms();
    for (unsigned int iat=0; iat<n_atoms; iat++) { 
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         const RDKit::Atom* at_p = mol[iat];
+#else
       RDKit::ATOM_SPTR at_p = mol[iat];
+#endif
       RDKit::Atom::ChiralType chiral_tag = at_p->getChiralTag();
       // std::cout << "atom " << iat << " chiral tag: " << chiral_tag << std::endl;
 

@@ -217,13 +217,21 @@ cod::atom_types_t::handle_bigger_rings_from_fused_rings(RDKit::ROMol &rdkm,
 
    for (unsigned int iat=0; iat<rdkm.getNumAtoms(); iat++) {
       if (is_ring_member(iat, fused_rings)) {
-	 RDKit::Atom *this_at = rdkm[iat].get();
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+            RDKit::Atom *this_at = rdkm[iat];
+#else
+            RDKit::Atom *this_at = rdkm[iat].get();
+#endif
 	 unsigned int idx_c = this_at->getIdx();
 	 RDKit::ROMol::ADJ_ITER nbrIdx, endNbrs;
 	 boost::tie(nbrIdx, endNbrs) = rdkm.getAtomNeighbors(this_at);
 	 while(nbrIdx != endNbrs) {
 	    if (is_ring_member(*nbrIdx, fused_rings)) { 
-	       RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+             RDKit::Atom* at = rdkm[*nbrIdx];
+#else
+             RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
+#endif
 	       RDKit::Bond *bond = rdkm.getBondBetweenAtoms(idx_c, *nbrIdx);
 	       if (bond) {
 		  it = bond_map.find(iat);
@@ -421,8 +429,13 @@ cod::atom_types_t::get_cod_atom_type(RDKit::Atom *atom_base_p,
       boost::tie(nbrIdx, endNbrs) = rdkm.getAtomNeighbors(atom_base_p);
       std::vector<unsigned int> v; // hybridizations
       while (nbrIdx != endNbrs) {
-	 RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
-	 RDKit::Atom *neigh_atom_p = at.get();
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+            RDKit::Atom* at = (RDKit::Atom*) rdkm[*nbrIdx];
+            RDKit::Atom *neigh_atom_p = at;
+#else
+            RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
+            RDKit::Atom *neigh_atom_p = at.get();
+#endif
 	 if (neigh_atom_p != atom_parent_p) {
 	    // RDKit::Atom::HybridizationType hy = neigh_atom_p->getHybridization();
 	    // int h = hybridization_to_int(hy);
@@ -467,8 +480,13 @@ cod::atom_types_t::get_cod_atom_type(RDKit::Atom *atom_base_p,
       RDKit::ROMol::ADJ_ITER nbrIdx, endNbrs;
       boost::tie(nbrIdx, endNbrs) = rdkm.getAtomNeighbors(atom_p);
       while (nbrIdx != endNbrs) {
-	 RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
-	 RDKit::Atom *neigh_atom_p = at.get();
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+            RDKit::Atom* at = (RDKit::Atom*) rdkm[*nbrIdx];
+            RDKit::Atom *neigh_atom_p = at;
+#else
+            RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
+            RDKit::Atom *neigh_atom_p = at.get();
+#endif
 
 	 if (neigh_atom_p == atom_parent_p) {
 	    // neighbour of central atom was back to parent.
@@ -647,7 +665,11 @@ cod::atom_types_t::check_for_3rd_nb_info(RDKit::Atom *atom_base_p,
       bool found_parent = false;
       bool found_this   = false;
       for (unsigned int iat=0; iat<n_ring_atoms; iat++) {
-	 RDKit::Atom *ring_atom_p = rdkm[ring_atom_indices[iat]].get();
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+            const RDKit::Atom *ring_atom_p = rdkm[ring_atom_indices[iat]];
+#else
+            RDKit::Atom *ring_atom_p = rdkm[ring_atom_indices[iat]].get();
+#endif
 
 	 if (ring_atom_p == atom_parent_p)
 	    found_parent = true;
@@ -676,7 +698,11 @@ cod::atom_types_t::check_for_3rd_nb_info(RDKit::Atom *atom_base_p,
 	 const std::vector<int> &ring_atom_indices = atomRings[i_ring];
 	 unsigned int n_ring_atoms = ring_atom_indices.size();
 	 for (unsigned int iat=0; iat<n_ring_atoms; iat++) {
-	    RDKit::Atom *ring_atom_p = rdkm[ring_atom_indices[iat]].get();
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+          const RDKit::Atom *ring_atom_p = rdkm[ring_atom_indices[iat]];
+#else
+          RDKit::Atom *ring_atom_p = rdkm[ring_atom_indices[iat]].get();
+#endif
 
 	    if (ring_atom_p == atom_parent_p)
 	       found_parent = true;
@@ -720,13 +746,21 @@ cod::atom_types_t::related_via_angle(RDKit::Atom *atom_in_1_p,
    boost::tie(nbrIdx_1, endNbrs_1) = rdkm.getAtomNeighbors(atom_in_1_p);
    while(nbrIdx_1 != endNbrs_1) {
 
-      RDKit::ATOM_SPTR at_mid = rdkm[*nbrIdx_1];
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+         const RDKit::Atom* at_mid = rdkm[*nbrIdx_1];
+#else
+         RDKit::ATOM_SPTR at_mid = rdkm[*nbrIdx_1];
+#endif
 
       RDKit::ROMol::ADJ_ITER nbrIdx_2, endNbrs_2;
       boost::tie(nbrIdx_2, endNbrs_2) = rdkm.getAtomNeighbors(at_mid);
       while(nbrIdx_2 != endNbrs_2) {
 
-	 RDKit::Atom *at = rdkm[*nbrIdx_2].get();
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+            const RDKit::Atom *at = rdkm[*nbrIdx_2];
+#else
+            RDKit::Atom *at = rdkm[*nbrIdx_2].get();
+#endif
 
 	 if (at == atom_in_2_p) {
 	    angle_related = true;

@@ -391,7 +391,7 @@ build_shared=${build_shared:=0}
 # LE needs shared, so set this too then
 if [ $build_enhanced_ligand = 1 ]  ; then
     build_shared=1
-    build_boost=1
+    build_boost=0
     build_rdkit=1
 else
     build_boost=0
@@ -3568,26 +3568,24 @@ if [ $build_enhanced_ligand = 1 ] ; then
 
     if test -n "$build_rdkit" ; then
         echo BUILDING rdkit:
-        rdkit_version=2017_09_3
+        rdkit_version=2018_03_2
         ${WGET} https://github.com/rdkit/rdkit/archive/Release_${rdkit_version}.tar.gz
-        ${WGET} ${win_extras_place}/rdkit_strtok.patch
+        # ${WGET} ${win_extras_place}/rdkit_strtok.patch
         (
             date
             pwd
             tmpdir=`pwd`
             gzip -cd ${AUTOBUILD_SOURCES}/Release_${rdkit_version}.tar.gz | tar xf -
             cd rdkit-Release_${rdkit_version}
-            patch -p0 < ${AUTOBUILD_SOURCES}/rdkit_strtok.patch
+            # patch -p0 < ${AUTOBUILD_SOURCES}/rdkit_strtok.patch
             export RDBASE=`pwd`
             export PYTHONPATH=$RDBASE
             export PATH=$PATH:$RDBASE/lib
             export PATH=$PATH:$install_top_dir/lib
             mkdir build
             cd build
-            # FIXME python_version should contain a dot
             cmake -G "MSYS Makefiles" \
                   -DRDK_BUILD_PYTHON_WRAPPERS=ON \
-                  -DBOOST_ROOT=$install_top_dir  \
                   -DRDK_BUILD_SLN_SUPPORT=OFF \
                   -DRDK_TEST_MMFF_COMPLIANCE=OFF \
                   -DRDK_BUILD_CPP_TESTS=OFF \
@@ -3598,9 +3596,7 @@ if [ $build_enhanced_ligand = 1 ] ; then
                   -DRDK_INSTALL_INTREE=OFF \
                   -DBUILD_SHARED_LIBS=ON \
                   -DRDK_INSTALL_STATIC_LIBS=OFF \
-                  -DPYTHON_INSTDIR=/mingw64/lib/${python_version}/lib/site-packages \
                   -DCMAKE_INSTALL_PREFIX=$install_top_dir ..
-#                   -DCMAKE_CXX_FLAGS="-g -O -std=gnu++11 -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -Wall -Wextra -DWIN32" \
             $MAKE
             $MAKE install
             cd $tmpdir
