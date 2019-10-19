@@ -294,6 +294,11 @@ main (int argc, char *argv[]) {
      
 #ifdef WINDOWS_MINGW
       main_title = "Win" + main_title;
+#ifdef _WIN64
+      main_title = main_title + " 64bit";
+#else
+      main_title = main_title + " 32bit";
+#endif // WIN64
 #endif
 
       gtk_window_set_title(GTK_WINDOW (window1), main_title.c_str());
