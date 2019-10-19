@@ -383,7 +383,7 @@ fallback_coot_version=coot-0.8
 
 # For windows shared and enhanced Ligand compilation
 #
-# set this to "yes", i.e. 1 if you want to compile wth enhanced ligand 
+# set this to "yes", i.e. 1 if you want to compile wth enhanced ligand
 #
 build_enhanced_ligand=${build_enhanced_ligand:=0}
 build_shared=${build_shared:=0}
@@ -2056,7 +2056,7 @@ if [ $build_enhanced_ligand = 1 ]  ; then
 	      build_boost=
         else
             echo $install_top_dir/include/boost/version.hpp not exist, building boost
-  	        build_boost=1
+	      build_boost=1
         fi
     fi
     if [ -n "$build_rdkit" ] ; then
@@ -3539,7 +3539,7 @@ if [ $build_enhanced_ligand = 1 ] ; then
     if test -n "$build_boost" ; then
         echo BUILDING Boost:
         boost_version=1.60.0
-        # old wget cant get from sourceforge but new one can. Make sure there 
+        # old wget cant get from sourceforge but new one can. Make sure there
         # is a new one! e.g. https://eternallybored.org/misc/wget/
         ${WGET} --no-check-certificate http://sourceforge.net/projects/boost/files/boost/${boost_version}/boost_${boost_version//./_}.7z
         ${WGET} $win_extras_place/boost_1_60_0.patch
