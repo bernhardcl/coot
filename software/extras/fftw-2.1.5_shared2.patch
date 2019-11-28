@@ -1,0 +1,9 @@
+--- rfftw/Makefile.orig	2015-03-10 08:55:14 +0100
++++ rfftw/Makefile	2015-03-10 08:55:16 +0100
+@@ -177,7 +177,7 @@
+ LTLIBRARIES = $(lib_LTLIBRARIES)
+-librfftw_la_LIBADD =
++librfftw_la_LIBADD = ../fftw/libfftw.la
+ am__objects_1 = frc_1.lo frc_2.lo frc_3.lo frc_4.lo frc_5.lo frc_6.lo \
+ 	frc_7.lo frc_8.lo frc_9.lo frc_10.lo frc_11.lo frc_12.lo \
+ 	frc_13.lo frc_14.lo frc_15.lo frc_16.lo frc_32.lo frc_64.lo \
