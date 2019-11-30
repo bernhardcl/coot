@@ -1,0 +1,15 @@
+--- src/goocanvasenumtypes.h.orig	2018-08-21 14:41:21.365113300 +0200
++++ src/goocanvasenumtypes.h	2018-08-21 14:41:39.617145300 +0200
+@@ -7,10 +7,10 @@
+ #include <glib-object.h>
+ 
+ G_BEGIN_DECLS
+-C:/msys64/* Enumerations from "goocanvasitem.h" */
++/* Enumerations from "goocanvasitem.h" */
+ GType goo_canvas_animate_type_get_type (void);
+ #define GOO_TYPE_CANVAS_ANIMATE_TYPE (goo_canvas_animate_type_get_type())
+-C:/msys64/* Enumerations from "goocanvasutils.h" */
++/* Enumerations from "goocanvasutils.h" */
+ GType goo_canvas_pointer_events_get_type (void);
+ #define GOO_TYPE_CANVAS_POINTER_EVENTS (goo_canvas_pointer_events_get_type())
+ GType goo_canvas_item_visibility_get_type (void);
