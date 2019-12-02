@@ -1,15 +1,11 @@
---- src/goocanvasenumtypes.h.orig	2018-08-21 14:41:21.365113300 +0200
-+++ src/goocanvasenumtypes.h	2018-08-21 14:41:39.617145300 +0200
-@@ -7,10 +7,10 @@
- #include <glib-object.h>
- 
- G_BEGIN_DECLS
--C:/msys64/* Enumerations from "goocanvasitem.h" */
-+/* Enumerations from "goocanvasitem.h" */
- GType goo_canvas_animate_type_get_type (void);
- #define GOO_TYPE_CANVAS_ANIMATE_TYPE (goo_canvas_animate_type_get_type())
--C:/msys64/* Enumerations from "goocanvasutils.h" */
-+/* Enumerations from "goocanvasutils.h" */
- GType goo_canvas_pointer_events_get_type (void);
- #define GOO_TYPE_CANVAS_POINTER_EVENTS (goo_canvas_pointer_events_get_type())
- GType goo_canvas_item_visibility_get_type (void);
+--- src/Makefile.orig	2019-12-02 14:02:41.977102100 +0100
++++ src/Makefile	2019-12-02 14:03:14.043936200 +0100
+@@ -708,7 +708,7 @@
+ stamp-goocanvasenumtypes.h:  $(goo_canvas_public_headers) Makefile
+ 	(cd $(srcdir) && $(GLIB_MKENUMS) \
+ 		--fhead "#ifndef __GOO_CANVAS_ENUM_TYPES_H__\n#define __GOO_CANVAS_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
+-		--fprod "/* Enumerations from \"@filename@\" */\n" \
++		--fprod "//* Enumerations from \"@filename@\" */\n" \
+ 		--vhead "GType @enum_name@_get_type (void);\n#define GOO_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n\n\n" \
+ 		--ftail "G_END_DECLS\n\n#endif /* __GOO_CANVAS_ENUM_TYPES_H__ */" \
+ 		$(libgoocanvas_public_headers)) >> xgen-gtbh \
