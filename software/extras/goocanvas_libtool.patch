@@ -1,0 +1,10 @@
+--- libtool.orig        2019-12-03 08:57:04.717840900 +0000
++++ libtool     2019-12-03 09:01:41.740806000 +0000
+@@ -63,6 +63,7 @@
+ build_alias=x86_64-w64-mingw32
+ build=x86_64-w64-mingw32
+ build_os=mingw32
++postdeps="-lgdi32 -limm32 -lshell32 -lole32"
+
+ # A sed program that does not truncate output.
+ SED="/usr/bin/sed"
