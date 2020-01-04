@@ -971,13 +971,11 @@ coot::cip_rank_sorter(const std::pair<const RDKit::Atom *, unsigned int> &at_1,
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
 bool
 coot::chiral_check_order_swap(RDKit::Atom* at_1, RDKit::Atom* at_2,
-			      const std::vector<dict_chiral_restraint_t>  &chiral_restraints) {
+                              const std::vector<dict_chiral_restraint_t>  &chiral_restraints) {
 #else
-   }
-
-      bool
-      coot::chiral_check_order_swap(RDKit::ATOM_SPTR at_1, RDKit::ATOM_SPTR at_2,
-                     const std::vector<dict_chiral_restraint_t>  &chiral_restraints) {
+bool
+coot::chiral_check_order_swap(RDKit::ATOM_SPTR at_1, RDKit::ATOM_SPTR at_2,
+                              const std::vector<dict_chiral_restraint_t>  &chiral_restraints) {
 #endif
    bool status = false;
 
