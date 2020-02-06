@@ -856,6 +856,13 @@ molecule_class_info_t::dynamically_transform(coot::CartesianPairInfo v) {
    
 }
 
+void
+molecule_class_info_t::map_fill_from_mtz(const coot::mtz_to_map_info_t &mmi, const std::string &cwd, float sampling_rate) {
+
+   map_fill_from_mtz(mmi.mtz_file_name, cwd, mmi.f_col, mmi.phi_col, mmi.w_col, mmi.use_weights, mmi.is_difference_map, sampling_rate);
+
+}
+
 
 // 
 void
@@ -3447,12 +3454,15 @@ molecule_class_info_t::update_map_from_mtz_if_changed(const updating_map_params_
 	    continue_watching_mtz = false;
 	 } else {
 	    // happy path
-	    // ump.ctime = s.st_ctimespec; // mac version?
-#ifndef WINDOWS_MINGW
-	    ump.ctime = s.st_ctim;
-#else
-	    ump.ctime.tv_sec = s.st_ctime;
+#ifndef _POSIX_SOURCE
+#ifdef WINDOWS_MINGW
+            ump.ctime.tv_sec = s.st_ctime;
             ump.ctime.tv_nsec = 0.; // not available!? Lets hope not necessary
+#else
+	    ump.ctime = s.st_ctimespec; // mac?
+#endif // MINGW
+#else
+	    ump.ctime = s.st_ctim;
 #endif
 	 }
       }

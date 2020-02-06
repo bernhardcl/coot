@@ -96,6 +96,13 @@
 #include "c-interface.h"
 
 
+int
+molecule_class_info_t::update_molecule(std::string file_name, std::string cwd) {
+
+   return handle_read_draw_molecule(imol_no,
+				    file_name, cwd,
+				    0, 0, true, false, bond_width, bonds_box_type, false);
+}
 
 
 
@@ -5702,7 +5709,7 @@ molecule_class_info_t::intelligent_previous_atom(const std::string &chain_id,
 }
 
 
-// If there is a CA in this residue then return the index of that
+// If there is a CA or C1' in this residue then return the index of that
 // atom, if not, then return the index of the first atom in the
 // residue.
 //
@@ -5720,6 +5727,16 @@ molecule_class_info_t::intelligent_this_residue_atom(mmdb::Residue *res_p) const
       for (int i=0; i<nResidueAtoms; i++) {
 	 std::string atom_name(residue_atoms[i]->name);
 	 if (atom_name == " CA ") {
+	    ir = atom_to_atom_index(residue_atoms[i]);
+	    if (ir == -1)
+	       ir = full_atom_spec_to_atom_index(residue_atoms[i]->GetChainID(),
+						 residue_atoms[i]->GetSeqNum(),
+						 residue_atoms[i]->GetInsCode(),
+						 residue_atoms[i]->name,
+						 residue_atoms[i]->altLoc);
+	 }
+         // likewise C1'
+	 if (atom_name == " C1'") {
 	    ir = atom_to_atom_index(residue_atoms[i]);
 	    if (ir == -1)
 	       ir = full_atom_spec_to_atom_index(residue_atoms[i]->GetChainID(),
@@ -5825,12 +5842,18 @@ molecule_class_info_t::atom_intelligent(const std::string &chain_id, int resno,
 	 if (nResidueAtoms == 0) {
 	    std::cout << "INFO:: No atoms in residue" << std::endl;
 	 } else {
-	    short int found_it = 0;
-	    std::string CA = " CA "; // PDBv3 FIXME
+	    bool found_it = false;
+	    std::string CA       = " CA "; // PDBv3 FIXME
+	    std::string C1_prime = " C1'";
 	    for (int i=0; i<nResidueAtoms; i++) {
 	       if (std::string(residue_atoms[i]->name) == CA) {
 		  at = residue_atoms[i];
-		  found_it = 1;
+		  found_it = true;
+		  break;
+	       }
+	       if (std::string(residue_atoms[i]->name) == C1_prime) {
+		  at = residue_atoms[i];
+		  found_it = true;
 		  break;
 	       }
 	    }
@@ -9142,12 +9165,15 @@ molecule_class_info_t::update_coordinates_molecule_if_changed(const updating_coo
 	    continue_watching_coordinates_file = false;
 	 } else {
 	    // happy path
-	    // ucp.ctime = s.st_ctimespec; ?? mac?
-#ifndef WINDOWS_MINGW
-	    ucp.ctime = s.st_ctim;
+#ifndef _POSIX_SOURCE
+#ifdef WINDOWS_MINGW
+            ucp.ctime.tv_sec = s.st_ctime;
+            ucp.ctime.tv_nsec = 0.; // not available!? Lets hope not necessary
 #else
-	    ucp.ctime.tv_sec = s.st_ctime;
-	    ucp.ctime.tv_nsec = 0.; // not available!? Lets hope not necessary
+	    ucp.ctime = s.st_ctimespec; // Mac OS X?
+#endif // MINGW
+#else
+	    ucp.ctime = s.st_ctim;
 #endif
 	 }
       }
@@ -9191,3 +9217,31 @@ molecule_class_info_t::update_coordinates_molecule_if_changed(const updating_coo
    }
    return status;
 }
+
+// no redraw
+void
+molecule_class_info_t::update_self_from_file(const std::string &pdb_file_name) {
+
+   std::string cwd = coot::util::current_working_dir();
+   short int reset_rotation_centre = 0;
+   short int is_undo_or_redo = 0;
+   bool allow_duplseqnum = true;
+   bool v2_convert_flag = false;
+ 
+   handle_read_draw_molecule(imol_no, pdb_file_name, cwd,
+				   reset_rotation_centre,
+				   is_undo_or_redo,
+				   allow_duplseqnum,
+				   v2_convert_flag,
+				   bond_width,
+				   Bonds_box_type(),
+				   false);
+
+}
+
+void
+molecule_class_info_t::update_self(const coot::mtz_to_map_info_t &mmi) {
+
+}
+
+

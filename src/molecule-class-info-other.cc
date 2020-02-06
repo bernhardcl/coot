@@ -2507,6 +2507,17 @@ molecule_class_info_t::get_residue(const coot::residue_spec_t &residue_spec) con
    return res;
 }
 
+std::string
+molecule_class_info_t::get_residue_name(const coot::residue_spec_t &rs) const {
+
+   std::string rn;
+   mmdb::Residue *r = get_residue(rs);
+   if (r) {
+      rn = r->GetResName();
+   }
+   return rn;
+}
+
 // Useful when we know that the molecule is just one residue
 mmdb::Residue *
 molecule_class_info_t::get_first_residue() {
@@ -5785,7 +5796,9 @@ molecule_class_info_t::map_chains_to_new_chains(const std::vector<std::string> &
 
    std::vector<std::string> rv;
    // we dont want ! [] or *, they are mmdb specials.
-   std::string r("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%^&@?/~|-+=(){}:;.,'");
+   // 20200110-PE no more specials at all
+   // std::string r("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%^&@?/~|-+=(){}:;.,'");
+   std::string r("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
 
    // first remove from r, all the chain that already exist in this molecule.
    for (unsigned int i=0; i<this_model_chains.size(); i++) {
@@ -5827,7 +5840,10 @@ molecule_class_info_t::suggest_new_chain_id(const std::string &current_chain_id)
 
    std::string new_chain_id;
    
-   std::string r("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%^&@?/~|-+=(){}:;.,'");
+   // 20200110-PE no more specials at all
+   // std::string r("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%^&@?/~|-+=(){}:;.,'");
+   std::string r("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+
    std::vector<std::string> existing;
    int imod = 1;
    mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
@@ -5853,7 +5869,7 @@ molecule_class_info_t::suggest_new_chain_id(const std::string &current_chain_id)
    //
    if (new_chain_id.empty()) {
       if (current_chain_id.length() > 1) {
-	 std::string trial_chain_id = current_chain_id + "_2";
+	 std::string trial_chain_id = current_chain_id + "2";
 	 if (trial_chain_id.length() < (10-1)) { // magic mmdb chain id max length (mmdb_defs.h)
 	                                       // (we need a space for the terminal NULL too).
 	    bool found_it = false;
