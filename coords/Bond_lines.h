@@ -49,17 +49,18 @@
 #include "ligand/rotamer.hh"
 #include "coot-utils/coot-coord-utils.hh" // is this needed?
 
-namespace coot { 
+namespace coot {
 
    static std::string b_factor_bonds_scale_handle_name;
-   
+
    enum bond_colour_t { COLOUR_BY_CHAIN=0,
 			COLOUR_BY_CHAIN_C_ONLY=20,
+			COLOUR_BY_CHAIN_GOODSELL=21,
 			COLOUR_BY_ATOM_TYPE=1,
 			COLOUR_BY_SEC_STRUCT=2,
 			DISULFIDE_COLOUR=3,
 			COLOUR_BY_MOLECULE=4,
-			COLOUR_BY_RAINBOW=5, 
+			COLOUR_BY_RAINBOW=5,
 			COLOUR_BY_OCCUPANCY=6,
 			COLOUR_BY_B_FACTOR=7,
 			COLOUR_BY_USER_DEFINED_COLOURS=8 };
@@ -68,30 +69,30 @@ namespace coot {
 
     public:
     std::vector<std::string> atom_colour_map;
-     unsigned int index_for_chain(const std::string &chain) { 
+     unsigned int index_for_chain(const std::string &chain_id) {
        unsigned int isize = atom_colour_map.size();
-       for (unsigned int i=0; i<isize; i++) { 
-	  if (atom_colour_map[i] == chain) {
+       for (unsigned int i=0; i<isize; i++) {
+	  if (atom_colour_map[i] == chain_id) {
 	     return i;
 	  }
        }
-       atom_colour_map.push_back(chain);
+       atom_colour_map.push_back(chain_id);
        if (isize == HYDROGEN_GREY_BOND) {
 	  atom_colour_map[isize] = "skip-hydrogen-grey-colour-for-chain";
-	  atom_colour_map.push_back(chain);
+	  atom_colour_map.push_back(chain_id);
 	  isize++;
        }
        return isize;
     }
     // These colours ranges need to be echoed in the GL bond drawing
     // routine.
-    int index_for_rainbow(float wheel_colour) { 
+    int index_for_rainbow(float wheel_colour) {
        return int(30.0*wheel_colour);
     }
-    int index_for_occupancy(float wheel_colour) { 
+    int index_for_occupancy(float wheel_colour) {
        return int(5.0*wheel_colour);
     }
-    int index_for_b_factor(float wheel_colour) { 
+    int index_for_b_factor(float wheel_colour) {
        return int(30.0*wheel_colour);
     }
   };
@@ -203,9 +204,14 @@ template<class T> class graphical_bonds_lines_list {
    }
 };
 
+
 class graphical_bonds_atom_info_t {
 public:
    bool is_hydrogen_atom;
+   bool is_water; // don't not display this in sticks-only mode - or the water
+                  // will disappear (needs rebonding otherwise - not just a display flag)
+   float radius_scale; // Waters (and perhaps metals) should have big radii, so that
+                       // they are easier to see.
    coot::Cartesian position;
    mmdb::Atom *atom_p; // this should be a shared pointer I think.
                        // we don't want to be looking at this pointer
@@ -216,14 +222,30 @@ public:
       model_number = -1;
       position = pos;
       is_hydrogen_atom = is_hydrogen_atom_in;
+      is_water = false;
       atom_index = atom_index_in;
       atom_p = 0;
+      radius_scale = 1.0;
    }
    graphical_bonds_atom_info_t() {
       model_number = -1;
       is_hydrogen_atom = false;
       atom_index = -1; // unset
+      radius_scale = 1.0;
       atom_p = 0;
+      is_water = false;
+   }
+   // this is a bit of a weird construction
+   bool radius_for_atom_should_be_big(mmdb::Atom *atom_p) const {
+
+      // you might like to add other tests here.
+      mmdb::Residue *r = atom_p->GetResidue();
+      if (r) {
+         std::string res_name = r->GetResName();
+         if (res_name == "HOH")
+            return true;
+      }
+      return false;
    }
 };
 
@@ -545,6 +567,9 @@ class Bond_lines_container {
 				      bool are_different_atom_selections,
 				      bool have_udd_atoms,
 				      int udd_handle);
+   void atom_selection_missing_loops(const atom_selection_container_t &asc,
+                                     int udd_atom_index_handle,
+                                     int udd_fixed_during_refinement_handle);
 
    void construct_from_model_links(mmdb::Model *model, int udd_atom_index_handle, int atom_colour_type);
    // which wraps...
@@ -678,7 +703,30 @@ class Bond_lines_container {
    int set_rainbow_colours(mmdb::Manager *mol);
    void do_colour_by_chain_bonds_carbons_only(const atom_selection_container_t &asc,
 					      int imol,
+					      int atom_colour_type, // C-only or goodsell
 					      int draw_hydrogens_flag);
+   void do_colour_by_chain_bonds_carbons_only_internals(int imol, int imodel,
+							int chain_idx,
+							mmdb::Atom *at1, mmdb::Atom *at2,
+							int iat_1, int iat_2,
+							std::vector<std::pair<bool, mmdb::Residue *> > *het_residues_p,
+							const std::string &element_1,
+							const std::string &element_2,
+							const coot::Cartesian &atom_1,
+							const coot::Cartesian &atom_2,
+							int atom_colour_type,
+							int uddHnd);
+   void do_colour_by_chain_bonds_internals_goodsell_mode(int imol, int imodel,
+							int chain_idx,
+							mmdb::Atom *at1, mmdb::Atom *at2,
+							int iat_1, int iat_2,
+							std::vector<std::pair<bool, mmdb::Residue *> > *het_residues_p,
+							const std::string &element_1,
+							const std::string &element_2,
+							const coot::Cartesian &atom_1,
+							const coot::Cartesian &atom_2,
+							int uddHnd);
+   
 
    void try_set_b_factor_scale(mmdb::Manager *mol);
    graphical_bonds_container make_graphical_bonds_with_thinning_flag(bool thinning_flag) const;
@@ -965,6 +1013,10 @@ public:
    void check_graphical_bonds() const; 
    void check_static() const; 
    void do_disulphide_bonds(atom_selection_container_t, int imodel);
+   // which calls either
+   void do_disulphide_bonds_by_header(atom_selection_container_t SelAtom, int imodel);
+   // or
+   void do_disulphide_bonds_by_distance(atom_selection_container_t SelAtom, int imodel);
 
    // This can get called for intermediate atoms before the restraints have been made
    // (and the FixedDuringRefinement UDD is set), so that loops can flash on
@@ -1015,7 +1067,8 @@ public:
    void do_colour_by_chain_bonds(const atom_selection_container_t &asc,
 				 int imol,
 				 int draw_hydrogens_flag,
-				 short int change_c_only_flag);
+				 short int change_c_only_flag,
+				 bool do_goodsell_colour_mode);
    void do_colour_by_molecule_bonds(const atom_selection_container_t &asc,
 				    int draw_hydrogens_flag);
    void do_normal_bonds_no_water(const atom_selection_container_t &asc,

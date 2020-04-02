@@ -18,12 +18,15 @@ graphics_info_t::init() {
 
       which_eye = FRONT_EYE;
 
+      on_going_updating_map_lock = false;
+
       find_ligand_ligand_mols_ = new std::vector<std::pair<int, bool> >;
       geom_p = new coot::protein_geometry;
       geom_p->set_verbose(true);
 
       cif_dictionary_read_number = geom_p->init_standard();
       geom_p->add_planar_peptide_restraint();
+      convert_dictionary_planes_to_improper_dihedrals_flag = false;
 
       geom_p->init_ccp4srs("srsdata"); // overridden by COOT_CCP4SRS_DIR and CCP4_LIB
 
@@ -341,9 +344,8 @@ graphics_info_t::init() {
 								  1, 1));
 
       do_expose_swap_buffers_flag = 1;
-#ifdef WII_INTERFACE_WIIUSE
-      wiimotes = NULL;
-#endif
+
+      regenerate_bonds_needs_make_bonds_type_checked_flag = true;
 
       refmac_dialog_mtz_file_label = NULL;
       /* set no of refmac cycles */

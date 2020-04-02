@@ -703,6 +703,9 @@ graphics_info_t::geometric_distortions_from_mol(int imol, const atom_selection_c
 		  if (with_nbcs)
 		     flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
 		  
+		  unsigned int n_threads = coot::get_max_number_of_threads();
+		  if (n_threads > 0)
+		     restraints.thread_pool(&static_thread_pool, n_threads);
 		  short int do_residue_internal_torsions = 0;
 	       
 		  // 	       if (do_torsion_restraints) { 
@@ -720,7 +723,7 @@ graphics_info_t::geometric_distortions_from_mol(int imol, const atom_selection_c
 						flags,
 						do_residue_internal_torsions,
 						do_trans_peptide_restraints,
-						0.0, 0, false, false,
+						0.0, 0, false, false, false,
 						pseudos);
 
 		  if (nrestraints > 0) {

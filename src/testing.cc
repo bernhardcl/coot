@@ -697,6 +697,9 @@ testing_func_probabilities_refine_fragment(atom_selection_container_t atom_sel,
 					   residues_mol_pair.first,
 					   fixed_atom_specs, &dummy_xmap);
 
+   ctpl::thread_pool thread_pool(2);
+   restraints.thread_pool(&thread_pool, 2);
+
    short int do_rama_restraints = 0;
    short int do_residue_internal_torsions = 1;
    short int do_link_torsions = 0;
@@ -725,7 +728,7 @@ testing_func_probabilities_refine_fragment(atom_selection_container_t atom_sel,
 				 do_residue_internal_torsions,
 				 do_trans_peptide_restraints,
 				 rama_plot_restraint_weight,
-				 do_rama_restraints, false, false,
+				 do_rama_restraints, false, false, false,
 				 pseudos);
 
    if (output_numerical_gradients)
@@ -1148,7 +1151,7 @@ restr_res_vector() {
       restraints.add_map(weight);
       bool do_trans_peptide_restraints = true;
       int imol = 0;
-      restraints.make_restraints(imol, geom, flags, 0, do_trans_peptide_restraints, 0.0, 0, false, false, coot::NO_PSEUDO_BONDS);
+      restraints.make_restraints(imol, geom, flags, 0, do_trans_peptide_restraints, 0.0, 0, false, false, false, coot::NO_PSEUDO_BONDS);
       restraints.minimize(flags);
       restraints.write_new_atoms("ss-test.pdb");
    }
@@ -2318,11 +2321,14 @@ int test_relativise_file_name () {
 
 int test_previous_water() {
 
+   coot::protein_geometry geom;
+   geom.init_standard();
    int status = 0;
    molecule_class_info_t mci;
    mci.handle_read_draw_molecule(1,
 				 greg_test("pathological-water-test.pdb"),
 				 coot::util::current_working_dir(),
+				 &geom,
 				 0, 0, true, true, 1, coot::NORMAL_BONDS, false);
    mci.delete_atom("D", 162, "", " O  ", "");
    coot::Cartesian rc(0,0,0); // hack?

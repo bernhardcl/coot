@@ -20,9 +20,9 @@
 void
 coot::restraints_container_t::make_df_restraints_indices() {
 
-   // std::cout << "---------------------------------------------------------------" << std::endl;
-   // std::cout << "            make_df_restraints_indices() " << size() << std::endl;
-   // std::cout << "---------------------------------------------------------------" << std::endl;
+   std::cout << "---------------------------------------------------------------" << std::endl;
+   std::cout << "            make_df_restraints_indices() " << size() << std::endl;
+   std::cout << "---------------------------------------------------------------" << std::endl;
 
    // does restraints index vectors and df_by_thread_results
 
@@ -38,6 +38,8 @@ coot::restraints_container_t::make_df_restraints_indices() {
    // This (or something similar) should probably for the evaluation of
    // distortion too.
    //
+
+   // currently refinement fails if I n_r_s is not n_threads - I don't know why.
    unsigned int n_r_s = n_threads; // needs optimizing
    unsigned int restraints_size = size();
 
@@ -85,10 +87,10 @@ coot::restraints_container_t::make_df_restraints_indices() {
 
    if (false) { // debug thread-based restraints splitting
       for (std::size_t ii=0; ii<restraints_indices.size(); ii++) {
-	 std::cout << "::: thread " << ii << " has restraints ";
-	 for (std::size_t jj=0; jj<restraints_indices[ii].size(); jj++)
-	    std::cout << " " << restraints_indices[ii][jj];
-	 std::cout << std::endl;
+	      std::cout << "::: thread " << ii << " has restraints ";
+	      for (std::size_t jj=0; jj<restraints_indices[ii].size(); jj++)
+	         std::cout << " " << restraints_indices[ii][jj];
+	      std::cout << std::endl;
       }
    }
 
@@ -128,7 +130,7 @@ coot::restraints_container_t::clear_df_by_thread_results() {
    for (std::size_t i=0; i<df_by_thread_results.size(); i++) {
       std::vector<double> &v = df_by_thread_results[i];
       for (std::size_t j=0; j<v.size(); j++) {
-	 v[j] = 0.0;
+	      v[j] = 0.0;
       }
    }
 }
@@ -138,8 +140,8 @@ coot::restraints_container_t::clear_df_by_thread_results() {
 // parallel version of my_df()
 void
 coot::split_the_gradients_with_threads(const gsl_vector *v,
-				       restraints_container_t *restraints_p,
-				       gsl_vector *df) {
+                                       restraints_container_t *restraints_p,
+                                       gsl_vector *df) {
 
 #ifdef HAVE_CXX_THREAD
 #ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
@@ -162,6 +164,8 @@ coot::split_the_gradients_with_threads(const gsl_vector *v,
 
    //x auto tp_1 = std::chrono::high_resolution_clock::now();
 
+   // std::vector<std::chrono::time_point<std::chrono::system_clock> > timings(restraints_p->restraints_indices.size());
+
    std::atomic<unsigned int> done_count_for_threads(0);
    for (std::size_t ii=0; ii<restraints_p->restraints_indices.size(); ii++) {
 
@@ -171,12 +175,16 @@ coot::split_the_gradients_with_threads(const gsl_vector *v,
 					std::ref(restraints_p->df_by_thread_results[ii]),
 					std::ref(done_count_for_threads)
 					);
+      // we don't store the threads, so this won't work - we need to put the
+      // timing for process_dfs_in_range inside that function, and that fills
+      // a vector class member of type std::vector<std::chrono::time_point<std::chrono::system_clock> > >
+      // timings[ii] = std::chrono::high_resolution_clock::now();
    }
    //x auto tp_2 = std::chrono::high_resolution_clock::now();
 
    // wait for the threads in the thread pool
    while (done_count_for_threads != restraints_p->restraints_indices.size()) {
-      std::this_thread::sleep_for(std::chrono::microseconds(1));
+      std::this_thread::sleep_for(std::chrono::nanoseconds(20));
    }
 
    //x auto tp_3 = std::chrono::high_resolution_clock::now();
@@ -184,26 +192,44 @@ coot::split_the_gradients_with_threads(const gsl_vector *v,
    unsigned int n_r_s = restraints_p->restraints_indices.size();
    unsigned int n_variables = restraints_p->n_variables();
 
+   // consolidate - ~300us, GM restraints don't slow things down!? How can that be? Cache misses?
+   //
+   bool do_single_threaded_method = true;
+
+   if (do_single_threaded_method) {
+      for (std::size_t i_r_s=0; i_r_s<n_r_s; i_r_s++) {
+         const std::vector<double> &results_block = restraints_p->df_by_thread_results[i_r_s];
+         for (unsigned int i=0; i<n_variables; i++) {
+            if (results_block[i] != 0.0) { // this does speed things up a bit
+               *gsl_vector_ptr(df, i) += results_block[i];
+            }
+         }
+      }
+   } else {
+     // use consolidate_derivatives
+
+   // fill results_block
+   // void consolidate_dfs_for_atoms(int thread_index, std::pair<int, int> atom_indices,
+   //                                std::vector<double> *results_block_p,
+   //                                std::atomic<unsigned int> &done_count_for_threads);
+   // No, actually, before you do that - you've tried something like this before, I think.
+   // consolidate_derivatives.
+
    /*
       using threads slows things down by ~250us (baah!)
 
       unsigned int n_var_split = n_variables/2;
       done_count_for_threads = 0;
-      restraints_p->thread_pool_p->push(consolidate_derivatives, n_r_s,           0, n_var_split, restraints_p->df_by_thread_results, df, std::ref(done_count_for_threads));
-      restraints_p->thread_pool_p->push(consolidate_derivatives, n_r_s, n_var_split, n_variables, restraints_p->df_by_thread_results, df, std::ref(done_count_for_threads));
+      restraints_p->thread_pool_p->push(consolidate_derivatives, n_r_s,
+                                        0, n_var_split, restraints_p->df_by_thread_results,
+                                        df, std::ref(done_count_for_threads));
+      restraints_p->thread_pool_p->push(consolidate_derivatives, n_r_s, n_var_split,
+                                        n_variables, restraints_p->df_by_thread_results,
+                                        df, std::ref(done_count_for_threads));
       while (done_count_for_threads != 2)
          std::this_thread::sleep_for(std::chrono::microseconds(1));
    */
 
-   // consolidate - ~300us, GM restraints don't slow things down!? How can that be? Cache misses?
-   //
-   for (std::size_t i_r_s=0; i_r_s<n_r_s; i_r_s++) {
-      const std::vector<double> &results_block = restraints_p->df_by_thread_results[i_r_s];
-      for (unsigned int i=0; i<n_variables; i++) {
-	 if (results_block[i] != 0.0) { // this does speed things up a bit
-	    *gsl_vector_ptr(df, i) += results_block[i];
-	 }
-      }
    }
 
    //x auto tp_4 = std::chrono::high_resolution_clock::now();
@@ -224,17 +250,17 @@ coot::split_the_gradients_with_threads(const gsl_vector *v,
       done_count_for_threads = 0;
 
       for (std::size_t ii=0; ii<restraints_p->df_by_thread_atom_indices.size(); ii++) {
-	 restraints_p->thread_pool_p->push(process_electron_density_dfs_for_atoms,
-					   restraints_p->df_by_thread_atom_indices[ii],
-					   restraints_p, v, df,
-					   std::ref(done_count_for_threads));
+         restraints_p->thread_pool_p->push(process_electron_density_dfs_for_atoms,
+                                           restraints_p->df_by_thread_atom_indices[ii],
+                                           restraints_p, v, df,
+                                           std::ref(done_count_for_threads));
       }
 
       //x auto tp_6 = std::chrono::high_resolution_clock::now();
 
       // wait for the threads in the thread pool (~20us for threads to complete)
       while (done_count_for_threads != restraints_p->df_by_thread_atom_indices.size()) {
-	 std::this_thread::sleep_for(std::chrono::microseconds(1));
+         std::this_thread::sleep_for(std::chrono::microseconds(1));
       }
       //x auto tp_7 = std::chrono::high_resolution_clock::now();
 
@@ -250,7 +276,7 @@ coot::split_the_gradients_with_threads(const gsl_vector *v,
       auto d65 = chrono::duration_cast<chrono::microseconds>(tp_6 - tp_5).count();
       auto d76 = chrono::duration_cast<chrono::microseconds>(tp_7 - tp_6).count();
       if (true)
-	 std::cout << "timings:: distortion "
+	      std::cout << "timings:: distortion "
 		   << "d10 " << std::setw(5) << d10 << " "
 		   << "d21 " << std::setw(5) << d21 << " "
 		   << "d32 " << std::setw(5) << d32 << " "
@@ -277,9 +303,9 @@ coot::consolidate_derivatives(unsigned int thread_index,
 
    for (unsigned int i=variable_idx_start; i<variable_idx_end; i++) {
       for (std::size_t i_r_s=0; i_r_s<n_restraints_sets; i_r_s++) {
-	 if (df_sets_from[i_r_s][i] != 0.0) { // this test does speed things up (a bit)
-	    *gsl_vector_ptr(df, i) += df_sets_from[i_r_s][i];
-	 }
+         if (df_sets_from[i_r_s][i] != 0.0) { // this test does speed things up (a bit)
+            *gsl_vector_ptr(df, i) += df_sets_from[i_r_s][i];
+         }
       }
    }
    done_count_for_threads++;
@@ -303,69 +329,73 @@ coot::process_dfs_in_range(int thread_idx,
 
       // restraints_vec can change size due to pull atom restraints
       if (restraints_indices[i] >= n_restraints)
-	 continue;
+         continue;
 
-      const simple_restraint &rest = restraints_p->at(restraints_indices[i]);
+      const simple_restraint &rest = (*restraints_p)[restraints_indices[i]];
 
       if (false)
-	 std::cout << "process_dfs_in_range() i " << i << " restraint index " << restraints_indices[i]
-		   << " " << rest << std::endl;
+         std::cout << "process_dfs_in_range() i " << i << " restraint index " << restraints_indices[i]
+                   << " " << rest << std::endl;
 
       if (restraints_p->restraints_usage_flag & coot::GEMAN_MCCLURE_DISTANCE_MASK) {
-	 if (rest.restraint_type == coot::GEMAN_MCCLURE_DISTANCE_RESTRAINT) {
-	    process_dfs_geman_mcclure_distance(rest, restraints_p->geman_mcclure_alpha, v, results);
-	    continue;
-	 }
+         if (rest.restraint_type == coot::GEMAN_MCCLURE_DISTANCE_RESTRAINT) {
+            process_dfs_geman_mcclure_distance(rest, restraints_p->geman_mcclure_alpha, v, results);
+            continue;
+         }
       }
 
       if (restraints_p->restraints_usage_flag & coot::NON_BONDED_MASK) {
-	 if (rest.restraint_type == coot::NON_BONDED_CONTACT_RESTRAINT) {
-	    if (! rest.is_H_non_bonded_contact || restraints_p->apply_H_non_bonded_contacts_state()) {
-	       if (rest.nbc_function == simple_restraint::LENNARD_JONES) {
-		  process_dfs_non_bonded_lennard_jones(rest, restraints_p->lennard_jones_epsilon, v, results);
-	       } else {
-		  process_dfs_non_bonded(rest, v, results);
-	       }
-	    }
-	    continue;
-	 }
+         if (rest.restraint_type == coot::NON_BONDED_CONTACT_RESTRAINT) {
+            if (! rest.is_H_non_bonded_contact || restraints_p->apply_H_non_bonded_contacts_state()) {
+               if (rest.nbc_function == simple_restraint::LENNARD_JONES) {
+                  process_dfs_non_bonded_lennard_jones(rest, restraints_p->lennard_jones_epsilon, v, results);
+               } else {
+                  process_dfs_non_bonded(rest, v, results);
+               }
+            }
+            continue;
+         }
       }
 
       if (restraints_p->restraints_usage_flag & coot::BONDS_MASK)
-	 if (rest.restraint_type == coot::BOND_RESTRAINT)
-	    process_dfs_bond(rest, v, results);
-	 
+         if (rest.restraint_type == coot::BOND_RESTRAINT)
+            process_dfs_bond(rest, v, results);
+
       if (restraints_p->restraints_usage_flag & coot::ANGLES_MASK)
-	 if (rest.restraint_type == coot::ANGLE_RESTRAINT)
-	    process_dfs_angle(rest, v, results);
+         if (rest.restraint_type == coot::ANGLE_RESTRAINT)
+            process_dfs_angle(rest, v, results);
 
       // Torsions are not yet turned on in the constructor
       if (restraints_p->restraints_usage_flag & coot::TORSIONS_MASK)
-	 if (rest.restraint_type == coot::TORSION_RESTRAINT)
-	    process_dfs_torsion(rest, v, results);
+         if (rest.restraint_type == coot::TORSION_RESTRAINT)
+            process_dfs_torsion(rest, v, results);
 
       if (restraints_p->restraints_usage_flag & coot::CHIRAL_VOLUME_MASK)
-	 if (rest.restraint_type == coot::CHIRAL_VOLUME_RESTRAINT)
-	    process_dfs_chiral_volume(rest, v, results);
+         if (rest.restraint_type == coot::CHIRAL_VOLUME_RESTRAINT)
+            process_dfs_chiral_volume(rest, v, results);
 
       if (restraints_p->restraints_usage_flag & coot::PLANES_MASK)
-	 if (rest.restraint_type == coot::PLANE_RESTRAINT)
-	    process_dfs_plane(rest, v, results);
+         if (rest.restraint_type == coot::PLANE_RESTRAINT)
+            process_dfs_plane(rest, v, results);
+
+      if (restraints_p->restraints_usage_flag & coot::IMPROPER_DIHEDRALS_MASK)
+         if (rest.restraint_type == coot::IMPROPER_DIHEDRAL_RESTRAINT)
+            process_dfs_improper_dihedral(rest, v, results);
 
       if (restraints_p->restraints_usage_flag & coot::TRANS_PEPTIDE_MASK)
-	 if (rest.restraint_type == coot::TRANS_PEPTIDE_RESTRAINT)
-	    process_dfs_trans_peptide(rest, v, results);
+         if (rest.restraint_type == coot::TRANS_PEPTIDE_RESTRAINT)
+            process_dfs_trans_peptide(rest, v, results);
 
       if (restraints_p->restraints_usage_flag & coot::RAMA_PLOT_MASK)
-	 if (rest.restraint_type == coot::RAMACHANDRAN_RESTRAINT)
-	    process_dfs_rama(rest, restraints_p, v, results);
+         if (rest.restraint_type == coot::RAMACHANDRAN_RESTRAINT)
+            process_dfs_rama(rest, restraints_p, v, results);
 
       if (restraints_p->restraints_usage_flag & coot::PARALLEL_PLANES_MASK)
-	 if (rest.restraint_type == coot::PARALLEL_PLANES_RESTRAINT)
-	    process_dfs_parallel_planes(rest, v, results);
+         if (rest.restraint_type == coot::PARALLEL_PLANES_RESTRAINT)
+            process_dfs_parallel_planes(rest, v, results);
 
       if (rest.restraint_type == coot::TARGET_POS_RESTRAINT)
-	 process_dfs_target_position(rest, restraints_p->log_cosh_target_distance_scale_factor, v, results);
+         process_dfs_target_position(rest, restraints_p->log_cosh_target_distance_scale_factor, v, results);
 
    }
 
@@ -393,7 +423,7 @@ coot::process_dfs_bond(const coot::simple_restraint &restraint,
 
    double weight = 1.0/(restraint.sigma * restraint.sigma);
 
-   double constant_part = 2.0*weight * (1 - target_val * f_inv_fsqrt(b_i_sqrd));
+   double constant_part = 2.0*weight * (1.0 - target_val * f_inv_fsqrt(b_i_sqrd));
 
    double x_k_contrib = constant_part*(a1.x()-a2.x());
    double y_k_contrib = constant_part*(a1.y()-a2.y());
@@ -402,6 +432,11 @@ coot::process_dfs_bond(const coot::simple_restraint &restraint,
    double x_l_contrib = constant_part*(a2.x()-a1.x());
    double y_l_contrib = constant_part*(a2.y()-a1.y());
    double z_l_contrib = constant_part*(a2.z()-a1.z());
+
+#if 0 // debugging
+   std::this_thread::sleep_for(std::chrono::microseconds(100));
+   std::cout << "derivs " << x_k_contrib << " " << y_k_contrib << " " << z_k_contrib <<  " " << x_l_contrib << " " << y_l_contrib << " " << z_l_contrib << std::endl;
+#endif
 
    if (! restraint.fixed_atom_flags[0]) {
       results[idx_1  ] += x_k_contrib;
@@ -446,21 +481,21 @@ coot::process_dfs_angle(const coot::simple_restraint &restraint,
 
    double target_value = restraint.target_value*DEGTORAD;
 
-   idx = 3*(restraint.atom_index_1); 
-   clipper::Coord_orth k(gsl_vector_get(v,idx), 
-			 gsl_vector_get(v,idx+1), 
+   idx = 3*(restraint.atom_index_1);
+   clipper::Coord_orth k(gsl_vector_get(v,idx),
+			 gsl_vector_get(v,idx+1),
 			 gsl_vector_get(v,idx+2));
-   idx = 3*(restraint.atom_index_2); 
-   clipper::Coord_orth l(gsl_vector_get(v,idx), 
-			 gsl_vector_get(v,idx+1), 
+   idx = 3*(restraint.atom_index_2);
+   clipper::Coord_orth l(gsl_vector_get(v,idx),
+			 gsl_vector_get(v,idx+1),
 			 gsl_vector_get(v,idx+2));
-   idx = 3*(restraint.atom_index_3); 
-   clipper::Coord_orth m(gsl_vector_get(v,idx), 
-			 gsl_vector_get(v,idx+1), 
+   idx = 3*(restraint.atom_index_3);
+   clipper::Coord_orth m(gsl_vector_get(v,idx),
+			 gsl_vector_get(v,idx+1),
 			 gsl_vector_get(v,idx+2));
 
-   clipper::Coord_orth a_vec = (k - l); 
-   clipper::Coord_orth b_vec = (m - l);  
+   clipper::Coord_orth a_vec = (k - l);
+   clipper::Coord_orth b_vec = (m - l);
 
    double a = sqrt(a_vec.lengthsq());
    double b = sqrt(b_vec.lengthsq());
@@ -472,17 +507,17 @@ coot::process_dfs_angle(const coot::simple_restraint &restraint,
    }
    if (b < 0.01) {
       b = 0.01;
-      b_vec = clipper::Coord_orth(0.01, 0.01, 0.01);
+      b_vec = clipper::Coord_orth(0.01, 0.01, -0.01);
    }
-	    
+
    double l_over_a_sqd = 1.0/(a*a);
    double l_over_b_sqd = 1.0/(b*b);
    double l_ab         = 1.0/(a*b);
 
-   // for the end atoms: 
+   // for the end atoms:
    // \frac{\partial \theta}{\partial x_k} =
    //    -\frac{1}{sin\theta} [(x_l-x_k)cos\theta + \frac{x_m-x_l}{ab}]
-	 
+
    double a_dot_b = clipper::Coord_orth::dot(a_vec,b_vec);
    double cos_theta = a_dot_b/(a*b);
    // we need to stabilize cos_theta
@@ -505,18 +540,18 @@ coot::process_dfs_angle(const coot::simple_restraint &restraint,
    y_m_contrib = prem*(cos_theta*(l.y()-m.y())*l_over_b_sqd + l_ab*(k.y()-l.y()));
    z_m_contrib = prem*(cos_theta*(l.z()-m.z())*l_over_b_sqd + l_ab*(k.z()-l.z()));
 
-   // For the middle atom, we have more cross terms in 
+   // For the middle atom, we have more cross terms in
    // the derivatives of ab and a_dot_b.
-   // 
-   // I will split it up so that it is easier to read: 
-   // 
+   //
+   // I will split it up so that it is easier to read:
+   //
    term1x = (-cos_theta*(l.x()-k.x())*l_over_a_sqd) -cos_theta*(l.x()-m.x())*l_over_b_sqd;
    term1y = (-cos_theta*(l.y()-k.y())*l_over_a_sqd) -cos_theta*(l.y()-m.y())*l_over_b_sqd;
    term1z = (-cos_theta*(l.z()-k.z())*l_over_a_sqd) -cos_theta*(l.z()-m.z())*l_over_b_sqd;
 
    term2x = (-(k.x()-l.x())-(m.x()-l.x()))*l_ab;
    term2y = (-(k.y()-l.y())-(m.y()-l.y()))*l_ab;
-   term2z = (-(k.z()-l.z())-(m.z()-l.z()))*l_ab; 
+   term2z = (-(k.z()-l.z())-(m.z()-l.z()))*l_ab;
 
    x_l_mid_contrib = prem*(term1x + term2x);
    y_l_mid_contrib = prem*(term1y + term2y);
@@ -529,14 +564,14 @@ coot::process_dfs_angle(const coot::simple_restraint &restraint,
    double ds_dth = 2.0*(theta - target_value)*RADTODEG*RADTODEG;
    double w_ds_dth = weight * ds_dth;
 
-   if (!restraint.fixed_atom_flags[0]) { 
+   if (!restraint.fixed_atom_flags[0]) {
       idx = 3*(restraint.atom_index_1);
-      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + x_k_contrib*w_ds_dth); 
-      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + y_k_contrib*w_ds_dth); 
+      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + x_k_contrib*w_ds_dth);
+      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + y_k_contrib*w_ds_dth);
       // gsl_vector_set(df, idx+2, gsl_vector_get(df, idx+2) + z_k_contrib*w_ds_dth);
 
       if (false)
-	 std::cout << "debug angle gradient: " << idx << " "
+         std::cout << "debug angle gradient: " << idx << " "
 		   << " theta " << theta << " target_value " << target_value << " "
 		   << std::setw(12) << x_k_contrib << " "
 		   << std::setw(12) << y_k_contrib << " "
@@ -549,20 +584,20 @@ coot::process_dfs_angle(const coot::simple_restraint &restraint,
    }
    if (!restraint.fixed_atom_flags[2]) {
       idx = 3*(restraint.atom_index_3);
-      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + x_m_contrib*w_ds_dth); 
-      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + y_m_contrib*w_ds_dth); 
-      // gsl_vector_set(df, idx+2, gsl_vector_get(df, idx+2) + z_m_contrib*w_ds_dth); 
+      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + x_m_contrib*w_ds_dth);
+      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + y_m_contrib*w_ds_dth);
+      // gsl_vector_set(df, idx+2, gsl_vector_get(df, idx+2) + z_m_contrib*w_ds_dth);
       results[idx  ] += x_m_contrib*w_ds_dth;
       results[idx+1] += y_m_contrib*w_ds_dth;
       results[idx+2] += z_m_contrib*w_ds_dth;
    }
 
    // and mid atom
-   if (!restraint.fixed_atom_flags[1]) { 
+   if (!restraint.fixed_atom_flags[1]) {
       idx = 3*(restraint.atom_index_2);
-      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + x_l_mid_contrib*w_ds_dth); 
-      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + y_l_mid_contrib*w_ds_dth); 
-      // gsl_vector_set(df, idx+2, gsl_vector_get(df, idx+2) + z_l_mid_contrib*w_ds_dth); 
+      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + x_l_mid_contrib*w_ds_dth);
+      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + y_l_mid_contrib*w_ds_dth);
+      // gsl_vector_set(df, idx+2, gsl_vector_get(df, idx+2) + z_l_mid_contrib*w_ds_dth);
       results[idx  ] += x_l_mid_contrib*w_ds_dth;
       results[idx+1] += y_l_mid_contrib*w_ds_dth;
       results[idx+2] += z_l_mid_contrib*w_ds_dth;
@@ -575,29 +610,29 @@ coot::process_dfs_torsion(const coot::simple_restraint &this_restraint,
 			  const gsl_vector *v,
 			  std::vector<double> &results) { // fill results
 
-   int n_torsion_restr = 0; 
-   int idx; 
+   int n_torsion_restr = 0;
+   int idx;
 
-   idx = 3*(this_restraint.atom_index_1); 
-   clipper::Coord_orth P1(gsl_vector_get(v,idx), 
-			  gsl_vector_get(v,idx+1), 
+   idx = 3*(this_restraint.atom_index_1);
+   clipper::Coord_orth P1(gsl_vector_get(v,idx),
+			  gsl_vector_get(v,idx+1),
 			  gsl_vector_get(v,idx+2));
-   idx = 3*(this_restraint.atom_index_2); 
-   clipper::Coord_orth P2(gsl_vector_get(v,idx), 
-			  gsl_vector_get(v,idx+1), 
+   idx = 3*(this_restraint.atom_index_2);
+   clipper::Coord_orth P2(gsl_vector_get(v,idx),
+			  gsl_vector_get(v,idx+1),
 			  gsl_vector_get(v,idx+2));
-   idx = 3*(this_restraint.atom_index_3); 
-   clipper::Coord_orth P3(gsl_vector_get(v,idx), 
-			  gsl_vector_get(v,idx+1), 
+   idx = 3*(this_restraint.atom_index_3);
+   clipper::Coord_orth P3(gsl_vector_get(v,idx),
+			  gsl_vector_get(v,idx+1),
 			  gsl_vector_get(v,idx+2));
-   idx = 3*(this_restraint.atom_index_4); 
-   clipper::Coord_orth P4(gsl_vector_get(v,idx), 
-			  gsl_vector_get(v,idx+1), 
+   idx = 3*(this_restraint.atom_index_4);
+   clipper::Coord_orth P4(gsl_vector_get(v,idx),
+			  gsl_vector_get(v,idx+1),
 			  gsl_vector_get(v,idx+2));
 
    try {
-      coot::distortion_torsion_gradients_t dtg =
-	 fill_distortion_torsion_gradients(P1, P2, P3, P4);
+
+      distortion_torsion_gradients_t dtg = fill_distortion_torsion_gradients(P1, P2, P3, P4);
 
       if (dtg.zero_gradients) {
 
@@ -605,104 +640,63 @@ coot::process_dfs_torsion(const coot::simple_restraint &this_restraint,
 
       } else {
 
-	 //
-	 // use period
+         double V_jk = 11.0;
+         double n_jk = this_restraint.periodicity;
+         double phi     = clipper::Util::d2rad(dtg.theta); // variable name change
+         double phi0_jk = clipper::Util::d2rad(this_restraint.target_value);
+         double dV_dphi = 0.5 * V_jk * (sin(n_jk*(phi - phi0_jk))) * n_jk;
+         double tt = dtg.tan_theta; // variable name change
+         double scale = dV_dphi/(1.0 + tt*tt);
 
-	 double diff = 99999.9;
-	 double tdiff;
-	 double trial_target;
-	 int per = this_restraint.periodicity;
+	 double xP1_contrib = scale * dtg.dD_dxP1;
+	 double xP2_contrib = scale * dtg.dD_dxP2;
+	 double xP3_contrib = scale * dtg.dD_dxP3;
+	 double xP4_contrib = scale * dtg.dD_dxP4;
 
-	 if (dtg.theta < 0.0) dtg.theta += 360.0; 
+	 double yP1_contrib = scale * dtg.dD_dyP1;
+	 double yP2_contrib = scale * dtg.dD_dyP2;
+	 double yP3_contrib = scale * dtg.dD_dyP3;
+	 double yP4_contrib = scale * dtg.dD_dyP4;
 
-	 for(int iper=0; iper<per; iper++) { 
-	    trial_target = this_restraint.target_value + double(iper)*360.0/double(per); 
-	    if (trial_target >= 360.0) trial_target -= 360.0; 
-	    tdiff = dtg.theta - trial_target;
-	    if (tdiff < -180) tdiff += 360;
-	    if (tdiff >  180) tdiff -= 360;
-	    // std::cout << "   iper: " << iper << "   " << dtg.theta << "   " << trial_target << "   " << tdiff << "   " << diff << std::endl;
-	    if (fabs(tdiff) < fabs(diff)) { 
-	       diff = tdiff;
-	    }
-	 }
-	 if (diff < -180.0) { 
-	    diff += 360.; 
-	 } else { 
-	    if (diff > 180.0) { 
-	       diff -= 360.0; 
-	    }
-	 }
-		  
-	 if (false)
-	    std::cout << "in df_torsion: dtg.theta is " << dtg.theta 
-		      <<  " and target is " << this_restraint.target_value 
-		      << " and diff is " << diff
-		      << " and periodicity: " << this_restraint.periodicity << std::endl;
+	 double zP1_contrib = scale * dtg.dD_dzP1;
+	 double zP2_contrib = scale * dtg.dD_dzP2;
+	 double zP3_contrib = scale * dtg.dD_dzP3;
+	 double zP4_contrib = scale * dtg.dD_dzP4;
 
-	 double tt = tan(clipper::Util::d2rad(dtg.theta));
-	 double torsion_scale = (1.0/(1+tt*tt)) *
-	    clipper::Util::rad2d(1.0);
-
-	 double weight = 1/(this_restraint.sigma * this_restraint.sigma);
-
-	 // 	       std::cout << "torsion weight: " << weight << std::endl;
-	 // 	       std::cout << "torsion_scale : " << torsion_scale << std::endl; 
-	 // 	       std::cout << "diff          : " << torsion_scale << std::endl; 	       
-
-	 double xP1_contrib = 2.0*diff*dtg.dD_dxP1*torsion_scale * weight;
-	 double xP2_contrib = 2.0*diff*dtg.dD_dxP2*torsion_scale * weight;
-	 double xP3_contrib = 2.0*diff*dtg.dD_dxP3*torsion_scale * weight;
-	 double xP4_contrib = 2.0*diff*dtg.dD_dxP4*torsion_scale * weight;
-
-	 double yP1_contrib = 2.0*diff*dtg.dD_dyP1*torsion_scale * weight;
-	 double yP2_contrib = 2.0*diff*dtg.dD_dyP2*torsion_scale * weight;
-	 double yP3_contrib = 2.0*diff*dtg.dD_dyP3*torsion_scale * weight;
-	 double yP4_contrib = 2.0*diff*dtg.dD_dyP4*torsion_scale * weight;
-
-	 double zP1_contrib = 2.0*diff*dtg.dD_dzP1*torsion_scale * weight;
-	 double zP2_contrib = 2.0*diff*dtg.dD_dzP2*torsion_scale * weight;
-	 double zP3_contrib = 2.0*diff*dtg.dD_dzP3*torsion_scale * weight;
-	 double zP4_contrib = 2.0*diff*dtg.dD_dzP4*torsion_scale * weight;
-	    
-	 if (! this_restraint.fixed_atom_flags[0]) { 
+	 if (! this_restraint.fixed_atom_flags[0]) {
 	    idx = 3*(this_restraint.atom_index_1);
-	    // *gsl_vector_ptr(df, idx  ) += xP1_contrib;
-	    // *gsl_vector_ptr(df, idx+1) += yP1_contrib;
-	    // *gsl_vector_ptr(df, idx+2) += zP1_contrib;
+
+            // std::cout << "torsion deriv " << idx/3 << " " << xP1_contrib << " " << yP1_contrib << " " << zP1_contrib << std::endl;
 
 	    results[idx  ] += xP1_contrib;
 	    results[idx+1] += yP1_contrib;
 	    results[idx+2] += zP1_contrib;
 	 }
 
-	 if (! this_restraint.fixed_atom_flags[1]) { 
+	 if (! this_restraint.fixed_atom_flags[1]) {
 	    idx = 3*(this_restraint.atom_index_2);
-	    // *gsl_vector_ptr(df, idx  ) += xP2_contrib;
-	    // *gsl_vector_ptr(df, idx+1) += yP2_contrib;
-	    // *gsl_vector_ptr(df, idx+2) += zP2_contrib;
+
+            // std::cout << "torsion deriv " << idx/3 << " " << xP2_contrib << " " << yP2_contrib << " " << zP2_contrib << std::endl;
 
 	    results[idx  ] += xP2_contrib;
 	    results[idx+1] += yP2_contrib;
 	    results[idx+2] += zP2_contrib;
 	 }
 
-	 if (! this_restraint.fixed_atom_flags[2]) { 
+	 if (! this_restraint.fixed_atom_flags[2]) {
 	    idx = 3*(this_restraint.atom_index_3);
-	    // *gsl_vector_ptr(df, idx  ) += xP3_contrib;
-	    // *gsl_vector_ptr(df, idx+1) += yP3_contrib;
-	    // *gsl_vector_ptr(df, idx+2) += zP3_contrib;
+
+            // std::cout << "torsion deriv " << idx/3 << " " << xP3_contrib << " " << yP3_contrib << " " << zP3_contrib << std::endl;
 
 	    results[idx  ] += xP3_contrib;
 	    results[idx+1] += yP3_contrib;
 	    results[idx+2] += zP3_contrib;
 	 }
 
-	 if (! this_restraint.fixed_atom_flags[3]) { 
+	 if (! this_restraint.fixed_atom_flags[3]) {
 	    idx = 3*(this_restraint.atom_index_4);
-	    // *gsl_vector_ptr(df, idx  ) += xP4_contrib;
-	    // *gsl_vector_ptr(df, idx+1) += yP4_contrib;
-	    // *gsl_vector_ptr(df, idx+2) += zP4_contrib;
+
+            // std::cout << "torsion deriv " << idx/3 << " " << xP4_contrib << " " << yP4_contrib << " " << zP4_contrib << std::endl;
 
 	    results[idx  ] += xP4_contrib;
 	    results[idx+1] += yP4_contrib;
@@ -713,7 +707,7 @@ coot::process_dfs_torsion(const coot::simple_restraint &this_restraint,
    catch (const std::runtime_error &rte) {
       std::cout << "Caught runtime_error" << rte.what() << std::endl;
    }
-} 
+}
 
 void
 coot::process_dfs_chiral_volume(const coot::simple_restraint &restraint,
@@ -723,7 +717,7 @@ coot::process_dfs_chiral_volume(const coot::simple_restraint &restraint,
 
    double cv;
    double distortion;
-   
+
    int idx = 3*restraint.atom_index_centre;
    clipper::Coord_orth centre(gsl_vector_get(v, idx),
 			      gsl_vector_get(v, idx+1),
@@ -749,9 +743,9 @@ coot::process_dfs_chiral_volume(const coot::simple_restraint &restraint,
    cv = clipper::Coord_orth::dot(a, clipper::Coord_orth::cross(b,c));
 
    distortion = cv - restraint.target_chiral_volume;
-	    
-   // 	    std::cout << "---- xxx ---- DEBUG:: chiral volume deriv: " 
-   // 		      << cv << " chiral distortion " 
+
+   // 	    std::cout << "---- xxx ---- DEBUG:: chiral volume deriv: "
+   // 		      << cv << " chiral distortion "
    // 		      << distortion << "\n";
    // distortion /= (restraint.sigma * restraint.sigma);
 
@@ -759,13 +753,13 @@ coot::process_dfs_chiral_volume(const coot::simple_restraint &restraint,
       - (b.y()*c.z() - b.z()*c.y())
       - (a.z()*c.y() - a.y()*c.z())
       - (a.y()*b.z() - a.z()*b.y());
-		  
-   double P0_y_contrib = 
+
+   double P0_y_contrib =
       - (b.z()*c.x() - b.x()*c.z())
       - (a.x()*c.z() - a.z()*c.x())
       - (a.z()*b.x() - a.x()*b.z());
 
-   double P0_z_contrib = 
+   double P0_z_contrib =
       - (b.x()*c.y() - b.y()*c.x())
       - (a.y()*c.x() - a.x()*c.y())
       - (a.x()*b.y() - a.y()*b.x());
@@ -784,7 +778,7 @@ coot::process_dfs_chiral_volume(const coot::simple_restraint &restraint,
 
    double s = 2*distortion/(restraint.sigma * restraint.sigma);
 
-   if (!restraint.fixed_atom_flags[0]) { 
+   if (!restraint.fixed_atom_flags[0]) {
       idx = 3*( restraint.atom_index_centre);
       // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + s * P0_x_contrib);
       // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + s * P0_y_contrib);
@@ -793,35 +787,131 @@ coot::process_dfs_chiral_volume(const coot::simple_restraint &restraint,
       results[idx+1] += s * P0_y_contrib;
       results[idx+2] += s * P0_z_contrib;
    }
-	       
-   if (!restraint.fixed_atom_flags[1]) { 
+
+   if (!restraint.fixed_atom_flags[1]) {
       idx = 3*( restraint.atom_index_1);
-      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + s * P1_x_contrib); 
-      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + s * P1_y_contrib); 
+      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + s * P1_x_contrib);
+      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + s * P1_y_contrib);
       // gsl_vector_set(df, idx+2, gsl_vector_get(df, idx+2) + s * P1_z_contrib);
       results[idx  ] += s * P1_x_contrib;
       results[idx+1] += s * P1_y_contrib;
       results[idx+2] += s * P1_z_contrib;
    }
 
-   if (!restraint.fixed_atom_flags[2]) { 
+   if (!restraint.fixed_atom_flags[2]) {
       idx = 3*( restraint.atom_index_2);
-      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + s * P2_x_contrib); 
-      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + s * P2_y_contrib); 
+      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + s * P2_x_contrib);
+      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + s * P2_y_contrib);
       // gsl_vector_set(df, idx+2, gsl_vector_get(df, idx+2) + s * P2_z_contrib);
       results[idx  ] += s * P2_x_contrib;
       results[idx+1] += s * P2_y_contrib;
       results[idx+2] += s * P2_z_contrib;
    }
 
-   if (!restraint.fixed_atom_flags[3]) { 
+   if (!restraint.fixed_atom_flags[3]) {
       idx = 3*( restraint.atom_index_3);
-      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + s * P3_x_contrib); 
-      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + s * P3_y_contrib); 
+      // gsl_vector_set(df, idx,   gsl_vector_get(df, idx)   + s * P3_x_contrib);
+      // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + s * P3_y_contrib);
       // gsl_vector_set(df, idx+2, gsl_vector_get(df, idx+2) + s * P3_z_contrib);
       results[idx  ] += s * P3_x_contrib;
       results[idx+1] += s * P3_y_contrib;
       results[idx+2] += s * P3_z_contrib;
+   }
+}
+
+
+void
+coot::process_dfs_improper_dihedral(const coot::simple_restraint &restraint,
+				                        const gsl_vector *v,
+				                        std::vector<double> &results) { // fill results
+
+   double cv;
+   double distortion;
+
+   int idx;
+
+   idx = 3*( restraint.atom_index_1);
+   clipper::Coord_orth a1(gsl_vector_get(v, idx),
+			  gsl_vector_get(v, idx+1),
+			  gsl_vector_get(v, idx+2));
+   idx = 3*( restraint.atom_index_2);
+   clipper::Coord_orth a2(gsl_vector_get(v, idx),
+			  gsl_vector_get(v, idx+1),
+			  gsl_vector_get(v, idx+2));
+   idx = 3*( restraint.atom_index_3);
+   clipper::Coord_orth a3(gsl_vector_get(v, idx),
+			  gsl_vector_get(v, idx+1),
+			  gsl_vector_get(v, idx+2));
+   idx = 3*restraint.atom_index_4;
+   clipper::Coord_orth centre(gsl_vector_get(v, idx),
+			      gsl_vector_get(v, idx+1),
+			      gsl_vector_get(v, idx+2));
+
+   clipper::Coord_orth a = a1 - centre;
+   clipper::Coord_orth b = a2 - centre;
+   clipper::Coord_orth c = a3 - centre;
+
+   cv = clipper::Coord_orth::dot(a, clipper::Coord_orth::cross(b,c));
+   distortion = cv;
+   if (false) // debug
+      std::cout << "process_dfs_improper_dihedral " << distortion << "\n";
+
+   double P0_x_contrib =
+      - (b.y()*c.z() - b.z()*c.y())
+      - (a.z()*c.y() - a.y()*c.z())
+      - (a.y()*b.z() - a.z()*b.y());
+
+   double P0_y_contrib =
+      - (b.z()*c.x() - b.x()*c.z())
+      - (a.x()*c.z() - a.z()*c.x())
+      - (a.z()*b.x() - a.x()*b.z());
+
+   double P0_z_contrib =
+      - (b.x()*c.y() - b.y()*c.x())
+      - (a.y()*c.x() - a.x()*c.y())
+      - (a.x()*b.y() - a.y()*b.x());
+
+   double P1_x_contrib = b.y()*c.z() - b.z()*c.y();
+   double P1_y_contrib = b.z()*c.x() - b.x()*c.z();
+   double P1_z_contrib = b.x()*c.y() - b.y()*c.x();
+
+   double P2_x_contrib = a.z()*c.y() - a.y()*c.z();
+   double P2_y_contrib = a.x()*c.z() - a.z()*c.x();
+   double P2_z_contrib = a.y()*c.x() - a.x()*c.y();
+
+   double P3_x_contrib = a.y()*b.z() - a.z()*b.y();
+   double P3_y_contrib = a.z()*b.x() - a.x()*b.z();
+   double P3_z_contrib = a.x()*b.y() - a.y()*b.x();
+
+   double sigma = restraint.sigma;
+   double s = 2.0 * distortion/(sigma * sigma);
+
+   if (!restraint.fixed_atom_flags[0]) {
+      idx = 3*( restraint.atom_index_1);
+      results[idx  ] += s * P1_x_contrib;
+      results[idx+1] += s * P1_y_contrib;
+      results[idx+2] += s * P1_z_contrib;
+   }
+
+   if (!restraint.fixed_atom_flags[1]) {
+      idx = 3*( restraint.atom_index_2);
+      results[idx  ] += s * P2_x_contrib;
+      results[idx+1] += s * P2_y_contrib;
+      results[idx+2] += s * P2_z_contrib;
+   }
+
+   if (!restraint.fixed_atom_flags[2]) {
+      idx = 3*( restraint.atom_index_3);
+      results[idx  ] += s * P3_x_contrib;
+      results[idx+1] += s * P3_y_contrib;
+      results[idx+2] += s * P3_z_contrib;
+   }
+
+   if (!restraint.fixed_atom_flags[3]) {
+      idx = 3*( restraint.atom_index_4);
+      results[idx  ] += s * P0_x_contrib;
+      results[idx+1] += s * P0_y_contrib;
+      results[idx+2] += s * P0_z_contrib;
    }
 }
 
@@ -830,7 +920,7 @@ coot::process_dfs_plane(const coot::simple_restraint &plane_restraint,
 		       const gsl_vector *v,
 		       std::vector<double> &results) { // fill results
 
-   int idx; 
+   int idx;
 
    double devi_len;
    // this calculates plane_info.distortion_score, but we don't need it here.
@@ -844,7 +934,7 @@ coot::process_dfs_plane(const coot::simple_restraint &plane_restraint,
       if (! plane_restraint.fixed_atom_flags[j] ) {
 	 idx = 3*plane_restraint.plane_atom_index[j].first;
 	 devi_len =
-	    plane_info.abcd[0]*gsl_vector_get(v,idx  ) + 
+	    plane_info.abcd[0]*gsl_vector_get(v,idx  ) +
 	    plane_info.abcd[1]*gsl_vector_get(v,idx+1) +
 	    plane_info.abcd[2]*gsl_vector_get(v,idx+2) -
 	    plane_info.abcd[3];
@@ -1007,7 +1097,7 @@ coot::process_dfs_non_bonded_lennard_jones(const coot::simple_restraint &this_re
 
    // theres a problem here somewhere.  Need to check this - change the NBC function
    // in make_non_bonded_contact_restraints()
-   
+
    int idx_1 = 3*this_restraint.atom_index_1;
    int idx_2 = 3*this_restraint.atom_index_2;
 
@@ -1022,9 +1112,9 @@ coot::process_dfs_non_bonded_lennard_jones(const coot::simple_restraint &this_re
    double lj_sigma = this_restraint.target_value;
    double max_dist = lj_sigma * 2.5; // 2.5 is conventional limit, i.e. ~3.5 * 2.5
    max_dist = 999.9; // does this match the one in the gradients? And the one in distortion score?
-   
+
    double b_i_sqrd = (a1-a2).lengthsq();
-   if (b_i_sqrd < 0.81) b_i_sqrd = 0.81; // stabilize (as per distortion score lj)
+   if (b_i_sqrd < 1.0) b_i_sqrd = 1.0; // stabilize (as per distortion score lj)
 
    if (b_i_sqrd < (max_dist * max_dist)) {
 
@@ -1086,13 +1176,15 @@ coot::process_dfs_target_position(const coot::simple_restraint &restraint,
 				  const gsl_vector *v,
 				  std::vector<double> &results) {
 
+   if (restraint.is_closed) return;
+
    double sigma = 0.03;
    int idx = 3*(restraint.atom_index_1);
 
    bool harmonic_restraint = true;
 
    if (harmonic_restraint) {
-      
+
       double constant_part = 2.0 / (sigma * sigma);
 
       double dist_x = gsl_vector_get(v, idx)   - restraint.atom_pull_target_pos[0];
@@ -1110,7 +1202,7 @@ coot::process_dfs_target_position(const coot::simple_restraint &restraint,
    } else {
 
       double scale = log_cosh_target_distance_scale_factor;
-      double top_out_dist = 4.0;  // Angstroms, needs tweaking?
+     double top_out_dist = 4.0;  // Angstroms, needs tweaking?
       double k = 1.0 / top_out_dist;
 
       clipper::Coord_orth current_pos(gsl_vector_get(v,idx),
@@ -1363,35 +1455,35 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
       int idx;
 
       idx = 3*(rama_restraint.atom_index_1);
-      clipper::Coord_orth P1(gsl_vector_get(v,idx), 
-			     gsl_vector_get(v,idx+1), 
+      clipper::Coord_orth P1(gsl_vector_get(v,idx),
+			     gsl_vector_get(v,idx+1),
 			     gsl_vector_get(v,idx+2));
-      idx = 3*(rama_restraint.atom_index_2); 
-      clipper::Coord_orth P2(gsl_vector_get(v,idx), 
-			     gsl_vector_get(v,idx+1), 
+      idx = 3*(rama_restraint.atom_index_2);
+      clipper::Coord_orth P2(gsl_vector_get(v,idx),
+			     gsl_vector_get(v,idx+1),
 			     gsl_vector_get(v,idx+2));
-      idx = 3*(rama_restraint.atom_index_3); 
-      clipper::Coord_orth P3(gsl_vector_get(v,idx), 
-			     gsl_vector_get(v,idx+1), 
+      idx = 3*(rama_restraint.atom_index_3);
+      clipper::Coord_orth P3(gsl_vector_get(v,idx),
+			     gsl_vector_get(v,idx+1),
 			     gsl_vector_get(v,idx+2));
-      idx = 3*(rama_restraint.atom_index_4); 
-      clipper::Coord_orth P4(gsl_vector_get(v,idx), 
-			     gsl_vector_get(v,idx+1), 
+      idx = 3*(rama_restraint.atom_index_4);
+      clipper::Coord_orth P4(gsl_vector_get(v,idx),
+			     gsl_vector_get(v,idx+1),
 			     gsl_vector_get(v,idx+2));
-      idx = 3*(rama_restraint.atom_index_5); 
-      clipper::Coord_orth P5(gsl_vector_get(v,idx), 
-			     gsl_vector_get(v,idx+1), 
+      idx = 3*(rama_restraint.atom_index_5);
+      clipper::Coord_orth P5(gsl_vector_get(v,idx),
+			     gsl_vector_get(v,idx+1),
 			     gsl_vector_get(v,idx+2));
 
-      clipper::Coord_orth a = P2 - P1; 
-      clipper::Coord_orth b = P3 - P2; 
+      clipper::Coord_orth a = P2 - P1;
+      clipper::Coord_orth b = P3 - P2;
       clipper::Coord_orth c = P4 - P3;
       clipper::Coord_orth d = P5 - P4;
 
       // New assignements:
       // TRANS    psi    (2nd N) (2nd CA) (2nd C ) (3nd N)
-      // TRANS    phi    (1st C) (2nd N ) (2nd CA) (2nd C) 
-      // 
+      // TRANS    phi    (1st C) (2nd N ) (2nd CA) (2nd C)
+      //
       // So Rama_atoms in this order:
       //   0       1        2      3         4
       //  P1      P2       P3     P4        P5
@@ -1431,7 +1523,7 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
       if ( clipper::Util::isnan(phi) ) {
 	 std::cout << "WARNING: observed torsion phi is a NAN!" << std::endl;
 	 // throw an exception
-      } 
+      }
       if ( clipper::Util::isnan(psi) ) {
 	 std::cout << "WARNING: observed torsion psi is a NAN!" << std::endl;
 	 // throw an exception
@@ -1462,8 +1554,8 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
       double multiplier_psi = 1.0;
 
       if (restraints->rama_type == restraints_container_t::RAMA_TYPE_ZO) {
-	 std::pair<float,float> zo_rama_pair = restraints->zo_rama_grad(rama_restraint.rama_plot_residue_type, phir, psir);
-	 if (false)
+	      std::pair<float,float> zo_rama_pair = restraints->zo_rama_grad(rama_restraint.rama_plot_residue_type, phir, psir);
+	         if (false)
 	    std::cout << "debug:: in my_df_rama() rama_plot_residue_type is "
 		      << rama_restraint.rama_plot_residue_type << " gradients "
 		      << zo_rama_pair.first << " " << zo_rama_pair.second
@@ -1510,7 +1602,7 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
       yP4_contrib += multiplier_psi * dtg_psi.dD_dyP3;
       zP4_contrib += multiplier_psi * dtg_psi.dD_dzP3;
 
-      if (0) { 
+      if (0) {
 	 xP2_contrib = 0.0;
 	 yP2_contrib = 0.0;
 	 zP2_contrib = 0.0;
@@ -1528,7 +1620,7 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
       double yP5_contrib = multiplier_psi*dtg_psi.dD_dyP4;
       double zP5_contrib = multiplier_psi*dtg_psi.dD_dzP4;
 
-      if (! rama_restraint.fixed_atom_flags[0]) { 
+      if (! rama_restraint.fixed_atom_flags[0]) {
 	 idx = 3*(rama_restraint.atom_index_1);
 	 // gsl_vector_set(df, idx,   gsl_vector_get(df, idx  ) + xP1_contrib);
 	 // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + yP1_contrib);
@@ -1539,7 +1631,7 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
 	 results[idx+2] += zP1_contrib;
       }
 
-      if (! rama_restraint.fixed_atom_flags[1]) { 
+      if (! rama_restraint.fixed_atom_flags[1]) {
 	 idx = 3*(rama_restraint.atom_index_2);
 	 // gsl_vector_set(df, idx,   gsl_vector_get(df, idx  ) + xP2_contrib);
 	 // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + yP2_contrib);
@@ -1550,7 +1642,7 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
 	 results[idx+2] += zP2_contrib;
       }
 
-      if (! rama_restraint.fixed_atom_flags[2]) { 
+      if (! rama_restraint.fixed_atom_flags[2]) {
 	 idx = 3*(rama_restraint.atom_index_3);
 	 // gsl_vector_set(df, idx,   gsl_vector_get(df, idx  ) + xP3_contrib);
 	 // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + yP3_contrib);
@@ -1561,7 +1653,7 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
 	 results[idx+2] += zP3_contrib;
       }
 
-      if (! rama_restraint.fixed_atom_flags[3]) { 
+      if (! rama_restraint.fixed_atom_flags[3]) {
 	 idx = 3*(rama_restraint.atom_index_4);
 	 // gsl_vector_set(df, idx,   gsl_vector_get(df, idx  ) + xP4_contrib);
 	 // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + yP4_contrib);
@@ -1572,7 +1664,7 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
 	 results[idx+2] += zP4_contrib;
       }
 
-      if (! rama_restraint.fixed_atom_flags[4]) { 
+      if (! rama_restraint.fixed_atom_flags[4]) {
 	 idx = 3*(rama_restraint.atom_index_5);
 	 // gsl_vector_set(df, idx,   gsl_vector_get(df, idx  ) + xP5_contrib);
 	 // gsl_vector_set(df, idx+1, gsl_vector_get(df, idx+1) + yP5_contrib);
@@ -1585,7 +1677,7 @@ coot::process_dfs_rama(const coot::simple_restraint &rama_restraint,
    }
    catch (const std::runtime_error &rte) {
       std::cout << "ERROR:: my_df_rama() caught " << rte.what() << std::endl;
-   } 
+   }
 
 }
 

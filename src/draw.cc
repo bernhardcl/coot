@@ -357,16 +357,15 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
 	 graphics_info_t::molecules[ii].draw_dipoles();
 
 	 // draw display list objects
-	 if (graphics_info_t::molecules[ii].has_display_list_objects()) {
-	    glEnable(GL_LIGHTING);
-	    glEnable(GL_LIGHT0);
-	    glEnable(GL_LIGHT1);
-	    glEnable(GL_LIGHT3);
-	    glEnable(GL_LIGHT4);
-	    glDisable(GL_LIGHT2);
- 	    n_display_list_objects +=
- 	       graphics_info_t::molecules[ii].draw_display_list_objects(gl_context);
-	    glDisable(GL_LIGHTING);
+         if (true) {
+	    if (graphics_info_t::molecules[ii].has_display_list_objects()) {
+	       glEnable(GL_LIGHTING);
+	       glEnable(GL_LIGHT0);
+	       glEnable(GL_LIGHT1);
+	       // glDisable(GL_LIGHT2);
+               n_display_list_objects += graphics_info_t::molecules[ii].draw_display_list_objects(gl_context);
+	       glDisable(GL_LIGHTING);
+	    }
 	 }
 	 
 	 if (graphics_info_t::molecules[ii].draw_animated_ligand_interactions_flag) { 
@@ -374,13 +373,12 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
 	    glEnable(GL_LIGHT0);
 	    glEnable(GL_LIGHT1);
 	    glDisable(GL_LIGHT2);
-	    graphics_info_t::molecules[ii].draw_animated_ligand_interactions(gl_info,
-									     graphics_info_t::time_holder_for_ligand_interactions);
+	    graphics_info_t::molecules[ii].draw_animated_ligand_interactions(gl_info, graphics_info_t::time_holder_for_ligand_interactions);
 	    glDisable(GL_LIGHTING);
 	 }
 
 	 // draw anisotropic atoms maybe
-	 graphics_info_t::molecules[ii].anisotropic_atoms();
+	 graphics_info_t::molecules[ii].draw_anisotropic_atoms();
 
 	 // We need to (also) pass whether we are drawing the first or
 	 // secondary window, so that, when display lists are being
@@ -446,8 +444,8 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
 
       // lsq atom blobs
       if (graphics_info_t::lsq_plane_atom_positions->size() > 0) {
-	 graphics_info_t g;
-	 g.render_lsq_plane_atoms();
+         graphics_info_t g;
+         g.render_lsq_plane_atoms();
       }
 
       // ligand flash bond
@@ -456,9 +454,9 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
       // draw reference object, which sits at the model origin.
       //
       if (graphics_info_t::show_origin_marker_flag) { 
-	 glLineWidth(1.0);
-	 glColor3f(0.7,0.7,0.2);
-	 myWireCube (0.6);
+         glLineWidth(1.0);
+         glColor3f(0.8,0.8,0.8);
+	      myWireCube (0.6);
       }
 
       graphics_info_t::draw_generic_objects();
@@ -485,8 +483,8 @@ draw_mono(GtkWidget *widget, GdkEventExpose *event, short int in_stereo_flag) {
 	 myWireCube (1.0);
       }
 
-     // Now we have finished displaying our annotation objects and
-     // making transformations, lets put the matrix back how it used
+      // Now we have finished displaying our annotation objects and
+      // making transformations, lets put the matrix back how it used
       // to be.
       glPopMatrix();
 

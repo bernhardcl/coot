@@ -138,18 +138,48 @@ molecule_class_info_t::set_and_get_histogram_values(unsigned int n_bins) {
       //
    } else {
       if (map_histogram_values.size() > 0) {
-	 // use the cache
+          // use the cache
       } else {
-	 // uncached
-	 bool ignore_pseudo_zeros = false;
-	 mean_and_variance<float> mv =
-	    map_density_distribution(xmap, n_bins, false, ignore_pseudo_zeros);
-	 if (mv.size() == 0) {
-	    // add fake result
-	    mv.bins.push_back(0);
-	 }
-	 map_histogram_values = mv;
+         // uncached
+         bool ignore_pseudo_zeros = false;
+         mean_and_variance<float> mv =
+            map_density_distribution(xmap, n_bins, false, ignore_pseudo_zeros);
+         if (mv.size() == 0) {
+            // add fake result
+            mv.bins.push_back(0);
+         }
+         map_histogram_values = mv;
       }
    }
    return map_histogram_values;
 }
+
+
+// radial colouring
+void
+molecule_class_info_t::set_radial_map_colouring_centre(float x, float y, float z) {
+
+}
+
+void
+molecule_class_info_t::set_radial_map_colouring_min_radius(float r) {
+
+}
+
+void
+molecule_class_info_t::set_radial_map_colouring_max_radius(float r) {
+
+}
+
+void
+molecule_class_info_t::set_radial_map_colouring_invert(bool invert_state) {
+
+}
+
+void
+molecule_class_info_t::set_radial_map_colouring_saturation(float saturation) {
+
+}
+
+
+

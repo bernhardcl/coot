@@ -5,7 +5,7 @@
 // MODEL 1.
 // 
 mmdb::Residue *
-coot::get_residue(const coot::residue_spec_t &res_spec, mmdb::Manager *mol) {
+coot::lidia_utils::get_residue(const coot::residue_spec_t &res_spec, mmdb::Manager *mol) {
 
    mmdb::Residue *res = nullptr;
    bool found_res = false;
@@ -43,7 +43,7 @@ coot::get_residue(const coot::residue_spec_t &res_spec, mmdb::Manager *mol) {
 
 /* BL says:: already defined in coot-utils/coot-coord-utils.cc
 clipper::Coord_orth
-coot::co(mmdb::Atom *at) {
+coot::lidia_utils::co(mmdb::Atom *at) {
    return clipper::Coord_orth(at->x, at->y, at->z);
 }
 */

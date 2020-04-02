@@ -105,6 +105,7 @@ EXTRA_DIST = \
 	junk.cc coot-gtk2.defs coot-dox.cfg post-gtk2-glade.sh \
         post-process-coot-wrap-guile.sh \
         post-process-coot-wrap-python.sh \
+        fixup-interface.h.sh \
 	coot_wrap_guile_pre.cc dynarama.glade
 
 
@@ -281,6 +282,7 @@ coot_bin_SOURCES = \
 	git-revision-count.cc 	 \
 	scm-boot-guile.hh 	 \
 	scm-boot-guile.cc 	 \
+	clipper-ccp4-map-file-wrapper.hh \
 	c-interface.h            \
 	c-interface-analysis.cc	 \
 	c-interface-bonds.hh	 \
@@ -292,6 +294,7 @@ coot_bin_SOURCES = \
 	c-interface-build-symmetry.cc	 \
 	c-interface-build-gui.cc \
 	c-interface-curlew.cc    \
+	c-interface-curlew.hh    \
 	c-interface-database.hh  \
 	c-interface-database.cc  \
 	c-interface-generic-objects.h	 \
@@ -331,6 +334,7 @@ coot_bin_SOURCES = \
 	c-interface-refine.cc	 \
 	c-interface-residues.cc	 \
 	c-interface-refmac.cc	 \
+	simple-refmac.cc	 \
 	c-interface-refmac.h	 \
 	c-interface-scm.hh	 \
 	c-interface-scm.cc	 \
@@ -360,6 +364,7 @@ coot_bin_SOURCES = \
 	cc-interface-png.cc      \
 	cc-interface-user-defined-atom-colours.hh \
 	cc-interface-user-defined-atom-colours.cc \
+	cc-interface-molecular-representation.hh  \
 	callbacks.c callbacks.h	 \
         canvas-fixes.hh          \
 	cfc.cc cfc.hh            \
@@ -395,12 +400,14 @@ coot_bin_SOURCES = \
 	coot-setup-python.cc     \
 	coot-setup-python.hh     \
 	coot-version.hh          \
-	data-pair-remover.hh     \
 	coot_wrap_guile.cc       \
-        curlew.h                 \
-        curlew.hh                \
-        dots-representation.hh   \
+   curlew.h                 \
+   curlew.hh                \
+	data-pair-remover.hh     \
+   density-results-container-t.hh \
+   dots-representation.hh   \
 	draw.cc                  \
+	draw.hh                  \
 	drag-and-drop.hh         \
 	drag-and-drop.cc         \
 	draw-generic-display-objects.cc \
@@ -439,9 +446,11 @@ coot_bin_SOURCES = \
 	graphics-info-pick.cc	 \
 	graphics-info-refmac.cc  \
 	graphics-info-render.cc	 \
-	graphics-info-residues.cc	 \
+	graphics-info-residues.cc	\
+	graphics-info-refine.cc	\
 	graphics-info-scripting.cc	\
 	graphics-info-state.cc	 \
+	graphics-info-statics.cc \
 	graphics-info-superpose.cc	\
 	graphics-ligand-view.cc	 \
 	graphics-ligand-view.hh	 \
@@ -465,8 +474,10 @@ coot_bin_SOURCES = \
 	ligand-check.hh          \
         map-statistics.hh        \
 	merge-molecule-results-info-t.hh \
+	model-composition-statistics.hh \
 	molecule-class-info.cc 	 \
 	molecule-class-info-alignment.cc \
+	molecule-class-info-analysis.cc \
 	molecule-class-info-bonds.cc    \
 	molecule-class-info-maps.cc 	\
 	molecule-class-info-maps-2.cc 	\
@@ -497,6 +508,7 @@ coot_bin_SOURCES = \
 	protein_db-interface.hh  \
 	protein_db-interface.cc  \
 	python-classes.cc	 \
+	python-classes.hh	 \
 	read-phs.h		 \
 	read-phs.c		 \
 	read-cif.h		 \
@@ -518,8 +530,9 @@ coot_bin_SOURCES = \
 	sequence-view.cc         \
 	seq-view-interface.c     \
 	seq-view-interface.h     \
+	sound.hh                 \
 	startup-scripts.hh       \
-	support.c support.h 	 \
+	support.c support.h 	    \
 	support-gtk2-extras.c    \
 	testing.cc testing-2.cc  \
 	testing-data.hh          \
@@ -695,6 +708,7 @@ dynarama_bin_LDADD = \
         $(top_builddir)/coords/libcoot-coords.la                \
         $(top_builddir)/utils/libcoot-utils.la                  \
         $(top_builddir)/coot-utils/libcoot-coord-utils.la       \
+        $(top_builddir)/lidia-core/libcoot-lidia-core.la        \
         $(top_builddir)/geometry/libcoot-geometry.la            \
         $(top_builddir)/coot-surface/libcoot-surface.la         \
         $(top_builddir)/compat/libcoot-compat.la                \

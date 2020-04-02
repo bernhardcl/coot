@@ -501,10 +501,15 @@
 	      (cadr atom-spec)))))
 
 (define (residue-spec->residue-name imol spec)
-  (residue-name imol 
-		(list-ref spec 1)
-		(list-ref spec 2)
-		(list-ref spec 3)))
+  (if (= (length spec) 4)
+      (residue-name imol
+		    (list-ref spec 1)
+		    (list-ref spec 2)
+		    (list-ref spec 3))
+      (residue-name imol
+		    (list-ref spec 0)
+		    (list-ref spec 1)
+		    (list-ref spec 2))))
 
 ;; for sorting residue specs
 (define (residue-spec-less-than spec-1 spec-2)
@@ -797,39 +802,39 @@
   (if (not (command-in-path-or-absolute? cmd))
       
       (begin 
-	(format #t "command ~s not found~%" cmd)
-	255)
+        (format #t "command ~s not found~%" cmd)
+        255)
 
       (let* ((cmd-ports (apply run-with-pipe (append (list "r+" cmd) args)))
-	     (pid (car cmd-ports))
-	     (output-port (car (cdr cmd-ports)))
-	     (input-port  (cdr (cdr cmd-ports))))
-	
-	(let loop ((data-list data-list))
-	  (if (null? data-list)
-	      (begin 
-		(close input-port))
-	      
-	      (begin
-		(format input-port "~a~%" (car data-list))
-		(loop (cdr data-list)))))
-	
-	(call-with-output-file log-file-name
-	  (lambda (log-file-port)
-	    
-	    (let f ((obj (read-line output-port)))
-	      (if (eof-object? obj)
-		  (begin 
-		    (let* ((status-info (waitpid pid))
-			   (status (status:exit-val (cdr status-info))))
-		      ;; (format #t "exit status: ~s~%" status) silence
-		      status)) ; return status 
-		  
-		  (begin
-		    (if (eq? screen-output-also? #t)
-			(format #t ":~a~%" obj))
-		    (format log-file-port "~a~%" obj)
-		    (f (read-line output-port))))))))))
+             (pid (car cmd-ports))
+             (output-port (car (cdr cmd-ports)))
+             (input-port  (cdr (cdr cmd-ports))))
+
+        (let loop ((data-list data-list))
+          (if (null? data-list)
+              (begin
+                (close input-port))
+
+              (begin
+                (format input-port "~a~%" (car data-list))
+                (loop (cdr data-list)))))
+
+        (call-with-output-file log-file-name
+          (lambda (log-file-port)
+
+            (let f ((obj (read-line output-port)))
+              (if (eof-object? obj)
+                  (begin
+                    (let* ((status-info (waitpid pid))
+                           (status (status:exit-val (cdr status-info))))
+                      ;; (format #t "exit status: ~s~%" status) silence
+                      status)) ; return status
+
+                  (begin
+                    (if (eq? screen-output-also? #t)
+                        (format #t ":~a~%" obj))
+                    (format log-file-port "~a~%" obj)
+                    (f (read-line output-port))))))))))
 
 (define (ok-goosh-status? status)
 
@@ -2474,7 +2479,7 @@
     (for-each (lambda (atom-name)
 		(add-lsq-atom-pair (list chain-id-ref res-no-ref ins-code-ref atom-name "")
 				   (list chain-id-mov res-no-mov ins-code-mov atom-name "")))
-	      (list " CA " " N  " " C  "))
+	      (list " CA " " N  " " C  "))  ;; PDBv3 FIXME
     (apply-lsq-matches imol-ref imol-mov))
 
   ;; get-monomer-and-dictionary, now we check to see if we have a
@@ -2534,10 +2539,12 @@
 					     (residue-spec->res-no   new-res-spec)
 					     (residue-spec->ins-code new-res-spec)
 					     resno "")
-		      
+
 		      (format #t "debug:: ------ chain ids : ~s ~s~%" new-chain-id chain-id-in)
 		      (if (not (string=? new-chain-id chain-id-in))
-			  (change-chain-id imol new-chain-id chain-id-in 0 resno resno))
+			  (change-chain-id imol new-chain-id chain-id-in 1
+					   (residue-spec->res-no new-res-spec)
+					   (residue-spec->res-no new-res-spec)))
 
 		      (let ((replacement-state (refinement-immediate-replacement-state))
 			    (imol-map (imol-refinement-map)))
@@ -3669,7 +3676,8 @@
       (format #t "in drugbox->chemspider i: ~s~%" i)
       i))
 
-
+  (define (last-element list-of-strings)
+    (car (reverse list-of-strings)))
 
   ;; With some clever coding, these handle-***-value functions could
   ;; be consolidated.  There is likely something clever in Python to
@@ -3756,6 +3764,15 @@
 	(format #t "handle-rev-string none of the above~%")
 	#f))))
 
+  ;;
+  (define (file-seems-good? file-name)
+    (if (not (file-exists? file-name))
+	#f
+	(let* ((stat-result (stat file-name))
+	       (stat-size (stat:size stat-result)))
+	  (> stat-size 20))))
+
+  ;; return a mol file name
   (define (handle-rev-string-2016 rev-string)
 
     (let ((lines (string-split rev-string #\newline)))
@@ -3775,35 +3792,131 @@
 			(get-drug-via-wikipedia s)))))))) ;; returns a file anme
 
        (else
-	(let ((db-id #f)) ;; drugbank-id e.g. DB01098
+	(let ((db-id-list '())) ;; drugbank-id e.g. DB01098
 	  (for-each (lambda (line)
-		      (if (string-match "DrugBank = " line)
-			  (let ((parts (string->list-of-strings line)))
-			    (if (> (length parts) 3)
-				(set! db-id (list-ref parts 3)))))
-		      ;; match other databases here
+		      (format #t "debug:: line: ~s~%" line)
+
+		      ;; we don't want to hit xxx_Ref - hence the trailing space
+
+		      (if (string-match "DrugBank[ \t]" line)
+                (let ((parts (string->list-of-strings line)))
+                  (format #t "   debug:: drugbank parts: ~s~%" parts)
+                  (let ((id-string (last-element parts)))
+                    (if (number? (string->number id-string))
+                        (set! db-id-list (cons (cons "DrugBank" id-string) db-id-list))))))
+
+		      (if (string-match "ChemSpiderID[ \t]" line)
+                (let ((parts (string->list-of-strings line)))
+                  (format #t "   debug:: ChemSpiderID parts: ~s~%" parts)
+                  (let ((id-string (last-element parts)))
+                    (if (not (string-match "correct" id-string))
+                        (if (number? (string->number id-string))
+                            (set! db-id-list (cons (cons "ChemSpider" id-string) db-id-list)))))))
+
+		      (if (string-match "PubChem[ \t]" line)
+                (let ((parts (string->list-of-strings line)))
+                  (format #t "   debug:: PubChem parts: ~s~%" parts)
+                  (let ((id-string (last-element parts)))
+                    (if (not (string-match "correct" id-string))
+                        (set! db-id-list (cons (cons "PubChem" id-string) db-id-list))))))
+
+		      (if (string-match "ChEMBL[ \t]" line)
+                (let ((parts (string->list-of-strings line)))
+                  (format #t "   debug:: ChEMBL parts: ~s~%" parts)
+                  (let ((id-string (last-element parts)))
+                    (if (number? (string->number id-string))
+                        (set! db-id-list (cons (cons "ChEMBL" id-string) db-id-list))))))
 		      )
 		    lines)
 
-	  (format #t "DEBUG:: handle-rev-string-2016: db-id: ~s~%" db-id)
+	  (format #t "DEBUG:: handle-rev-string-2016: db-id-list: ~s~%" db-id-list)
 
-	  ;; check an association-list for the "DrugBank" entry
-	  ;; 
-	  (if (string? db-id)
+	  ;; now db-id-list is something like (("DrugBank" . 12234) ("ChEMBL" . 6789))
+	  ;; can we find one of them that works?
 
-	      ;; normal path hopefully
-	      ;; 
-	      (let ((db-mol-uri (string-append
-				 ;; "http://www.drugbank.ca/structures/structures/small_molecule_drugs/"
-				 "https://www.drugbank.ca/structures/small_molecule_drugs/"
-				 db-id ".mol"))
-		    (file-name (string-append db-id ".mol")))
-		(format #t "DEBUG:: handle-rev-string-2016: getting url: ~s to file ~s~%" db-mol-uri file-name)
-		(coot-get-url db-mol-uri file-name)
-		file-name)
- 
-	      #f))))))
+	  (let loop ((db-id-list db-id-list))
 
+	    (cond
+	     ((null? db-id-list) "Failed-to-find-a-molecule-file-name")
+	     ((string=? (car (car db-id-list)) "DrugBank")
+
+	       (let ((db-id (car db-id-list)))
+		 (if (pair? db-id)
+
+		     (let ((DBWebsite (car db-id))
+			   (id (cdr db-id)))
+
+		       (let ((db-mol-uri (string-append
+					  "https://www.drugbank.ca/structures/small_molecule_drugs/" id ".mol"))
+			     (file-name (string-append "drugbank-" id ".mol")))
+			 (format #t "DEBUG:: DrugBank path: getting url: ~s to file ~s~%"
+				 db-mol-uri file-name)
+			 (coot-get-url db-mol-uri file-name)
+			 ;; check that file-name is good here
+			 (if (file-seems-good? file-name)
+			     (format #t "DEBUG:: yes db file-name: ~s seems good ~%" file-name))
+			 (if (file-seems-good? file-name)
+			     file-name
+			     (loop (cdr db-id-list))))))))
+
+	      ((string=? (car (car db-id-list))  "ChemSpider")
+	       (let ((db-id (car db-id-list)))
+		 (if (pair? db-id)
+
+		     (let ((DBWebsite (car db-id))
+			   (id (cdr db-id)))
+
+		       (let ((cs-mol-url
+			      (string-append "http://www.chemspider.com/"
+					     "FilesHandler.ashx?type=str&striph=yes&id="
+					     id))
+			     (file-name (string-append "cs-" id ".mol")))
+			 (format #t "Get ---ChemSpider--- ~s ~s~%" cs-mol-url id)
+			 (coot-get-url cs-mol-url file-name)
+			 (if (file-seems-good? file-name)
+			     (format #t "DEBUG:: yes cs file-name: ~s seems good ~%" file-name))
+			 (if (file-seems-good? file-name)
+			     file-name
+			     (loop (cdr db-id-list))))))))
+
+	      ((string=? (car (car db-id-list))  "ChEMBL")
+	       (let ((db-id (car db-id-list)))
+		 (if (pair? db-id)
+
+		     (let ((DBWebsite (car db-id))
+			   (id (cdr db-id)))
+
+		       (let ((mol-url
+			      (string-append "https://www.ebi.ac.uk/chembl/api/data/molecule/CHEMBL"
+					     id ".sdf"))
+			     (file-name (string-append "chembl-" id ".sdf")))
+			 (coot-get-url mol-url file-name)
+			 (if (file-seems-good? file-name)
+			     (format #t "DEBUG:: yes chembl file-name: ~s seems good ~%" file-name))
+			 (if (file-seems-good? file-name)
+			     file-name
+			     (loop (cdr db-id-list))))))))
+
+	      ((string=? (car (car db-id-list))  "PubChem")
+	       (let ((db-id (car db-id-list)))
+		 (if (pair? db-id)
+
+		     (let ((DBWebsite (car db-id))
+			   (id (cdr db-id)))
+
+		       (let ((pc-mol-url (string-append "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/"
+							id "/record/SDF/?record_type=2d&response_type=display"))
+			     (file-name (string-append "pc-" id ".mol")))
+			 (format #t "========== pubchem pc-mol-url: ~s~%" pc-mol-url)
+			 (coot-get-url pc-mol-url file-name)
+			 (if (file-seems-good? file-name)
+			     (format #t "DEBUG:: yes pc file-name: ~s seems good ~%" file-name))
+			 (if (file-seems-good? file-name)
+			     file-name
+			     (loop (cdr db-id-list))))))))
+
+	      (else
+	       (loop (cdr db-id-list))))))))))
 
   (define (handle-sxml-rev-value sxml)
     ;; (format #t "handle-sxml-rev-value sxml: ~s~%" sxml)
@@ -3814,7 +3927,9 @@
        (else 
 	(let ((entity (car ls)))
 	  (if (string? entity)
-	      (handle-rev-string-2016 entity)
+	      (let ((aaa (handle-rev-string-2016 entity)))
+		(format #t "---------- aaa: ~s~%" aaa)
+		aaa)
 	      (loop (cdr ls))))))))
 
   (define (handle-sxml-revisions-value sxml)
@@ -3957,6 +4072,7 @@
 					   ;; (format #t "about to get sxml ~%") paracetamol.xml fails here
 					   (let ((sxml (xml->sxml string-port)))
 					     (handle-sxml sxml))))))
+		      (format #t "------------- captured: ~s~%" captured)
 		      captured))))))))
 
 
@@ -4062,6 +4178,77 @@
 			      (if (file-exists? pref-file)
 				  (load pref-file))))))))))))))
 
+
+
+;; something like this for intermediate atoms also?
+;;
+;; n-neighbs is either 0 or 1
+;;
+(define (rebuild-residues-using-db-loop imol middle-residue-spec n-neighbs)
+
+  ;; utility function
+  ;;
+  (define (remove-any-GLY-CBs imol-db-loop saved-residue-names ch-id resno-low)
+
+    (for-each (lambda (residue-idx res-name)
+		(if (string? res-name) ;; might be #f for missing residues
+		    (if (string=? res-name "GLY")
+			(let ((res-no-gly (+ resno-low residue-idx)))
+			  (delete-atom imol-db-loop ch-id res-no-gly "" " CB " "")))))
+	      (range (length saved-residue-names)) saved-residue-names))
+
+   ;; main line
+
+   (let* ((resno-mid (residue-spec->res-no middle-residue-spec))
+	  (resno-low  (- resno-mid n-neighbs))
+	  (resno-high (+ resno-mid n-neighbs))
+          (r (append (range (- resno-mid 4 n-neighbs) (+ resno-mid n-neighbs 0))
+		     (range (+ resno-mid 1 n-neighbs) (+ resno-mid 3 n-neighbs))))
+          (nov (print-var r))
+          (ch-id (residue-spec->chain-id middle-residue-spec))
+          (residue-specs (map (lambda(res-no)
+                                (list ch-id res-no ""))
+                              r)))
+
+     (let ((loop-mols (protein-db-loops
+		       imol residue-specs (imol-refinement-map) 1 *db-loop-preserve-residue-names*)))
+        (let ((residue-spec-of-residues-to-be-replaced (if (= n-neighbs 0)
+                                                           (list middle-residue-spec)
+							   (map (lambda (r)
+								  (list ch-id r ""))
+								(range resno-low
+								       (+ resno-high 1))))))
+
+          (let ((saved-residue-names (map (lambda (r) (residue-spec->residue-name imol r))
+					  residue-spec-of-residues-to-be-replaced)))
+	    (if (> (length loop-mols) 0)
+
+		;; loop-mols have the correct residue numbering but the wrong chain-id and
+		;; residue type
+
+		(let ((imol-db-loop (car (list-ref loop-mols 1)))
+		      (tmp-loop-mols (car loop-mols)))
+		  (let ((chain-id-db-loop (chain-id imol-db-loop 0)))
+		    (if (not (string=? ch-id chain-id-db-loop))
+			(change-chain-id imol-db-loop chain-id-db-loop ch-id 0 0 0))
+		    (let ((selection (string-append "//" ch-id "/"
+						    (number->string resno-low)
+						    "-"
+						    (number->string resno-high)
+						    )))
+
+		      ;; if the original residue was a GLY, the imol-db-loop might (probably
+		      ;; will) have CB. If that is the case, then we should remove the CBs now
+		      ;;
+		      (remove-any-GLY-CBs imol-db-loop saved-residue-names ch-id resno-low)
+
+		      ;; this moves atoms, adds atoms if needed, doesn't change the residue name
+		      ;;
+		      (replace-fragment imol imol-db-loop selection)
+		      ;; tidy up
+		      (for-each (lambda (i) (close-molecule i)) tmp-loop-mols))))))))))
+
+
 	
 ;; Americans...
 ;; (define chiral-center-inverter chiral-centre-inverter)
@@ -4092,5 +4279,16 @@
 			 ")")))
     (format #t "--------- run this python-string: ~s~%" python-string)
     (run-python-command python-string)))
+
+
+
+(define (go-to-box-middle)
+
+  (let ((ls (map-molecule-list)))
+    (if (not (null? ls))
+       (let ((imol-map (car ls)))
+         (let ((c (cell imol-map)))
+           (format #t "c ~s~%" c)
+           (apply set-rotation-centre (map (lambda (a) (* a 0.5)) (list-head c 3))))))))
 
 

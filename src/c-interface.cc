@@ -134,14 +134,6 @@
 #include "cmtz-interface.hh"
 // #include "mtz-bits.h" stuff from here moved to cmtz-interface
 
-// Including python needs to come after graphics-info.h, because
-// something in Python.h (2.4 - chihiro) is redefining FF1 (in
-// ssm_superpose.h) to be 0x00004000 (Grrr).
-//
-#ifdef USE_PYTHON
-#include "Python.h"
-#endif // USE_PYTHON
-
 
 // This is (already) in git-revision-count.cc
 //
@@ -488,6 +480,191 @@ int make_updating_model_molecule(const char *filename) {
    return status;
 }
 
+// do we need to return the imol for the model and the map? If so, this
+// needs to be in cc-interface.hh
+//
+void updating_refmac_refinement_files(const char *updating_refmac_refinement_files_json_file_name) {
+
+#ifdef MAKE_UPDATING_REFMAC_REFINEMENT_MOLECULES // using JSON
+
+   if (updating_refmac_refinement_files_json_file_name) {
+
+      // set a timeout function that looks for this file
+      GSourceFunc f = GSourceFunc(updating_refmac_refinement_json_timeout_function);
+      std::string *fn_p = new std::string(updating_refmac_refinement_files_json_file_name);
+      guint updating_idx = g_timeout_add(500, f, fn_p); // possibly illegal.
+   }
+#else
+   std::cout << "ERROR:: updating_refmac_refinement_files() is just a stub - needs CXX11"
+	     << std::endl;
+#endif // MAKE_UPDATING_REFMAC_REFINEMENT_MOLECULES   
+}
+
+int updating_refmac_refinement_json_timeout_function(gpointer data) {
+
+   int status = 1; // keep going
+
+#ifdef MAKE_UPDATING_REFMAC_REFINEMENT_MOLECULES
+
+   if (! data) return 0;
+
+   std::string *fn = reinterpret_cast<std::string *>(data);
+   std::string json_file_name = *fn;
+
+   std::fstream f(json_file_name);
+   if (f) {
+
+      std::string s;
+      f.seekg(0, std::ios::end);
+      s.reserve(f.tellg());
+      f.seekg(0, std::ios::beg);
+
+      s.assign((std::istreambuf_iterator<char>(f)),
+	       std::istreambuf_iterator<char>());
+      unsigned int n_already_done = 0;
+
+      std::vector<coot::mtz_to_map_info_t> mtz_map_infos;
+
+      try {
+	 json j = json::parse(s);
+         json ls = j["animation"];
+         unsigned int n_cycles = ls.size();
+
+         std::cout << "n_cycles " << n_cycles << std::endl;
+         std::string mtz_file_name, f_col, phi_col;
+         std::string model_file_name;
+
+         json anim_part_id    = ls["id"];
+         json anim_part_map   = ls["map"];
+         json anim_part_model = ls["model"];
+         json anim_part_x     = ls["xmissing"]; // test
+         std::cout << "map: " << anim_part_map << std::endl;
+         std::cout << "x:   " << anim_part_x   << std::endl;
+
+         if (! anim_part_id.is_null() && !anim_part_model.is_null() && !anim_part_map.is_null()) {
+
+            std::string id = anim_part_id;
+            model_file_name = anim_part_model["filepath"];
+            mtz_file_name = anim_part_map["filepath"];
+
+            json column_sets = anim_part_map["columns"];
+	    coot::mtz_to_map_info_t mmi_2fofc;
+	    coot::mtz_to_map_info_t mmi_fofc;
+            std::size_t n_column_sets = column_sets.size();
+            for (std::size_t i=0; i<n_column_sets; i++) {
+               json col_set = column_sets[i];
+               if (col_set["id"] == "2Fo-Fc") {
+                  std::cout << "Found 2Fo-Fc" << std::endl;
+                  json labels = col_set["labels"];
+                  coot::mtz_to_map_info_t mmi;
+                  mmi.id = id;
+                  mmi.mtz_file_name = mtz_file_name;
+                  mmi.f_col         = labels[0];
+                  mmi.phi_col       = labels[1];
+                  mtz_map_infos.push_back(mmi);
+		  mmi_2fofc = mmi;
+               }
+               if (col_set["id"] == "Fo-Fc") {
+                  std::cout << "Found Fo-Fc" << std::endl;
+                  json labels = col_set["labels"];
+                  coot::mtz_to_map_info_t mmi;
+                  mmi.id = id;
+                  mmi.mtz_file_name = mtz_file_name;
+                  mmi.f_col         = labels[0];
+                  mmi.phi_col       = labels[1];
+                  mmi.is_difference_map = true;
+                  mtz_map_infos.push_back(mmi);
+		  mmi_fofc = mmi;
+               }
+            }
+            if (true) { // debug
+               std::cout << "Here with id: " << id << std::endl;
+               std::cout << "Here with model_file_name: " << model_file_name << std::endl;
+               std::cout << "Here with mtz_file_name: " << mtz_file_name << std::endl;
+               for (unsigned int i=0; i<mtz_map_infos.size(); i++)
+                  std::cout << mtz_map_infos[i].mtz_file_name << " " << mtz_map_infos[i].id << " "
+                            << mtz_map_infos[i].f_col << " " << mtz_map_infos[i].phi_col << std::endl;
+
+               // OK, but which map and which model needs to be updated?
+               std::cout << "Here are the molecules so far " << std::endl;
+               for (int i=0; i<graphics_n_molecules(); i++) {
+                  std::cout << "molecule name " << i << " " << graphics_info_t::molecules[i].name_
+			    << std::endl;
+               }
+            }
+
+            int imol_model_updating = -1;
+            int imol_map_1_updating = -1;
+            int imol_map_2_updating = -1;
+            for (int i=0; i<graphics_n_molecules(); i++) {
+               std::string name = graphics_info_t::molecules[i].get_name();
+               std::string id_model = id + "_model";
+               std::string id_2fofc = id + "_2fofc";
+               std::string id_fofc  = id + "_fofc";
+               if (name == id_model) {
+                  if (is_valid_model_molecule(i)) {
+                     imol_model_updating = i;
+                     break;
+                  }
+               }
+               if (name == id_2fofc) {
+                  if (is_valid_map_molecule(i)) {
+                     imol_map_1_updating = i;
+                     break;
+                  }
+               }
+               if (name == id_fofc) {
+                  if (is_valid_map_molecule(i)) {
+                     imol_map_2_updating = i;
+                     break;
+                  }
+               }
+            }
+
+            if (is_valid_model_molecule(imol_model_updating)) {
+               std::string cwd = coot::util::current_working_dir();
+	       graphics_info_t::molecules[imol_model_updating].update_molecule(model_file_name, cwd);
+            }
+            if (is_valid_map_molecule(imol_map_1_updating)) {
+	       if (! mmi_2fofc.f_col.empty()) {
+		  std::string cwd = coot::util::current_working_dir();
+		  graphics_info_t::molecules[imol_map_1_updating].map_fill_from_mtz(mmi_2fofc.mtz_file_name,
+										    cwd,
+										    mmi_2fofc.f_col,
+										    mmi_2fofc.phi_col,
+										    mmi_2fofc.w_col,
+										    mmi_2fofc.use_weights,
+										    mmi_2fofc.is_difference_map,
+										    graphics_info_t::map_sampling_rate);
+	       }
+            }
+            if (is_valid_map_molecule(imol_map_2_updating)) {
+	       if (! mmi_fofc.f_col.empty()) {
+		  std::string cwd = coot::util::current_working_dir();
+		  graphics_info_t::molecules[imol_map_1_updating].map_fill_from_mtz(mmi_fofc.mtz_file_name,
+										    cwd,
+										    mmi_fofc.f_col,
+										    mmi_fofc.phi_col,
+										    mmi_fofc.w_col,
+										    mmi_fofc.use_weights,
+										    mmi_fofc.is_difference_map,
+										    graphics_info_t::map_sampling_rate);
+	       }
+            }
+         }
+      }
+      catch(const nlohmann::detail::type_error &e) {
+	 std::cout << "ERROR:: " << e.what() << std::endl;
+      }
+      catch(const nlohmann::detail::parse_error &e) {
+	 std::cout << "ERROR:: " << e.what() << std::endl;
+      }
+
+      status = 0; // no need to run this function again
+   }
+#endif // MAKE_UPDATING_REFMAC_REFINEMENT_MOLECULES
+   return status;
+}
 
 void allow_duplicate_sequence_numbers() {
 
@@ -503,7 +680,7 @@ void set_convert_to_v2_atom_names(short int state) {
 
 
 int handle_read_draw_molecule_with_recentre(const char *filename,
-					   int recentre_on_read_pdb_flag) {
+					    int recentre_on_read_pdb_flag) {
 
    int r = -1;
    //
@@ -551,6 +728,7 @@ int handle_read_draw_molecule_with_recentre(const char *filename,
       int bonds_box_type = graphics_info_t::default_bonds_box_type;
       istat = g.molecules[imol].handle_read_draw_molecule(imol, f,
 							  coot::util::current_working_dir(),
+							  graphics_info_t::Geom_p(),
 							  recentre_on_read_pdb_flag, 0,
 							  g.allow_duplseqnum,
 							  g.convert_to_v2_atom_names_flag,
@@ -576,8 +754,8 @@ int handle_read_draw_molecule_with_recentre(const char *filename,
 
 	 int first_n_types_with_no_dictionary = types_with_no_dictionary.size();
 	 
-	 std::cout << "DEBUG:: there were " << types_with_no_dictionary.size() << " types "
-		   << "with no dictionary " << std::endl;
+	 std::cout << "DEBUG:: there were " << types_with_no_dictionary.size()
+		   << " types with no dictionary " << std::endl;
 
 	 for (unsigned int i=0; i<types_with_no_dictionary.size(); i++) {
 	    if (0)
@@ -2549,7 +2727,23 @@ void set_colour_by_chain(int imol) {
    if (is_valid_model_molecule(imol)) {
       std::set<int> s; // dummy
       short int f = graphics_info_t::rotate_colour_map_on_read_pdb_c_only_flag;
-      graphics_info_t::molecules[imol].make_colour_by_chain_bonds(s,f);
+      bool g = false; // goodsell_mode
+      graphics_info_t::molecules[imol].make_colour_by_chain_bonds(s,f,g);
+      graphics_draw();
+   }
+   std::string cmd = "set-colour-by-chain";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(imol);
+   add_to_history_typed(cmd, args);
+}
+
+void set_colour_by_chain_goodsell_mode(int imol) { 
+   
+   if (is_valid_model_molecule(imol)) {
+      std::set<int> s; // dummy
+      short int f = graphics_info_t::rotate_colour_map_on_read_pdb_c_only_flag;
+      bool g = true; // goodsell_mode
+      graphics_info_t::molecules[imol].make_colour_by_chain_bonds(s,f,g);
       graphics_draw();
    }
    std::string cmd = "set-colour-by-chain";
@@ -5760,6 +5954,11 @@ int refine_ramachandran_angles_state() {
    return graphics_info_t::do_rama_restraints;
 }
 
+void set_refine_rotamers(int state) {
+   graphics_info_t::do_rotamer_restraints = state;
+}
+
+
 
 #include "c-interface-refine.hh"
 
@@ -8802,7 +9001,8 @@ void load_tutorial_model_and_data() {
    std::string mtz_fn = coot::util::append_dir_file(d, "rnasa-1.8-all_refmac1.mtz");
 
    int imol = handle_read_draw_molecule_with_recentre(pdb_fn.c_str(), true);
-   int imol_map = make_and_draw_map(mtz_fn.c_str(), "FWT", "PHWT", "", 0, 0);
+   int imol_map = make_and_draw_map_with_refmac_params(mtz_fn.c_str(), "FWT", "PHWT", "", 0, 0, 1, "FGMP18", "SIGFGMP18", "FreeR_flag", 1);
    int imol_diff_map = make_and_draw_map(mtz_fn.c_str(), "DELFWT", "PHDELWT", "", 0, 1);
+
 
 }

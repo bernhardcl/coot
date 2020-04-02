@@ -1134,7 +1134,7 @@ void hydrogenate_region(float radius) {
 	 if (graphics_info_t::prefer_python) {
 #ifdef USE_PYTHON
 
-	    std::string python_command = "reduce_on_pdb_file(";
+	    std::string python_command = "reduce_on_pdb_file_no_flip(";
 	    python_command += coot::util::int_to_string(imol);
 	    python_command += ", ";
 	    python_command += single_quote(pdb_in);
@@ -1158,7 +1158,7 @@ void hydrogenate_region(float radius) {
 #ifdef USE_GUILE
 	    // write a PDB file and run reduce, read it in
 	    //
-	    std::string scheme_command = "(reduce-on-pdb-file ";
+	    std::string scheme_command = "(reduce-on-pdb-file-no-flip ";
 	    scheme_command += coot::util::int_to_string(imol);
 	    scheme_command += " ";
 	    scheme_command += single_quote(pdb_in);
@@ -2756,6 +2756,9 @@ void fill_single_map_properties_dialog(GtkWidget *window, int imol) {
    std::string spgr_text_string;
    std::string reso_text_string;
 
+   std::string title = "Properties for Map " + coot::util::int_to_string(imol);
+   gtk_window_set_title(GTK_WINDOW(window), title.c_str());
+
    // 20180924-PE FIXME needs to consider NXmaps
    //
    const clipper::Xmap<float> &xmap = graphics_info_t::molecules[imol].xmap;
@@ -2770,10 +2773,16 @@ void fill_single_map_properties_dialog(GtkWidget *window, int imol) {
       r = 2.0 * xmap.cell().descr().a()/static_cast<float>(xmap.grid_sampling().nu());
       reso_text_string = " ";
       reso_text_string += coot::util::float_to_string(r);
-      reso_text_string += " (by grid)";
    } else {
       reso_text_string = coot::util::float_to_string(r);
    }
+   // now add the grid info to the reso text
+   reso_text_string += " Å (by grid) ";
+   clipper::Grid_sampling gs = xmap.grid_sampling();
+   reso_text_string += coot::util::int_to_string(gs.nu()) + " ";
+   reso_text_string += coot::util::int_to_string(gs.nv()) + " ";
+   reso_text_string += coot::util::int_to_string(gs.nw());
+
 
    gtk_label_set_text(GTK_LABEL(cell_text), cell_text_string.c_str());
    gtk_label_set_text(GTK_LABEL(spgr_text), spgr_text_string.c_str());

@@ -1,7 +1,6 @@
 ;;;; Copyright 2007 by Paul Emsley
 ;;;; 
-;;;; This program
-   or modify
+;;;; This program is free software; you can redistribute it and/or modify
 ;;;; it under the terms of the GNU General Public License as published by
 ;;;; the Free Software Foundation; either version 3 of the License, or (at
 ;;;; your option) any later version.
@@ -3079,7 +3078,7 @@
 (define *solvent-ligand-list* 
   (append
    *additional-solvent-ligands*
-   (list "EDO" "GOL" "DMS" "ACT" "MPD" "CIT" "SO4" "PO4" "TRS" "TAM" "PG4" "EBE" "BTB")))
+   (list "EDO" "GOL" "DMS" "ACT" "MPD" "CIT" "SO4" "PO4" "TRS" "TAM" "PEG" "PG4" "PE8" "EBE" "BTB")))
 
 (define *random-jiggle-n-trials* 50)
 
@@ -3153,7 +3152,7 @@
 	 (h-sep (gtk-hseparator-new))
 	 (close-button (gtk-button-new-with-label "  Close  ")))
     
-    (gtk-window-set-default-size window 250 500)
+    (gtk-window-set-default-size window 450 500)
     (gtk-window-set-title window "Solvent Ligands")
     (gtk-container-border-width window 8)
     (gtk-container-add window outside-vbox)
@@ -3802,7 +3801,7 @@
 				     (min-max-and-chain-id (min-max-residues-from-atom-specs atom-specs)))
 
 				 (if (not (list? min-max-and-chain-id))
-				     (info-dialog "Picked atoms not in same molecule and chain")
+				     (info-dialog "WARNING:: Picked atoms not in same molecule and chain")
 				     (let ((loop-mols
 					    (protein-db-loops imol residue-specs 
 							      (imol-refinement-map)
@@ -4010,8 +4009,20 @@
   (if (defined? 'coot-main-menubar)
       (let ((menu (coot-menubar-menu "Cryo-EM")))
 
+        (add-simple-coot-menu-menuitem
+         menu "Go To Map Molecule Middle"
+         (lambda ()
+          (go-to-map-molecule-centre (imol-refinement-map))))
+
+        (add-simple-coot-menu-menuitem
+         menu "Go To Box Middle" go-to-box-middle)
+
+        (add-simple-coot-menu-menuitem
+         menu "Sharpen/Blur..."
+         sharpen-blur-map-gui)
+
 	(add-simple-coot-menu-menuitem
-	 menu "Multi-sharpen..."
+	 menu "Multi-sharpen using Refmac..."
 	 refmac-multi-sharpen-gui)
 
 	(add-simple-coot-menu-menuitem

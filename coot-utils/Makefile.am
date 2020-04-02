@@ -1,19 +1,19 @@
 # coot-utils/Makefile.am
-# 
+#
 # Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007 The University of York
 # Copyright 2014 by Medical Research Council
 # Author: Paul Emsley
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or (at
 # your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -38,7 +38,11 @@ pkginclude_HEADERS = peak-search.hh coot-trim.hh \
         atom-overlaps.hh reduce.hh atom-selection-container.hh contact-info.hh plane-utils.hh \
         secondary-structure-headers.hh c-beta-deviations.hh jed-flip.hh lidia-core-functions.hh \
 	bonded-atoms.hh spherical-harmonics.hh helix-like.hh merge-atom-selections.hh \
-	contacts-by-bricks.hh amp-reso.hh stack-and-pair.hh
+	contacts-by-bricks.hh amp-reso.hh stack-and-pair.hh atom-tools.hh segmap.hh fast-eigens.hh strand-fragments.hh \
+	sfcalc-genmap.hh cablam-markup.hh slurp-map.hh \
+	coot_shiftfield.h shiftfield.h
+
+
 
 pkgincludedir = $(includedir)/coot/coot-utils
 
@@ -65,20 +69,24 @@ libcoot_coord_utils_la_SOURCES = coot-coord-utils.cc \
 	atom-overlaps.cc reduce.cc atom-selection-container.cc contact-info.cc coot-shelx-ins.cc \
 	secondary-structure-headers.cc plane-utils.cc c-beta-deviations.cc lidia-core-functions.cc \
 	atom-tools.cc bonded-atoms.cc bricks.cc helix-like.cc merge-atom-selections.cc \
-	contacts-by-bricks.cc stack-and-pair.cc
+	contacts-by-bricks.cc stack-and-pair.cc fast-eigens.cc strand-fragments.cc sfcalc-genmap.cc \
+	cablam-markup.cc coot_shiftfield.cpp shiftfield.cpp slurp-map.cc
 
 
-#    $(top_builddir)/mini-mol/libcoot-mini-mol.la 
-#    $(top_builddir)/utils/libcoot-utils.la 
+
+
+#    $(top_builddir)/mini-mol/libcoot-mini-mol.la
+#    $(top_builddir)/utils/libcoot-utils.la
 #    $(CLIPPER_LIBS) $(MMDB_LIBS)
 
 libcoot_coord_utils_la_LIBADD = \
     $(top_builddir)/lidia-core/libcoot-lidia-core.la \
     $(top_builddir)/geometry/libcoot-geometry.la \
+    $(top_builddir)/utils/libcoot-utils.la \
+    $(CLIPPER_LIBS) $(MMDB_LIBS) \
     $(GSL_LIBS) $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(L_BOOST_PYTHON) $(PYTHON_LIBS)
 
-
-libcoot_coord_utils_la_LDFLAGS = $(SHARED_LDFLAGS) $(CLIPPER_LIBS) $(MMDB_LIBS)
+libcoot_coord_utils_la_LDFLAGS = $(SHARED_LDFLAGS)
 
 # shelx
 # libcoot_shelx_la_SOURCES = coot-shelx-ins.cc
@@ -98,9 +106,9 @@ libcoot_coord_extras_la_SOURCES = coot-coord-extras.cc coot-coord-lsq.cc \
 #     $(top_builddir)/mini-mol/libcoot-mini-mol.la
 #    $(top_builddir)/utils/libcoot-utils.la
 
-# should libcoot-coord-utils link $CLIPPER_LIBS?
+# should libcoot-coord-utils link $CLIPPER_LIBS? Yes, I think so.
 libcoot_coord_extras_la_LIBADD = \
-   libcoot-coord-utils.la 
+   libcoot-coord-utils.la $(CLIPPER_LIBS)
 
 libcoot_coord_extras_la_LDFLAGS = $(SHARED_LDFLAGS)
 
@@ -117,9 +125,9 @@ libcoot_map_utils_la_LIBADD = \
 libcoot_map_utils_la_LDFLAGS = $(SHARED_LDFLAGS)
 
 # for map things that need mmdb, clipper, gsl and other things
-libcoot_map_heavy_la_SOURCES = coot-map-heavy.cc coot-fffear.cc spherical-harmonics.cc
+libcoot_map_heavy_la_SOURCES = coot-map-heavy.cc coot-fffear.cc spherical-harmonics.cc segmap.cc
 
-#   $(top_builddir)/utils/libcoot-utils.la 
+#   $(top_builddir)/utils/libcoot-utils.la
 
 # and mini-mol (just one).
 libcoot_map_heavy_la_LIBADD = \
@@ -133,7 +141,7 @@ libcoot_map_heavy_la_LDFLAGS = $(SHARED_LDFLAGS)
 #
 check_PROGRAMS = test-h-bonds testshelxreader test-coot-utils test-hole test-elastic test-spherical glyco-torsions \
 	test-tt-morph test-coot-probe test-chem-feat test-cod-atom-types dictionary-atom-types cod-db-access \
-	test-emma test-convolute
+	test-emma test-convolute test-segmap test-5-residue-fragments
 
 
 # test_zo_chi_table_SOURCES = test-zo-chi-table.cc
@@ -142,8 +150,8 @@ check_PROGRAMS = test-h-bonds testshelxreader test-coot-utils test-hole test-ela
 # test_agg_clust_LDADD =     $(top_builddir)/utils/libcoot-utils.la $(CLIPPER_LIBS)
 
 
-#	$(top_builddir)/geometry/libcoot-geometry.la 
-#        $(top_builddir)/mini-mol/libcoot-mini-mol.la 
+#	$(top_builddir)/geometry/libcoot-geometry.la
+#        $(top_builddir)/mini-mol/libcoot-mini-mol.la
 #        $(top_builddir)/utils/libcoot-utils.la $(GLOB_LIBS)
 
 
@@ -152,7 +160,7 @@ test_coot_probe_LDADD =          \
 	./libcoot-coord-utils.la
 
 testshelxreader_SOURCES = test-shelx-reader.cc
-testshelxreader_LDADD =  ./libcoot-coord-utils.la 
+testshelxreader_LDADD =  ./libcoot-coord-utils.la
 
 test_emma_SOURCES = test-emma.cc
 test_emma_LDADD =  libcoot-map-utils.la \
@@ -164,15 +172,23 @@ test_convolute_LDADD = \
 	./libcoot-map-heavy.la \
 	$(top_builddir)/coords/libcoot-coords.la
 
+test_segmap_SOURCES = test-segmap.cc
+test_segmap_LDADD = \
+        ./libcoot-map-utils.la \
+	./libcoot-map-heavy.la \
+	$(top_builddir)/coords/libcoot-coords.la
+
 # other test binaries may need to be linked like this too
-test_coot_utils_SOURCES = test-utils.cc
+test_coot_utils_SOURCES = test-coot-utils.cc
 test_coot_utils_LDADD = \
 	./libcoot-map-heavy.la    \
 	./libcoot-map-utils.la    \
 	./libcoot-coord-extras.la \
 	./libcoot-coord-utils.la  \
 	$(top_builddir)/coords/libcoot-coords.la \
-	$(CLIPPER_LIBS) $(CCP4SRS_LIBS)
+	$(top_builddir)/geometry/libcoot-geometry.la \
+	$(top_builddir)/utils/libcoot-utils.la \
+	$(CLIPPER_LIBS) $(CCP4SRS_LIBS) -lpthread
 
 test_h_bonds_SOURCES = test-h-bonds.cc
 test_h_bonds_LDADD = \
@@ -211,6 +227,10 @@ test_cod_atom_types_LDADD = \
 cod_db_access_SOURCES = cod-db-access.cc
 
 cod_db_access_LDADD = $(top_builddir)/lidia-core/libcoot-lidia-core.la $(RDKIT_LIBS)
+
+test_5_residue_fragments_SOURCES = test-5-residue-fragments.cc
+
+test_5_residue_fragments_LDADD = $(top_builddir)/coot-utils/libcoot-coord-utils.la $(RDKIT_LIBS)
 
 dictionary_atom_types_SOURCES = dictionary-atom-types.cc
 
