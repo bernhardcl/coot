@@ -1682,7 +1682,11 @@ coot::add_chem_comp_sp2_C_planes(const RDKit::ROMol &mol, coot::dictionary_resid
 	    try {
 	       std::vector<std::string> atom_names;
 	       for (unsigned int ii=0; ii<matches[imatch].size(); ii++) {
+#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
+		  const RDKit::Atom* at_p = mol[matches[imatch][ii].second];
+#else
 		  RDKit::ATOM_SPTR at_p = mol[matches[imatch][ii].second];
+#endif
 
 		  // Unlike aromatics, the atoms of this type of plane
 		  // can be in more than one plane.
