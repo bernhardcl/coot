@@ -16,6 +16,7 @@ lib_LTLIBRARIES=libcoot-pli.la
 libcoot_pli_la_SOURCES = protein-ligand-interactions.cc flev-annotations.cc pi-stacking.cc specs.cc
 
 libcoot_pli_la_LIBADD = $(top_builddir)/lidia-core/libcoot-lidia-core.la   \
+			$(top_builddir)/coot-utils/libcoot-coord-utils.la  \
                         $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(L_BOOST_PYTHON) \
                         $(PYTHON_LIBS)
 

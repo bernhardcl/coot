@@ -111,7 +111,8 @@ libcoot_py_restraints_la_SOURCES = mmff-restraints.cc mmff-restraints.hh \
 # 20141014 Add $RDKIT_LIBS for Bill
 libcoot_py_restraints_la_LIBADD =  \
                                 $(top_builddir)/geometry/libcoot-geometry.la \
-                                $(RDKIT_LIBS) $(PYTHON_LIBS)
+                                $(top_builddir)/lidia-core/libcoot-lidia-core.la \
+                                $(CAIRO_LIBS) $(RDKIT_LIBS) $(PYTHON_LIBS)
 
 # -no-undefined causes strange/interesting link errors with clang/Mac OS X 10.10.3
 # libcoot_py_restraints_la_LDFLAGS = -no-undefined 
