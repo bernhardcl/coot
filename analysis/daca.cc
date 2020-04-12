@@ -2,6 +2,7 @@
 #include <map>
 #include <iomanip>
 #include <fstream>
+#include <clipper/core/coords.h>
 #include "utils/coot-utils.hh"
 #include "geometry/residue-and-atom-specs.hh"
 #include "coot-utils/coot-coord-utils.hh"

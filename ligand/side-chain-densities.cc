@@ -4,6 +4,7 @@
 
 #include <boost/math/distributions/skew_normal.hpp>
 
+#include "compat/coot-sysdep.h"
 #include "analysis/stats.hh"
 #include "utils/coot-utils.hh"
 #include "side-chain-densities.hh"
