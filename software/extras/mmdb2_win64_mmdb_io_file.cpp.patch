@@ -1,0 +1,22 @@
+--- mmdb2/mmdb_io_file.cpp.orig	2020-04-20 11:08:56.357171900 +0200
++++ mmdb2/mmdb_io_file.cpp	2020-04-22 10:38:31.097628400 +0200
+@@ -649,7 +649,18 @@
+       else if (hFile!=NULL)  {
+         if (!StdIO)  {
+     #ifndef _MSC_VER
+-          if (gzipIO!=ARCH_NONE)  pclose ( hFile );
++          if (gzipIO!=ARCH_NONE)  {
++#ifdef __MINGW64__
++	    if (!FileEnd()) {
++	      char buffer[256];
++	      while (fgets(buffer, 256, hFile) != NULL)
++		{
++		  // actually just fast forward to EOF
++		}
++	    }
++#endif
++	    pclose ( hFile );
++	  }
+                             else  fclose ( hFile );
+     #else
+           fclose ( hFile );
