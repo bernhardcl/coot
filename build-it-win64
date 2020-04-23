@@ -2143,7 +2143,7 @@ mmdb_version=2.0.19
 mmdb_server_dir=$extras_place
 echo ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
 ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
-${WGET} $win_extras_place/mmdb_io_file.cpp.patch
+${WGET} $win_extras_place/mmdb2_win64_mmdb_io_file.cpp.patch
 
 (
 date
@@ -2151,7 +2151,7 @@ gzip -dc ${AUTOBUILD_SOURCES}/mmdb2-$mmdb_version.tar.gz | tar xf -
 echo gzip -dc ${AUTOBUILD_SOURCES}/mmdb2-$mmdb_version.tar.gz
 cd  mmdb2-$mmdb_version
 pwd
-patch -p0 <${AUTOBUIILD_SOURCES}/mmdb_io_file.cpp.patch
+patch -p0 <${AUTOBUIILD_SOURCES}/mmdb2_win64_mmdb_io_file.cpp.patch
 ./configure $generic_prefix $shared_static_flag
 $MAKE
 $MAKE install
