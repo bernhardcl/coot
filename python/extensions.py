@@ -145,9 +145,9 @@ if (have_coot_python):
      menu.append(menuitem_modules)
      menuitem_modules.show()
 
-     menuitem_pdbe.set_submenu(submenu_pdbe)
-     menu.append(menuitem_pdbe)
-     menuitem_pdbe.show()
+     #menuitem_pdbe.set_submenu(submenu_pdbe)
+     #menu.append(menuitem_pdbe)
+     #menuitem_pdbe.show()
      
      
 
@@ -1369,6 +1369,23 @@ if (have_coot_python):
        lambda func: molecule_chooser_gui(
          "Choose a molecule from which to clear Ball&Stick objects",
          lambda imol: clear_ball_and_stick(imol)))
+
+     def make_grey_atoms_func(state):
+       with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code,
+                                  aa_atom_name, aa_alt_conf]:
+         set_use_grey_carbons_for_molecule(aa_imol, state)       
+
+     add_simple_coot_menu_menuitem(
+       submenu_representation,
+       "Grey Carbons for Molecule",
+       lambda func: make_grey_atoms_func(1)
+)
+
+
+     add_simple_coot_menu_menuitem(
+       submenu_representation,
+       "Coloured Carbons for Molecule",
+       lambda func: make_grey_atoms_func(0))
 
 
      add_simple_coot_menu_menuitem(

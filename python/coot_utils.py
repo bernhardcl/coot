@@ -519,7 +519,7 @@ def residue_atom_to_atom_name(ra):
     else:
         return ra[0][0]
 
-def residue_atom_to_postion(ra):
+def residue_atom_to_position(ra):
     if not isinstance(ra, list):
         return False
     else:
@@ -1475,9 +1475,9 @@ def transform_map(*args):
     return ret
 
 
-# return then NCS master of the first molecule that has ncs.
+# return the NCS master of the first molecule that has NCS.
 # 
-# return "" on fail to find an ncs chain
+# return "" on fail to find an NCS chain
 #
 def get_first_ncs_master_chain():
 
@@ -2349,7 +2349,7 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
         else:
             print "we have dict and model for tlc already"
             return have_tlc_molecule
-    
+
     #
     def mutate_it():
         imol_ligand = get_monomer_and_dictionary(tlc)
@@ -2380,8 +2380,9 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
                                       residue_spec_to_ins_code(new_res_spec),
                                       resno, "")
                 if not (new_chain_id == chain_id_in):
-                    change_chain_id(imol, new_chain_id, chain_id_in, 0, resno,
-                                    resno)
+                    change_chain_id(imol, new_chain_id, chain_id_in, 1,
+                                    residue_spec_to_res_no(new_res_spec),
+                                    residue_spec_to_res_no(new_res_spec))
 
                 replacement_state = refinement_immediate_replacement_state()
                 imol_map = imol_refinement_map()
@@ -3029,6 +3030,10 @@ def remove_annotation_here(rad=1.5):
     handle = text_index_near_position(*args)
     if handle > -1:
         remove_text(handle)
+    else:
+        txt = "BL WARNING:: no annotation found near here (%s A radius)\n" %rad
+        txt += "Not removing anything!"
+        info_dialog(txt)
 
 def remove_annotation_at_click(rad=1.5):
     def remove_here(*args):
@@ -4425,31 +4430,31 @@ def setup_ccp4():
             CCP4_MASTER = os.path.abspath(os.path.join(ccp4_dir, os.pardir))
             # not all required I guess!? They should be set anyway
             ccp4_env_vars = {
-                "CCP4_SCR": ["C:\ccp4temp"],
-                "CCP4I_TCLTK": [CCP4_MASTER, "TclTk84\bin"],
-                "CBIN": [CCP4, "\bin"],
-                "CLIB": [CCP4, "\lib"],
-                "CLIBD": [CCP4, "\lib\data"],
-                "CEXAM": [CCP4, "\examples"],
-                "CHTML": [CCP4, "\html"],
-                "CINCL": [CCP4, "\include"],
-                "CCP4I_TOP": [CCP4, "\share\ccp4i"],
-                "CLIBD_MON": [CCP4, "\lib\data\monomers\\"],
-                "MMCIFDIC": [CCP4, "\lib\ccp4\cif_mmdic.lib"],
-                "CRANK": [CCP4, "\share\ccp4i\crank"],
+                "CCP4_SCR": ["C:\\ccp4temp"],
+                "CCP4I_TCLTK": [CCP4_MASTER, "TclTk84", "bin"],
+                "CBIN": [CCP4, "bin"],
+                "CLIB": [CCP4, "lib"],
+                "CLIBD": [CCP4, "lib", "data"],
+                "CEXAM": [CCP4, "examples"],
+                "CHTML": [CCP4, "html"],
+                "CINCL": [CCP4, "include"],
+                "CCP4I_TOP": [CCP4, "share", "ccp4i"],
+                "CLIBD_MON": [CCP4, "lib", "data", "monomers"],
+                "MMCIFDIC": [CCP4, "lib", "ccp4", "cif_mmdic.lib"],
+                "CRANK": [CCP4, "share", "ccp4i", "crank"],
                 "CCP4_OPEN": ["unknown"],
                 "GFORTRAN_UNBUFFERED_PRECONNECTED": ["Y"]
                 }
             for env_var in ccp4_env_vars:
                 env_dir = os.getenv(env_var)
                 if not env_dir:
-                    # variable not set, so let do so if exists
+                    # variable not set or empty, so let do so if exists
+                    key = ccp4_env_vars[env_var]
                     if len(key) > 1:
-                        if os.path.isdir(env_dir):
-                            # have dir so set variable
-                            key = ccp4_env_vars[env_var]
-                            value = os.path.join(key)
+                        # dir should be:
+                        value = os.path.join(*key)
                             #print "BL DEBUG:: set env variable to", env_var, value
+                        if os.path.isdir(value):
                             os.environ[env_var] = value
                     else:
                         value = key[0]
@@ -4556,6 +4561,55 @@ def rename_alt_confs_active_residue():
         inscode  = active_atom[3]
 
         rename_alt_confs(imol, chain_id, resno, inscode)
+
+# Util function to pipe Coot C stdout to a file (Note: python stdout doesnt
+# touch C stdout, therefore this is needed. Of course could just tee out
+# all output, but that may not always be required).
+#
+# based on https://stackoverflow.com/questions/4675728/redirect-stdout-to-a-file-in-python
+#
+# use either e.g. with open file fn (fn= open(...)):
+#
+# with stdout_redirected(fn):
+#   do some coot things
+#
+# or:
+# with open('output.txt', 'w') as f, stdout_redirected(f):
+#  some coot commands
+#
+
+import os
+import sys
+from contextlib import contextmanager
+
+def fileno(file_or_fd):
+    fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
+    if not isinstance(fd, int):
+        raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
+    return fd
+
+@contextmanager
+def stdout_redirected(to=os.devnull, stdout=None):
+    if stdout is None:
+       stdout = sys.stdout
+
+    stdout_fd = fileno(stdout)
+    # copy stdout_fd before it is overwritten
+    #NOTE: `copied` is inheritable on Windows when duplicating a standard stream
+    with os.fdopen(os.dup(stdout_fd), 'wb') as copied: 
+        stdout.flush()  # flush library buffers that dup2 knows nothing about
+        try:
+            os.dup2(fileno(to), stdout_fd)  # $ exec >&to
+        except ValueError:  # filename
+            with open(to, 'wb') as to_file:
+                os.dup2(to_file.fileno(), stdout_fd)  # $ exec > to
+        try:
+            yield stdout # allow code to be run with the redirected stdout
+        finally:
+            # restore stdout to its previous value
+            #NOTE: dup2 makes stdout_fd inheritable unconditionally
+            stdout.flush()
+            os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
 
 
 ####### Back to Paul's scripting.

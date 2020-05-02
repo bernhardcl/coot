@@ -12,6 +12,8 @@ def deactivate_molecules_except(imol):
 #
 def contact_score_ligand(imol, res_spec):
 
+    global probe_command
+
     deactivate_molecules_except(imol)
 
     chain_id = res_spec_to_chain_id(res_spec)
