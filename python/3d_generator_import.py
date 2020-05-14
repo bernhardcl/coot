@@ -93,7 +93,7 @@ def import_from_3d_generator_from_mdl_using_acedrg(mdl_file_name, comp_id):
 def import_from_3d_generator_from_mdl_using_pyrogen(mdl_file_name, comp_id):
 
     if not command_in_path_qm("pyrogen"):
-        info_dialog("pyrogen not found in path")
+        info_dialog("WARNING:: pyrogen not found in path")
     else:
         # happy path, maybe!?
         #  -m for sdf (default) and -c for mmcif
@@ -102,20 +102,21 @@ def import_from_3d_generator_from_mdl_using_pyrogen(mdl_file_name, comp_id):
         if command_in_path_qm("mogul"):
             args = [file_type_flag, mdl_file_name, "--residue-type", comp_id]
         else:
-            args = ["--no-mogul", file_type_flag, mdl_file_name, "--residue-type", comp_id]
+            args = ["--no-mogul", "-M", file_type_flag, mdl_file_name,
+                    "--residue-type", comp_id]
         status = popen_command("pyrogen", args,
                  [], "pyrogen.log", True)
         if status:
             info_dialog("WARNING:: Bad exit status for pyrogen\n - see pyrogen.log")
         else:
-            active_res = active_residue()  # what for?
             pdb_out_file_name = comp_id + "-pyrogen.pdb"
             cif_out_file_name = comp_id + "-pyrogen.cif"
             imol_ligand = handle_read_draw_molecule_and_move_molecule_here(pdb_out_file_name)
             if not valid_model_molecule_qm(imol_ligand):
-                info_dialog("WARNING:: Something bad happened running pyrogen")
+                info_dialog("WARNING:: Something bad happened running pyrogen.\nSee pyrogen.log")
             else:
-                read_cif_dictionary(cif_out_file_name)
+                handle_cif_dictionary_for_molecule(cif_out_file_name,
+                                                   imol_ligand, 0)
                 return imol_ligand   # should return False otherwise? FIXME
 
 # to be over-ridden by your favourite 3d conformer and restraints generator, if you like...
@@ -461,6 +462,9 @@ def new_molecule_by_smiles_string(tlc_text, smiles_text, force_libcheck=False):
             three_letter_code = tlc_text[0:3]
         else:
             three_letter_code = "XXX"
+
+        print "::::::::::::::::::::: three-letter-code:", three_letter_code
+        print "::::::::::::::::::::: enhanced-ligand-coot?:", enhanced_ligand_coot_p
 
         if (force_libcheck):
             use_libcheck(three_letter_code)

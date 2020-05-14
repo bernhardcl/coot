@@ -166,6 +166,7 @@ def click_select_residues_for_acedrg(window, option_menu, delete_atom_entry,
                 else:
                     if not (imol_click_1 == imol_click_2):
                         add_status_bar_text("These residues are not in the same molecule")
+                        return False
                     else:
                         imol = imol_click_1
                         delete_stripped_1 = delete_atom_text.replace(" ", "")
@@ -251,6 +252,7 @@ def click_select_residues_for_acedrg(window, option_menu, delete_atom_entry,
                             # happy path
                             link_file_name = st_1 + "_link.cif" # acedrg name
                             hack_link_file_name = hack_link(link_file_name)
+                            # read-cif-dictionary returns the monomer index or -1. not a status.
                             dict_read_status = read_cif_dictionary(hack_link_file_name)
                             # dict_read_status is the number of bonds read
                             if (dict_read_status > -2):

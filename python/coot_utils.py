@@ -2311,9 +2311,7 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
         if not isinstance(rn, str):
             return False
         else:
-            if rn in aa_list:
-                return True
-        return False
+            return rn in aa_list
 
     #
     def overlap_by_main_chain(imol_mov, chain_id_mov, res_no_mov, ins_code_mov,
@@ -2371,14 +2369,18 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
             new_chain_id_info = merge_molecules([imol_ligand], imol)
             print "BL DEBUG:: new_chain_id_info: ", new_chain_id_info
             merge_status = new_chain_id_info[0]
+            print "BL DEBUG:: merge status: ", merge_status
             if merge_status == 1:
                 new_res_spec = new_chain_id_info[1]
                 new_chain_id = residue_spec_to_chain_id(new_res_spec)
-                print "BL DEBUG:: new res spec", new_res_spec
-                change_residue_number(imol, new_chain_id,
+                print "BL DEBUG:: new_res_spec", new_res_spec
+                print "BL DEBUG:: change_residue_number to ", resno
+                change_residue_number(imol,
+                                      residue_spec_to_chain_id(new_res_spec),
                                       residue_spec_to_res_no(new_res_spec),
                                       residue_spec_to_ins_code(new_res_spec),
                                       resno, "")
+                print "BL DEBUG::  chain ids :", new_chain_id, chain_id_in
                 if not (new_chain_id == chain_id_in):
                     change_chain_id(imol, new_chain_id, chain_id_in, 1,
                                     residue_spec_to_res_no(new_res_spec),
@@ -2388,7 +2390,7 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
                 imol_map = imol_refinement_map()
                 set_refinement_immediate_replacement(1)
                 if imol_map == -1:
-                    regularize_zone(imol, chain_id_in, resno, resno, "")
+                    regularize_zone(imol, chain_id_in, resno, resno, "" )
                 else:
                     spin_atoms = [" P  ", " O1P", " O2P", " O3P"]
                     phos_dir = {
@@ -2399,10 +2401,11 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
                         dir_atoms = phos_dir[tlc]
                     else:
                         dir_atoms = False
-                    refine_zone(imol, chain_id_in, resno, resno, "")
+                    #refine_zone(imol, chain_id_in, resno, resno, "")
                     if dir_atoms:
-                        spin_search(imol_map, imol, chain_id_in, resno, "", dir_atoms, spin_atoms)
-                        refine_zone(imol, chain_id_in, resno, resno, "")
+                        spin_search(imol_map, imol, chain_id_in, resno, "",
+                                    dir_atoms, spin_atoms)
+                        #refine_zone(imol, chain_id_in, resno, resno, "")
                 accept_regularizement()
                 set_refinement_immediate_replacement(replacement_state)
 
@@ -2423,11 +2426,7 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
         map_mols = map_molecule_list()
         if len(map_mols) > 1:
             show_select_map_dialog()
-            mutate_it()
-        else:
-            mutate_it()
-    else:
-        mutate_it()
+    mutate_it()
 
 # A bit of fun
 #
@@ -3749,6 +3748,77 @@ def file_to_preferences(filename):
                         shutil.copyfile(ref_py, pref_file)
                         if os.path.isfile(pref_file):
                             execfile(pref_file, globals())
+
+
+# something like this for intermediate atoms also?
+#
+# n-neighbs is either 0 or 1
+#
+def rebuild_residues_using_db_loop(imol, middle_residue_spec, n_neighbs):
+
+    global db_loop_preserve_residue_names
+
+    # utility function
+    #
+    def remove_any_GLY_CBs(imol_db_loop, saved_residue_names, ch_id, resno_low):
+
+        for residue_idx, res_name in enumerate(saved_residue_names):
+            if isinstance(res_name, str):
+                if res_name == "GLY":
+                    res_no_gly = resno_low + residue_idx
+                    delete_atom(imol_db_loop, ch_id, res_no_gly, "", " CB ", "")
+
+    # main line
+
+    resno_mid = residue_spec_to_res_no(middle_residue_spec)
+    resno_low = resno_mid - n_neighbs
+    resno_high = resno_mid + n_neighbs
+    r = range(resno_mid - 4 - n_neighbs, resno_mid + n_neighbs + 0) + \
+        range(resno_mid + 1 + n_neighbs, resno_mid + 3 + n_neighbs)
+    print "BL DEBUG:: r", r
+    ch_id = residue_spec_to_chain_id(middle_residue_spec)
+    residue_specs = map(lambda res_no: [ch_id, res_no, ""], r)
+
+    loop_mols = protein_db_loops(imol, residue_specs, imol_refinement_map(),
+                                 1, db_loop_preserve_residue_names)
+    residue_spec_of_residues_to_be_replaced = [middle_residue_spec] \
+        if n_neighbs == 0 else map(lambda rno: [ch_id, rno, ""],
+                                   range(resno_low, resno_high + 1))
+
+    saved_residue_names = map(lambda rno: residue_spec_to_residue_name(imol, rno),
+                              residue_spec_of_residues_to_be_replaced)
+
+    if len(loop_mols) > 0:
+        # loop-mols have the correct residue numbering but the wrong chain-id
+        # and residue type
+        imol_db_loop = loop_mols[1][0]
+        tmp_loop_mols = loop_mols[0]
+        chain_id_db_loop = chain_id(imol_db_loop, 0)
+        if not ch_id == chain_id_db_loop:
+            change_chain_id(imol, imol_db_loop, chain_id_db_loop, ch_id, 0, 0, 0)
+        selection = "//" + ch_id + "/" + str(resno_low) + "-" + str(resno_high)
+
+        # if the original residue was a GLY, the imol-db-loop might (probably
+        # will) have CB. If that is the case, then we should remove the CBs now
+        #
+        remove_any_GLY_CBs(imol_db_loop, saved_residue_names, ch_id, resno_low)
+
+        # this moves atoms, adds atoms if needed, doesn't change the residue name
+        #
+        replace_fragment(imol, imol_db_loop, selection)
+        # tidy up
+        for i in tmp_loop_mols:
+            close_molecule(i)
+
+def go_to_box_middle():
+
+    ls = map_molecule_list()
+    if ls:
+        imol_map = ls[0]
+        c = cell(imol_map)
+        print "BL DEBUG:: c", c
+        rc = map(lambda a: a * 0.5, c[:3])
+        set_rotation_centre(*rc)
 
 # add terminal residue is the normal thing we do with an aligned
 # sequence, but also we can try ton find the residue type of a
