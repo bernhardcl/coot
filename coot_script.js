@@ -3,7 +3,7 @@
 $(document).ready(function () {
       GetLatestReleaseInfo();
    });
-    
+
 function GetLatestReleaseInfo() {
 
    $.getJSON("https://api.github.com/repos/bernhardcl/coot/releases/latest").done(function (release) {
@@ -29,12 +29,11 @@ function GetLatestReleaseInfo() {
          var releaseInfo = release.name + " was updated " + timeAgo + " and downloaded " + downloadCount.toLocaleString() + " times.";
          $(".coot-download-href").attr("href", asset.browser_download_url);
          $(".coot-download-action").attr("action", asset.browser_download_url);
-                           
          $(".release-info").text(releaseInfo);
-         $(".version-info").text(release.name);               
+         $(".version-info").text(release.name);
       });
 }
-      
+
 function GetReleases(repo, pre_release) {
    $.getJSON("https://api.github.com/repos/" + repo + "/releases").done(function(json) {
          var totalDownloadCount = 0;
@@ -57,13 +56,13 @@ function GetReleases(repo, pre_release) {
                   md5sum_url = asset2.browser_download_url;
                }
             }
-            
+
             totalDownloadCount += downloadCount;
             // to avoid an extra library (moment.js)
             var d = new Date(asset.updated_at);
-            
+
             var isPre_release = (pre_release == 'true');
-            
+
             if ((pre_release == "all") ||
                 (isPre_release == release.prerelease)) {
                $(".table-downloads tbody")
