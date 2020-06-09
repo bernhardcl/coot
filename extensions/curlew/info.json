@@ -1,0 +1,31 @@
+{
+   "extensions": [
+      {
+         "name": "Chain Refine",
+         "version": "1.3",
+         "file-name": "curlew_chain_refine.py",
+         "description": "Refine a chain. Adds a key-binding and menu item",
+         "icon": "images/mcc-32.svg",
+         "date": "2020-06-02",
+         "checksum": "62138"
+      },
+      {
+         "name": "Morph",
+         "version": "1",
+         "file-name": "curlew_morph_march.py",
+         "description": "Lots of Morph tools - and crankshafting",
+         "icon": "images/rrz.png",
+         "date": "2020-06-02",
+         "checksum": "26929"
+      },
+      {
+         "name": "Elaborated Pepflip",
+         "version": "1",
+         "file-name": "curlew_pepflip_complicado.py",
+         "description": "pepflip now acts on intermediate atoms by adding a\nkey binding",
+         "icon": "images/flip-peptide.png",
+         "date": "2020-06-02",
+         "checksum": "38800"
+      }
+   ]
+}
