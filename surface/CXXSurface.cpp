@@ -592,7 +592,7 @@ int CXX_mot::CXXSurface::calculateFromAtoms(mmdb::PManager allAtomsManager_in, c
 	
 
 //#pragma omp parallel for default(none) shared(selHnd, nSelAtoms, SelAtom, probeRadius, delta, cout, unitSphereAtOrigin, vdwBallPntrs, contactMap, ContextSelAtom, splitReentrantProbes) schedule(dynamic, 100) //num_threads(2)
-#pragma omp parallel for default(none) shared(nSelAtoms, SelAtom, cout, unitSphereAtOrigin, vdwBallPntrs, contactMap, ContextSelAtom, splitReentrantProbes) schedule(dynamic, 100) //num_threads(2)
+#pragma omp parallel for default(none) shared(nSelAtoms, SelAtom, cout, unitSphereAtOrigin, vdwBallPntrs, contactMap, ContextSelAtom, splitReentrantProbes, probeRadius, delta, selHnd) schedule(dynamic, 100) //num_threads(2)
 	for (int atomNr = 0;atomNr < nSelAtoms; atomNr++) { 
 		mmdb::PAtom centralAtom = static_cast<const CXXAtomBall *>(vdwBallPntrs[atomNr])->getAtomI();		
 		if (!(atomNr%100) || atomNr==nSelAtoms-1) {
