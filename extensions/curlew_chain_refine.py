@@ -1,5 +1,6 @@
 
 try:
+    # check if we have lined_residues function
     linked_residues_py
     def refine_active_fragment():
         with UsingActiveAtom(True) as [aa_imol, aa_chain_id, aa_res_no,
