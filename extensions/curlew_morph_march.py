@@ -70,14 +70,27 @@ if (have_coot_python):
             )
 
 
-        def x():
-            pass
+        add_simple_coot_menu_menuitem(
+            menu,
+            "Crankshaft Peptide Optimizer",
+            lambda func:
+            using_active_atom(crankshaft_peptide_rotation_optimization_py,
+                              "aa_imol", "aa_res_spec"))
+
+
+        def jiggle_all_chain():
+            with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
+                                       aa_ins_code, aa_atom_name, aa_alt_conf]:
+                for chain_id in chain_ids(aa_imol):
+                    fit_chain_to_map_by_random_jiggle(aa_imol, chain_id, 800, 2)
+                    fit_chain_to_map_by_random_jiggle(aa_imol, chain_id, 800, 2)
 
         add_simple_coot_menu_menuitem(
             menu,
             "Jiggle All Chains",
-            lambda func: map(using_active_atom(fit_chain_to_map_by_random_jiggle, "aa_imol", chain_id), chain_ids("aa_imol"))
-            )
+            lambda func:
+            jiggle_all_chain())
 
+register_extension("curlew_morph_march.py", "1.0")
 
 

@@ -1,9 +1,11 @@
 
 try:
+    # to see if it is defined
     pepflip_intermediate_atoms
     add_key_binding("Pepflip Complicado", "q",
-                    lambda func:
-                    pepflip_active_residue() if pepflip_intermediate_atoms() == 0)
+                    lambda:
+                    pepflip_intermediate_atoms() == 0 and
+                    pepflip_active_residue())
 except:
     pass
 
