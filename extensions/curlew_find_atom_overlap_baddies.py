@@ -381,3 +381,6 @@ if coot_python.main_menubar():
     menu, "Overlaps, Peptides, CBeta, Rama & Rota Outliers",
     lambda func: make_quick_test_validation_dialog_func()
     )
+
+register_extension("curlew_find_atom_overlap_baddies.py", "1.0")
+
