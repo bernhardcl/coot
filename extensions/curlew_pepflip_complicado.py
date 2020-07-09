@@ -9,4 +9,4 @@ try:
 except:
     pass
 
-register_extension("curlew_pepflip_complicado.py", 1.1)
+register_extension("curlew_pepflip_complicado.py", "1.1")
