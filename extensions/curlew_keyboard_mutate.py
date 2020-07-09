@@ -57,4 +57,4 @@ def mutate_and_auto_fit_window():
 add_key_binding("Fast auto-mutate", "q",
                 lambda: mutate_and_auto_fit_window())
 
-register_extension("curle_keyboard_mutate.py", "1.0")
+register_extension("curlew_keyboard_mutate.py", "1.0")
