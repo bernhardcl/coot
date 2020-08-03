@@ -209,7 +209,9 @@ main (int argc, char *argv[]) {
       // gtk_settings_set_long_property
       g_type_class_unref (g_type_class_ref (GTK_TYPE_IMAGE_MENU_ITEM));
       g_object_set(gtk_settings_get_default(), "gtk-menu-images", TRUE, NULL);
+#ifndef WINDOWS_MINGW
       g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", TRUE, NULL);
+#endif
       glutInit(&argc, argv);
    } else {
 
