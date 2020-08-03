@@ -2658,10 +2658,10 @@ if test -n "$build_gtk" ; then
       7z x -y ${AUTOBUILD_SOURCES}/gtk+-dev_${gtk2_version}_win32.zip
       cd - 
       # install hicolor theme
-      # FIXME - update to 0.15 but uses xz then (check install for it)
-      hicolor_version=0.13
+      # FIXME - update to 0.17 but uses xz then (check install for it)
+      hicolor_version=0.17
       ${WGET} --no-check-certificate http://icon-theme.freedesktop.org/releases/hicolor-icon-theme-${hicolor_version}.tar.gz
-      gzip -cd ${AUTOBUILD_SOURCES}/hicolor-icon-theme-${hicolor_version}.tar.gz | tar xf -
+      7z x -so ${AUTOBUILD_SOURCES}/hicolor-icon-theme-${hicolor_version}.tar.gz | tar xf -
       cd hicolor-icon-theme-${hicolor_version}
       ./configure --prefix=$install_top_dir
       $MAKE
