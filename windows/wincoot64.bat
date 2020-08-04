@@ -47,7 +47,7 @@ For /F "Skip=1 Tokens=2*" %%A In (
     /V "InstallDir" 2^>Nul'
 ) Do Set "CCP4Dir=%%~B"
 REM find latest dir
-FOR /F " tokens=*" %%i IN ('dir %CCP4DIR% /b /ad-h /t:c /od') DO SET vers=%%i
+FOR /F " tokens=*" %%i IN ('dir "%CCP4DIR%\7.*" /b /ad-h /t:c /od') DO SET vers=%%i
 REM setup ccp4
 call "%CCP4DIR%\%vers%\ccp4.setup.bat"
 Exit /B 0
