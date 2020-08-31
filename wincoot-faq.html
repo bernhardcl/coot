@@ -19,7 +19,7 @@
     <h1><a class="mozTocH1" name="mozTocId631798"></a>WinCoot FAQs and
       problems page</h1>
     For the usual Coot problems and bugs have a look at Paul's FAQ <a
-      href="https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/docs/coot-faq.html">page</a>.
+href="https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/docs/coot-faq.html">page</a>.
     Often RTFM helps too, therefore the Coot documentation, tutorial
     etc. is provided for your comfort. Nevertheless, WinCoot might crash
     on you unexpectedly (like a lot of other Windows programs...).
@@ -110,6 +110,7 @@ reference,
 
 
 
+
       citation and furtherinformation<br>
     </h2>
     <p>The official reference for WinCoot is published now:</p>
@@ -129,6 +130,7 @@ reference,
     <pre>@Article{emsley10:coot,<br> author = {Emsley P, Lohkamp B, Scott W, Cowtan K},<br> title = {Features and Development of Coot},<br> journal = {Acta Crystallographica Section D - Biological Crystallography},<br> year = 2010,<br> volume = 66,<br> pages = 486-501<br>}<br></pre>
     <p>The Coot paper is published in the <a
         href="http://journals.iucr.org/d/issues/2010/04/00/issconts.html">proceedings
+
 
 
 
@@ -294,14 +296,12 @@ href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=
     <h4><a class="mozTocH3" name="mozTocId209103"></a>Bizarre
       connectivity of coordinate files<br>
     </h4>
-    I guess you see something like <a
-      href="images/ugly2.png">this</a>.
+    I guess you see something like <a href="images/ugly2.png">this</a>.
     This should not happen any more (from 0.3.3.1), however there is
     rare cases on Windows 7 where it occurs again (this is progress for
-    you!). Actually it happens randomlly on Windows 10 as well (usually 
-    after merging of molecules). So if it does please let me know about 
-    your system and try
-    the following:<br>
+    you!). Actually it happens randomlly on Windows 10 as well (usually
+    after merging of molecules). So if it does please let me know about
+    your system and try the following:<br>
     <br>
     It may be that you have a 'non-english speaking' computer and
     changing some settings on your computer may fix this.<br>
@@ -321,7 +321,7 @@ href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=
     you can try the following:<br>
     <ul>
       <li>download the language setting <a
-href="software/extras/language.zip">files</a>.</li>
+          href="software/extras/language.zip">files</a>.</li>
       <li>unzip the files in <i>yourWinCootDirectory</i></li>
       <li>Edit your wincoot.bat (runwincoot.bat prior to 0.8.8) file the
         following way:</li>
@@ -366,14 +366,13 @@ href="http://msdn.microsoft.com/en-us/library/dd318693%28v=vs.85%29.aspx">this</
     brief check about the size can help (something above 70Mb
     currently). The correct way is to varify the download via the <a
       href="http://www.openoffice.org/dev_docs/using_md5sums.html">md5sum</a>
-    (<a
-      href="software/binaries/stable/">stable</a>,
-    <a
-href="software/binaries/nightlies/pre-release/">development</a>).<br>
+    (<a href="software/binaries/stable/">stable</a>, <a
+      href="software/binaries/nightlies/pre-release/">development</a>).<br>
     <h3><a class="mozTocH3" name="mozTocId531754"></a>I only get a grey
       display window</h3>
     Turning down your graphics card acceleration should solve this. To
     do so go to <span style="font-style: italic;">Start-&gt;Settings-&gt;Control
+
 
 
 
@@ -430,11 +429,19 @@ href="http://sourceforge.net/mailarchive/message.php?msg_id=896B75251BA19745A529
       </ul>
       <li>Run the program and check.</li>
     </ul>
+    <p>Others (Kent Rossman) have reported that some XBOX servive (<font
+        face="Calibri">GameDVR) </font>may intefer with the stereo.
+      Disabling and uninstalling this may help.<br>
+    </p>
+    <ul>
+    </ul>
     <p>There may be other issues though which are related to the fact
       that WinCoot is 32bit and some graphics card drivers don't seem
       work well with 32bit applications. The hope is that this will go
-      away with 64bit WinCoot (in the pipeline but packing issues at the
-      moment).<br>
+      away with 64bit WinCoot (in <a
+        href="https://bernhardcl.github.io/coot/wincoot-releases.html">beta
+        release</a> but packing issues at the moment). First test,
+      however, seem not too promising. Maybe related to one of above.<br>
     </p>
     <ul>
     </ul>
@@ -537,6 +544,7 @@ your
 
 
 
+
           <span style="font-style: italic;">PATH&nbsp;</span>; for an
           alternative see 5) </li>
       </ul>
@@ -551,6 +559,7 @@ somewhere
 else
 in
 your
+
 
 
 
@@ -585,6 +594,7 @@ that
 probe_command
 and
 reduce_command
+
 
 
 
@@ -664,6 +674,7 @@ reduce_command
 
 
 
+
         describe the location of your files (e.g. probe_command =
         "C:\Mydirectory\probe.exe") </li>
     </ol>
@@ -691,11 +702,13 @@ or
 
 
 
+
       put a line in your <span style="font-style: italic;">YourWinCootDirectory</span>\.coot.py
 which
 reads
 something
 like
+
 
 
 
@@ -767,6 +780,7 @@ like
 
 
 
+
       WIKI page</a>.<br>
     <h3><a class="mozTocH3" name="mozTocId107913"></a>How do I use extra
       parameters in the Refmac interface?<br>
@@ -778,6 +792,7 @@ like
     which give refmac extra parameters is called <span
       style="font-style: italic;">refmac-extra-params.txt</span> for
     easy text editing (see an example <a href="refmac-extra-params.txt">here</a>).
+
 
 
 
