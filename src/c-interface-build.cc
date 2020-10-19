@@ -622,6 +622,19 @@ int backup_compress_files_state() {
   return state;
 } 
 
+void set_decoloned_backup_file_names(int state) {
+   graphics_info_t::decoloned_backup_file_names_flag = state;
+   std::vector<std::string> command_strings;
+   command_strings.push_back("set-decoloned-backup-file-names");
+   command_strings.push_back(graphics_info_t::int_to_string(state));
+   add_to_history(command_strings);
+}
+
+int decoloned_backup_file_names_state() {
+   add_to_history_simple("decoloned-backup-file-names-state");
+   return graphics_info_t::decoloned_backup_file_names_flag;
+}
+
 
 
 
@@ -1615,6 +1628,7 @@ PyObject *refine_residues_with_modes_with_alt_conf_py(int imol, PyObject *res_sp
 		g.residue_type_selection_was_user_picked_residue_range = false;
 		coot::refinement_results_t rr =
 		   g.refine_residues_vec(imol, residues, alt_conf, mol);
+                g.conditionally_wait_for_refinement_to_finish();
 		rv = g.refinement_results_to_py(rr);
 	     }
           }
@@ -3286,13 +3300,16 @@ void assign_pir_sequence(int imol, const char *chain_id_in, const char *seq) {
 
 void assign_sequence_from_file(int imol, const char *file) {
    if (is_valid_model_molecule(imol)) {
-    graphics_info_t::molecules[imol].assign_sequence_from_file(std::string(file));
-  }
-  std::string cmd = "assign-sequence-from-file";
-  std::vector<coot::command_arg_t> args;
-  args.push_back(imol);
-  args.push_back(single_quote(file));
-  add_to_history_typed(cmd, args);
+      graphics_info_t::molecules[imol].assign_sequence_from_file(std::string(file));
+   } else {
+      std::cout << "WARNING:: assign_sequence_from_file() molecule number " << imol
+                << " is not a valid molecule" << std::endl;
+   }
+   std::string cmd = "assign-sequence-from-file";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(imol);
+   args.push_back(single_quote(file));
+   add_to_history_typed(cmd, args);
 }
 
 void assign_sequence_from_string(int imol, const char *chain_id_in, const char *seq) {

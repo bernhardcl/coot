@@ -390,7 +390,10 @@
 # 5.33 20181214 bump the mmdb2 version (pdbx_ins_code)
 # 5.34 20181215 clipper patch fixes
 # 5.35 20190401 clipper configure fftw patch
-script_version=5.35
+# 5.36 20200415 Updates for Release 0.9 - a bit delayed
+# 5.37 20200514 redirect numpy output
+# 5.38 20200921 Add clustalw2
+script_version=5.38
 
 
 
@@ -1464,6 +1467,7 @@ pre_release_server_dir=http://lmb.bioch.ox.ac.uk/coot/software/source/pre-releas
 pre_release_server_dir=http://www2.mrc-lmb.cam.ac.uk/groups/murshudov/coot/source/pre-releases/
 pre_release_server_dir=http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/source/pre-releases
 pre_release_server_dir=https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/source/pre-releases/0.9-pre
+pre_release_server_dir=https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/source/pre-releases
 #
 release_server_dir=http://www.ysbl.york.ac.uk/~emsley/software
 release_server_dir=http://lmb.bioch.ox.ac.uk/coot/software/source/releases
@@ -1483,7 +1487,7 @@ if [ $build_coot_prerelease = yes ]  ; then
    pre_release_files_html=${AUTOBUILD_SOURCES}/index-pre-release.html
 fi
 
-echo doing the awk
+echo doing the awk on the html $pre_release_files_html
 awk ' /a href=.*.tar.gz/ {split($2, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); print file}' $pre_release_files_html
 
 coot_version_tmp=$(awk  ' /a href=.*.tar.gz/ {split($2, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); print file}' \
@@ -1512,6 +1516,8 @@ coot_prerelease_exists=
 
 # coot_version_pre no longer has .tar.gz extension
 
+echo =========================== build_coot_prerelease currently is $build_coot_prerelease ========================
+
 if test "$build_coot_prerelease" = 1 ; then 
 
    echo debug:: ${WGETO} -O ${AUTOBUILD_SOURCES}/index.html -o ${AUTOBUILD_SOURCES}/wget-e.s.p.log $pre_release_server_dir/
@@ -1522,19 +1528,23 @@ if test "$build_coot_prerelease" = 1 ; then
    echo INFO:: building pre-release and coot_version_pre is $coot_version_pre
    if [ -z "$coot_version_pre" ] ; then
       # this path when there are no pre-releases to be built, i.e. build the latest release.
-      echo trying to build pre-release coot, but failed to find pre-release version
-      echo make a stable release then
-      build_coot_prerelease=
+      echo NNX:: trying to build pre-release coot, but failed to find pre-release version
+      echo NNX:: make a stable release then
+      build_coot_prerelease=no
       BINARY_TAR_DEST_DIR=$STABLE_DEST_DIR
       mkdir -p ${BINARY_TAR_DEST_DIR}/holding
 
       ${WGETO} -O ${AUTOBUILD_SOURCES}/index.html -o ${AUTOBUILD_SOURCES}/wget-e.s.p.log $release_server_dir/
-      echo examining release server files ${AUTOBUILD_SOURCES}/index.html
+      echo NNX:: examining release server files ${AUTOBUILD_SOURCES}/index.html
       # coot_version=$(awk  ' /compressed.*a href=/ {f=$6; split($6, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); files[file]=1; } END { for (file in files) { final=file } ; print final } ' 
       # have another go at latest version extraction.
-      coot_version=$(awk '/compressed.*a href=/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); files[++n]=file; } END {  for (file in files) print files[file]}'  \
-          ${AUTOBUILD_SOURCES}/index.html | sort | tail -1)
-      echo coot_version $coot_version
+
+      # 20200415-PE - man this is fragile code. Don't need to sort now.
+      
+      awk '/.*a href=.coot/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); files[++n]=file; } END {  for (file in files) print files[file]}' ${AUTOBUILD_SOURCES}/index.html
+
+      coot_version=$(awk '/.*a href=.coot/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); files[++n]=file; } END {  for (file in files) print files[file]}' ${AUTOBUILD_SOURCES}/index.html | sort | tail -1)
+      echo NNX:: coot_version $coot_version
 
    else
       build_coot_prerelease=1  # belt and braces
@@ -1556,11 +1566,20 @@ else
 
     ${WGETO} -O ${AUTOBUILD_SOURCES}/index.html -o ${AUTOBUILD_SOURCES}/wget-e.s.p.log $release_server_dir/
     echo examining release server files ${AUTOBUILD_SOURCES}/index.html
-    coot_version=$(awk  ' /compressed.*a href=/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); files[file]=1; } END { asort(files, indices) ; for (file in files) { final=file } ; print final } ' \
-        ${AUTOBUILD_SOURCES}/index.html | tail -1)
+    echo ========== awk results:
+    awk  ' /a href=.*.tar.gz/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); print file}' \
+       ${AUTOBUILD_SOURCES}/index.html
+    echo ==== with tail ==========
+    awk  ' /a href=.*.tar.gz/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); print file}' \
+       ${AUTOBUILD_SOURCES}/index.html | tail -1
+    echo =========== from ${AUTOBUILD_SOURCES}/index.html 
+    cat ${AUTOBUILD_SOURCES}/index.html 
+    echo ==============
+    coot_version=$(awk  ' /a href=.*.tar.gz/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); print file}' \
+       ${AUTOBUILD_SOURCES}/index.html | tail -1)
     if test -z "$coot_version" ; then
        # maybe it wasn't GNU awk (we can't sort the associative array), this will pick a "random" arry key -> coot_version
-       coot_version=$(awk  ' /compressed.*a href=/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); files[file]=1; } END { for (file in files) { final=file } ; print final } ' \
+       coot_version=$(awk  ' /.*a href=/ {f=$2; split(f, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); files[file]=1; } END { for (file in files) { final=file } ; print final } ' \
         ${AUTOBUILD_SOURCES}/index.html | tail -1)
     fi
     echo coot_version $coot_version
@@ -1578,7 +1597,6 @@ echo coot_version_pre is $coot_version_pre
 echo build_coot_prerelease: $build_coot_prerelease
 echo release_server_dir $release_server_dir 
 echo coot_version $coot_version
-
 
 
 # set the build prefix for installed stuff.  Put everything in the
@@ -3169,7 +3187,7 @@ if [ "$build_boost" = true ] ; then
       ./b2 address-model=$address_model cflags=-fPIC -j2 cxxflags=-fPIC install
       cd - 
    fi
-   ) > $HOSTLOGDIR/16-boost.log
+   ) > $HOSTLOGDIR/16-boost.log 2>&1
 fi
 
 
@@ -3193,9 +3211,14 @@ if [ true = true ] ; then
          skip_this=true
    fi
    if [ $skip_this = false ] ;  then
+      (
       echo building ========================= numpy ==============================
       # this needs fortran compiler gfortran
 
+      # maybe get numpy from github?
+      # https://github.com/numpy/numpy/releases/download/v1.14.1/numpy-1.14.1.tar.gz
+      # numpy needset setuptools
+      # https://github.com/pypa/setuptools/archive/v41.5.1.tar.gz
       ${WGET} https://pypi.python.org/packages/source/n/numpy/numpy-$numpy_version.tar.gz
       #
       tar xf ${AUTOBUILD_SOURCES}/numpy-$numpy_version.tar.gz
@@ -3215,6 +3238,7 @@ if [ true = true ] ; then
          exit 2
       fi
       cd - 
+      ) > $HOSTLOGDIR/16-b-numpy.log 2>&1
    fi
 fi
 
@@ -3243,6 +3267,7 @@ if [ "$build_rdkit" = true ] ; then
 
    if [ $skip_this = false ] ;  then
 
+      echo building rdkit
       (
       echo building ========================= rdkit ==============================
 
@@ -3277,13 +3302,9 @@ if [ "$build_rdkit" = true ] ; then
          tree_from_build=../rdkit
       else
 
-         echo x
          echo wget $rdkit_home/$rdkit_tar_host_file_name -P ${AUTOBUILD_SOURCES} -O ${AUTOBUILD_SOURCES}/$rdkit_tar_download_file_name
-         echo xx
          wget $rdkit_home/$rdkit_tar_host_file_name -P ${AUTOBUILD_SOURCES} -O ${AUTOBUILD_SOURCES}/$rdkit_tar_download_file_name
-         echo xxx
          echo tar xf ${AUTOBUILD_SOURCES}/$rdkit_tar_download_file_name
-         echo xxxx
          tar xf ${AUTOBUILD_SOURCES}/$rdkit_tar_download_file_name
          pwd
          ls
@@ -3360,10 +3381,10 @@ if [ "$build_rdkit" = true ] ; then
 	 -DPYTHON_EXECUTABLE=$install_top_dir/bin/python \
          -DPYTHON_LIBRARY=$install_top_dir/lib/libpython2.7.$extension_type \
          -DPYTHON_INCLUDE_DIR=$install_top_dir/include/python2.7 \
-	 -DRDK_BUILD_CAIRO_SUPPORT=ON   \
-	 -DRDK_TEST_MULTITHREADED=OFF   \
-         -DRDK_BUILD_THREADSAFE_SSS=OFF \
-         -DRDK_BUILD_INCHI_SUPPORT=ON   \
+	 -DRDK_BUILD_CAIRO_SUPPORT=ON    \
+	 -DRDK_TEST_MULTITHREADED=OFF    \
+         -DRDK_BUILD_THREADSAFE_SSS=OFF  \
+         -DRDK_BUILD_INCHI_SUPPORT=OFF   \
          $cmake_macosx_rpath \
          -DCMAKE_INSTALL_PREFIX=$install_top_dir $tree_from_build
 
@@ -3372,10 +3393,10 @@ if [ "$build_rdkit" = true ] ; then
 	 -DPYTHON_EXECUTABLE=$install_top_dir/bin/python \
          -DPYTHON_LIBRARY=$install_top_dir/lib/libpython2.7.$extension_type \
          -DPYTHON_INCLUDE_DIR=$install_top_dir/include/python2.7 \
-	 -DRDK_BUILD_CAIRO_SUPPORT=ON   \
-	 -DRDK_TEST_MULTITHREADED=OFF   \
-         -DRDK_BUILD_THREADSAFE_SSS=OFF \
-         -DRDK_BUILD_INCHI_SUPPORT=ON   \
+	 -DRDK_BUILD_CAIRO_SUPPORT=ON    \
+	 -DRDK_TEST_MULTITHREADED=OFF    \
+         -DRDK_BUILD_THREADSAFE_SSS=OFF  \
+         -DRDK_BUILD_INCHI_SUPPORT=OFF   \
          $cmake_macosx_rpath \
          -DCMAKE_INSTALL_PREFIX=$install_top_dir $tree_from_build ; then
 
@@ -3391,7 +3412,7 @@ if [ "$build_rdkit" = true ] ; then
       fi
       cd ..
       cd ..
-      ) > $HOSTLOGDIR/17-rdkit.log
+      ) > $HOSTLOGDIR/17-rdkit.log 2>&1
    fi
 fi
 
@@ -3799,7 +3820,7 @@ if test -n "$build_libidn" ; then
    if $MAKE ; then
       $MAKE install
    fi
-) > $HOSTLOGDIR/15-a-libidn2.txt
+) > $HOSTLOGDIR/15-a-libidn2.txt 2>&1
 else
     echo not building libidn2:
 fi
@@ -3856,7 +3877,7 @@ if test -n "$build_curl" ; then
       fi
    fi
 
-) > $HOSTLOGDIR/15-b-curl.txt
+) > $HOSTLOGDIR/15-b-curl.txt 2>&1
 else
     echo not building curl:
 fi
@@ -3898,11 +3919,31 @@ else
    echo 1 ----------------------------------------------------------------
    $MAKE install
 fi    
-) > $HOSTLOGDIR/15-gsl.txt
+) > $HOSTLOGDIR/15-gsl.txt 2>&1
 else
     echo not building gsl:
 fi
 
+#################################################################
+# Clustalw2
+#################################################################
+#
+${WGET} ftp://ftp.ebi.ac.uk/pub/software/clustalw2/2.1/clustalw-2.1.tar.gz
+if [ ! -e ${AUTOBUILD_SOURCES}/clustalw-2.1.tar.gz ] ; then
+   echo failed to download clustalw2
+else
+   # happy path
+   (
+   tar xf ${AUTOBUILD_SOURCES}/clustalw-2.1.tar.gz
+   cd clustalw-2.1/
+   ./configure --prefix=$install_top_dir
+   if ${MAKE} ; then
+       make install
+   else
+       echo make for clustalw-2.1 failed. Boo.
+   fi   
+   ) > $HOSTLOGDIR/18-clustalw.txt 2>&1
+fi
 
 
 #################################################################
@@ -3958,7 +3999,7 @@ else
           echo /usr/include/gd.h exists - skip libgd build
        fi
 
-      ) > $HOSTLOGDIR/15-libgd.txt
+      ) > $HOSTLOGDIR/15-libgd.txt 2>&1
     
       echo build render...............
       ( 
@@ -3995,7 +4036,11 @@ else
                 -e 's/  TLIBS =.*/  TLIBS =/' \
              Makefile.incl
           fi
-       
+
+          echo about to do this: $MAKE render
+          $MAKE render
+          ls -l render
+
           if $MAKE render ; then 
   	     make prefix=$install_top_dir install
 	     # did that work?  I doubt it. Let's do it by hand
@@ -4019,7 +4064,7 @@ else
        else 
           echo $install_top_dir/bin/render already exists, no build
        fi
-       ) > $HOSTLOGDIR/15-raster3d.txt
+       ) > $HOSTLOGDIR/15-raster3d.txt 2>&1
    fi
 fi
 
@@ -4029,6 +4074,11 @@ fi
 ###############################################################################
 #
 echo BUILDING coot: version $coot_version, guile=$ENABLE_GUILE_COOT, python=$ENABLE_PYTHON_COOT
+
+if [ -z "$coot_version" ] ; then
+   echo coot_version is empty - exit now
+   my_exit 2 coot_version not set
+fi
 if [ "$build_coot_prerelease" != 1 ] ; then 
    # normal release coot
    ${WGET} $release_server_dir/$coot_version.tar.gz 
@@ -4059,6 +4109,17 @@ else
    # ${WGET} http://www.ysbl.york.ac.uk/~emsley/software/coot-static.patch
 fi
 
+# get the cxxsurface patch - not sure if/when it's needed.
+# It seems to be needed for g++ 9.2.1 on Ubuntu 19.10
+# but not on 4.8.5 on Scientific Linux
+${WGET} $extras_place/cxxsurface-for-openmp-v1.patch
+# reset this (set it to "yes") if needed, depending on the OS/compiler
+need_cxxsurface_for_openmp_patch=no
+if [ "$w_fid" = g++-9 ] ; then
+   echo we need the CXXSurface OpenMP patch
+   need_cxxsurface_for_openmp_patch=yes
+fi
+
 echo using coot version $coot_version
 ls -ls ${AUTOBUILD_SOURCES}/$coot_version.tar.gz
 if [ -e ${AUTOBUILD_SOURCES}/$coot_version.tar.gz ] ; then
@@ -4073,6 +4134,11 @@ pwd
 gzip -dc ${AUTOBUILD_SOURCES}/$coot_version.tar.gz | tar xf -
 coot_dir_name=`echo $coot_version | sed 's/-revision.*//'`
 cd $coot_dir_name
+
+if [ $need_cxxsurface_for_openmp_patch = yes ] ; then
+    echo patching from ${AUTOBUILD_SOURCES}/cxxsurface-for-openmp-v1.patch
+    patch -p0 < ${AUTOBUILD_SOURCES}/cxxsurface-for-openmp-v1.patch
+fi
 
 if test -n "$glib_installed" ; then
     coot_extra_args="$coot_extra_args --with-glib-prefix=$install_top_dir"
@@ -4201,7 +4267,7 @@ echo ./configure $coot_prefix \
       $goocanvas_args     \
       $glut_prefix        \
       COOT_BUILD_INFO_STRING="$coot_build_info_string" \
-      --with-boost=$prfx  \
+      --with-boost=$install_top_dir  \
       $guile_scripting    \
       $python_scripting   \
       $sqlite_config_args \
@@ -4220,7 +4286,7 @@ echo ./configure $coot_prefix \
       $goocanvas_args     \
       $glut_prefix        \
       COOT_BUILD_INFO_STRING="$coot_build_info_string" \
-      --with-boost=$prfx  \
+      --with-boost=$install_top_dir  \
       $guile_scripting    \
       $python_scripting   \
       $sqlite_config_args \
@@ -4441,13 +4507,13 @@ if [ "$run_tests" = true ] ; then
                   echo ========================
                   echo pass-2nd-test > $LOGS/test-status
 
-	          mv $holding_tar_file $bin_tar_file
-	          mv $holding_tar_file.md5sum $bin_tar_file.md5sum
+                  mv $holding_tar_file $bin_tar_file
+                  mv $holding_tar_file.md5sum $bin_tar_file.md5sum
 
                   # update the description of the latest binary tar file for
                   # this build-type.
                   binary_type_latest=$BINARY_TAR_DEST_DIR/type-binary-${OS}-${systype}${python_tag}${gtk2}-latest.txt
-	          echo $coot_version > $binary_type_latest
+                  echo $coot_version > $binary_type_latest
 
                   # update the ChangeLog, README and RELEASE-NOTES
                   cd "$build_dir"
@@ -4459,12 +4525,12 @@ if [ "$run_tests" = true ] ; then
                   cp RELEASE-NOTES    $BINARY_TAR_DEST_DIR/${coot_version}-RELEASE-NOTES
                   cp RELEASE-NOTES    $BINARY_TAR_DEST_DIR/PRE-RELEASE-NOTES
 
-	          echo about to publish files:
-	          echo about to publish files: >&2
+                  echo about to publish files:
+                  echo about to publish files: >&2
 
-	          # only copy over the binary files if they are not there
-	          # already (checked by publish executable).
-	          #
+                  # only copy over the binary files if they are not there
+                  # already (checked by publish executable).
+                  #
                   # reading the git logs adding $BINARY_TAR_DEST_DIR seems to have fixed something. 
                   # Now, the transfer-to-web-server.sh scripts take the second arg 
                   # and munge it to be the correct directory for the binary (and .txt) files.
@@ -4479,8 +4545,8 @@ if [ "$run_tests" = true ] ; then
 	          echo $publish --no-server-check coot-README
 	          $publish --no-server-check coot-README
                   if [ -z "$build_coot_prerelease" ] ; then
-   	             echo $publish  --no-server-check RELEASE-NOTES
-	             $publish --no-server-check RELEASE-NOTES
+                  echo $publish  --no-server-check RELEASE-NOTES
+                  $publish --no-server-check RELEASE-NOTES
                   else 
    	             echo $publish  --no-server-check $BINARY_TAR_DEST_DIR/PRE-RELEASE-NOTES
 	             $publish --no-server-check $BINARY_TAR_DEST_DIR/PRE-RELEASE-NOTES

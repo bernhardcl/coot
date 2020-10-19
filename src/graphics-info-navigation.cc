@@ -282,6 +282,8 @@ graphics_info_t::intelligent_previous_atom_centring(GtkWidget *go_to_atom_window
 
 }
 
+#include "nsv.hh"
+
 // direction is either "next" or "previous"
 // 
 int
@@ -296,7 +298,7 @@ graphics_info_t::intelligent_near_atom_centring(GtkWidget *go_to_atom_window,
    int resno = go_to_atom_residue();
    int imol = go_to_atom_molecule();
 
-   if (0) { 
+   if (false) {
       std::cout << "intelligent_near_atom_centring() " << direction << std::endl;
       std::cout << "intelligent_near_atom_centring() " << imol << std::endl;
       std::cout << "intelligent_near_atom_centring() :" << chain << ":" << std::endl;
@@ -358,10 +360,20 @@ graphics_info_t::intelligent_near_atom_centring(GtkWidget *go_to_atom_window,
 	 // Update the graphics (glarea widget):
 	 // 
 	 update_things_on_move_and_redraw(); // (symmetry, environment, map) and draw it
-     // and show something in the statusbar
-     std::string ai;
-     ai = atom_info_as_text_for_statusbar(atom_index, imol);
-     add_status_bar_text(ai);
+         // and show something in the statusbar
+         std::string ai;
+         ai = atom_info_as_text_for_statusbar(atom_index, imol);
+         add_status_bar_text(ai);
+
+         mmdb::Residue *residue_p = next_atom->residue;
+         if (residue_p) {
+            GtkWidget *svc = get_sequence_view_is_displayed(imol);
+            if (svc) {
+               exptl::nsv *nsv = static_cast<exptl::nsv *>(g_object_get_data(G_OBJECT(svc), "nsv"));
+               if (nsv)
+                  nsv->highlight_residue(residue_p);
+            }
+         }
       }
    }
    return 1;
@@ -1034,23 +1046,24 @@ graphics_info_t::active_atom_spec_simple() {
    float dist_best = 999999999.9;
    mmdb::Atom *at_close = 0;
 
-   coot::Cartesian rc(graphics_info_t::RotationCentre_x(),
-		      graphics_info_t::RotationCentre_y(),
-		      graphics_info_t::RotationCentre_z());
-   for (int imol=0; imol<graphics_info_t::n_molecules(); imol++) {
-      if (graphics_info_t::molecules[imol].is_displayed_p()) { 
-	 if (graphics_info_t::molecules[imol].atom_selection_is_pickable()) {
-	    bool do_ca_check_flag = false;
-	    coot::at_dist_info_t at_info =
-	       graphics_info_t::molecules[imol].closest_atom(rc, do_ca_check_flag, "", false);
-	    if (at_info.atom) {
-	       if (at_info.dist <= dist_best) {
-		  dist_best = at_info.dist;
-		  imol_closest = at_info.imol;
-		  at_close = at_info.atom;
-	       }
-	    }
-	 }
+   graphics_info_t g;
+   coot::Cartesian rc = g.RotationCentre(); // not static!
+   for (int imol=0; imol<n_molecules(); imol++) {
+      if (is_valid_model_molecule(imol)) {
+         if (molecules[imol].is_displayed_p()) {
+            if (molecules[imol].atom_selection_is_pickable()) {
+               bool do_ca_check_flag = false;
+               coot::at_dist_info_t at_info =
+                  molecules[imol].closest_atom(rc, do_ca_check_flag, "", false);
+               if (at_info.atom) {
+                  if (at_info.dist <= dist_best) {
+                     dist_best = at_info.dist;
+                     imol_closest = at_info.imol;
+                     at_close = at_info.atom;
+                  }
+               }
+            }
+         }
       }
    }
    if (at_close) {
@@ -1061,9 +1074,6 @@ graphics_info_t::active_atom_spec_simple() {
    std::pair<int, coot::atom_spec_t> p1(imol_closest, spec);
    return std::pair<bool, std::pair<int, coot::atom_spec_t> > (was_found_flag, p1);
 }
-
-   
-
 
 
 // static 
@@ -1160,33 +1170,6 @@ int graphics_info_t::apply_go_to_residue_from_sequence_triplet(int imol, const s
    return status;
 }
 
-
-
-// do it if have intermediate atoms and ctrl is pressed.
-// 
-// axis: 0 for Z, 1 for X.
-// 
-short int
-graphics_info_t::rotate_intermediate_atoms_maybe(short int axis, double angle) {
-
-
-   short int handled_flag = 0;
-
-   if (rot_trans_rotation_origin_atom) { 
-      if (moving_atoms_asc) {
-	 if (moving_atoms_asc->n_selected_atoms > 0) {
-	    if (control_is_pressed) {
-	       if (axis == 0)
-		  rotate_intermediate_atoms_round_screen_z(angle);
-	       else 
-		  rotate_intermediate_atoms_round_screen_x(angle);
-	       handled_flag = 1;
-	    }
-	 }
-      }
-   }
-   return handled_flag;
-}
 
 
 // --- unapply symmetry to current view, (we are looking at

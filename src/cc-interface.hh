@@ -270,6 +270,12 @@ PyObject *amplitude_vs_resolution_py(int mol_map);
 SCM amplitude_vs_resolution_scm(int mol_map);
 #endif
 
+//! \brief Flip the hand of the map
+//!
+//! in case it was accidentally generated on the wrong one.
+//! @return the molecule number of the flipped map.
+int flip_hand(int imol_map);
+
 //! \brief Go to the centre of the molecule - for Cryo-EM Molecules
 //!
 //!        and recontour at a sensible value.
@@ -602,6 +608,7 @@ PyObject *get_residue_by_type_py(int, const std::string &residue_type);
 SCM atom_info_string_scm(int imol, const char *chain_id, int resno,
 			 const char *ins_code, const char *atname,
 			 const char *altconf);
+SCM molecule_to_pdb_string_scm(int imol);
 #endif // USE_GUILE
 
 /*! \brief return the rename from a residue serial number
@@ -709,7 +716,7 @@ SCM residues_near_residue(int imol, SCM residue_in_scm, float radius);
 //!
 SCM residues_near_residues_scm(int imol, SCM residues_in, float radius);
 
-//! \brief resdiues near residue
+//! \brief residues near residue
 //!
 //! @return residues within radius of pos (x,y,z) position
 //!
@@ -717,6 +724,10 @@ SCM residues_near_residues_scm(int imol, SCM residues_in, float radius);
 //! pos is a list of 3 numbers.  (get imol from active-atom)
 //!
 SCM residues_near_position_scm(int imol, SCM pos, float radius);
+
+//! \brief label the closest atoms in the residues that neighbour residue_spec
+//!
+void label_closest_atoms_in_neighbour_residues_scm(int imol, SCM residue_spec_scm, float radius);
 
 #endif	/* USE_GUILE */
 
@@ -738,6 +749,12 @@ void add_hydrogens_from_file(int imol, std::string pdb_with_Hs_file_name);
 PyObject *atom_info_string_py(int imol, const char *chain_id, int resno,
 			      const char *ins_code, const char *atname,
 			      const char *altconf);
+
+//! \brief
+//!
+//! Return the molecule as a PDB string
+PyObject *molecule_to_pdb_string_py(int imol);
+
 //! \brief
 //! Return a list of atom info for each atom in the specified residue:
 //
@@ -837,6 +854,10 @@ PyObject *residues_near_residues_py(int imol, PyObject *residues_in, float radiu
 //! closer than radius Angstroems to the given position.
 //!
 PyObject *residues_near_position_py(int imol, PyObject *pos_in, float radius);
+
+//! \brief label the closest atoms in the residues that neighbour residue_spec
+//!
+void label_closest_atoms_in_neighbour_residues_py(int imol, PyObject *residue_spec_py, float radius);
 
 //! \brief return a Python object for the bonds
 //
@@ -1755,6 +1776,9 @@ SCM spherical_density_overlap(SCM i_scm, SCM j_scm);
 #endif // USE_GUILE
 #endif // __cplusplus
 
+void resolve_clashing_sidechains_by_deletion(int imol);
+
+void resolve_clashing_sidechains_by_rebuilding(int imol);
 
 /*  ----------------------------------------------------------------------- */
 /*                  GUIL Utility Functions                                  */

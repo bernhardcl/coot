@@ -56,6 +56,17 @@
 	 (water-coordination-gui)))
 
       (add-simple-coot-menu-menuitem
+       menu "Atom Overlaps"
+       (lambda ()
+         (using-active-atom
+          (molecule-atom-overlaps-gui aa-imol))))
+
+      (add-simple-coot-menu-menuitem
+       menu "Pepflips from Difference Map..."
+       (lambda ()
+         (pepflips-by-difference-map-gui)))
+
+      (add-simple-coot-menu-menuitem
        menu "Validation Outliers"
        (lambda ()
            (using-active-atom
@@ -479,6 +490,12 @@
 	;; ---------------------------------------------------------------------
 
 	(add-simple-coot-menu-menuitem
+	 submenu-models "Add Hydrogens"
+	 (lambda ()
+	   (using-active-atom
+	    (coot-reduce aa-imol))))
+
+	(add-simple-coot-menu-menuitem
 	 submenu-models "Add Hydrogens using Refmac"
 	 (lambda ()
 	   (using-active-atom
@@ -496,13 +513,11 @@
 				 (lambda (imol)
 				   (move-waters-to-around-protein imol)))))
 
-
       (add-simple-coot-menu-menuitem 
        submenu-models "Assign (force) HETATMs for this Residue"
        (lambda ()
 	 (using-active-atom
 	  (hetify-residue aa-imol aa-chain-id aa-res-no aa-ins-code))))
-
 
 	(add-simple-coot-menu-menuitem
 	 submenu-models "Assign HETATM to molecule..."
@@ -517,7 +532,6 @@
 	   (molecule-chooser-gui "Molecule to Copy..."
 				 (lambda (imol)
 				   (copy-molecule imol)))))
-
 
 	(add-simple-coot-menu-menuitem
 	 submenu-models "Copy Fragment..."

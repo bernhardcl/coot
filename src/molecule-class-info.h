@@ -325,7 +325,7 @@ class molecule_class_info_t {
 
    // saving temporary files (undo)
    //
-   std::string save_molecule_filename(const std::string &dir);
+   std::string get_save_molecule_filename(const std::string &dir);
    int make_backup(); // changes history details
    int make_maybe_backup_dir(const std::string &filename) const;
    short int backup_this_molecule;
@@ -862,7 +862,11 @@ public:        //                      public
 			  int brief_atom_labels_flag,
 			  short int seg_ids_in_atom_labels_flag) const;
 
-   void label_atom(int i, int brief_atom_labels_flag, short int seg_ids_in_atom_labels_flag);
+   void draw_atom_label(int atom_index, int brief_atom_labels_flag, short int seg_ids_in_atom_labels_flag);
+
+   // don't count the mainchain of the peptide-linked residues
+   //
+   std::vector<mmdb::Atom *> closest_atoms_in_neighbour_residues(mmdb::Residue *residue_p, float radius) const;
 
    void debug_selection() const;
    void debug(bool debug_atoms_also_flag=false) const;
@@ -1104,6 +1108,8 @@ public:        //                      public
 
    mmdb::Atom *get_atom(int idx) const;
 
+   bool have_atom_close_to_position(const coot::Cartesian &pos) const;
+
    // return the maximum residue number in the chain. first of false means failure to do so.
    //
    std::pair<bool,int> max_res_no_in_chain(mmdb::Chain *chain_p) const;
@@ -1122,8 +1128,8 @@ public:        //                      public
    }
 
    void makebonds(const coot::protein_geometry *geom_p, const std::set<int> &no_bonds_to_these_atom_indices);
-   void makebonds(float max_dist, const coot::protein_geometry *geom_p, bool add_residue_indices=false); // maximum distance for bond (search)
-   void makebonds(float min_dist, float max_dist, const coot::protein_geometry *geom_p, bool add_residue_indices=false);
+   void makebonds(float max_dist, const coot::protein_geometry *geom_p); // maximum distance for bond (search)
+   void makebonds(float min_dist, float max_dist, const coot::protein_geometry *geom_p);
    void make_ca_bonds(float min_dist, float max_dist);
    void make_ca_bonds(float min_dist, float max_dist, const std::set<int> &no_bonds_to_these_atom_indices);
    void make_ca_bonds();
@@ -1141,14 +1147,16 @@ public:        //                      public
    void b_factor_representation();
    void b_factor_representation_as_cas();
    void occupancy_representation();
-   void user_defined_colours_representation(coot::protein_geometry *geom_p, bool all_atoms_mode); // geom needed for ligands
+   void user_defined_colours_representation(coot::protein_geometry *geom_p,
+                                            bool all_atoms_mode,
+                                            bool draw_missing_loops_flag);
 
    void make_bonds_type_checked();
 
    void make_bonds_type_checked(const std::set<int> &no_bonds_to_these_atom_indices);
 
 
-   void label_atoms(int brief_atom_labels_flag, short int seg_ids_in_atom_labels_flag);
+   void draw_atom_labels(int brief_atom_labels_flag, short int seg_ids_in_atom_labels_flag);
 
    //
    void update_molecule_after_additions(); // cleanup, new
@@ -1589,7 +1597,7 @@ public:        //                      public
 			  const coot::ghost_molecule_display_t &ghost_info,
 			  int is_diff_map_flag,
 			  int swap_difference_map_colours_flag,
-			  float sigma_in);
+			  float contour_level_in);
 
    void install_new_map(const clipper::Xmap<float> &mapin, std::string name, bool is_em_map_in);
    void set_name(std::string name); // you are encouraged not to use
@@ -1766,6 +1774,10 @@ public:        //                      public
    short int delete_residue(int model_number,
 			    const std::string &chain_id, int resno,
                             const std::string &inscode);
+
+   // wraps above
+   short int delete_residue(const coot::residue_spec_t &spec);
+
    // Delete only the atoms of the residue that have the same altconf (as
    // the selected atom).  If the selected atom has altconf "", you
    // should call simply delete_residue().
@@ -1802,6 +1814,8 @@ public:        //                      public
    int delete_waters(); // return status of atoms deleted (0 -> none deleted).
 
    int delete_chain(const std::string &chain_id);
+
+   bool delete_sidechain(mmdb::Residue *residue_p);
 
    int delete_sidechains_for_chain(const std::string &chain_id);
 
@@ -1860,6 +1874,7 @@ public:        //                      public
    void apply_pir_renumber(const coot::pir_alignment_t &a, mmdb::Chain *chain_p);
    // this is where the PIR alignments are stored, the key is the chain-id
    std::map<std::string, coot::pir_alignment_t> pir_alignments;
+
 
    // Try to align on all chains - pick the best one and return it in
    // the second.  If there is no chain that matches within match_frag
@@ -2643,8 +2658,10 @@ public:        //                      public
    coot::util::missing_atom_info
    fill_partial_residues(coot::protein_geometry *geom_p, int imol_refinement_map);
    // return 1 if the residue was filled, 0 if the residue was not found
-   int fill_partial_residue(coot::residue_spec_t &residue_spec,
-			     coot::protein_geometry *geom_p, int imol_refinement_map);
+   int fill_partial_residue(const coot::residue_spec_t &residue_spec,
+                            const coot::protein_geometry *geom_p, int imol_refinement_map);
+
+   std::vector<std::string> get_chain_ids() const;
 
    // Ribosome People:
    int exchange_chain_ids_for_seg_ids();
@@ -2806,6 +2823,7 @@ public:        //                      public
    graphical_bonds_container get_bonds_representation() { make_bonds_type_checked(); return bonds_box; }
    //
    std::vector<coot::residue_spec_t> residues_near_residue(const coot::residue_spec_t &rspec, float radius) const;
+   void label_closest_atoms_in_neighbour_atoms(coot::residue_spec_t residue_spec, float radius);
 
    void remove_ter_atoms(const coot::residue_spec_t &spec); // from all models
 
@@ -3387,6 +3405,10 @@ public:        //                      public
    mean_and_variance<float> map_histogram_values;
    mean_and_variance<float> set_and_get_histogram_values(unsigned int n_bins); // fill above
 
+   void resolve_clashing_sidechains_by_deletion(const coot::protein_geometry *geom_p);
+   void resolve_clashing_sidechains_by_rebuilding(const coot::protein_geometry *geom_p,
+                                                  int imol_refinement_map);
+
    static int watch_mtz(gpointer data); // return 0 to stop watching
    bool continue_watching_mtz;
    updating_map_params_t updating_map_previous;
@@ -3408,6 +3430,8 @@ public:        //                      public
 
    // allow this to be called from the outside, when this map gets updated (by sfcalc_genmap)
    void set_mean_and_sigma();
+
+   std::string pdb_string() const;
 
    coot::model_composition_stats_t get_model_composition_statistics() const;
 

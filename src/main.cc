@@ -268,7 +268,7 @@ main (int argc, char *argv[]) {
 
    if (graphics_info_t::use_graphics_interface_flag) {
 
-      window1 = create_window1 ();
+      window1 = create_window1();
 
       std::string version_string = VERSION;
       std::string main_title = "Coot " + version_string;
@@ -288,7 +288,9 @@ main (int argc, char *argv[]) {
 
       gtk_window_set_title(GTK_WINDOW (window1), main_title.c_str());
 
-      glarea = gl_extras(lookup_widget(window1, "vbox1"),
+      // this vbox is not used execut to look up "main_window_graphics_hbox"
+      // which is where the gl_area goes
+      glarea = gl_extras(lookup_widget(window1, "main_window_vbox"),
 			 cld.hardware_stereo_flag);
       if (glarea) {
 	 // application icon:
@@ -369,17 +371,10 @@ main (int argc, char *argv[]) {
    // 
    change_directory_maybe();
 
-  
-   // allocate some memory for the molecules
-   //
-   std::cout << "initalize graphics molecules...";
-   std::cout.flush();
-   initialize_graphics_molecules();
-   std::cout << "done." << std::endl;
-	
+
 #if !defined(USE_GUILE) && !defined(USE_PYTHON)
    handle_command_line_data(cld);  // and add a flag if listener
-   // should be started.
+                                   // should be started.
 #endif
   
    // which gets looked at later in c_inner_main's make_port_listener_maybe()

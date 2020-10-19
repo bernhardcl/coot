@@ -955,7 +955,7 @@ void hardware_stereo_mode() {
       if (graphics_info_t::display_mode != coot::HARDWARE_STEREO_MODE) {
 	 int previous_mode = graphics_info_t::display_mode;
 	 graphics_info_t::display_mode = coot::HARDWARE_STEREO_MODE;
-	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "vbox1");
+	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "main_window_vbox");
 	 if (!vbox) {
 	    std::cout << "ERROR:: failed to get vbox in hardware_stereo_mode!\n";
 	 } else {
@@ -1012,7 +1012,7 @@ void zalman_stereo_mode() {
       if (graphics_info_t::display_mode != coot::HARDWARE_STEREO_MODE) {
 	 int previous_mode = graphics_info_t::display_mode;
 	 graphics_info_t::display_mode = coot::ZALMAN_STEREO;
-	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "vbox1");
+	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "main_window_vbox");
 	 if (!vbox) {
 	    std::cout << "ERROR:: failed to get vbox in zalman_stereo_mode!\n";
 	 } else {
@@ -1064,7 +1064,7 @@ void mono_mode() {
          int x_size = main_win->allocation.width;
          int y_size = main_win->allocation.height;
 	 graphics_info_t::display_mode = coot::MONO_MODE;
-	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "vbox1");
+	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "main_window_vbox");
 	 if (!vbox) {
 	    std::cout << "ERROR:: failed to get vbox in mono mode!\n";
 	 } else {
@@ -1118,27 +1118,29 @@ void side_by_side_stereo_mode(short int use_wall_eye_flag) {
 
    if (graphics_info_t::use_graphics_interface_flag) {
 
-      
       // If it wasn't in side by side stereo mode, then we need to
       // generated 2 new glareas by calling gl_extras().
-      // 
+      //
+
       if (!((graphics_info_t::display_mode == coot::SIDE_BY_SIDE_STEREO) ||
 	    (graphics_info_t::display_mode == coot::SIDE_BY_SIDE_STEREO_WALL_EYE) ||
 	    (graphics_info_t::display_mode == coot::DTI_SIDE_BY_SIDE_STEREO))) {
-	 
-	 if (use_wall_eye_flag == 1) {
+
+         if (use_wall_eye_flag == 1) {
 	    graphics_info_t::in_wall_eyed_side_by_side_stereo_mode = 1;
 	    graphics_info_t::display_mode = coot::SIDE_BY_SIDE_STEREO_WALL_EYE;
 	 } else {
 	    graphics_info_t::in_wall_eyed_side_by_side_stereo_mode = 0;
 	    graphics_info_t::display_mode = coot::SIDE_BY_SIDE_STEREO;
 	 }
+
 	 // int previous_mode = graphics_info_t::display_mode;
 	 short int stereo_mode = coot::SIDE_BY_SIDE_STEREO;
 	 if (use_wall_eye_flag)
 	    stereo_mode = coot::SIDE_BY_SIDE_STEREO_WALL_EYE;
-	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "vbox1");
+	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "main_window_vbox");
 	 GtkWidget *glarea = gl_extras(vbox, stereo_mode);
+
 	 if (glarea) {
 	    if (graphics_info_t::idle_function_spin_rock_token) { 
 	       toggle_idle_spin_function(); // turn it off;
@@ -1187,7 +1189,7 @@ void set_dti_stereo_mode(short int state) {
 	 } else {
 	    stereo_mode = coot::SIDE_BY_SIDE_STEREO;
 	 }
-	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "vbox1");
+	 GtkWidget *vbox = lookup_widget(graphics_info_t::glarea, "main_window_vbox");
 	 GtkWidget *glarea = gl_extras(vbox, stereo_mode);
 	 if (graphics_info_t::use_graphics_interface_flag) {
 	    if (graphics_info_t::idle_function_spin_rock_token) { 
@@ -2265,6 +2267,22 @@ void set_draw_stick_mode_atoms(int imol, short int state) {
    graphics_draw();
 }
 
+void set_draw_missing_residues_loops(short int state) {
+
+   bool prev_state = graphics_info_t::draw_missing_loops_flag;
+   bool new_state = state;
+   if (new_state != prev_state) {
+      graphics_info_t::draw_missing_loops_flag = new_state;
+      for (int imol=0; imol<graphics_info_t::n_molecules(); imol++) {
+         if (is_valid_model_molecule(imol)) {
+            graphics_info_t::molecules[imol].make_bonds_type_checked();
+         }
+      }
+      graphics_draw();
+   }
+}
+
+
 
 /*! \brief the state of draw hydrogens for molecule number imol.  
 
@@ -2921,6 +2939,11 @@ get_aniso_probability() {
 /*  ---------------------------------------------------------------------- */
 /*                         Display Functions                               */
 /*  ---------------------------------------------------------------------- */
+
+/*! \brief set default for the drawing of atoms in stick mode (default is on (1)) */
+void set_draw_stick_mode_atoms_default(short int state) {
+   graphics_info_t::draw_stick_mode_atoms_default = state;
+}
 
 void set_default_bond_thickness(int t) {
 
@@ -5006,7 +5029,8 @@ void graphics_to_user_defined_atom_colours_representation(int imol) {
 
    if (is_valid_model_molecule(imol)) {
       graphics_info_t g;
-      g.molecules[imol].user_defined_colours_representation(g.Geom_p(), false);
+      bool all_atoms_flag = false;
+      g.molecules[imol].user_defined_colours_representation(g.Geom_p(), all_atoms_flag, g.draw_missing_loops_flag);
       std::vector<std::string> command_strings;
       command_strings.push_back("graphics-to-user-defined-colours-representation");
       command_strings.push_back(graphics_info_t::int_to_string(imol));
@@ -5024,7 +5048,8 @@ void graphics_to_user_defined_atom_colours_all_atoms_representation(int imol) {
 
    if (is_valid_model_molecule(imol)) {
       graphics_info_t g;
-      g.molecules[imol].user_defined_colours_representation(g.Geom_p(), true);
+      bool all_atoms_flag = false;
+      g.molecules[imol].user_defined_colours_representation(g.Geom_p(), all_atoms_flag, g.draw_missing_loops_flag);
       std::vector<std::string> command_strings;
       command_strings.push_back("graphics-to-user-defined-colours-representation");
       command_strings.push_back(graphics_info_t::int_to_string(imol));
@@ -5832,8 +5857,14 @@ symmetry_operators_to_xHM_py(PyObject *symmetry_operators) {
 void 
 scale_zoom_internal(float f) {
 
+   // now we filter out unusual/erroneous changes in zoom
+
    graphics_info_t g;
-   g.zoom *= fabs(f);
+   if (f > 0.0)
+      if (f < 1.8)
+         if (f > 0.5)
+            g.zoom *= f;
+
 }
 
 void scale_zoom(float f) {
@@ -7040,6 +7071,14 @@ void destroy_edit_backbone_rama_plot() {
 // 
 void print_sequence_chain(int imol, const char *chain_id) {
 
+   print_sequence_chain_general(imol, chain_id, 0, 0, "");
+}
+
+void print_sequence_chain_general(int imol, const char *chain_id,
+                                   short int pir_format,
+                                   short int file_output,
+                                   const char *file_name) {
+
    std::string seq;
    bool with_spaces = false; // block spaced output is easier to read
 
@@ -7083,9 +7122,39 @@ void print_sequence_chain(int imol, const char *chain_id) {
 	    }
 	 }
       }
-      std::cout << ">" << graphics_info_t::molecules[imol].name_sans_extension(0)
-		<< " chain " << chain_id << std::endl;
-      std::cout << seq << std::endl;
+
+      std::string full_seq;
+      if (pir_format) {
+         std::string n = graphics_info_t::molecules[imol].name_sans_extension(0); 
+         full_seq = ">P1;";
+         full_seq += n;
+         full_seq += " ";
+         full_seq += chain_id;
+         full_seq += "\n\n";
+         full_seq += seq;
+         full_seq += "\n*\n";
+      } else {
+         std::string n = graphics_info_t::molecules[imol].name_sans_extension(0); 
+         full_seq = "> ";
+         full_seq += n;
+         full_seq += " ";
+         full_seq += chain_id;
+         full_seq += "\n";
+         full_seq += seq;
+         full_seq += "\n";
+      }
+
+      if (file_output) {
+         std::ofstream f(file_name);
+         if (f) {
+            f << full_seq;
+            f.close();
+         } else {
+            std::cout << "WARNING:: failed to open " << file_name << std::endl;
+         }
+      } else {
+         std::cout << full_seq;
+      }
    }
 }
 

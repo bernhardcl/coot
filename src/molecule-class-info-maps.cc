@@ -316,17 +316,17 @@ molecule_class_info_t::update_map_internal() {
 
    if (has_xmap()) {
       if (is_EM_map())
-	 radius = graphics_info_t::box_radius_em;
+         radius = graphics_info_t::box_radius_em;
 
       if (false)
-	 std::cout << "in update_map_internal() " << radius << " vs x "
-		   << graphics_info_t::box_radius_xray << " em "
-		   << graphics_info_t::box_radius_em << " is-em: "
-		   << is_EM_map() << std::endl;
+         std::cout << "in update_map_internal() " << radius << " vs x "
+           << graphics_info_t::box_radius_xray << " em "
+           << graphics_info_t::box_radius_em << " is-em: "
+           << is_EM_map() << std::endl;
 
       coot::Cartesian rc(graphics_info_t::RotationCentre_x(),
-			 graphics_info_t::RotationCentre_y(),
-			 graphics_info_t::RotationCentre_z());
+                         graphics_info_t::RotationCentre_y(),
+                         graphics_info_t::RotationCentre_z());
 
       try {
          update_map_triangles(radius, rc);  // NXMAP-FIXME
@@ -743,6 +743,10 @@ molecule_class_info_t::update_map_triangles(float radius, coot::Cartesian centre
             threads[ii].join();
       }
 
+      if (is_dynamically_transformed_map_flag)
+         for (unsigned int ii=0; ii<draw_vector_sets.size(); ii++)
+            dynamically_transform(draw_vector_sets[ii]);
+
       if (draw_it_for_solid_density_surface) {
          tri_con = my_isosurface.GenerateTriangles_from_Xmap(xmap,
                                  contour_level, dy_radius, centre,
@@ -905,7 +909,11 @@ molecule_class_info_t::draw_solid_density_surface(bool do_flat_shading) {
 	 if (density_surface_opacity < 1.0) {
 	    clipper::Coord_orth front_cl(front.x(), front.y(), front.z());
 	    clipper::Coord_orth  back_cl( back.x(),  back.y(),  back.z());
+            auto tp_1 = std::chrono::high_resolution_clock::now();
 	    tri_con.depth_sort(back_cl, front_cl);
+            auto tp_2 = std::chrono::high_resolution_clock::now();
+            auto d21 = chrono::duration_cast<chrono::milliseconds>(tp_2 - tp_1).count();
+            // std::cout << "triangle sorting " << d21 << " milliseconds" << std::endl;
 	    // std::cout << " sorted" << std::endl;
 	    if (xmap_is_diff_map)
 	       tri_con_diff_map_neg.depth_sort(back_cl, front_cl);
@@ -1216,7 +1224,7 @@ molecule_class_info_t::dynamically_transform(coot::CartesianPairInfo v) {
       clipper::Coord_orth ct1 = c1.transform(map_ghost_info.rtop);
       clipper::Coord_orth ct2 = c2.transform(map_ghost_info.rtop);
       v.data[i] = coot::CartesianPair(coot::Cartesian(ct1.x(), ct1.y(), ct1.z()),
-				coot::Cartesian(ct2.x(), ct2.y(), ct2.z()));
+                                      coot::Cartesian(ct2.x(), ct2.y(), ct2.z()));
    }
 
 }
@@ -2003,7 +2011,7 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
       if (coot::util::is_basic_em_map_file(filename)) {
          em = true;
          // fill xmap
-         done = coot::util::slurp_fill_xmap_from_map_file(filename, &xmap);
+         // done = coot::util::slurp_fill_xmap_from_map_file(filename, &xmap);
       }
 
       if (! done) {

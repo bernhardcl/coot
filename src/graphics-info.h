@@ -35,6 +35,8 @@
 #include <vector>
 #endif // HAVE_VECTOR
 
+// #include <utils/backward.hpp>
+
 // need gtk things
 #include <gtk/gtk.h>
 
@@ -135,6 +137,8 @@ enum { N_ATOMS_MEANS_BIG_MOLECULE = 400 };
 
 #include "generic-display-object.hh"
 
+#include "simple-distance-object.hh"
+
 
 namespace coot {
    enum {NEW_COORDS_UNSET = 0,       // moving_atoms_asc_type values
@@ -230,27 +234,6 @@ namespace coot {
       clipper::Coord_orth p2;
       clipper::Coord_orth p3;
    };
-
-
-   class simple_distance_object_t {
-   public:
-     clipper::Coord_orth start_pos;
-     clipper::Coord_orth end_pos;
-     int imol_start;
-     int imol_end;
-     simple_distance_object_t(int imol1,
-			      const clipper::Coord_orth &start,
-			      int imol2,
-			      const clipper::Coord_orth &end) {
-       start_pos = start;
-       end_pos = end;
-       imol_start = imol1;
-       imol_end = imol2;
-     }
-     friend std::ostream& operator<<(std::ostream &s, simple_distance_object_t o);
-   };
-   std::ostream& operator<<(std::ostream &s, simple_distance_object_t o);
-
 
    class intermediate_atom_distance_t {
      Cartesian static_position;
@@ -881,7 +864,7 @@ class graphics_info_t {
    std::string adjust_refinement_residue_name(const std::string &resname) const;
    static void info_dialog_missing_refinement_residues(const std::vector<std::string> &res_names);
    void info_dialog_alignment(coot::chain_mutation_info_container_t mutation_info) const;
-   void info_dialog_refinement_non_matching_atoms(std::vector<std::pair<std::string, std::vector<std::string> > > nma);
+   void info_dialog_refinement_non_matching_atoms(std::vector<std::pair<mmdb::Residue *, std::vector<std::string> > > nma);
 
    // bottom left flat ligand view:
    //
@@ -896,7 +879,6 @@ public:
    enum { USE_PYTHON_STATE_COMMANDS = 2, USE_SCM_STATE_COMMANDS = 1 };
 
    //
-   void initialize_molecules() { }
 
    void init();
 
@@ -1052,6 +1034,8 @@ public:
 
    static short int do_lighting_flag;
    static bool do_flat_shading_for_solid_density_surface;
+
+   static bool sequence_view_is_docked_flag;
 
    static short int do_anti_aliasing_flag; // BL feature
    void set_do_anti_aliasing(int state);
@@ -1325,6 +1309,7 @@ public:
    float Y() { return rotation_centre_y; };
    float Z() { return rotation_centre_z; };
 
+   // why isn't this static? Make it static
    coot::Cartesian RotationCentre() const
       { return coot::Cartesian(rotation_centre_x,
 			       rotation_centre_y,
@@ -2026,6 +2011,7 @@ public:
    // sequence view
    static GtkWidget **sequence_view_is_displayed;
    void set_sequence_view_is_displayed(GtkWidget *seq_view_canvas, int imol);
+   GtkWidget * get_sequence_view_is_displayed(int imol) const;
    static int nsv_canvas_pixel_limit;
 
    // Geometry Graphs:
@@ -2297,6 +2283,7 @@ public:
    void make_moving_atoms_restraints_graphics_object();
    static coot::extra_restraints_representation_t moving_atoms_extra_restraints_representation;
    static bool draw_it_for_moving_atoms_restraints_graphics_object;
+   static bool draw_missing_loops_flag;
 
    //
    static float environment_min_distance;
@@ -2362,7 +2349,8 @@ public:
 				     const std::string &res_type,
 				     short int immediate_addition_flag);
    void execute_simple_nucleotide_addition(int imol, const std::string &term_type,
-					   mmdb::Residue *res_p, const std::string &chain_id);
+                                           mmdb::Residue *res_p, const std::string &chain_id);
+   void execute_simple_nucleotide_addition(int imol, const std::string &chain_id, int res_no);
 
    static short int add_terminal_residue_immediate_addition_flag;
    static short int refinement_immediate_replacement_flag;  // don't dialog me please
@@ -2420,6 +2408,7 @@ public:
    void delete_sidechain_range(int imol,
 			       const coot::residue_spec_t &res_1,
 			       const coot::residue_spec_t &res_2);
+   void delete_active_residue();
    // c-info functions really, but we cant have mmdb_manager there, so the are moved here.
    //
    static void fill_output_residue_info_widget(GtkWidget *widget, int imol,
@@ -3017,7 +3006,7 @@ public:
    void add_target_position_restraint_for_intermediate_atom(const coot::atom_spec_t &spec,
 							    const clipper::Coord_orth &target_pos);
    void add_target_position_restraints_for_intermediate_atoms(const std::vector<std::pair<coot::atom_spec_t, clipper::Coord_orth> > &atom_spec_position_vec); // refines after added
-   short int rotate_intermediate_atoms_maybe(short int axis, double angle);
+   short int rotate_intermediate_atoms_maybe(unsigned int widget_height, unsigned int widget_width);
                                                  // do it if have intermediate atoms
                                                  // and ctrl is pressed.
    // axis: 0 for Z, 1 for X.
@@ -3037,7 +3026,12 @@ public:
 						    int resno_2) const;
    atom_selection_container_t make_moving_atoms_asc(mmdb::Manager *mol,
 						    const std::vector<mmdb::Residue *> &residues) const;
-   static bool moving_atoms_displayed_p() { return moving_atoms_asc->mol; }
+   static bool moving_atoms_displayed_p() {
+      if (moving_atoms_asc)
+         if (moving_atoms_asc->mol)
+            return true;
+      return false;
+   }
    // so that we know that fixed_points_sheared_drag_1 and
    // fixed_points_sheared_drag_2 are sensible:
    //
@@ -3392,7 +3386,8 @@ public:
    static float difference_map_peaks_sigma_level;
 
    // ---------------- backup filenames ----------------------
-   static short int unpathed_backup_file_names_flag;
+   static bool unpathed_backup_file_names_flag;
+   static bool decoloned_backup_file_names_flag;
    static int backup_compress_files_flag;
 
    // --------- Miguel's axis orientation matrix ---------------
@@ -3586,6 +3581,7 @@ public:
    // -- default bond width
    static int default_bond_width;
    static int default_bonds_box_type; // Phil want to configure this.
+   static bool draw_stick_mode_atoms_default; // true,
 
    // ---- default sigma level:
    static float default_sigma_level_for_map;
@@ -3991,6 +3987,11 @@ string   static std::string sessionid;
    /*! \brief shiftfield xyz refinement */
    void shiftfield_xyz_factor_refinement(int imol);
 
+   // if pull_restraint_neighbour_displacement_max_radius < 1.5 (say) then
+   // turn off proportional editing.
+   static float pull_restraint_neighbour_displacement_max_radius;
+   void pull_restraint_neighbour_displacement_change_max_radius(bool up_or_down); // change above
+   static void draw_pull_restraint_neighbour_displacement_max_radius_circle();
 
 #ifdef USE_PYTHON
    PyObject *pyobject_from_graphical_bonds_container(int imol,
@@ -4009,7 +4010,7 @@ string   static std::string sessionid;
 #ifdef USE_PYTHON
    // Python function, called per frame draw - for Hamish
    static std::string python_draw_function_string;
-  void set_python_draw_function(const std::string &f) { python_draw_function_string = f; }
+   void set_python_draw_function(const std::string &f) { python_draw_function_string = f; }
 #endif // USE_PYTHON
 
    static ctpl::thread_pool static_thread_pool;

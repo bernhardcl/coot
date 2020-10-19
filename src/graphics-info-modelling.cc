@@ -314,7 +314,7 @@ graphics_info_t::copy_mol_and_refine(int imol_for_atoms,
 
    mol->DeleteSelection(selHnd);
 
-   std::pair<bool, std::vector<std::pair<std::string, std::vector<std::string> > > >
+   std::pair<bool, std::vector<std::pair<mmdb::Residue *, std::vector<std::string> > > >
       icheck_atoms = Geom_p()->atoms_match_dictionary(imol_for_atoms, residues, check_hydrogens_too_flag, false);
 
    if (! icheck_atoms.first) {
@@ -445,6 +445,25 @@ graphics_info_t::refinement_loop_threaded() {
       coot::refinement_results_t rr = g.last_restraints->minimize(imol_moving_atoms, flags,
 								  spf, pr_chi_sqds, *Geom_p());
       graphics_info_t::saved_dragged_refinement_results = rr;
+
+      if (false) {
+         if (rr.refinement_results_contain_overall_nbc_score) {
+            std::cout << "-------------- nbc baddies " << std::endl;
+            for (unsigned int i=0; i<rr.sorted_nbc_baddies.size(); i++)
+               std::cout << "       nbc number " << i
+                         << ":  " << rr.sorted_nbc_baddies[i].first
+                         << " "  << rr.sorted_nbc_baddies[i].second << std::endl;
+         }
+      }
+      if (false) {
+         if (rr.refinement_results_contain_overall_rama_plot_score) {
+            std::cout << "-------------- rama baddies " << std::endl;
+            for (unsigned int i=0; i<rr.sorted_rama_baddies.size(); i++)
+               std::cout << "       rama number " << i
+                         << ":  " << rr.sorted_rama_baddies[i].first
+                         << " "  << rr.sorted_rama_baddies[i].second << std::endl;
+         }
+      }
 
       if (rr.progress == GSL_SUCCESS) {
 	 graphics_info_t::continue_update_refinement_atoms_flag = false; // not sure what this does
@@ -670,19 +689,24 @@ graphics_info_t::regenerate_intermediate_atoms_bonds_timeout_function_and_draw()
 
       graphics_info_t g; // 37 nanoseconds
 
-      if (graphics_info_t::threaded_refinement_needs_to_accept_moving_atoms) {
+      if (threaded_refinement_needs_to_accept_moving_atoms) {
          g.accept_moving_atoms(); // calls clear_up_moving_atoms() which deletes last_restraints
       }
 
-      if (graphics_info_t::threaded_refinement_needs_to_clear_up) {
-         std::cout << "---------- in regenerate_intermediate_atoms_bonds_timeout_function() clear up moving atoms! "
-                   << std::endl;
+      if (threaded_refinement_needs_to_clear_up) {
+         if (false)
+            std::cout << "---------- in regenerate_intermediate_atoms_bonds_timeout_function() clear up moving atoms! "
+                      << std::endl;
          g.clear_up_moving_atoms(); // get the restraints lock, deletes last_restraints
          g.clear_moving_atoms_object();
+         if (accept_reject_dialog_docked_flag == coot::DIALOG) {
+	       // this calls clear_up_moving_atoms() and clears atom pull restraint.
+	       gtk_widget_destroy(accept_reject_dialog);
+         }
       }
 
       // no need to do this if Esc is pressed.
-      if (! graphics_info_t::refinement_immediate_replacement_flag)
+      if (! refinement_immediate_replacement_flag)
          g.check_and_warn_inverted_chirals_and_cis_peptides();
    }
 
@@ -884,8 +908,8 @@ graphics_info_t::refine_residues_vec(int imol,
 
    bool use_map_flag = 1;
 
-   if (true)
-      std::cout << "debug:: in refine_residues_vec() with altconf \""
+   if (false)
+      std::cout << "INFO:: refine_residues_vec() with altconf \""
 		<< alt_conf << "\"" << std::endl;
 
    coot::refinement_results_t rr = generate_molecule_and_refine(imol, residues, alt_conf, mol, use_map_flag);
@@ -1101,7 +1125,13 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
 						       do_rama_restraints,
 						       true, true, make_auto_h_bond_restraints_flag,
 						       pseudo_bonds_type);
-   // link and flank args default true
+                                                       // link and flank args default true
+
+   if (pull_restraint_neighbour_displacement_max_radius > 1.99) {
+      last_restraints->set_use_proportional_editing(true);
+      last_restraints->pull_restraint_neighbour_displacement_max_radius =
+         pull_restraint_neighbour_displacement_max_radius;
+   }
 
    last_restraints->set_geman_mcclure_alpha(geman_mcclure_alpha);
    last_restraints->set_lennard_jones_epsilon(graphics_info_t::lennard_jones_epsilon);
@@ -1146,10 +1176,11 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
       // rr.found_restraints_flag = true;
 
       if (refinement_immediate_replacement_flag) {
-	 // wait until refinement finishes
-	 while (restraints_lock) {
-	    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            std::cout << "restrainst locked by " << restraints_locking_function_name << std::endl;
+         // wait until refinement finishes
+         while (restraints_lock) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(700));
+            std::cout << "INFO:: make_last_restraints() [immediate] restraints locked by "
+                      << restraints_locking_function_name << std::endl;
          }
       }
 
@@ -1261,7 +1292,7 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	    // Now we want to do an atom name check.  This stops exploding residues.
 	    //
 	    bool check_hydrogens_too_flag = false;
-	    std::pair<bool, std::vector<std::pair<std::string, std::vector<std::string> > > >
+	    std::pair<bool, std::vector<std::pair<mmdb::Residue *, std::vector<std::string> > > >
 	       icheck_atoms = Geom_p()->atoms_match_dictionary(imol, residues, check_hydrogens_too_flag, false);
 
 	    if (! icheck_atoms.first) {
@@ -1463,30 +1494,39 @@ graphics_info_t::make_moving_atoms_restraints_graphics_object() {
    if (moving_atoms_asc) {
       if (last_restraints) {
 
-         moving_atoms_extra_restraints_representation.clear();
-         for (int i=0; i<last_restraints->size(); i++) {
-            const coot::simple_restraint &rest = last_restraints->at(i);
-            if (rest.restraint_type == coot::BOND_RESTRAINT ||
-                rest.restraint_type == coot::GEMAN_MCCLURE_DISTANCE_RESTRAINT) {
+         if (draw_it_for_moving_atoms_restraints_graphics_object) {
 
-               if (rest.target_value > 2.15) {  // no real bond restraints
-                  int idx_1 = rest.atom_index_1;
-                  int idx_2 = rest.atom_index_2;
-                  mmdb::Atom *at_1 = moving_atoms_asc->atom_selection[idx_1];
-                  mmdb::Atom *at_2 = moving_atoms_asc->atom_selection[idx_2];
-                  if (at_1 && at_2) {
-                     clipper::Coord_orth p1 = coot::co(at_1);
-                     clipper::Coord_orth p2 = coot::co(at_2);
-                     double dd = rest.target_value;
-                     double de = sqrt(clipper::Coord_orth(p1-p2).lengthsq());
-                     bool do_it = true;
-                     std::string atom_name_1 = at_1->GetAtomName();
-                     std::string atom_name_2 = at_2->GetAtomName();
-                     if (atom_name_1 == " CA ")
-                        if (atom_name_2 == " CA ")
-                           do_it = false;
-                     if (do_it)
-                        moving_atoms_extra_restraints_representation.add_bond(p1, p2, dd, de);
+            moving_atoms_extra_restraints_representation.clear();
+            for (int i=0; i<last_restraints->size(); i++) {
+               const coot::simple_restraint &rest = last_restraints->at(i);
+               if (rest.restraint_type == coot::BOND_RESTRAINT ||
+                   rest.restraint_type == coot::GEMAN_MCCLURE_DISTANCE_RESTRAINT) {
+
+                  if (rest.target_value > 2.15) {  // no real bond restraints
+                     int idx_1 = rest.atom_index_1;
+                     int idx_2 = rest.atom_index_2;
+                     // we can't display bonds to non-moving atoms
+                     if (idx_1 < moving_atoms_asc->n_selected_atoms) {
+                        if (idx_2 < moving_atoms_asc->n_selected_atoms) {
+                           mmdb::Atom *at_1 = moving_atoms_asc->atom_selection[idx_1];
+                           mmdb::Atom *at_2 = moving_atoms_asc->atom_selection[idx_2];
+                           if (at_1 && at_2) {
+                              clipper::Coord_orth p1 = coot::co(at_1);
+                              clipper::Coord_orth p2 = coot::co(at_2);
+                              const double &dd = rest.target_value;
+                              float def = sqrtf(clipper::Coord_orth(p1-p2).lengthsq());
+                              double de = static_cast<double>(def);
+                              bool do_it = true;
+                              std::string atom_name_1 = at_1->GetAtomName();
+                              std::string atom_name_2 = at_2->GetAtomName();
+                              if (atom_name_1 == " CA ")
+                                 if (atom_name_2 == " CA ")
+                                    do_it = false;
+                              if (do_it)
+                                 moving_atoms_extra_restraints_representation.add_bond(p1, p2, dd, de);
+                           }
+                        }
+                     }
                   }
                }
             }
@@ -1511,17 +1551,16 @@ graphics_info_t::draw_moving_atoms_restraints_graphics_object() {
                   const coot::extra_restraints_representation_t::extra_bond_restraints_respresentation_t &res =
                      moving_atoms_extra_restraints_representation.bonds[ib];
 
-                  // red if actual distance is greater than target
+                  // purple if actual distance is greater than target
                   //
                   double d_sqd = (res.second - res.first).clipper::Coord_orth::lengthsq();
+                  double d = sqrt(d_sqd);
                   double esd = 0.05;
-
-                  double b = 0.005 * (res.target_dist*res.target_dist - d_sqd)/esd;
+                  double z = (res.target_dist - d)/esd;
+                  double b = 0.02 * z;
                   if (b >  0.4999) b =  0.4999;
                   if (b < -0.4999) b = -0.4999;
                   double b_green = b;
-                  if (b > 0) b_green *= 0.2;
-		  // std::cout << "b " << b << " b_green " << b_green << std::endl;
                   glColor3d(0.5-b, 0.5+b_green*0.9, 0.5-b);
 
                   glVertex3f(res.first.x(), res.first.y(), res.first.z());
@@ -3214,19 +3253,41 @@ graphics_info_t::execute_add_terminal_residue(int imol,
 		  // if (terminus_type == "C" || terminus_type == "MC") 
 		  //    molecules[imol_moving_atoms].move_O_atom_of_added_to_residue(res_p, chain_id);
 
-		  graphics_draw();
-	       }
-	    }
-	 }
+                  graphics_draw();
+               }
+            }
+         }
       }
    }
    return state;
 }
 
+void
+graphics_info_t::execute_simple_nucleotide_addition(int imol, const std::string &chain_id, int res_no) {
+
+   if (! is_valid_model_molecule(imol)) {
+      std::cout << "WARNING:: wrong model " << imol << std::endl;
+      return;
+   }
+
+   mmdb::Residue *residue_p = molecules[imol].get_residue(chain_id, res_no, "");
+   if (! residue_p) {
+      std::cout << "WARNING:: missing-residue" << chain_id << " " << res_no << std::endl;
+   } else {
+      std::string term_type = "";
+      mmdb::Residue *r_p = molecules[imol].get_residue(chain_id, res_no-1, "");
+      mmdb::Residue *r_n = molecules[imol].get_residue(chain_id, res_no+1, "");
+      if (r_p  && ! r_n) term_type = "C";
+      if (r_n  && ! r_p) term_type = "N";
+      if (!r_n && ! r_p) term_type = "MC";
+      execute_simple_nucleotide_addition(imol, term_type, residue_p, chain_id);
+   }
+}
+
 
 void
 graphics_info_t::execute_simple_nucleotide_addition(int imol, const std::string &term_type, 
-						    mmdb::Residue *res_p, const std::string &chain_id) {
+                                                    mmdb::Residue *res_p, const std::string &chain_id) {
 
 
    // If it's RNA beam it in in ideal A form,
@@ -3243,7 +3304,7 @@ graphics_info_t::execute_simple_nucleotide_addition(int imol, const std::string 
 
    if (term_type == "not-terminal-residue") {
       std::cout << "That was not a terminal residue (check for neighbour solvent residues maybe) "
-		<< coot::residue_spec_t(res_p) << std::endl;
+                << coot::residue_spec_t(res_p) << std::endl;
       add_status_bar_text("That was not a terminal residue.");
    } else { 
 
@@ -3819,7 +3880,8 @@ graphics_info_t::rot_trans_adjustment_changed(GtkAdjustment *adj, gpointer user_
       if (molecules[imol_moving_atoms].draw_hydrogens())
 	 draw_hydrogens_flag = true;
 
-      bonds.do_Ca_plus_ligands_bonds(*moving_atoms_asc, imol_moving_atoms, Geom_p(), 1.0, 4.7, draw_hydrogens_flag);
+      bonds.do_Ca_plus_ligands_bonds(*moving_atoms_asc, imol_moving_atoms, Geom_p(), 1.0, 4.7,
+                                     draw_missing_loops_flag, draw_hydrogens_flag);
       regularize_object_bonds_box.clear_up();
       regularize_object_bonds_box = bonds.make_graphical_bonds();
    } else {
@@ -5042,6 +5104,19 @@ graphics_info_t::delete_sidechain_range(int imol,
    graphics_draw();
 
 }
+
+void
+graphics_info_t::delete_active_residue() {
+
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > aa = active_atom_spec();
+   if (aa.first) {
+      int imol = aa.second.first;
+      coot::residue_spec_t rs(aa.second.second);
+      molecules[imol].delete_residue(rs);
+   }
+   graphics_draw();
+}
+
 
 
 

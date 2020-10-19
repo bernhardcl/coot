@@ -1550,33 +1550,8 @@ add_file_dialog_action_area_vbox(GtkWidget *fileselection) {
 GtkWidget *add_filename_filter_button(GtkWidget *fileselection,
 				      short int data_type) {
 
-   bool no_chooser_filter = 1;
    GtkWidget *button = 0;
-
-   if (graphics_info_t::gtk2_file_chooser_selector_flag == coot::CHOOSER_STYLE) {
-      	no_chooser_filter = 0;
-	add_filechooser_filter_button(fileselection, data_type);
-   }
-
-   if (no_chooser_filter) {
-      GtkWidget *aa = GTK_FILE_SELECTION(fileselection)->action_area;
-      GtkWidget *frame = gtk_frame_new("File-name filter:");
-
-      int d = data_type;
-      button = gtk_toggle_button_new_with_label("Filter");
-
-      gtk_widget_ref(button);
-      gtk_widget_show(button);
-      gtk_container_add(GTK_CONTAINER(aa),frame);
-
-      gtk_container_add(GTK_CONTAINER(frame), button);
-      // callback in c-interface-gtk2.cc
-      gtk_signal_connect (GTK_OBJECT (button), "toggled",
-			  GTK_SIGNAL_FUNC (on_filename_filter_toggle_button_toggled),
-			  GINT_TO_POINTER(d));
-      gtk_widget_show(frame);
-   }
-
+   add_filechooser_filter_button(fileselection, data_type);
    return button;
 }
 
@@ -1619,7 +1594,7 @@ void add_save_coordinates_include_hydrogens_and_aniso_checkbutton(GtkWidget *fil
 // only available in gtk2
 // here we go
 
-#if (GTK_MAJOR_VERSION > 1)
+
 // where data type:
 // 0 coords
 // 1 mtz etc
@@ -1638,8 +1613,8 @@ void add_filechooser_filter_button(GtkWidget *fileselection,
   GtkFileFilter *filterall    = gtk_file_filter_new();
   GtkFileFilter *filterselect = gtk_file_filter_new();
 
-  gtk_file_filter_set_name (filterall, "all-files");
-  gtk_file_filter_add_pattern (filterall, "*");
+  gtk_file_filter_set_name(filterall, "all-files");
+  gtk_file_filter_add_pattern(filterall, "*");
 
   if (d == COOT_COORDS_FILE_SELECTION || d == COOT_SAVE_COORDS_FILE_SELECTION) {
 
@@ -1681,7 +1656,7 @@ void add_filechooser_filter_button(GtkWidget *fileselection,
     script_glob_extension.push_back("*.scm");
 #endif // USE_GUILE
 
-    gtk_file_filter_set_name (filterselect, "scripting-files");
+    gtk_file_filter_set_name(filterselect, "scripting-files");
 
     globs = script_glob_extension;
 
@@ -1694,10 +1669,10 @@ void add_filechooser_filter_button(GtkWidget *fileselection,
     gtk_file_filter_add_pattern (filterselect, s.c_str());
   };
 
-  gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (fileselection),
-			       GTK_FILE_FILTER (filterall));
-  gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (fileselection),
-			       GTK_FILE_FILTER (filterselect));
+  gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (fileselection),
+                              GTK_FILE_FILTER (filterall));
+  gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (fileselection),
+                              GTK_FILE_FILTER (filterselect));
 
   if (filter_fileselection_filenames_state() == 1) {
     // filter automatically
@@ -1726,8 +1701,6 @@ void add_filechooser_extra_filter_button(GtkWidget *fileselection,
 
 }
 
-
-#endif // GTK_MAJOR_VERSION
 
 void
 on_read_map_difference_map_toggle_button_toggled (GtkButton       *button,
@@ -1912,99 +1885,18 @@ void add_is_difference_map_checkbutton(GtkWidget *fileselection) {
 
 }
 
-void add_recentre_on_read_pdb_checkbutton(GtkWidget *fileselection) {
+void add_recentre_on_read_pdb_checkbutton(GtkWidget *filechooser) {
 
-   bool doit = 1;
-
-   if (graphics_info_t::gtk2_file_chooser_selector_flag == coot::CHOOSER_STYLE) {
-      doit = 0;
-      GtkWidget *combobox =
-	 lookup_widget(GTK_WIDGET(fileselection),
-		       "coords_filechooserdialog1_recentre_combobox");
-      gtk_combo_box_append_text(GTK_COMBO_BOX(combobox), "Recentre on Molecule");
-      gtk_combo_box_append_text(GTK_COMBO_BOX(combobox), "Don't Recentre");
-      gtk_combo_box_append_text(GTK_COMBO_BOX(combobox), "Recentre Molecule Here");
-      if (graphics_info_t::recentre_on_read_pdb)
-     	  gtk_combo_box_set_active(GTK_COMBO_BOX(combobox), 0);
-      if (!graphics_info_t::recentre_on_read_pdb)
-     	  gtk_combo_box_set_active(GTK_COMBO_BOX(combobox), 1);
-   }
-
-
-   if (doit) {
-
-      if (0) {
-
-	 GtkWidget *aa = GTK_FILE_SELECTION(fileselection)->action_area;
-	 GtkWidget *button = gtk_check_button_new_with_label("Recentre");
-	 GtkWidget *frame = gtk_frame_new("Recentre?");
-	 GtkTooltips *tooltips = gtk_tooltips_new();
-
-	 gtk_widget_ref(button);
-	 gtk_object_set_data_full(GTK_OBJECT(fileselection),
-				  "coords_fileselection1_recentre_checkbutton",
-				  button,
-				  (GtkDestroyNotify) gtk_widget_unref);
-	 gtk_tooltips_set_tip(tooltips, button,
-			      _("Deactivate this checkbutton if you don't want to change the view centre when these new coordinates are read"), NULL);
-
-	 // shall we activate the button?
-	 if (graphics_info_t::recentre_on_read_pdb)
-	    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
-	 gtk_widget_show(button);
-	 gtk_container_add(GTK_CONTAINER(aa),frame);
-	 gtk_container_add(GTK_CONTAINER(frame), button);
-	 gtk_signal_connect (GTK_OBJECT (button), "toggled",
-			     GTK_SIGNAL_FUNC (on_recentre_on_read_pdb_toggle_button_toggled),
-			     NULL);
-	 gtk_widget_show(frame);
-      } else {
-
-	 GtkWidget *aa = GTK_FILE_SELECTION(fileselection)->action_area;
-	 GtkWidget *om = gtk_option_menu_new();
-	 GtkWidget *menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(om));
-	 if (menu)
-	    gtk_widget_destroy(menu);
-	 menu = GTK_WIDGET(gtk_menu_new());
-	 GtkWidget *frame = gtk_frame_new("Recentre?");
-	 GtkTooltips *tooltips = gtk_tooltips_new();
-
-	 gtk_widget_ref(om);
-	 gtk_object_set_data_full(GTK_OBJECT(fileselection),
-				  "coords_fileselection1_recentre_optionmenu",
-				  om,
-				  (GtkDestroyNotify) gtk_widget_unref);
-// 	 gtk_tooltips_set_tip(tooltips, om,
-// 			      _("Deactivate this checkbutton if you don't want to change the view centre when these new coordinates are read"), NULL);
-
-	 GtkWidget *menuitem;
-
-	 menuitem = gtk_menu_item_new_with_label("Recentre on Molecule");
-	 gtk_menu_append(GTK_MENU(menu), menuitem);
-	 gtk_widget_show(menuitem);
-	 // shall we activate the button?
-	 if (graphics_info_t::recentre_on_read_pdb)
-	    gtk_menu_item_activate(GTK_MENU_ITEM(menuitem));
-	 //
-	 menuitem = gtk_menu_item_new_with_label("Don't Recentre");
-	 gtk_menu_append(GTK_MENU(menu), menuitem);
-	 if (!graphics_info_t::recentre_on_read_pdb)
-	    gtk_menu_item_activate(GTK_MENU_ITEM(menuitem));
-	 gtk_widget_show(menuitem);
-	 //
-	 menuitem = gtk_menu_item_new_with_label("Recentre Molecule Here");
-	 gtk_menu_append(GTK_MENU(menu), menuitem);
-	 gtk_widget_show(menuitem);
-
-
-
-	 gtk_widget_show(om);
-	 gtk_container_add(GTK_CONTAINER(aa),frame);
-	 gtk_container_add(GTK_CONTAINER(frame), om);
-	 gtk_option_menu_set_menu(GTK_OPTION_MENU(om), menu);
-	 gtk_widget_show(frame);
-      }
-   }
+   GtkWidget *combobox = lookup_widget(GTK_WIDGET(filechooser),
+                                       "coords_filechooserdialog1_recentre_combobox");
+   std::cout << "debug:: in add_recentre_on_read_pdb_checkbutton() found combobox " << combobox << std::endl;
+   gtk_combo_box_append_text(GTK_COMBO_BOX(combobox), "Recentre on Molecule");
+   gtk_combo_box_append_text(GTK_COMBO_BOX(combobox), "Don't Recentre");
+   gtk_combo_box_append_text(GTK_COMBO_BOX(combobox), "Recentre Molecule Here");
+   if (graphics_info_t::recentre_on_read_pdb)
+      gtk_combo_box_set_active(GTK_COMBO_BOX(combobox), 0);
+   if (!graphics_info_t::recentre_on_read_pdb)
+      gtk_combo_box_set_active(GTK_COMBO_BOX(combobox), 1);
 }
 
 
@@ -3002,7 +2894,6 @@ toolbar_popup_menu (GtkToolbar *toolbar,
     { N_("Display on the bottom"), coot::model_toolbar::BOTTOM },
   };
 
-#if (GTK_MAJOR_VERSION > 1)
   if (hdlbox->child_detached) {
     item = gtk_menu_item_new_with_label (_("Reattach to main window"));
     gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
@@ -3051,7 +2942,7 @@ toolbar_popup_menu (GtkToolbar *toolbar,
   gtk_menu_popup (GTK_MENU(menu), NULL, NULL, NULL, NULL, 0,
 		  (event_button != NULL) ? event_button->time
 		  : gtk_get_current_event_time());
-#endif // GTK_MAJOR_VERSION
+
 }
 
 void
@@ -3093,7 +2984,7 @@ set_model_toolbar_docked_position(int state) {
     GtkWidget *handle = lookup_widget(GTK_WIDGET(graphics_info_t::glarea),
 				       "model_fit_refine_toolbar_handlebox");
     GtkWidget *vbox    = lookup_widget(GTK_WIDGET(graphics_info_t::glarea),
-				       "vbox1");
+				       "main_window_vbox");  // was "vbox1"
     GtkWidget *toolbar = lookup_widget(handle, "model_toolbar");
     GtkWidget *vsep    = lookup_widget(handle, "model_toolbar_vsep_toolitem");
     GtkWidget *hsep    = lookup_widget(handle, "model_toolbar_hsep_toolitem");
@@ -5719,21 +5610,25 @@ void show_restraints_editor(const char *monomer_type) {
 //                   sequence view
 // ===================================================================
 
+void set_sequence_view_is_docked(short int state) {
+   graphics_info_t::sequence_view_is_docked_flag = state;
+}
+
 
 void nsv(int imol) {
 
 #if defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
    if (is_valid_model_molecule(imol)) {
+
       GtkWidget *w = coot::get_validation_graph(imol, coot::SEQUENCE_VIEW);
+
       if (w) {
 
 	 // it already exists... just raise it and map it.
 
-	 // GtkWidget *canvas = g.sequence_view_is_displayed[imol];
 	 GtkWidget *canvas = coot::get_validation_graph(imol, coot::SEQUENCE_VIEW);
+
 	 // so what is the window (which we shall call widget)?
-
-
 	 GtkWidget *widget = lookup_widget(canvas, "nsv_dialog");
 
 	 if (widget) {
@@ -5743,6 +5638,8 @@ void nsv(int imol) {
 	       gdk_window_raise(widget->window);
 	    }
 	 } else {
+
+            std::cout << "WARNING:: in nsv() lookup of nsv_dialog from canvas failed " << std::endl;
 
 	    widget = lookup_widget(canvas, "sequence_view_dialog");
 	    if (widget) {
@@ -5756,9 +5653,14 @@ void nsv(int imol) {
 
       } else {
 	 graphics_info_t g;
+         GtkWidget *main_window_vbox = 0;
+         if (g.sequence_view_is_docked_flag) {
+            main_window_vbox = lookup_widget(g.glarea, "main_window_vbox");
+         }
 	 std::string name = g.molecules[imol].name_for_display_manager();
 	 exptl::nsv *seq_view =
 	    new exptl::nsv(g.molecules[imol].atom_sel.mol, name, imol,
+                           main_window_vbox,
 			   g.use_graphics_interface_flag,
 			   g.nsv_canvas_pixel_limit);
 	 // I think that there is a false positive for scan-build here.
@@ -6331,10 +6233,11 @@ int add_generic_display_object(const coot::generic_display_object_t &gdo) {
 #include <boost/crc.hpp>
 #endif
 
-bool
+std::pair<bool, std::string>
 checksums_match(const std::string &file_name, const std::string &checksum) {
 
    bool state = false;
+   std::string message;
 
 #ifdef HAVE_BOOST
    std::ifstream f(file_name.c_str());
@@ -6345,20 +6248,23 @@ checksums_match(const std::string &file_name, const std::string &checksum) {
       // boost::crc_basic<16> crc_ccitt1( 0x1021, 0xFFFF, 0, false, false );
       boost::crc_basic<16> crc_ccitt1(0xffff, 0x0, 0, false, false );
       crc_ccitt1.process_bytes(dl_str.c_str(), dl_str.size());
-      // std::cout << "checksum compare " << crc_ccitt1.checksum() << " " << checksum << std::endl;
+      std::cout << "checksum compare " << crc_ccitt1.checksum() << " " << checksum << std::endl;
       std::string s = coot::util::int_to_string(crc_ccitt1.checksum());
       if (s == checksum)
 	 state = true;
+      else
+         message = s + " vs " + checksum;
    }
 #endif // HAVE_BOOST
-   return state;
+   return std::pair<bool, std::string> (state, message);
 }
 
 
 // 20200302 Be'er Sheva new style extension installation
 // Put these in c-interface-curlew?
 void
-curlew_install_extension_file(const std::string &file_name, const std::string &checksum) {
+curlew_install_extension_file(const std::string &file_name, const std::string &checksum,
+                              GtkWidget *install_button, GtkWidget *uninstall_button) {
 
    if (!file_name.empty()) {
 
@@ -6386,7 +6292,8 @@ curlew_install_extension_file(const std::string &file_name, const std::string &c
       } else {
          // Happy path
          if (coot::file_exists(dl_fn)) {
-            if (checksums_match(dl_fn, checksum)) {
+            std::pair<bool, std::string> checksum_result = checksums_match(dl_fn, checksum);
+            if (checksum_result.first) {
                // I want a function that returns preferences_dir
                char *home = getenv("HOME");
 #ifdef WINDOWS_MINGW
@@ -6409,15 +6316,21 @@ curlew_install_extension_file(const std::string &file_name, const std::string &c
                   if (status != 0) {
                      std::cout << "WARNING:: rename status " << status << " failed to install " << file_name << std::endl;
                   } else {
-                     std::cout << "debug:: renaming successful" << std::endl;
-                     std::cout << "INFO:: run_script called on " << preferences_file_name << std::endl;
+                     std::cout << "debug:: BB renaming successful" << std::endl;
+                     std::cout << "debug:: BB run_script() called on " << preferences_file_name << std::endl;
                      run_script(preferences_file_name.c_str());
+
+                     std::cout << "hiding install_button " << install_button << std::endl;
+                     gtk_widget_hide(install_button);
+                     std::cout << "show uninstall_button  " << uninstall_button << std::endl;
+                     gtk_widget_show(uninstall_button);
+                     
                   }
                } else {
                   std::cout << "No HOME env var" << std::endl;
                }
             } else {
-               std::cout << "WARNING:: Failure in checksum match " << dl_fn << std::endl;
+               std::cout << "WARNING:: Failure in checksum match " << dl_fn << " " << checksum_result.second << std::endl;
             }
          } else {
             std::cout << "WARNING:: download target file " << dl_fn << " does not exist" << std::endl;
@@ -6470,20 +6383,24 @@ void curlew_dialog_install_extensions(GtkWidget *curlew_dialog, int n_extensions
       for (int i=0; i<n_extensions; i++) {
 	 std::string cb_name = "curlew_selected_check_button_";
 	 cb_name += coot::util::int_to_string(i);
+	 std::string uninstall_button_name = "curlew_uninstall_button_";
+	 uninstall_button_name += coot::util::int_to_string(i);
 	 std::string hbox_name = "curlew_extension_hbox_";
 	 hbox_name += coot::util::int_to_string(i);
-	 GtkWidget *w = lookup_widget(curlew_dialog, cb_name.c_str());
-	 GtkWidget *hbox = lookup_widget(curlew_dialog, hbox_name.c_str());
 
-	 if (w) {
-	    int status = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w));
+	 GtkWidget *check_button     = lookup_widget(curlew_dialog, cb_name.c_str());
+	 GtkWidget *uninstall_button = lookup_widget(curlew_dialog, uninstall_button_name.c_str());
+	 GtkWidget *hbox             = lookup_widget(curlew_dialog, hbox_name.c_str());
+
+	 if (check_button) {
+	    int status = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(check_button));
 	    if (status) { // selected for download/install
-	       if (false)
-		  std::cout << "Got w " << w << " for i " << cb_name << " " << status
+	       if (true)
+		  std::cout << "Got check_button " << check_button << " for i " << cb_name << " " << status
 		            <<std::endl;
 
-               gchar *file_name_cstr = static_cast<gchar *> (g_object_get_data(G_OBJECT(w), "file-name"));
-               gchar *checksum_cstr  = static_cast<gchar *> (g_object_get_data(G_OBJECT(w), "checksum"));
+               gchar *file_name_cstr = static_cast<gchar *> (g_object_get_data(G_OBJECT(check_button), "file-name"));
+               gchar *checksum_cstr  = static_cast<gchar *> (g_object_get_data(G_OBJECT(check_button), "checksum"));
 
                if (file_name_cstr) {
 
@@ -6515,7 +6432,8 @@ void curlew_dialog_install_extensions(GtkWidget *curlew_dialog, int n_extensions
 			if (coot::file_exists(dl_fn)) {
 			   std::string checksum;
 			   if (checksum_cstr) checksum = checksum_cstr;
-			   if (checksums_match(dl_fn, checksum)) {
+                           std::pair<bool, std::string> checksum_result = checksums_match(dl_fn, checksum);
+                           if (checksum_result.first) {
 			      // I want a function that returns preferences_dir
 			      char *home = getenv("HOME");
 #ifdef WINDOWS_MINGW
@@ -6536,9 +6454,15 @@ void curlew_dialog_install_extensions(GtkWidget *curlew_dialog, int n_extensions
 				 if (status != 0) {
 				    std::cout << "WARNING:: rename status " << status << " failed to install " << file_name << std::endl;
 				 } else {
-                                    std::cout << "debug:: renaming successful" << std::endl;
-				    std::cout << "run_script on " << preferences_file_name << std::endl;
+                                    std::cout << "debug:: AA  renaming successful" << std::endl;
+				    std::cout << "debug:: AA run_script() on " << preferences_file_name << std::endl;
 				    run_script(preferences_file_name.c_str());
+
+                                    std::cout << "hiding check_button " << check_button << std::endl;
+                                    gtk_widget_hide(check_button);
+                                    std::cout << "show uninstall_button  " << uninstall_button << std::endl;
+                                    gtk_widget_show(uninstall_button);
+                                    
 				    // make the hbox insensitive
 				    if (hbox) {
 				       gtk_widget_set_sensitive(hbox, FALSE);
@@ -6548,7 +6472,7 @@ void curlew_dialog_install_extensions(GtkWidget *curlew_dialog, int n_extensions
                                  std::cout << "No HOME env var" << std::endl;
                               }
 			   } else {
-			      std::cout << "WARNING:: Failure in checksum match " << dl_fn << std::endl;
+			      std::cout << "WARNING:: Failure in checksum match " << dl_fn << " " << checksum_result.second << std::endl;
 			   }
 			} else {
 			   std::cout << "WARNING:: file does not exist " << file_name << std::endl;

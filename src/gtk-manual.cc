@@ -59,7 +59,8 @@ on_map_color_changed(GtkWidget *w,
 /* 		 GtkColorSelection *colorsel)  */
 		     gpointer *tmd)
 { 
- 
+
+   // std::cout << "... on_map_color_changed() " << std::endl;
    gdouble color[4];
    struct map_colour_data_type* t;
 
@@ -1758,7 +1759,7 @@ display_control_add_reps_frame(GtkWidget *display_control_window_glade,
       if (t)
 	 w = t;
       else
-	 std::cout << "ERROR:: in display_control_add_reps_container failed to lookup "
+	 std::cout << "ERROR:: in display_control_add_reps_frame failed to lookup "
 		   << name << " widget" << std::endl;
    } 
    return w;
@@ -1775,7 +1776,7 @@ display_control_add_reps_all_on_check_button(GtkWidget *display_control_window_g
       if (t)
 	 w = t;
       else
-	 std::cout << "ERROR:: in display_control_add_reps_container failed to lookup "
+	 std::cout << "ERROR:: in display_control_add_reps_all_on_check_button failed to lookup "
 		   << name << " widget" << std::endl;
    }
    return w;

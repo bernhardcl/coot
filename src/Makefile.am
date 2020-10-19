@@ -492,6 +492,7 @@ coot_bin_SOURCES = \
 	molecule-class-info-refine.cc   \
         molecule-class-info-kk.cc       \
 	molecule-class-info-surface.cc 	\
+	molecule-class-info-string.cc 	\
 	molecule-class-info-patterson.cc \
 	molecule-class-info-ncs.cc 	\
 	molecule-class-info-mol-tris.cc 	\
@@ -530,9 +531,10 @@ coot_bin_SOURCES = \
 	sequence-view.cc         \
 	seq-view-interface.c     \
 	seq-view-interface.h     \
+        simple-distance-object.hh \
 	sound.hh                 \
 	startup-scripts.hh       \
-	support.c support.h 	    \
+	support.c support.h      \
 	support-gtk2-extras.c    \
 	testing.cc testing-2.cc  \
 	testing-data.hh          \

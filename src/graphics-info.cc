@@ -95,13 +95,6 @@
 
 #include "geometry/dict-utils.hh"
 
-// A few non-class members - should be somewhere else, I guess.
-//
-void initialize_graphics_molecules() {
-  graphics_info_t g;
-  g.initialize_molecules();
-}
-
 // return a vector of the current valid map molecules
 std::vector<int>
 graphics_info_t::valid_map_molecules() const {
@@ -1740,6 +1733,26 @@ graphics_info_t::run_post_set_rotation_centre_hook_py() {
 #endif
 
 
+void
+graphics_info_t::pull_restraint_neighbour_displacement_change_max_radius(bool up_or_down) {
+
+   if (up_or_down)
+      pull_restraint_neighbour_displacement_max_radius -= 1.0;
+   else
+      pull_restraint_neighbour_displacement_max_radius += 1.0;
+
+   if (last_restraints) {
+      if (pull_restraint_neighbour_displacement_max_radius > 1.99) {
+         last_restraints->set_use_proportional_editing(true);
+         last_restraints->pull_restraint_neighbour_displacement_max_radius =
+            pull_restraint_neighbour_displacement_max_radius;
+      } else {
+         last_restraints->set_use_proportional_editing(false);
+      }
+   }
+}
+
+
 
 void
 graphics_info_t::update_environment_distances_by_rotation_centre_maybe(int imol_in) {
@@ -1971,7 +1984,8 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
          bool draw_hydrogens_flag = false;
          if (molecules[imol_moving_atoms].draw_hydrogens())
          draw_hydrogens_flag = true;
-         bonds.do_Ca_plus_ligands_bonds(*moving_atoms_asc, imol, Geom_p(), 1.0, 4.7, draw_hydrogens_flag);
+         bonds.do_Ca_plus_ligands_bonds(*moving_atoms_asc, imol, Geom_p(), 1.0, 4.7,
+                                        draw_missing_loops_flag, draw_hydrogens_flag);
 
          unsigned int unlocked = 0;
          // Neither of these seems to make a difference re: the intermediate atoms python representation
@@ -2003,7 +2017,7 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
       } else {
 
          Bond_lines_container bonds;
-         bonds.do_Ca_bonds(*moving_atoms_asc, 1.0, 4.7);
+         bonds.do_Ca_bonds(*moving_atoms_asc, 1.0, 4.7, draw_missing_loops_flag);
          unsigned int unlocked = false;
          while (! moving_atoms_bonds_lock.compare_exchange_weak(unlocked, 1) && !unlocked) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -2057,7 +2071,8 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
       std::set<int> dummy;
       bool do_sticks_for_waters = true; // otherwise waters are (tiny) discs.
       Bond_lines_container bonds(*moving_atoms_asc, imol_moving_atoms, dummy, Geom_p(),
-				 do_disulphide_flag, draw_hydrogens_flag, 0, "dummy",
+				 do_disulphide_flag, draw_hydrogens_flag,
+                                 draw_missing_loops_flag, 0, "dummy",
 				 do_rama_markup, do_rota_markup, do_sticks_for_waters, tables_pointer);
       unsigned int unlocked = false;
       while (! moving_atoms_bonds_lock.compare_exchange_weak(unlocked, 1) && !unlocked) {
@@ -3112,14 +3127,14 @@ graphics_info_t::graphics_object_internal_pentakis_dodec(const coot::generic_dis
 
       for (unsigned int i=0; i<12; i++) {
 
-	 std::vector<unsigned int> face = penta_dodec.pkdd.d.face(i);
+         std::vector<unsigned int> face = penta_dodec.pkdd.d.face(i);
 
-	 glBegin(GL_TRIANGLE_FAN);
+         glBegin(GL_TRIANGLE_FAN);
 
-	 // first the base point (tip of the triangles/pyrimid)
-	 clipper::Coord_orth pvu(pv[i].unit());
-	 glNormal3d(pvu.x(), pvu.y(), pvu.z());
-	 glVertex3d(pv[i].x(), pv[i].y(), pv[i].z());
+         // first the base point (tip of the triangles/pyrimid)
+         clipper::Coord_orth pvu(pv[i].unit());
+         glNormal3d(pvu.x(), pvu.y(), pvu.z());
+         glVertex3d(pv[i].x(), pv[i].y(), pv[i].z());
 
 	 for (unsigned int j=0; j<=4; j++) {
 	    const clipper::Coord_orth &pt = v[face[j]];
@@ -3461,19 +3476,12 @@ graphics_info_t::int_to_string(int i) {
 
 std::string
 graphics_info_t::float_to_string(float f) {
-   char s[100];
-   // initial s, stop valgrind complaining
-   for (int i=0; i<100; i++) s[i]=0;
-   snprintf(s,99,"%5.2f",f);
-   return std::string(s);
+   return coot::util::float_to_string(f);
 }
 
 std::string
 graphics_info_t::float_to_string_using_dec_pl(float f, unsigned short int n_dec_pl) {
-   char s[100];
-   for (int i=0; i<100; i++) s[i]=0;
-   snprintf(s,99,"%7.4f",f); // haha, FIXME. (use n_dec_pl, not 4)
-   return std::string(s);
+   return coot::util::float_to_string_using_dec_pl(f, n_dec_pl);
 }
 
 
@@ -5025,7 +5033,7 @@ graphics_info_t::draw_atom_pull_restraint() {
 
 		  if (do_arrow) {
 
-		     double radius = 0.1;
+		     double radius = 0.11;
 		     double fraction_head_size = 0.1;
 
 		     double top =  radius;
@@ -5033,9 +5041,9 @@ graphics_info_t::draw_atom_pull_restraint() {
 		     int slices  = 12;
 		     int stacks  = 2;
 
-		     GLfloat  mat_specular[] = {0.9, 0.7, 0.7, 0.8};
-		     GLfloat  mat_ambient[]  = {0.9, 0.5, 0.6, 1.0};
-		     GLfloat  mat_shininess[] = {15};
+		     GLfloat  mat_specular[] = {0.95, 0.7, 0.7, 0.9};
+		     GLfloat  mat_ambient[]  = {0.95, 0.5, 0.6, 1.0};
+		     GLfloat  mat_shininess[] = {16};
 		     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  mat_specular);
 		     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   mat_ambient);
 		     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   mat_specular);
@@ -5110,6 +5118,62 @@ graphics_info_t::draw_atom_pull_restraint() {
 	       }
 	    }
 	 }
+      }
+   }
+}
+
+
+
+// and the pull restraint neighbour displacement radius (mabye)
+void graphics_info_t::draw_pull_restraint_neighbour_displacement_max_radius_circle() {
+
+   if (control_is_pressed) {
+      if (pull_restraint_neighbour_displacement_max_radius > 1.0) {
+         if (moving_atoms_displayed_p()) {
+
+            // there should be a function for this?
+            clipper::Coord_orth rc(RotationCentre_x(), RotationCentre_y(), RotationCentre_z());
+
+            coot::Cartesian centre = unproject_xyz(0, 0, 0.5);
+            coot::Cartesian front  = unproject_xyz(0, 0, 0.0);
+            coot::Cartesian right  = unproject_xyz(1, 0, 0.5);
+            coot::Cartesian top    = unproject_xyz(0, 1, 0.5);
+
+            coot::Cartesian screen_x = (right - centre);
+            coot::Cartesian screen_y = (top   - centre);
+            coot::Cartesian screen_z = (front - centre);
+
+            screen_x.unit_vector_yourself();
+            screen_y.unit_vector_yourself();
+            screen_z.unit_vector_yourself();
+
+            clipper::Coord_orth screen_x_co(screen_x.x(), screen_x.y(), screen_x.z());
+            clipper::Coord_orth screen_y_co(screen_y.x(), screen_y.y(), screen_y.z());
+      
+            glColor3f(0.6, 0.6, 0.6);
+            glLineWidth(1.0);
+            glBegin(GL_LINES); // call this after unproject_xyz().
+            for (unsigned int i=0; i<50; i++) {
+               float theta_this = 0.02 * static_cast<float>(i)   * M_PI * 2.0;
+               float theta_next = 0.02 * static_cast<float>(i+1) * M_PI * 2.0;
+               float stt = sinf(theta_this);
+               float ctt = cosf(theta_this);
+               float stn = sinf(theta_next);
+               float ctn = cosf(theta_next);
+               float r = pull_restraint_neighbour_displacement_max_radius;
+
+               clipper::Coord_orth p1 = r * ctt * screen_x_co + r * stt * screen_y_co;
+               clipper::Coord_orth p2 = r * ctn * screen_x_co + r * stn * screen_y_co;
+
+               p1 += rc;
+               p2 += rc;
+
+               glVertex3f(p1.x(), p1.y(), p1.z());
+               glVertex3f(p2.x(), p2.y(), p2.z());
+         
+            }
+            glEnd();
+         }
       }
    }
 }
@@ -5378,8 +5442,7 @@ graphics_info_t::draw_geometry_objects() {
 		     text_pos = d[i].start_pos +
 			0.5 * ( d[i].end_pos - d[i].start_pos +
 				clipper::Coord_orth(0.0, 0.1, 0.1));
-		     dist = clipper::Coord_orth::length( d[i].start_pos,
-							 d[i].end_pos);
+		     dist = clipper::Coord_orth::length( d[i].start_pos, d[i].end_pos);
 		     printString(float_to_string(dist), text_pos.x(), text_pos.y(), text_pos.z());
 		  }
 	       }

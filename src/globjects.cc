@@ -485,7 +485,8 @@ coot::console_display_commands_t graphics_info_t::console_display_commands;
 int graphics_info_t::undo_molecule = -1;
 
 // backup filenames
-short int graphics_info_t::unpathed_backup_file_names_flag = 0;
+bool graphics_info_t::unpathed_backup_file_names_flag = 0;
+bool graphics_info_t::decoloned_backup_file_names_flag = 0;
 
 // backup compress files (default: compress)
 int graphics_info_t::backup_compress_files_flag = 1;
@@ -2150,6 +2151,13 @@ gint glarea_motion_notify (GtkWidget *widget, GdkEventMotion *event) {
 //    area.width  = widget->allocation.width;
 //    area.height = widget->allocation.height;
 
+   GtkAllocation allocation;
+   gint width;
+   gint height;
+   gtk_widget_get_allocation (widget, &allocation);
+   width = allocation.width;
+   height = allocation.height;
+
    GdkModifierType my_button1_mask = info.gdk_button1_mask();
    GdkModifierType my_button2_mask = info.gdk_button2_mask();
    GdkModifierType my_button3_mask = info.gdk_button3_mask();
@@ -2238,9 +2246,6 @@ gint glarea_motion_notify (GtkWidget *widget, GdkEventMotion *event) {
 		  // intermediate-atom-screen-z-rotate not a single
 		  // atom move.
 
-// 		  std::cout << "Moving single atom " << x_as_int << " "
-// 				<< y_as_int << " " << x << " " << y << std::endl;
-
 		  info.move_single_atom_of_moving_atoms(x_as_int, y_as_int);
 		  // info.move_atom_pull_target_position(x_as_int ,y_as_int);
 
@@ -2269,12 +2274,9 @@ gint glarea_motion_notify (GtkWidget *widget, GdkEventMotion *event) {
 	    } else {
 	       // info.in_moving_atoms_drag_atom_mode_flag test
 
-	       short int handled_non_atom_drag_event = 0;
-	       x_diff = x - info.GetMouseBeginX();
-	       y_diff = y - info.GetMouseBeginY();
-	       handled_non_atom_drag_event =
-		  info.rotate_intermediate_atoms_maybe(0, x_diff * 0.01);
-	       info.rotate_intermediate_atoms_maybe(1, y_diff * 0.01);
+               info.mouse_current_x = x;
+               info.mouse_current_y = y;
+	       short int handled_non_atom_drag_event = info.rotate_intermediate_atoms_maybe(width, height);
 
 	       if (! handled_non_atom_drag_event) {
 
@@ -2805,11 +2807,16 @@ gint key_press_event(GtkWidget *widget, GdkEventKey *event)
 
    case GDK_d:
 
-      if (graphics_info_t::clipping_back < 15.0) {
-	 set_clipping_front(graphics_info_t::clipping_front + 0.4);
-	 set_clipping_back (graphics_info_t::clipping_front + 0.4);
-	 // std::cout << "INFO:: clipping " << graphics_info_t::clipping_front << " "
-	 // << graphics_info_t::clipping_back << std::endl;
+      if (graphics_info_t::control_is_pressed) {
+	 graphics_info_t g;
+	 g.delete_active_residue();
+      } else {
+	 if (graphics_info_t::clipping_back < 15.0) {
+	    set_clipping_front(graphics_info_t::clipping_front + 0.4);
+	    set_clipping_back (graphics_info_t::clipping_front + 0.4);
+	    // std::cout << "INFO:: clipping " << graphics_info_t::clipping_front << " "
+	    // << graphics_info_t::clipping_back << std::endl;
+	 }
       }
       handled = TRUE;
       break;
@@ -3912,13 +3919,6 @@ gint glarea_button_press(GtkWidget *widget, GdkEventButton *event) {
       // std::cout << "Nothing doin' at the moment" << std::endl;
    }
 
-   if (event->button == 4) {
-      handle_scroll_density_level_event(1); // up
-   }
-
-   if (event->button == 5) {
-      handle_scroll_density_level_event(0); // down
-   }
    return TRUE;
 }
 
@@ -4043,16 +4043,24 @@ gint glarea_button_release(GtkWidget *widget, GdkEventButton *event) {
 gint glarea_scroll_event(GtkWidget *widget, GdkEventScroll *event) {
 
    graphics_info_t info;
-   bool handled = 0;
+   bool handled = false;
    if (info.control_is_pressed) {
       if (info.shift_is_pressed) {
 	 if (event->direction == GDK_SCROLL_UP)
 	    change_model_molecule_representation_mode(1);
 	 if (event->direction == GDK_SCROLL_DOWN)
 	    change_model_molecule_representation_mode(0);
-	 handled = 1;
+	 handled = true;
       } else {
-	 // std::cout << "shift is not pressed" << std::endl;
+         // maybe we change the proportional editing (pull atom neighbour displacement) radiu
+         if (true) {
+            bool dir = true;
+            if (event->direction == GDK_SCROLL_DOWN)
+               dir = false;
+            info.pull_restraint_neighbour_displacement_change_max_radius(dir);
+            info.graphics_draw();
+            handled = true;
+         }
       }
    } else {
       // std::cout << "control is not pressed " << std::endl;

@@ -121,7 +121,7 @@ void do_accept_reject_dialog(std::string fit_type, const coot::refinement_result
 	 add_accept_reject_lights(window, rr);
       }
    }
-   
+
    std::string txt = "";
    txt += "Accept ";
    txt += fit_type;
@@ -177,20 +177,27 @@ void do_accept_reject_dialog(std::string fit_type, const coot::refinement_result
       
       // now set the position, if it was set:
 
-      if (debug)
-	 std::cout << "Here...... outer "
+      if (false)
+	 std::cout << "Here in do_accept_reject_dialog() ...... outer "
 		   << graphics_info_t::accept_reject_dialog_x_position
 		   << " "
 		   << graphics_info_t::accept_reject_dialog_y_position
 		   << std::endl;
+
       if ((graphics_info_t::accept_reject_dialog_x_position > -100) && 
 	  (graphics_info_t::accept_reject_dialog_y_position > -100)) {
-	 if (debug)
-	    std::cout << "Here...... inside if setting ..... " 
+	 if (false)
+	    std::cout << "Here in do_accept_reject_dialog() ...... inside if setting ..... "
 		      << graphics_info_t::accept_reject_dialog_x_position
 		      << " "
 		      << graphics_info_t::accept_reject_dialog_y_position
 		      << std::endl;
+
+         std::cout << "INFO:: gtk_widget_set_uposition() " << window << " "
+                   << graphics_info_t::accept_reject_dialog_x_position << " "
+                   << graphics_info_t::accept_reject_dialog_y_position << " "
+                   << std::endl;
+
 	 // gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_NONE);
 	 gtk_widget_set_uposition(window,
 				  graphics_info_t::accept_reject_dialog_x_position,
@@ -494,22 +501,30 @@ graphics_info_t::info_dialog_alignment(coot::chain_mutation_info_container_t mut
 }
 
 void
-graphics_info_t::info_dialog_refinement_non_matching_atoms(std::vector<std::pair<std::string, std::vector<std::string> > > nma) {
+graphics_info_t::info_dialog_refinement_non_matching_atoms(std::vector<std::pair<mmdb::Residue *, std::vector<std::string> > > nma) {
 
    std::string s = "WARNING:: Failed to match (to the dictionary) the following model atom names:\n";
    for (unsigned int i=0; i<nma.size(); i++) {
       s += "   ";
-      s += nma[i].first;
-      s += "\n   ";
+      s += nma[i].first->GetChainID();
+      s += " ";
+      s += int_to_string(nma[i].first->GetSeqNum());
+      s += " ";
+      s += nma[i].first->GetResName();
+      s += "  ";
       for (unsigned int j=0; j<nma[i].second.size(); j++) {
 	 s += "\"";
 	 s += nma[i].second[j];
 	 s += "\"   ";
       }
       s += "\n";
+   }
+
+   if(! nma.empty()) {
       s += "\n";
       s += "   That would cause exploding atoms, so the refinement didn't start\n";
    }
+
 
    GtkWidget *dialog = info_dialog(s); // get trashed by markup text
    if (dialog) { 
@@ -1852,7 +1867,8 @@ graphics_info_t::fill_combobox_with_coordinates_options(GtkWidget *combobox,
          ss += "...";
       ss += molecules[imol].name_.substr(left_size, ilen);
 
-      std::cout << "debug:: --- in fill_combobox_with_coordinates_options() " << imol << " " << ss << std::endl;
+      //  std::cout << "debug:: --- in fill_combobox_with_coordinates_options() "
+      //            << imol << " " << ss << std::endl;
       gtk_list_store_append(store, &iter);
       gtk_list_store_set(store, &iter, 0, imol, 1, ss.c_str(), -1);
 
@@ -3231,6 +3247,21 @@ graphics_info_t::set_sequence_view_is_displayed(GtkWidget *widget, int imol) {
    }
 #endif // HAVE_GTK_CANVAS   
 }
+
+GtkWidget *
+graphics_info_t::get_sequence_view_is_displayed(int imol) const {
+
+   GtkWidget *w = 0;
+#if defined(HAVE_GTK_CANVAS) || defined(HAVE_GNOME_CANVAS)
+
+   if (is_valid_model_molecule(imol))
+       w = coot::get_validation_graph(imol, coot::SEQUENCE_VIEW);
+
+#endif
+   return w;
+}
+
+
 
 void 
 graphics_info_t::unset_geometry_dialog_distance_togglebutton() { 

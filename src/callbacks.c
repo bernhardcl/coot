@@ -6718,7 +6718,7 @@ on_preferences_map_radius_entry_changed
   const gchar *text = gtk_entry_get_text(entry);
   float fval = 0;
   fval = atof(text);
-  if ((fval > 0) && (fval <1000)) {
+  if ((fval > 0) && (fval <200)) {
     preferences_internal_change_value_float(PREFERENCES_MAP_RADIUS, fval);
     set_map_radius(fval);
   }
@@ -13040,3 +13040,97 @@ on_simple_refmac_filechooserdialog_response
    gtk_widget_destroy(GTK_WIDGET(dialog));
 
 }
+
+void
+on_label_neighbours1_activate          (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
+{
+  label_neighbours();
+}
+
+
+gboolean
+on_residue_type_chooser_entry_key_press_event
+                                        (GtkWidget       *widget,
+                                        GdkEventKey     *event,
+                                        gpointer         user_data)
+{
+  const char *entry_text = gtk_entry_get_text(GTK_ENTRY(widget));
+  GtkWidget *stub_button =
+    lookup_widget(widget, "residue_type_chooser_stub_checkbutton");
+   GtkWidget *window = lookup_widget(GTK_WIDGET(widget),
+                                     "residue_type_chooser_window");
+  short int istate = 0;
+
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
+    istate = 1;
+  if (event->keyval == GDK_Return || event->keyval == GDK_KP_Enter) {
+    handle_residue_type_chooser_entry_chose_type(entry_text, istate);
+    gtk_widget_destroy(window);
+  }
+  return FALSE;
+}
+
+
+void
+on_map_properties_dialog_specularity_state_checkbutton_toggled
+                                        (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+
+}
+
+
+void
+on_map_properties_dialog_fresnel_state_checkbutton_toggled
+                                        (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+
+}
+
+
+void
+on_map_properties_dialog_specularity_strength_entry_activate
+                                        (GtkEntry        *entry,
+                                        gpointer         user_data)
+{
+
+}
+
+
+void
+on_map_properties_dialog_specularity_shininess_entry_activate
+                                        (GtkEntry        *entry,
+                                        gpointer         user_data)
+{
+
+}
+
+
+void
+on_map_properties_dialog_fresnel_bias_entry_activate
+                                        (GtkEntry        *entry,
+                                        gpointer         user_data)
+{
+
+}
+
+
+void
+on_map_properties_dialog_fresnel_scale_entry_activate
+                                        (GtkEntry        *entry,
+                                        gpointer         user_data)
+{
+
+}
+
+
+void
+on_map_properties_dialog_fresnel_power_entry_activate
+                                        (GtkEntry        *entry,
+                                        gpointer         user_data)
+{
+
+}
+
