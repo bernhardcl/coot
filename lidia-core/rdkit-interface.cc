@@ -583,6 +583,7 @@ coot::rdkit_mol(mmdb::Residue *residue_p,
       // Violation occurred on line 166 in file xxx/rdkit-Release_2015_03_1/Code/GraphMol/Atom.cpp
       // Failed Expression: d_implicitValence>-1
       // ****
+
       // 
       // Either from 3d or via R/S.  We need to calculate the CIP ranks.
       // 
@@ -935,10 +936,7 @@ coot::set_atom_chirality(RDKit::Atom *rdkit_at, const coot::dict_atom &dict_atom
    bool debug = false;
 
    if (dict_atom.pdbx_stereo_config.first) {
-
       if (dict_atom.pdbx_stereo_config.second == "R") {
-
-	 // std::cout << "here in R: set_atom_chirality() for a dict_atom " << dict_atom << std::endl;
 
 	 // "work it out later" using rdkit sanitize doesn't seem to work
 	 //
@@ -969,8 +967,6 @@ coot::set_atom_chirality(RDKit::Atom *rdkit_at, const coot::dict_atom &dict_atom
    }
 }
 
-
-
 // sorts atoms so that the smallest ranks are at the top (close to index 0).
 //
 bool
@@ -986,11 +982,9 @@ bool
 coot::chiral_check_order_swap(RDKit::Atom* at_1, RDKit::Atom* at_2,
 			      const std::vector<dict_chiral_restraint_t>  &chiral_restraints) {
 #else
-   }
-
-      bool
-      coot::chiral_check_order_swap(RDKit::ATOM_SPTR at_1, RDKit::ATOM_SPTR at_2,
-                     const std::vector<dict_chiral_restraint_t>  &chiral_restraints) {
+bool
+coot::chiral_check_order_swap(RDKit::ATOM_SPTR at_1, RDKit::ATOM_SPTR at_2,
+                              const std::vector<dict_chiral_restraint_t>  &chiral_restraints) {
 #endif
    bool status = false;
 
@@ -1060,8 +1054,6 @@ coot::chiral_check_order_swap(RDKit::ATOM_SPTR at_1, RDKit::ATOM_SPTR at_2) {
 RDKit::RWMol
 coot::rdkit_mol(const coot::dictionary_residue_restraints_t &r) {
 
-   // std::cout << "===== rdkit_mol(dict) " << std::endl;
-
    RDKit::RWMol m;
    const RDKit::PeriodicTable *tbl = RDKit::PeriodicTable::getTable();
 
@@ -1115,6 +1107,7 @@ coot::rdkit_mol(const coot::dictionary_residue_restraints_t &r) {
 	 if (! done_chiral) {
 	    set_atom_chirality(at, r.atom_info[iat]);
 	 }
+
 
          if (false) {
 	    RDKit::Atom::ChiralType ct = at->getChiralTag();
@@ -1184,22 +1177,12 @@ coot::rdkit_mol(const coot::dictionary_residue_restraints_t &r) {
 		  // wedge bonds should have the chiral centre as the first atom.
 		  //
 		  bool swap_order = false;
-#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-		  RDKit::Atom *at_1 = m[idx_1];
-		  RDKit::Atom *at_2 = m[idx_2];
-#else
-		  RDKit::ATOM_SPTR at_1 = m[idx_1];
-		  RDKit::ATOM_SPTR at_2 = m[idx_2];
-#endif
-
-		  if (! at_1) continue;
-		  if (! at_2) continue;
 
 		  if (r.chiral_restraint.size()) {
-		     swap_order = chiral_check_order_swap(at_1, at_2, r.chiral_restraint);
+		     swap_order = chiral_check_order_swap(m[idx_1], m[idx_2], r.chiral_restraint);
 		  } else {
 		     // use the atoms rdkit chiral status
-		     swap_order = chiral_check_order_swap(at_1, at_2);
+		     swap_order = chiral_check_order_swap(m[idx_1], m[idx_2]);
 		  }
 		  if (! swap_order) {  // normal
 		     bond->setBeginAtomIdx(idx_1);
@@ -1211,8 +1194,8 @@ coot::rdkit_mol(const coot::dictionary_residue_restraints_t &r) {
 	    
 		  if (type == RDKit::Bond::AROMATIC) {
 		     bond->setIsAromatic(true);
-		     at_1->setIsAromatic(true);
-		     at_2->setIsAromatic(true);
+		     m[idx_1]->setIsAromatic(true);
+		     m[idx_2]->setIsAromatic(true);
 		  }
 		  m.addBond(bond); // worry about ownership or memory leak.
 	       } else {
