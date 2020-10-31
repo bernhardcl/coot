@@ -137,11 +137,14 @@ fi
 
 # we need this for movable/slim directory usage
 if [ "$systype" != "${systype/MINGW32_NT/}" ] ; then
-   # BL says:: is there some better cleverness possible?!
-   # I could use (if we have new bash)
-   # if [[ $systype == MINGW* ]] ; then
+   # BL says:: only for old MINGW32
    coot_bin=$COOT_PREFIX/bin/coot-bin
    PYTHONHOME=$COOT_PREFIX/python27
+   PATH=$PATH:$PYTHONHOME
+elif [[ ( "$systype" != "${systype/MINGW64_NT/}" )
+  || ( "$systype" != "${systype/MSYS/}" ) ]] ; then
+   coot_bin=$COOT_PREFIX/bin/coot-bin
+   PYTHONHOME=$COOT_PREFIX
    PATH=$PATH:$PYTHONHOME
 else
    coot_bin=$COOT_PREFIX/libexec/coot-bin
