@@ -2919,21 +2919,7 @@ int quick_save() {
 
    // std::cout << "Quick save..." << std::endl;
    graphics_info_t g;
-   for (int imol=0; imol<graphics_n_molecules(); imol++) {
-      g.molecules[imol].quick_save();
-   }
-
-   
-   short int il = coot::SCRIPT_UNSET;
-
-#ifdef USE_GUILE
-   il = coot::SCHEME_SCRIPT;
-   g.save_state_file(g.save_state_file_name.c_str(), il);
-#endif    
-#ifdef USE_PYTHON
-   il = coot::PYTHON_SCRIPT;
-   g.save_state_file("0-coot.state.py", il);
-#endif    
+   g.quick_save();
    return 0;
 }
 
@@ -4846,6 +4832,11 @@ void accept_regularizement() {
 void accept_moving_atoms() {
 
    graphics_info_t g;
+
+   while (g.continue_threaded_refinement_loop) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+   }
+
    g.accept_moving_atoms(); // does a g.clear_up_moving_atoms();
    g.clear_moving_atoms_object();
 }
