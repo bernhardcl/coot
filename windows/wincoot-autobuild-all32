@@ -59,8 +59,8 @@ if [ -z "$build_enhanced_ligand" ] ; then
 fi
 
 #
-BINARY_DIR=/c/msys64/home/bernhard/public_html/software/binaries/pre-release
-PRE_BINARY_DIR=/c/msys64/home/bernhard/public_html/software/binaries/pre-release
+BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/pre-release
+PRE_BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/pre-release
 # test if there is enough disk space first
 (
 fsutil.exe volume diskfree c: > ${HOME}/diskspace.tmp
@@ -110,7 +110,7 @@ function copy_logs {
 build_it=${HOME}/Projects/coot/build-it-win
 
 # location of makensis.exe
-makensis="/c/Program Files (x86)/NSIS/makensis.exe"
+makensis="/c/Program Files/NSIS/makensis.exe"
 
 # location of installerscript
 wincoot_installer_script=${HOME}/Projects/coot/windows/WinCoot_install_masta.nsi
@@ -160,9 +160,9 @@ else
 fi
 
 if [ "$build_coot_prerelease" = "0" ] ; then
-    install_top_dir=${HOME}/autobuild/${OS}-${HOST}-gtk2-shared
+    install_top_dir=${HOME}/autobuild/${OS}-${HOST}-gtk2
 else
-    install_top_dir=${HOME}/autobuild/${OS}-${HOST}-pre-release-gtk2-shared
+    install_top_dir=${HOME}/autobuild/${OS}-${HOST}-pre-release-gtk2
 fi
 
 if [ $make_installer_only == 0 ] ; then
@@ -184,7 +184,6 @@ if [ $make_installer_only == 0 ] ; then
       copy_logs python
       # read in variables from install run
       . ${HOME}/wincoot-installer-variables
-      # NOTE:: this overrides what is given in commandline args. Shouldnt. FIXME
       if [ -z "$build_coot_prerelease" ] ; then
           build_coot_prerelease=0
       fi
@@ -311,14 +310,14 @@ fi
 
 # flag for makensis, i.e. overwrite binary dir when stable release
 makensis_flag=
-src_dir=//Dsrc_dir="C:\msys64\home\bernhard\autobuild\MINGW64_NT-6.1-bernie-pre-release-gtk2-shared"
+src_dir=//Dsrc_dir="C:\MinGW\msys\1.0\home\bernhard\autobuild\MINGW32_NT-6.1-bernie-pc-pre-release-gtk2"
 PUBLIC_BINARY_DIR=$PUBLIC_NIGHTLY_DEST_DIR
 if [ "$build_coot_prerelease" != "1" ] ; then
    # stable release
    echo Have stable release and set variables now
-   makensis_flag=//Dbinary_dir="C:\msys64\home\bernhard\public_html\software\binaries\stable"
-   src_dir=//Dsrc_dir="C:\msys64\home\bernhard\autobuild\MINGW64_NT-6.1-bernie-gtk2-shared"
-   BINARY_DIR=/c/msys64/home/bernhard/public_html/software/binaries/stable
+   makensis_flag=//Dbinary_dir="C:\MinGW\msys\1.0\home\bernhard\public_html\software\binaries\stable"
+   src_dir=//Dsrc_dir="C:\MinGW\msys\1.0\home\bernhard\autobuild\MINGW32_NT-6.1-bernie-pc-gtk2"
+   BINARY_DIR=/c/MinGW/msys/1.0/home/bernhard/public_html/software/binaries/stable
    PUBLIC_BINARY_DIR=$PUBLIC_STABLE_DEST_DIR
 fi
 
@@ -380,10 +379,6 @@ if [ "$build_installer" = "0" ] ; then
    wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/reduce.exe
    wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/reduce_wwPDB_het_dict.txt
    wget -N -P ${HOME}/autobuild/extras http://bernhardcl.github.io/coot/software/extras/probe_reduce.txt
-   # some more...
-   wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/ppm2bmp.exe
-   wget --no-check-certificate -N -P ${HOME}/autobuild/extras https://github.com/bernhardcl/coot/raw/gh-binaries/auxil_binaries/gzip.exe
-
    # now make the installer
    echo installer-progress > $PUBLIC_HTML_LOGS/gtk2-build-status
    echo

@@ -383,7 +383,7 @@ fallback_coot_version=coot-0.8
 
 # For windows shared and enhanced Ligand compilation
 #
-# set this to "yes", i.e. 1 if you want to compile wth enhanced ligand 
+# set this to "yes", i.e. 1 if you want to compile wth enhanced ligand
 #
 build_enhanced_ligand=${build_enhanced_ligand:=0}
 build_shared=${build_shared:=0}
@@ -391,7 +391,7 @@ build_shared=${build_shared:=0}
 # LE needs shared, so set this too then
 if [ $build_enhanced_ligand = 1 ]  ; then
     build_shared=1
-    build_boost=1
+    build_boost=0
     build_rdkit=1
 else
     build_boost=0
@@ -1370,7 +1370,7 @@ build_goocanvas=
 build_python=
 build_guile_gtk=
 build_gtkglext=
-#build_freeglut=0
+build_freeglut=0
 build_glib=
 #build_readline=
 build_curl=
@@ -1547,6 +1547,10 @@ fi
 
 # freeglut
 # for dir in ${dir_list} ; do
+if [ -e /mingw64/libfreeglut.dll.a ] ; then
+   echo system has freeglut
+   build_freeglut=
+fi
 if test -e ${install_top_dir}/include/GL/freeglut_std.h ; then
    echo installation has Freeglut
    build_freeglut=
@@ -2056,7 +2060,7 @@ if [ $build_enhanced_ligand = 1 ]  ; then
 	      build_boost=
         else
             echo $install_top_dir/include/boost/version.hpp not exist, building boost
-  	        build_boost=1
+	      build_boost=1
         fi
     fi
     if [ -n "$build_rdkit" ] ; then
@@ -2065,7 +2069,7 @@ if [ $build_enhanced_ligand = 1 ]  ; then
 	      build_rdkit=
         else
             echo $install_top_dir/include/rdkit/RDGeneral/versions.h not exist, building rdkit
-  	        build_rdkit=1
+	      build_rdkit=1
         fi
     fi
 else
@@ -2139,7 +2143,7 @@ mmdb_version=2.0.19
 mmdb_server_dir=$extras_place
 echo ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
 ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
-${WGET} $win_extras_place/mmdb_io_file.cpp.patch
+${WGET} $win_extras_place/mmdb2_win64_mmdb_io_file.cpp.patch
 
 (
 date
@@ -2147,7 +2151,7 @@ gzip -dc ${AUTOBUILD_SOURCES}/mmdb2-$mmdb_version.tar.gz | tar xf -
 echo gzip -dc ${AUTOBUILD_SOURCES}/mmdb2-$mmdb_version.tar.gz
 cd  mmdb2-$mmdb_version
 pwd
-patch -p0 <${AUTOBUIILD_SOURCES}/mmdb_io_file.cpp.patch
+patch -p0 <${AUTOBUIILD_SOURCES}/mmdb2_win64_mmdb_io_file.cpp.patch
 ./configure $generic_prefix $shared_static_flag
 $MAKE
 $MAKE install
@@ -2260,6 +2264,7 @@ if test -n "$build_clipper" ; then
     # ${WGET} $extras_place/clipper-$clipper_version.tar.gz
     #${WGET} ftp://ftp.ccp4.ac.uk/opensource/clipper-$clipper_version.tar.gz
     ${WGET} $win_extras_place/clipper-$clipper_version.tar.gz
+    ${WGET} $win_extras_place/clipper_win64.patch
 
     (
     # temp hack
@@ -2267,7 +2272,7 @@ if test -n "$build_clipper" ; then
     # gzip -dc ${AUTOBUILD_SOURCES}/clipper-$clipper_version.tar.gz | tar xf -
     #
     gzip -dc ${AUTOBUILD_SOURCES}/clipper-$clipper_version.tar.gz | tar xf -
-    #mv clipper-$clipper_version clipper-$clipper_dir_version
+    mv clipper-$clipper_version clipper-$clipper_dir_version
     cd clipper-$clipper_dir_version
     pwd
     date
@@ -2279,14 +2284,16 @@ if test -n "$build_clipper" ; then
     # BL says:: FIXME
     # do we still need the patch?
     export     CPPFLAGS=-I$install_top_dir/include
-    export      LDFLAGS="-Wl,--large-address-aware -L$install_top_dir/lib"
+    export      LDFLAGS=-L$install_top_dir/lib
     echo CPPFLAGS $CPPFLAGS
     echo LDFLAGS  $LDFLAGS
 
     #patch -p0 < ${AUTOBUILD_SOURCES}/clipper_win32.patch
     #patch -p0 < ${AUTOBUILD_SOURCES}/clipper-2.1.thread.patch
     # patch the hkl_data.h header
-#    sed -ibackup -e 's/int i = 0; i < list.size(); i++/unsigned int i = 0; i < list.size(); i++/' clipper/core/hkl_data.h
+    # sed -ibackup -e 's/int i = 0; i < list.size(); i++/unsigned int i = 0; i < list.size(); i++/' clipper/core/hkl_data.h
+
+    patch -p0 < ${AUTOBUILD_SOURCES}/clipper_win64.patch
 
     ./configure --prefix=$install_top_dir \
 	--enable-mmdb=$install_top_dir    \
@@ -2297,13 +2304,13 @@ if test -n "$build_clipper" ; then
 	--enable-ccp4    \
 	--enable-minimol \
 	--enable-cns     \
-       CXXFLAGS="-g -O2 -fno-strict-aliasing"
+       CXXFLAGS="-g -O2 -fno-strict-aliasing -Wno-narrowing"
        # CXXFLAGS="-g -O2 -fno-strict-aliasing -DCLIPPER_DISABLE_THREADS"
        # We have to disable the threading for now, no clean exit from (Win)Coot
        # CXXFLAGS="-g -O2 -fno-strict-aliasing"
        # not need any more ?!
        # CCP4_CXXFLAGS=-I$install_top_dir/include CCP4_LIBS=$install_top_dir/lib/libccp4c.la	\
-    # we don't want to make the clipper executables, so let's cd in to the clipper libs and
+    # we don't want to make the clipper executables, so let's cd in to the clipper libs and 
     # make (just) those.
     # not any more!!! make all!!!
     if [ $build_shared = 1 ] ; then
@@ -2335,6 +2342,7 @@ fi
 
 # freeglut
 # we use 'normal' glut 
+# provided by msys2
 if test -n "$build_freeglut" ; then
     echo BUILDING freeglut:
 #nate's version is not good as it requires 'manual' adjustments to compilation
@@ -2650,10 +2658,10 @@ if test -n "$build_gtk" ; then
       7z x -y ${AUTOBUILD_SOURCES}/gtk+-dev_${gtk2_version}_win32.zip
       cd - 
       # install hicolor theme
-      # FIXME - update to 0.15 but uses xz then (check install for it)
-      hicolor_version=0.13
+      # FIXME - update to 0.17 but uses xz then (check install for it)
+      hicolor_version=0.17
       ${WGET} --no-check-certificate http://icon-theme.freedesktop.org/releases/hicolor-icon-theme-${hicolor_version}.tar.gz
-      gzip -cd ${AUTOBUILD_SOURCES}/hicolor-icon-theme-${hicolor_version}.tar.gz | tar xf -
+      7z x -so ${AUTOBUILD_SOURCES}/hicolor-icon-theme-${hicolor_version}.tar.gz | tar xf -
       cd hicolor-icon-theme-${hicolor_version}
       ./configure --prefix=$install_top_dir
       $MAKE
@@ -2801,13 +2809,17 @@ if [ "$build_goocanvas" != "no" ] ; then
     echo BUILDING goocanvas 
     goocanvas_major_version=1.0
     goocanvas_version=${goocanvas_major_version}.0
-    ${WGET} http://ftp.gnome.org/pub/gnome/binaries/win32/goocanvas/${goocanvas_major_version}/goocanvas-${goocanvas_version}-win32.zip
-    ${WGET} http://ftp.gnome.org/pub/gnome/binaries/win32/goocanvas/${goocanvas_major_version}/goocanvas-dev-${goocanvas_version}-win32.zip
+#    ${WGET} http://ftp.gnome.org/pub/gnome/binaries/win32/goocanvas/${goocanvas_major_version}/goocanvas-${goocanvas_version}-win32.zip
+#    ${WGET} http://ftp.gnome.org/pub/gnome/binaries/win32/goocanvas/${goocanvas_major_version}/goocanvas-dev-${goocanvas_version}-win32.zip
+    ${WGET} https://download.gnome.org/sources/goocanvas/1.0/goocanvas-1.0.0.tar.gz
     (date
-     cd $install_top_dir
+     gzip -cd ${AUTOBUILD_SOURCE}/goocamvas-1.0.0.tar.gz | tar xf -
+     cd goocanvas-1.0.0
      pwd
-     7z x -y ${AUTOBUILD_SOURCES}/goocanvas-${goocanvas_version}-win32.zip
-     7z x -y ${AUTOBUILD_SOURCES}/goocanvas-dev-${goocanvas_version}-win32.zip
+     ./configure --prefix=$install_top_dir
+     patch -p0 <${AUTOBUILD_SOURCES}/goocanvas_enum.patch
+     $MAKE
+     $MAKE install
      cd -
     ) > $HOSTLOGDIR/06-pre-goocanvas.txt
 else
@@ -2821,7 +2833,7 @@ fi
 
 # So that python is found when it is installed:
 #
-PATH=$install_top_dir/bin:$install_top_dir/$python_version:$install_top_dir/$python_version/Scripts:$PATH
+PATH=$install_top_dir/bin:$install_top_dir/$python_version:$PATH
 export PATH
 
 # python_version is the filename of the python executable.  For python
@@ -3471,6 +3483,7 @@ gsl_version=2.2.1
 ( 
 date
 pwd
+#if [ -n "$shared_flag" ] ; then
 if [ 0 == 1 ] ; then
 gzip -dc ${AUTOBUILD_SOURCES}/gsl-$gsl_version.tar.gz | tar xf -
 cd gsl-$gsl_version
@@ -3535,18 +3548,18 @@ if [ $build_enhanced_ligand = 1 ] ; then
     if test -n "$build_boost" ; then
         echo BUILDING Boost:
         boost_version=1.60.0
-        # old wget cant get from sourceforge but new one can. Make sure there 
+        # old wget cant get from sourceforge but new one can. Make sure there
         # is a new one! e.g. https://eternallybored.org/misc/wget/
         ${WGET} --no-check-certificate http://sourceforge.net/projects/boost/files/boost/${boost_version}/boost_${boost_version//./_}.7z
         ${WGET} $win_extras_place/boost_1_60_0.patch
-        ${WGET} $win_extras_place/make_boost.bat
+        ${WGET} $win_extras_place/make_boost64.bat
         (
             date
             pwd
             7z x -y ${AUTOBUILD_SOURCES}/boost_${boost_version//./_}.7z
             cd boost_${boost_version//./_}
             patch -p0 < ${AUTOBUILD_SOURCES}/boost_1_60_0.patch
-            cmd /c < ${AUTOBUILD_SOURCES}/make_boost.bat
+            cmd /c < ${AUTOBUILD_SOURCES}/make_boost64.bat
             cd -
             ) > $HOSTLOGDIR/21-boost.txt 2>&1
     else
@@ -3555,16 +3568,16 @@ if [ $build_enhanced_ligand = 1 ] ; then
 
     if test -n "$build_rdkit" ; then
         echo BUILDING rdkit:
-        rdkit_version=2017_09_3
+        rdkit_version=2018_03_2
         ${WGET} https://github.com/rdkit/rdkit/archive/Release_${rdkit_version}.tar.gz
-        ${WGET} ${win_extras_place}/rdkit_strtok.patch
+        # ${WGET} ${win_extras_place}/rdkit_strtok.patch
         (
             date
             pwd
             tmpdir=`pwd`
             gzip -cd ${AUTOBUILD_SOURCES}/Release_${rdkit_version}.tar.gz | tar xf -
             cd rdkit-Release_${rdkit_version}
-            patch -p0 < ${AUTOBUILD_SOURCES}/rdkit_strtok.patch
+            # patch -p0 < ${AUTOBUILD_SOURCES}/rdkit_strtok.patch
             export RDBASE=`pwd`
             export PYTHONPATH=$RDBASE
             export PATH=$PATH:$RDBASE/lib
@@ -3573,7 +3586,6 @@ if [ $build_enhanced_ligand = 1 ] ; then
             cd build
             cmake -G "MSYS Makefiles" \
                   -DRDK_BUILD_PYTHON_WRAPPERS=ON \
-                  -DBOOST_ROOT=$install_top_dir  \
                   -DRDK_BUILD_SLN_SUPPORT=OFF \
                   -DRDK_TEST_MMFF_COMPLIANCE=OFF \
                   -DRDK_BUILD_CPP_TESTS=OFF \
@@ -3584,9 +3596,7 @@ if [ $build_enhanced_ligand = 1 ] ; then
                   -DRDK_INSTALL_INTREE=OFF \
                   -DBUILD_SHARED_LIBS=ON \
                   -DRDK_INSTALL_STATIC_LIBS=OFF \
-                  -DPYTHON_INSTDIR=$install_top_dir/${python_version}/lib/site-packages \
                   -DCMAKE_INSTALL_PREFIX=$install_top_dir ..
-#                   -DCMAKE_CXX_FLAGS="-g -O -std=gnu++11 -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -Wall -Wextra -DWIN32" \
             $MAKE
             $MAKE install
             cd $tmpdir
@@ -3606,7 +3616,7 @@ if test -n "$build_glob" ; then
   (
    date
    pwd
-   bzip2 -cd ${AUTOBULD_SOURCES}/glob-1.0.tar.bz2 | tar xf -
+   bzip2 -cd glob-1.0.tar.bz2 | tar xf -
    cd glob-1.0
    ./configure $generic_prefix
    make
@@ -3734,8 +3744,6 @@ fi
 
 
 
-
-
 ###############################################################################
 ##########         build Coot                                     #############
 ###############################################################################
@@ -3820,8 +3828,6 @@ if [ -e libtool ] ; then
   rm libtool
 fi
 
-# quick hack for large maps
-export LDFLAGS="-Wl,--large-address-aware"
 
 echo From tar file: ${AUTOBUILD_SOURCES}/$coot_version.tar.gz
 echo building in: $PWD
