@@ -6844,6 +6844,14 @@ molecule_class_info_t::get_save_molecule_filename(const std::string &dir) {
       t_name_1 = name_for_display_manager();
    std::string t_name_2 = replace_char(t_name_1, '/');
    std::string t_name_3 = replace_char(t_name_2, ' ');
+#ifdef WINDOWS_MINGW
+   std::string t_name_t1 = t_name_3;
+   if (decolonify) {  // BL says: maybe not needed
+       t_name_t1 = replace_char(t_name_3, ':');
+   }
+   std::string t_name_t2 = replace_char(t_name_t1, '\\');
+   t_name_3 = t_name_t2;
+#endif
 
    if (save_time_string.empty()) {
       time_t t;
