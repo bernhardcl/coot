@@ -81,16 +81,16 @@ coot::mmff_bonds_and_angles(RDKit::ROMol &mol) {
       std::map<unsigned long long, bool> done_angle;
       for (unsigned int iat_1=0; iat_1<n_atoms; iat_1++) { 
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-            RDKit::Atom* at_1 = mol[iat_1];
-            RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
-            boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_1);
-            while(nbr_idx_1 != end_nbrs_1){
-                  const RDKit::Atom* at_2 = mol[*nbr_idx_1];
+	 const RDKit::Atom *at_1 = mol[iat_1];
+	 RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
+	 boost::tie(nbr_idx_1, end_nbrs_1) = mol.getAtomNeighbors(at_1);
+	 while(nbr_idx_1 != end_nbrs_1){
+	    const RDKit::Atom *at_2 = mol[*nbr_idx_1];
 
-                  RDKit::ROMol::ADJ_ITER nbr_idx_2, end_nbrs_2;
-                  boost::tie(nbr_idx_2, end_nbrs_2) = mol.getAtomNeighbors(at_2);
-                  while(nbr_idx_2 != end_nbrs_2){
-                        const RDKit::Atom* at_3 = mol[*nbr_idx_2];
+	    RDKit::ROMol::ADJ_ITER nbr_idx_2, end_nbrs_2;
+	    boost::tie(nbr_idx_2, end_nbrs_2) = mol.getAtomNeighbors(at_2);
+	    while(nbr_idx_2 != end_nbrs_2){
+	       const RDKit::Atom *at_3 = mol[*nbr_idx_2];
 #else
             RDKit::ATOM_SPTR at_1 = mol[iat_1];
             RDKit::ROMol::ADJ_ITER nbr_idx_1, end_nbrs_1;
@@ -165,8 +165,8 @@ coot::make_mmff_restraints(RDKit::ROMol &mol) {
 	 unsigned int idx_1 = mm_info->bonds[ibond].get_idx_1();
 	 unsigned int idx_2 = mm_info->bonds[ibond].get_idx_2();
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-    RDKit::Atom* at_p_1 = mol[idx_1];
-    RDKit::Atom* at_p_2 = mol[idx_2];
+	 const RDKit::Atom *at_p_1 = mol[idx_1];
+	 const RDKit::Atom *at_p_2 = mol[idx_2];
 #else
     RDKit::ATOM_SPTR at_p_1 = mol[idx_1];
     RDKit::ATOM_SPTR at_p_2 = mol[idx_2];
@@ -192,9 +192,9 @@ coot::make_mmff_restraints(RDKit::ROMol &mol) {
 	 unsigned int idx_2 = mm_info->angles[iangle].get_idx_2();
 	 unsigned int idx_3 = mm_info->angles[iangle].get_idx_3();
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-    RDKit::Atom* at_p_1 = mol[idx_1];
-    RDKit::Atom* at_p_2 = mol[idx_2];
-    RDKit::Atom* at_p_3 = mol[idx_3];
+	 const RDKit::Atom *at_p_1 = mol[idx_1];
+	 const RDKit::Atom *at_p_2 = mol[idx_2];
+	 const RDKit::Atom *at_p_3 = mol[idx_3];
 #else
     RDKit::ATOM_SPTR at_p_1 = mol[idx_1];
     RDKit::ATOM_SPTR at_p_2 = mol[idx_2];

@@ -45,7 +45,7 @@
 // 					      const RDKit::ROMol &rdkm) {
 
 
-cod::atom_level_2_type::atom_level_2_type(RDKit::Atom *base_atom_p,
+cod::atom_level_2_type::atom_level_2_type(const RDKit::Atom *base_atom_p,
 					  const RDKit::ROMol &rdkm) {
 
    //
@@ -63,10 +63,11 @@ cod::atom_level_2_type::atom_level_2_type(RDKit::Atom *base_atom_p,
    boost::tie(nbrIdx, endNbrs) = rdkm.getAtomNeighbors(base_atom_p);
    while(nbrIdx != endNbrs) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-         RDKit::Atom* at_neighb = (RDKit::Atom *) rdkm[*nbrIdx];
-         unsigned int degree = at_neighb->getDegree();
-         int n = at_neighb->getAtomicNum();
-         std::pair<int,std::string> ring_info = make_ring_info_string(at_neighb);
+      const RDKit::Atom *at_neighb = rdkm[*nbrIdx];
+      unsigned int degree = at_neighb->getDegree();
+      int n = at_neighb->getAtomicNum();
+      std::pair<int,std::string> ring_info = make_ring_info_string(at_neighb);
+      
          std::string atom_ele = tbl->getElementSymbol(n);
 
          // std::string s = atom_ele;
@@ -406,7 +407,7 @@ cod::atom_level_2_type::level_2_component_sorter(const atom_level_2_component_ty
 
 // return number_of_ring,atom_ring_string
 std::pair<int, std::string>
-cod::make_ring_info_string(RDKit::Atom *atom_p) {
+cod::make_ring_info_string(const RDKit::Atom *atom_p) {
 
    std::string atom_ring_string;
    
@@ -453,7 +454,7 @@ cod::make_ring_info_string(RDKit::Atom *atom_p) {
 }
 
 
-cod::atom_level_2_type::atom_level_2_component_type::atom_level_2_component_type(RDKit::Atom *at, const RDKit::ROMol &rdkm) {
+cod::atom_level_2_type::atom_level_2_component_type::atom_level_2_component_type(const RDKit::Atom *at, const RDKit::ROMol &rdkm) {
       
    // Version 147 atom types
    // s += coot::util::int_to_string(degree);
@@ -465,7 +466,7 @@ cod::atom_level_2_type::atom_level_2_component_type::atom_level_2_component_type
    boost::tie(nbrIdx_n, endNbrs_n) = rdkm.getAtomNeighbors(at);
    while(nbrIdx_n != endNbrs_n) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-         const RDKit::Atom* at_neighb_n = rdkm[*nbrIdx_n];
+         const RDKit::Atom *at_neighb_n = rdkm[*nbrIdx_n];
 #else
          RDKit::ATOM_SPTR at_neighb_n = rdkm[*nbrIdx_n];
 #endif

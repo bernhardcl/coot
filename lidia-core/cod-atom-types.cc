@@ -228,7 +228,7 @@ cod::atom_types_t::handle_bigger_rings_from_fused_rings(RDKit::ROMol &rdkm,
 	 while(nbrIdx != endNbrs) {
 	    if (is_ring_member(*nbrIdx, fused_rings)) { 
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-             RDKit::Atom* at = rdkm[*nbrIdx];
+             RDKit::Atom *at = rdkm[*nbrIdx];
 #else
              RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
 #endif
@@ -413,10 +413,10 @@ cod::atom_types_t::trace_path(unsigned int idx,
 // 
 // std::pair<std::string, std::list<cod::third_neighbour_info_t> >
 cod::atom_type_t
-cod::atom_types_t::get_cod_atom_type(RDKit::Atom *atom_base_p,
-				     RDKit::Atom *atom_nb_1_p,
-				     RDKit::Atom *atom_parent_p,
-				     RDKit::Atom *atom_p,
+cod::atom_types_t::get_cod_atom_type(const RDKit::Atom *atom_base_p,
+				     const RDKit::Atom *atom_nb_1_p,
+                                     const RDKit::Atom *atom_parent_p,
+				     const RDKit::Atom *atom_p,
 				     const RDKit::ROMol &rdkm,
 				     int nb_level) {
 
@@ -430,8 +430,8 @@ cod::atom_types_t::get_cod_atom_type(RDKit::Atom *atom_base_p,
       std::vector<unsigned int> v; // hybridizations
       while (nbrIdx != endNbrs) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-            RDKit::Atom* at = (RDKit::Atom*) rdkm[*nbrIdx];
-            RDKit::Atom *neigh_atom_p = at;
+            const RDKit::Atom *at = rdkm[*nbrIdx];
+            const RDKit::Atom *neigh_atom_p = at;
 #else
             RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
             RDKit::Atom *neigh_atom_p = at.get();
@@ -481,8 +481,8 @@ cod::atom_types_t::get_cod_atom_type(RDKit::Atom *atom_base_p,
       boost::tie(nbrIdx, endNbrs) = rdkm.getAtomNeighbors(atom_p);
       while (nbrIdx != endNbrs) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-            RDKit::Atom* at = (RDKit::Atom*) rdkm[*nbrIdx];
-            RDKit::Atom *neigh_atom_p = at;
+            const RDKit::Atom *at = rdkm[*nbrIdx];
+            const RDKit::Atom *neigh_atom_p = at;
 #else
             RDKit::ATOM_SPTR at = rdkm[*nbrIdx];
             RDKit::Atom *neigh_atom_p = at.get();
@@ -573,7 +573,7 @@ cod::atom_types_t::get_cod_atom_type(RDKit::Atom *atom_base_p,
 
 
 unsigned int 
-cod::atom_types_t::get_smallest_ring_info(RDKit::Atom *atom_p) const {
+cod::atom_types_t::get_smallest_ring_info(const RDKit::Atom *atom_p) const {
 
    unsigned int sr = 0;
    std::vector<int> ring_size_vec;
@@ -596,10 +596,10 @@ cod::atom_types_t::get_smallest_ring_info(RDKit::Atom *atom_p) const {
 // that shares a ring with NB-3.
 // 
 cod::third_neighbour_info_t
-cod::atom_types_t::get_cod_nb_3_type(RDKit::Atom *atom_base_p, // the original atom 
-				     RDKit::Atom *atom_nb_1_p,
-				     RDKit::Atom *atom_parent_p,
-				     RDKit::Atom *atom_p,
+cod::atom_types_t::get_cod_nb_3_type(const RDKit::Atom *atom_base_p, // the original atom 
+				     const RDKit::Atom *atom_nb_1_p,
+				     const RDKit::Atom *atom_parent_p,
+				     const RDKit::Atom *atom_p,
 				     const RDKit::ROMol &rdkm) {
    
    third_neighbour_info_t tni;
@@ -642,10 +642,10 @@ cod::atom_types_t::get_cod_nb_3_type(RDKit::Atom *atom_base_p, // the original a
 }
 
 bool
-cod::atom_types_t::check_for_3rd_nb_info(RDKit::Atom *atom_base_p,
-					 RDKit::Atom *atom_nb_1_p,
-					 RDKit::Atom *atom_parent_p,
-					 RDKit::Atom *atom_p,
+cod::atom_types_t::check_for_3rd_nb_info(const RDKit::Atom *atom_base_p,
+					 const RDKit::Atom *atom_nb_1_p,
+					 const RDKit::Atom *atom_parent_p,
+					 const RDKit::Atom *atom_p,
 					 const RDKit::ROMol &rdkm) {
 
    // "related" means "3rd neighb info is needed for this atom"
@@ -737,8 +737,8 @@ cod::atom_types_t::check_for_3rd_nb_info(RDKit::Atom *atom_base_p,
 }
 
 bool
-cod::atom_types_t::related_via_angle(RDKit::Atom *atom_in_1_p,
-				     RDKit::Atom *atom_in_2_p,
+cod::atom_types_t::related_via_angle(const RDKit::Atom *atom_in_1_p,
+				     const RDKit::Atom *atom_in_2_p,
 				     const RDKit::ROMol &rdkm) const {
 
    bool angle_related = false;
@@ -747,7 +747,7 @@ cod::atom_types_t::related_via_angle(RDKit::Atom *atom_in_1_p,
    while(nbrIdx_1 != endNbrs_1) {
 
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-         const RDKit::Atom* at_mid = rdkm[*nbrIdx_1];
+         const RDKit::Atom *at_mid = rdkm[*nbrIdx_1];
 #else
          RDKit::ATOM_SPTR at_mid = rdkm[*nbrIdx_1];
 #endif
@@ -786,7 +786,7 @@ cod::atom_types_t::related_via_angle(RDKit::Atom *atom_in_1_p,
 // first is 3rd level (without 3rd neighbour info) and second is full (with neighbour info)
 // 
 std::pair<std::string, std::string>
-cod::atom_types_t::make_cod_level_3_and_4_atom_type(RDKit::Atom *base_atom_p,
+cod::atom_types_t::make_cod_level_3_and_4_atom_type(const RDKit::Atom *base_atom_p,
 						    const std::string &atom_ele,
 						    const std::vector<std::string> &neighbour_types,
 						    const std::list<third_neighbour_info_t> &tnil,
@@ -814,10 +814,10 @@ cod::atom_types_t::make_cod_level_3_and_4_atom_type(RDKit::Atom *base_atom_p,
 	 std::list<third_neighbour_info_t>::const_iterator it;
 
 	 // debug input to this function
-	 std::string name;
-	 for (it=tnil.begin(); it!=tnil.end(); it++) {
-	    it->atom_p->getProp("name", name);
-	    std::cout << "__ :" << name << ": "  << it->atom_p << "   \"" << it->ele << "\" "
+	 std::string name_inner;
+	 for (it=tnil.begin(); it!=tnil.end(); ++it) {
+	    it->atom_p->getProp("name", name_inner);
+	    std::cout << "__ :" << name_inner << ": "  << it->atom_p << "   \"" << it->ele << "\" "
 		      << it->degree << std::endl;
 	 }
       }
@@ -1067,7 +1067,7 @@ cod::atom_types_t::sort_neighbours(const std::vector<std::string> &neighbours_in
 
 // return 0,0 on failure
 std::pair<unsigned int, unsigned int>
-cod::atom_types_t::get_period_group(RDKit::Atom *at) const {
+cod::atom_types_t::get_period_group(const RDKit::Atom *at) const {
 
    const RDKit::PeriodicTable *tbl = RDKit::PeriodicTable::getTable();
    int n = at->getAtomicNum();
@@ -1089,7 +1089,7 @@ cod::atom_types_t::get_period_group(RDKit::Atom *at) const {
 // (don't use this function if you can avoid it)
 // 
 unsigned int
-cod::atom_types_t::make_hash_index(RDKit::Atom *at) const {
+cod::atom_types_t::make_hash_index(const RDKit::Atom *at) const {
 
    cod::primes primes(600000); // 12ms
 
@@ -1099,7 +1099,7 @@ cod::atom_types_t::make_hash_index(RDKit::Atom *at) const {
 
 // return 0 on failure
 unsigned int
-cod::atom_types_t::make_hash_index(RDKit::Atom *at, const cod::primes &primes) const {
+cod::atom_types_t::make_hash_index(const RDKit::Atom *at, const cod::primes &primes) const {
 
    unsigned int hash_value = 0;
 
@@ -1127,7 +1127,6 @@ cod::atom_types_t::make_hash_index(RDKit::Atom *at, const cod::primes &primes) c
 
       const RDKit::PeriodicTable *tbl = RDKit::PeriodicTable::getTable();
       int n = at->getAtomicNum();
-      std::string atom_ele = tbl->getElementSymbol(n);
 
       std::string name;
       at->getProp("name", name);

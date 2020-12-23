@@ -393,7 +393,8 @@
 # 5.36 20200415 Updates for Release 0.9 - a bit delayed
 # 5.37 20200514 redirect numpy output
 # 5.38 20200921 Add clustalw2
-script_version=5.38
+# 5.39 20201203 Add use_system_gnomecanvas_if_possible, default no.
+script_version=5.39
 
 
 
@@ -1975,14 +1976,27 @@ else
     echo libtool should be built
 fi
 
+# If this is unset, it means the same as "no"
+if test -z "$use_system_gnomecanvas_if_possible" ; then
+   use_system_gnomecanvas_if_possible=no
+fi
+
 # test for libgnomecanvas
-if test -e /usr/include/libgnomecanvas-2.0/libgnomecanvas/gnome-canvas-line.h ; then
-    echo system has libgnomecanvas
+if test "$use_system_gnomecanvas_if_possible" = yes ; then
+    if test -e /usr/include/libgnomecanvas-2.0/libgnomecanvas/gnome-canvas-line.h ; then
+        echo system has libgnomecanvas
+    else
+        if test -e ${install_top_dir}/include/libgnomecanvas-2.0/libgnomecanvas/gnome-canvas-line.h ; then
+            echo installation has libgnomecanvas - you clever fellow
+        else
+            build_libgnomecanvas=1
+        fi
+    fi
 else
     if test -e ${install_top_dir}/include/libgnomecanvas-2.0/libgnomecanvas/gnome-canvas-line.h ; then
-       echo installation has libgnomecanvas - you clever fellow
+        echo installation has libgnomecanvas - you clever fellow
     else
-       build_libgnomecanvas=1
+        build_libgnomecanvas=1
     fi
 fi
 
@@ -2049,15 +2063,15 @@ echo atempting to run installed guile-config \(this may fail, that\'s OK\).
 
 $install_top_dir/bin/guile-config --version
 
-if $install_top_dir/bin/guile-config --version ; then 
+if $install_top_dir/bin/guile-config --version ; then
 
-    # We have a seen a situation somehow where bin/guile-config is installed 
+    # We have a seen a situation somehow where bin/guile-config is installed
     # but include/libguile.h is not.  Strange.  Let's test for libguile.h too.
-    # 
+    #
     if test -e $install_top_dir/include/libguile.h ; then
-	echo installation has guile
-	build_guile=
-    else 
+        echo installation has guile
+        build_guile=
+    else
        echo no include/libguile.h. guile     should be built
        echo no include/libguile.h. guile-gtk should be built
        build_guile_gtk=1
@@ -2072,24 +2086,24 @@ fi
 if test -f $install_top_dir/share/guile/gui/paren-match.scm ; then
     echo installation has guile-gui
     build_guile_gui=
-else 
+else
     echo guile-gui needs to be installed
     build_guile_gui=1
 fi
 
 
-# guile-lib 
+# guile-lib
 if test -f $install_top_dir/share/guile/site/sxml/simple.scm ; then
     echo installation has guile-lib
     build_guile_lib=
-else 
+else
     build_guile_lib=1
     echo guile-lib needs to be installed
 fi
 
 
 
-# do we have greg? 
+# do we have greg?
 
 # LD_LIBRARY_PATH has been set by now
 echo testing for greg using `which guile`
@@ -2114,6 +2128,8 @@ fi #  ENABLE_GUILE_COOT
 python_version=python2.7
 pver=2.7.15
 numpy_version=1.7.1
+numpy_version=1.16.6
+# for an upgrade of numpy to work, the old numpy must be deleted from site-packages
 
 #
 # but more modern pythons do not compile (at least on my mac)
@@ -2121,23 +2137,23 @@ if [ $OS = Darwin ] ; then
    pver=2.7.8
 fi
 
-if [ $ENABLE_PYTHON_COOT = yes ] ; then 
+if [ $ENABLE_PYTHON_COOT = yes ] ; then
    $install_top_dir/bin/python -V
    if test $? != 0 ; then
       echo python should be built
       build_python=1
       build_pygtk=1
       build_pygobject=1
-   else 
+   else
       python_version_installed=`python -V 2>&1`
       python_target_version="Python $pver"
 
-      case "$python_version_installed" in 
-          "$python_target_version") 
+      case "$python_version_installed" in
+          "$python_target_version")
             echo installation has python, $python_version_installed
             which python
             build_python=
-	    build_pygtk=
+            build_pygtk=
             ;;
           *)
             echo python $python_version_installed installed but not up to date...
@@ -2151,26 +2167,26 @@ if [ $ENABLE_PYTHON_COOT = yes ] ; then
 fi
 
 # test for pygobject
-if [ $ENABLE_PYTHON_COOT = yes ] ; then 
+if [ $ENABLE_PYTHON_COOT = yes ] ; then
    if test -z "$build_pygobject" ; then
       if test -e $install_top_dir/include/pygtk-2.0/pygobject.h ; then
          echo installation has pygobject
         build_pygobject=
-      else  
+      else
          echo pygobject NOT exists, pygobject should be built
          build_pygobject=1
          build_pygtk=1
-      fi      
+      fi
    fi
 fi
 
 
 # test for pygtk
-if [ $ENABLE_PYTHON_COOT = yes ] ; then 
+if [ $ENABLE_PYTHON_COOT = yes ] ; then
    if test -z "$build_pygtk" ; then
       if test -e $install_top_dir/lib/pygtk/2.0/pygtk-demo.py ; then
          echo pygtk demo exists, no build pygtk
-      else 
+      else
          echo pygtk demo NOT exists, pygtk should be built
          build_pygtk=1
       fi
@@ -2186,7 +2202,7 @@ $install_top_dir/bin/gsl-config --prefix
 if test $? != 0 ; then
    echo gsl should be built
    build_gsl=1
-else 
+else
    gsl_version=`gsl-config --version`
 
    # if you change this, change also gsl_version below.
@@ -2203,12 +2219,12 @@ else
    echo build_gsl is $build_gsl
 
    if [ $build_gsl = 1 ] ; then
-	echo need to build GSL
+        echo need to build GSL
         build_gsl=1
-   else 
-	echo GSL is up to date
-	# set build_gsl to blank:
-	build_gsl=
+   else
+        echo GSL is up to date
+        # set build_gsl to blank:
+        build_gsl=
    fi
 fi
 
@@ -2246,7 +2262,7 @@ fi
 
 # guile-gtk, only look in installation, not system.
 
-# if we are not building gtk, perhaps we should not build 
+# if we are not building gtk, perhaps we should not build
 # guile-gtk also?
 if test -e "${install_top_dir}/include/guile-gtk.h" ; then
    echo installation has guile-gtk
@@ -3126,7 +3142,7 @@ if test -n "$build_pygtk" ; then
 
    # FIXME
    # 20090824
-   # 2.6.3 is too hight for CentOS 4 series, because it complains that 
+   # 2.6.3 is too hight for CentOS 4 series, because it complains that
    #       GLIB2 needs to be 2.6.0 or greater and (system) is only 2.4.2
    # Red Hat Enterprise Linux was released 2005-02-15.  Find a version of pygtk that
    # is compatible with that.
@@ -3165,7 +3181,7 @@ echo done pygtk
 build_boost=true
 test_for_already_installed_dependencies=true
 
-if [ "$build_boost" = true ] ; then 
+if [ "$build_boost" = true ] ; then
    (
    skip_this=false
    if [ "$test_for_already_installed_dependencies" = true ] ; then
@@ -3175,7 +3191,7 @@ if [ "$build_boost" = true ] ; then
       fi
    fi
 
-   if [ $skip_this = false ] ;  then
+   if [ $skip_this = false ] ; then
       echo building ========================= boost $boost_version =========================
 
       boost_home_url=https://dl.bintray.com/boostorg/release/1.71.0/source
@@ -3189,9 +3205,9 @@ if [ "$build_boost" = true ] ; then
       ./bootstrap.sh --prefix=$install_top_dir --with-libraries=python,regex,thread,serialization --without-icu
       # bjam no longer exists
       ./b2 address-model=$address_model cflags=-fPIC -j2 cxxflags=-fPIC install
-      cd - 
+      cd -
    fi
-   ) > $HOSTLOGDIR/16-boost.log 2>&1
+   ) > $HOSTLOGDIR/16-boost.txt 2>&1
 fi
 
 
@@ -3241,7 +3257,7 @@ if [ true = true ] ; then
          echo something bad about numpy.
          exit 2
       fi
-      cd - 
+      cd -
       ) > $HOSTLOGDIR/16-b-numpy.log 2>&1
    fi
 fi
@@ -3252,7 +3268,7 @@ export PATH=$HOME/cmake/bin:$PATH
 build_rdkit=true
 rdkit_version=2017_09_3
 # rdkit_version=2019_09_1 # python 3
-# rdkit_version=2018_09_2 # Atom pointers gone, needs coot patch
+rdkit_version=2018_09_2 # Atom pointers gone, needs coot patch
 rdkit_home=https://github.com/rdkit/rdkit/archive
 rdkit_tar_host_file_name=Release_$rdkit_version.tar.gz
 rdkit_tar_download_file_name=rdkit-Release_$rdkit_version.tar.gz
@@ -3266,16 +3282,16 @@ if [ "$build_rdkit" = true ] ; then
       fi
    fi
 
-   # hack
+   # hack - force RDKit build
    # skip_this=false
 
    if [ $skip_this = false ] ;  then
 
-      echo building rdkit
+      echo building rdkit $rdkit_version
       (
       echo building ========================= rdkit ==============================
 
-      # at last we can compile rdkit
+      # at last we get to actually compile rdkit
       RDKIT=$install_top_dir
       RDBASE=$install_top_dir
       CMAKE_INSTALL_PREFIX=$install_top_dir
@@ -3416,10 +3432,23 @@ if [ "$build_rdkit" = true ] ; then
       fi
       cd ..
       cd ..
-      ) > $HOSTLOGDIR/17-rdkit.log 2>&1
+      ) > $HOSTLOGDIR/17-rdkit.txt 2>&1
    fi
 fi
 
+# silicos-it's biscu-it
+if [ -e $install_top_dir/lib/python2.7/site-packages/silicos_it/descriptors/qed.py ] ; then
+   echo installation has biscu-it
+else
+   ${WGET} http://silicos-it.be.s3-website-eu-west-1.amazonaws.com/_downloads/qed-1.0.1.tar.gz
+   (date
+    pwd
+    tar xf ${AUTOBUILD_SOURCES}/qed-1.0.1.tar.gz
+    cd qed-1.0.1
+    $PYTHON setup.py install
+    cd -
+   ) > $HOSTLOGDIR/19-biscu-it.txt
+fi
 
 # Now we need:
 #  * guile
@@ -3864,6 +3893,10 @@ if test -n "$build_curl" ; then
    #
    # 20191211-PE on modern ubuntu: apt install libssl-dev, so that curl's configure finds it
    #             It's OK to depend on system libssl rather than build it myself.
+
+   # Make sure (here) that system has OpenSSL
+   # on Ubuntu: install it like this:
+   # apt-get install libssl-dev
    #
    echo ./configure  $generic_prefix --with-libidn2=$install_top_dir LDFLAGS=-L$install_top_dir/lib
    ./configure  $generic_prefix --with-libidn2=$install_top_dir LDFLAGS=-L$install_top_dir/lib
@@ -3894,7 +3927,7 @@ fi
 ###############################################################################
 #
 
-if test -n "$build_gsl" ; then 
+if test -n "$build_gsl" ; then
     echo BUILDING gsl:
 #
 # wget http://www.mirror.ac.uk/sites/ftp.gnu.org/gnu/gsl/gsl-1.5.tar.gz
@@ -3906,7 +3939,7 @@ gsl_version=1.16
 # ${WGET} http://ftp.gnu.org/gnu/gsl/gsl-$gsl_version.tar.gz
 # ${WGET} http://ftp.gnu.org/gnu/gsl/gsl-$gsl_version.tar.gz
 ${WGET} http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/gsl/gsl-$gsl_version.tar.gz
-( 
+(
 date
 pwd
 gzip -dc ${AUTOBUILD_SOURCES}/gsl-$gsl_version.tar.gz | tar xf -
@@ -3914,7 +3947,7 @@ cd gsl-$gsl_version
 ./configure $generic_prefix
 $MAKE
 status=$?
-if [ "$status" != 0 ] ; then 
+if [ "$status" != 0 ] ; then
     echo ERROR:: GSL make failed.
     exit 2
 else
@@ -3922,7 +3955,7 @@ else
    echo '                                ' make install
    echo 1 ----------------------------------------------------------------
    $MAKE install
-fi    
+fi
 ) > $HOSTLOGDIR/15-gsl.txt 2>&1
 else
     echo not building gsl:
@@ -3932,28 +3965,31 @@ fi
 # Clustalw2
 #################################################################
 #
-${WGET} ftp://ftp.ebi.ac.uk/pub/software/clustalw2/2.1/clustalw-2.1.tar.gz
-if [ ! -e ${AUTOBUILD_SOURCES}/clustalw-2.1.tar.gz ] ; then
-   echo failed to download clustalw2
+if test -e $install_top_dir/bin/clustalw2 ; then
+   echo not building clustalw2
 else
-   # happy path
-   (
-   tar xf ${AUTOBUILD_SOURCES}/clustalw-2.1.tar.gz
-   cd clustalw-2.1/
-   ./configure --prefix=$install_top_dir
-   if ${MAKE} ; then
-       make install
+   ${WGET} ftp://ftp.ebi.ac.uk/pub/software/clustalw2/2.1/clustalw-2.1.tar.gz
+   if [ ! -e ${AUTOBUILD_SOURCES}/clustalw-2.1.tar.gz ] ; then
+      echo failed to download clustalw2
    else
-       echo make for clustalw-2.1 failed. Boo.
-   fi   
-   ) > $HOSTLOGDIR/18-clustalw.txt 2>&1
+      # happy path
+      (
+      tar xf ${AUTOBUILD_SOURCES}/clustalw-2.1.tar.gz
+      cd clustalw-2.1/
+      ./configure --prefix=$install_top_dir
+      if ${MAKE} ; then
+          make install
+      else
+          echo make for clustalw-2.1 failed. Boo.
+      fi
+      ) > $HOSTLOGDIR/18-clustalw.txt 2>&1
+   fi
 fi
-
 
 #################################################################
 # Raster3D
 #################################################################
-# 
+#
 
 if [ -e $install_top_dir/bin/render ] ; then
    echo not building Raster3D render
@@ -3969,7 +4005,7 @@ else
 
    else
       echo libgd...............
-      ( 
+      (
        date
        pwd
        # build libgd
@@ -3984,7 +4020,7 @@ else
           echo checking for existance of $install_top_dir/include/gd.h
           if [ ! -e $install_top_dir/include/gd.h ] ; then
               echo get and build libgd...
-   	      # Amazon file names too long, so force output name with -O
+              # Amazon file names too long, so force output name with -O
               ${WGET} https://github.com/libgd/libgd/releases/download/gd-2.1.1/libgd-2.1.1.tar.gz -O ${AUTOBUILD_SOURCES}/libgd-2.1.1.tar.gz
 	      gzip -dc ${AUTOBUILD_SOURCES}/libgd-2.1.1.tar.gz | tar xf -
    	      cd libgd-2.1.1
@@ -4263,7 +4299,7 @@ echo PATH: $PATH
 echo using this guile:
 which guile
 
-rdkit_libs="-lRDKitMolDraw2D -lRDKitForceFieldHelpers -lRDKitDescriptors -lRDKitForceField -lRDKitSubstructMatch -lRDKitOptimizer -lRDKitDistGeomHelpers -lRDKitDistGeometry -lRDKitAlignment -lRDKitEigenSolvers -lRDKitDepictor -lRDKitMolChemicalFeatures -lRDKitFileParsers  -lRDKitRDGeometryLib -lRDKitGraphMol -lRDKitSmilesParse -lRDKitDataStructs -lRDKitRDGeneral -lboost_python27 -lpython2.7"
+rdkit_libs="-lRDKitMolDraw2D -lRDKitForceFieldHelpers -lRDKitDescriptors -lRDKitForceField -lRDKitSubstructMatch -lRDKitcoordgenlib -lRDKitOptimizer -lRDKitDistGeomHelpers -lRDKitDistGeometry -lRDKitAlignment -lRDKitEigenSolvers -lRDKitDepictor -lRDKitMolChemicalFeatures -lRDKitSubgraphs -lRDKitPartialCharges -lRDKitmaeparser -lRDKitFileParsers -lRDKitRDGeometryLib -lRDKitGraphMol -lRDKitSmilesParse -lRDKitSubgraphs -lRDKitDataStructs -lRDKitPartialCharges -lRDKitRDGeneral -lboost_python27 -lpython2.7"
 rdkit_install_dir=$install_top_dir
 
 echo ./configure $coot_prefix \

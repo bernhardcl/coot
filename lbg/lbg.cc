@@ -3526,7 +3526,7 @@ lbg_info_t::update_alerts(const RDKit::RWMol &rdkm) {
 		  int lbg_atom_index = rdkmol_idx;
 		  try {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-           const RDKit::Atom* at_p = rdkm[rdkmol_idx];
+           const RDKit::Atom *at_p = rdkm[rdkmol_idx];
 #else
            RDKit::ATOM_SPTR at_p = rdkm[rdkmol_idx];
 #endif
@@ -4388,7 +4388,7 @@ lbg_info_t::rdkit_mol_post_read_handling(RDKit::RWMol *m, const std::string &fil
 	 unsigned int n_atoms = m->getNumAtoms();
 	 for (unsigned int iat=0; iat<n_atoms; iat++) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-          RDKit::Atom* at_p = (*m)[iat];
+          const RDKit::Atom *at_p = (*m)[iat];
 #else
           RDKit::ATOM_SPTR at_p = (*m)[iat];
 #endif
@@ -4683,7 +4683,7 @@ lbg_info_t::import_rdkit_mol(RDKit::ROMol *rdkm, int iconf) const {
       double min_y = 9e9;
       for (unsigned int iat=0; iat<n_mol_atoms; iat++) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-            RDKit::Atom* at_p = (*rdkm)[iat];
+            const RDKit::Atom *at_p = (*rdkm)[iat];
 #else
             RDKit::ATOM_SPTR at_p = (*rdkm)[iat];
 #endif
@@ -4731,7 +4731,7 @@ lbg_info_t::import_rdkit_mol(RDKit::ROMol *rdkm, int iconf) const {
 
       for (unsigned int iat=0; iat<n_mol_atoms; iat++) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-            RDKit::Atom* at_p = (*rdkm)[iat];
+            const RDKit::Atom *at_p = (*rdkm)[iat];
 #else
             RDKit::ATOM_SPTR at_p = (*rdkm)[iat];
 #endif

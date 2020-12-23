@@ -31,7 +31,7 @@ coot::cairo_molecule_t::import_rdkit_mol(RDKit::ROMol *rdkm, int iconf) {
       double min_y = 9e9;
       for (unsigned int iat=0; iat<n_mol_atoms; iat++) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-	 RDKit::Atom *at_p = (*rdkm)[iat];
+	 const RDKit::Atom *at_p = (*rdkm)[iat];
 #else
 	 RDKit::ATOM_SPTR at_p = (*rdkm)[iat];
 #endif
@@ -78,7 +78,7 @@ coot::cairo_molecule_t::import_rdkit_mol(RDKit::ROMol *rdkm, int iconf) {
 
       for (unsigned int iat=0; iat<n_mol_atoms; iat++) {
 #if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-	 RDKit::Atom* at_p = (*rdkm)[iat];
+	 const RDKit::Atom *at_p = (*rdkm)[iat];
 #else
 	 RDKit::ATOM_SPTR at_p = (*rdkm)[iat];
 #endif
