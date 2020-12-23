@@ -2,7 +2,7 @@
 title WinCoot
 
 
-set COOT_PREFIX=%~dp0
+set COOT_PREFIX=yourWinCootdirectory
 set COOT_GUILE_PREFIX=%COOT_PREFIX:\=/%
 
 set COOT_HOME=%COOT_PREFIX%
