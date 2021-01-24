@@ -2089,77 +2089,101 @@ SCM alignment_mismatches_scm(int imol) {
 
 Return a list of mutations deletions insetions.
 Return  False on failure to align (e.g. not assigned sequence)
-and the empty list on no alignment mismatches.*/
+and the empty list on no alignment mismatches.
+
+Returns a list of alignment as text as 4th element
+*/
 #ifdef USE_PYTHON
 PyObject *alignment_mismatches_py(int imol) {
 
-   PyObject *r = Py_False;
+    PyObject *r = Py_False;
+    PyObject *list_of_alignments_as_text;
 
-   std::vector<std::pair<coot::residue_spec_t,std::string> > mutations;
-   std::vector<std::pair<coot::residue_spec_t,std::string> > insertions;
-   std::vector<std::pair<coot::residue_spec_t,std::string> > deletions;
+    std::vector<std::pair<coot::residue_spec_t,std::string> > mutations;
+    std::vector<std::pair<coot::residue_spec_t,std::string> > insertions;
+    std::vector<std::pair<coot::residue_spec_t,std::string> > deletions;
 
-   if (is_valid_model_molecule(imol)) {
-      std::pair<bool, std::vector<coot::chain_mutation_info_container_t> > ar =
-      	 graphics_info_t::molecules[imol].residue_mismatches(graphics_info_t::alignment_wgap,
-							     graphics_info_t::alignment_wspace);
-      if (ar.first)
-	r = PyList_New(0);
-      for (unsigned int ir=0; ir<ar.second.size(); ir++) {
-	 for (unsigned int im=0; im<ar.second[ir].mutations.size(); im++) {
-	    mutations.push_back(ar.second[ir].mutations[im]);
-	 }
-	 for (unsigned int is=0; is<ar.second[ir].single_insertions.size(); is++) {
-	    insertions.push_back(ar.second[ir].single_insertions[is]);
-	 }
-	 for (unsigned int id=0; id<ar.second[ir].deletions.size(); id++) {
-	    coot::residue_spec_t del = ar.second[ir].deletions[id];
-	    std::pair<coot::residue_spec_t, std::string> d(del, "Delete");
-	    deletions.push_back(d);
-	 }
-      }
-   }
+    if (is_valid_model_molecule(imol)) {
+        std::pair<bool, std::vector<coot::chain_mutation_info_container_t> > ar =
+                graphics_info_t::molecules[imol].residue_mismatches(graphics_info_t::alignment_wgap,
+                                                                    graphics_info_t::alignment_wspace);
+        if (ar.first)
+            r = PyList_New(0);
+        for (unsigned int ir=0; ir<ar.second.size(); ir++) {
+            for (unsigned int im=0; im<ar.second[ir].mutations.size(); im++) {
+                mutations.push_back(ar.second[ir].mutations[im]);
+            }
+            for (unsigned int is=0; is<ar.second[ir].single_insertions.size(); is++) {
+                insertions.push_back(ar.second[ir].single_insertions[is]);
+            }
+            for (unsigned int id=0; id<ar.second[ir].deletions.size(); id++) {
+                coot::residue_spec_t del = ar.second[ir].deletions[id];
+                std::pair<coot::residue_spec_t, std::string> d(del, "Delete");
+                deletions.push_back(d);
+            }
+        }
 
-   if ((mutations.size() > 0) || (insertions.size() > 0) || (deletions.size() > 0)) {
-     PyObject *insertions_py = PyList_New(0);
-     PyObject *deletions_py = PyList_New(0);
-     PyObject * mutations_py = PyList_New(0);
-     for (unsigned int i=0; i<mutations.size(); i++) {
-	 PyObject *rs_py = residue_spec_to_py(mutations[i].first);
-	 PyObject *str = PyString_FromString(mutations[i].second.c_str());
-	 PyList_Insert(rs_py, 0, str);
-	 PyList_Append(mutations_py, rs_py);
-	 Py_XDECREF(str);
-	 Py_XDECREF(rs_py);
-      }
-      for (unsigned int i=0; i<insertions.size(); i++) {
-	 PyObject *rs_py = residue_spec_to_py(insertions[i].first);
-	 PyObject *str = PyString_FromString(insertions[i].second.c_str());
-	 PyList_Insert(rs_py, 0, str);
-	 PyList_Append(insertions_py, rs_py);
-	 Py_XDECREF(str);
-	 Py_XDECREF(rs_py);
-      }
-      for (unsigned int i=0; i<deletions.size(); i++) {
-	 PyObject *rs_py = residue_spec_to_py(deletions[i].first);
-	 PyObject *str = PyString_FromString(deletions[i].second.c_str());
-	 PyList_Insert(rs_py, 0, str);
-	 PyList_Append(deletions_py, rs_py);
-	 Py_XDECREF(str);
-	 Py_XDECREF(rs_py);
-      }
-      r = PyList_New(3);
-      // These are reversed so that the residue numbers come out in
-      // numerical order (not backwards) and the returned list is
-      // [mutations, deletions, insertions].
-      PyList_SetItem(r, 0, mutations_py);
-      PyList_SetItem(r, 1, deletions_py);
-      PyList_SetItem(r, 2, insertions_py);
-   }
-   if (PyBool_Check(r)) {
-     Py_INCREF(r);
-   }
-   return r;
+        if ((mutations.size() > 0) || (insertions.size() > 0) || (deletions.size() > 0)) {
+            PyObject *insertions_py = PyList_New(0);
+            PyObject *deletions_py = PyList_New(0);
+            PyObject * mutations_py = PyList_New(0);
+            for (unsigned int i=0; i<mutations.size(); i++) {
+                PyObject *rs_py = residue_spec_to_py(mutations[i].first);
+                PyObject *str = PyString_FromString(mutations[i].second.c_str());
+                PyList_Insert(rs_py, 0, str);
+                PyList_Append(mutations_py, rs_py);
+                Py_XDECREF(str);
+                Py_XDECREF(rs_py);
+            }
+            for (unsigned int i=0; i<insertions.size(); i++) {
+                PyObject *rs_py = residue_spec_to_py(insertions[i].first);
+                PyObject *str = PyString_FromString(insertions[i].second.c_str());
+                PyList_Insert(rs_py, 0, str);
+                PyList_Append(insertions_py, rs_py);
+                Py_XDECREF(str);
+                Py_XDECREF(rs_py);
+            }
+            for (unsigned int i=0; i<deletions.size(); i++) {
+                PyObject *rs_py = residue_spec_to_py(deletions[i].first);
+                PyObject *str = PyString_FromString(deletions[i].second.c_str());
+                PyList_Insert(rs_py, 0, str);
+                PyList_Append(deletions_py, rs_py);
+                Py_XDECREF(str);
+                Py_XDECREF(rs_py);
+            }
+            r = PyList_New(4);
+            // These are reversed so that the residue numbers come out in
+            // numerical order (not backwards) and the returned list is
+            // [mutations, deletions, insertions].
+            PyList_SetItem(r, 0, mutations_py);
+            PyList_SetItem(r, 1, deletions_py);
+            PyList_SetItem(r, 2, insertions_py);
+
+            PyObject *alignment_as_text_py;
+            list_of_alignments_as_text = PyList_New(0);
+            for (std::size_t i=0; i<ar.second.size(); i++) {
+
+                // and the dialog text
+
+                const coot::chain_mutation_info_container_t &mic = ar.second[i];
+
+                std::cout << ":::::::::::::: Here with alignment_string: " << mic.alignment_string
+                          << std::endl;
+
+                alignment_as_text_py = PyString_FromString(mic.alignment_string.c_str());
+
+                PyList_Append(list_of_alignments_as_text, alignment_as_text_py);
+            }
+
+            // Put list_of_alignments_as_text at the end of r
+            PyList_SetItem(r, 3, list_of_alignments_as_text);
+
+        }
+    }
+    if (PyBool_Check(r)) {
+        Py_INCREF(r);
+    }
+    return r;
 }
 #endif // USE_PYTHON
 
