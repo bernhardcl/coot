@@ -95,10 +95,17 @@ def validation_outliers_dialog(imol, imol_map):
         return ret
 
     def molecule_atom_overlap_baddies():
+        l = molecule_atom_overlaps(imol)
+        if isinstance(l, list):
+            return l
+        else:
+            info_dialog(l)
+            return []
+
         return molecule_atom_overlaps(imol)
 
     def filter_molecule_atom_overlap_baddies(mao_baddies):
-        baddie_limit = 2.2  # more than this is marked as a baddie
+        baddie_limit = 2.0  # more than this is marked as a baddie, was 2.2. Is 2.0 good?
         return filter(lambda mao_item: mao_item['overlap-volume'] > baddie_limit, mao_baddies)
 
     def non_pro_cis_peptide_baddies():  # do the filter here - just for consistency
@@ -270,7 +277,8 @@ def validation_outliers_dialog(imol, imol_map):
 
             # Paul is not sure that he likes a score of
             # 0.0 meaning "Missing sidechain"
-            # we have lost some information on the way
+            # we have lost some information on the way.
+            # 20200511-PE Yeah, like the fact that the residue was RNA!
             #
             score_string = '{:6.2f} %'.format(score)
             ms_string = "Missing Sidechain" if score == 0.0 else "Rotamer Outlier"
@@ -417,3 +425,51 @@ def validation_outliers_dialog(imol, imol_map):
     poor_density_checkbutton.show()
     regenerate_button_local.show()
 
+
+def molecule_atom_overlaps_gui(imol):
+
+    def filter_molecule_atom_overlap_baddies(mao_baddies):
+        baddie_limit = 1.0  # more than this is marked as a baddie, was 2.2. Is 2.0 good?
+        return filter(lambda mao_item: mao_item['overlap-volume'] > baddie_limit, mao_baddies)
+
+    def make_buttons():
+
+        maob = molecule_atom_overlaps(imol)
+        if isinstance(maob, list):
+            maob_2 = maob
+        else:
+            info_dialog(l)
+            maob_2 = []
+        filtered_mao_baddies = filter_molecule_atom_overlap_baddies(maob_2)
+
+        atom_overlap_buttons = []
+        for baddie in filtered_mao_baddies:
+            atom_spec_1 = baddie['atom-1-spec']
+            atom_spec_2 = baddie['atom-2-spec']
+            overlap = baddie['overlap-volume']
+            button_label = "Atom Overlap " + \
+                           atom_spec_to_string(atom_spec_1) + \
+                           " on " + \
+                           atom_spec_to_string(atom_spec_2) + \
+                           " OV: " + \
+                           '{:5.2f}'.format(overlap)
+            atom_overlap_buttons.append([button_label,
+                                         [[set_go_to_atom_molecule, imol],
+                                          [set_go_to_atom_from_atom_spec, atom_spec_1]]])
+        return atom_overlap_buttons
+
+    def make_window_title(n):
+        return "Atom Overlaps for Molecule " + str(n)
+
+    # --- main line ---
+
+    dialog_vbox = False
+    window = False
+
+    buttons = make_buttons()
+
+    p = dialog_box_of_buttons(make_window_title(len(buttons)),
+                              [350, 200], buttons, " Close ")
+
+    # do we really need to return this!?
+    return p

@@ -74,6 +74,7 @@ def acedrg_env():
     
     return my_env
 
+
 def import_from_3d_generator_from_mdl_using_acedrg(mdl_file_name, comp_id):
 
     pdb_out_file_name = "acedrg-" + comp_id + ".pdb"
@@ -82,6 +83,22 @@ def import_from_3d_generator_from_mdl_using_acedrg(mdl_file_name, comp_id):
 
     status = popen_command("acedrg",
                            ["-m", mdl_file_name, "-r", comp_id, "-o", stub],
+                           [], "acedrg.log", False, local_env=acedrg_env())
+    if status:
+        info_dialog("WARNING:: Bad exit status for Acedrg\n - see acedrg.log")
+    else:
+        handle_read_draw_molecule_and_move_molecule_here(pdb_out_file_name)
+        read_cif_dictionary(cif_out_file_name)
+
+
+def import_from_cif_using_acedrg(cif_file_name, comp_id):
+
+    pdb_out_file_name = "acedrg-" + comp_id + ".pdb"
+    cif_out_file_name = "acedrg-" + comp_id + ".cif"
+    stub = "acedrg-" + comp_id
+
+    status = popen_command("acedrg",
+                           ["-c", cif_file_name, "-r", comp_id, "-o", stub],
                            [], "acedrg.log", False, local_env=acedrg_env())
     if status:
         info_dialog("WARNING:: Bad exit status for Acedrg\n - see acedrg.log")

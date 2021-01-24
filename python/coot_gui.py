@@ -2170,6 +2170,25 @@ def dialog_box_of_buttons_with_check_button(window_name, geometry,
    window.show_all()
    return [inside_vbox, window]
 
+def dialog_box_of_buttons_from_specs(window_name, geometry,
+                                     imol, specs):
+
+   # not needed, why here Paul?
+   #func = [cmd2str(set_go_to_atom_molecule, imol),
+   #        cmd2str(set_go_to_atom_chain_residue_atom_name,
+   #                chain_id, res_no, atom_name)]
+
+   buttons = []
+   for spec in specs:
+      label = residue_spec_to_string(spec)
+      cbf = [cmd2str(set_go_to_atom_molecule, imol),
+             cmd2str(set_go_to_atom_chain_residue_atom_name,
+                     residue_spec_to_chain_id(spec),
+                     residue_spec_to_res_no(spec), " C  ")]
+      buttons.append([label, cbf])
+
+   return dialog_box_of_buttons(window_name, geometry, buttons, " Close ")
+
 # This is exported outside of the box-of-buttons gui because the
 # clear_and_add_back function (e.g. from using the check button)
 # needs to add buttons - let's not duplicate that code.
@@ -4311,10 +4330,12 @@ def alignment_mismatches_gui(imol):
          buttons  = delete_buttons()
          buttons += mutate_buttons()
          buttons += insert_buttons()
-         alignments_as_text_list = am[3]
-
-         for alignment_text in alignments_as_text_list:
-            info_dialog_with_markup(alignment_text)
+         if (len(am) > 3):
+            # we have alignment text for info box
+            # protected for compatibiity reasons
+            alignments_as_text_list = am[3]
+            for alignment_text in alignments_as_text_list:
+               info_dialog_with_markup(alignment_text)
 
          dialog_box_of_buttons("Residue mismatches", [300, 300],
                                buttons, "  Close  ")
@@ -5196,6 +5217,70 @@ def water_coordination_gui():
 
    window.show_all()
 
+
+# interface to the difference_map based pepflip finder
+#
+def pepflips_by_difference_map_gui():
+
+   def delete_event(*args):
+      window.destroy()
+      return False
+
+   def find_flips_cb(*args):
+      imol_coords = get_option_menu_active_molecule(menu_coords,
+                                                    model_mol_list)
+      imol_map = get_option_menu_active_molecule(menu_map,
+                                                 map_mol_list)
+      n_sigma_str = n_sigma_entry.get_text()
+      n_sigma = float(n_sigma_str)
+      specs = pepflip_using_difference_map(imol_coords, imol_map, n_sigma)
+      print "dialog for specs\n"
+      print "specs:", specs
+      if not specs:
+         info_dialog("No pepflips found")
+      else:
+         dialog_box_of_buttons_from_specs("Potential Pepflip",
+                                          [240, 170],
+                                          imol_coords, specs)
+      delete_event()
+
+   def fill_option_menu_with_difference_map_options(menu):
+      return fill_option_menu_with_mol_options(menu, is_difference_map_qm)
+
+   window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+   chooser_label = "Difference map"
+   label = gtk.Label(chooser_label)
+   vbox = gtk.VBox(False, 6)
+   hbox_buttons = gtk.HBox(False, 5)
+   hbox_sigma = gtk.HBox(False, 5)
+   menu_map = gtk.combo_box_new_text()
+   menu_coords = gtk.combo_box_new_text()
+   n_sigma_label = gtk.Label("N-sigma cut-off")
+   n_sigma_entry = gtk.Entry()
+   ok_button = gtk.Button("  OK  ")
+   cancel_button = gtk.Button(" Cancel ")
+   h_sep = gtk.HSeparator()
+   model_mol_list = fill_option_menu_with_coordinates_mol_options(menu_coords)
+   map_mol_list = fill_option_menu_with_difference_map_options(menu_map)
+   window.set_default_size(370, 100)
+   window.add(vbox)
+   vbox.pack_start(label, False, False, 5)
+   vbox.pack_start(menu_map, True, True, 6)
+   vbox.pack_start(menu_coords, True, True, 6)
+   hbox_sigma.pack_start(n_sigma_label, False, False, 6)
+   hbox_sigma.pack_start(n_sigma_entry, False, False, 6)
+   vbox.pack_start(hbox_sigma, True, False, 6)
+   vbox.pack_start(h_sep, True, False, 2)
+   vbox.pack_start(hbox_buttons, False, False, 5)
+   hbox_buttons.pack_start(ok_button, True, False, 5)
+   hbox_buttons.pack_start(cancel_button, True, False, 5)
+   n_sigma_entry.set_text("4.0")
+
+   cancel_button.connect("clicked", delete_event)
+   ok_button.connect("clicked", find_flips_cb)
+
+   window.show_all()
+
 # return a list, or False (e.g. if not in same chain and molecule)
 #
 def min_max_residues_from_atom_specs(specs):
@@ -5453,24 +5538,35 @@ def add_module_cryo_em_gui():
             c = cell(m)
             set_rotation_centre(0.5 * c[0], 0.5 * c[1], 0.5 * c[2])
 
-      add_simple_coot_menu_menuitem(menu, "Sharpen/Blur...",
-                                    lambda func: sharpen_blur_map_gui())
-
-      add_simple_coot_menu_menuitem(menu, "Multi-sharpen...",
-                                    lambda func: refmac_multi_sharpen_gui())
-
-      add_simple_coot_menu_menuitem(menu, "Interactive Nudge Residues...",
-                                    lambda func: interactive_nudge_func())
-
       add_simple_coot_menu_menuitem(menu, "Go To Map Molecule Middle",
                                     lambda func: go_to_map_molecule_centre(imol_refinement_map()))
 
       add_simple_coot_menu_menuitem(menu, "Go To Box Middle",
                                     lambda func: go_to_box_middle())
 
+      add_simple_coot_menu_menuitem(menu, "Sharpen/Blur...",
+                                    lambda func: sharpen_blur_map_gui())
+
+      add_simple_coot_menu_menuitem(menu, "Multi-sharpen...",
+                                    lambda func: refmac_multi_sharpen_gui())
+
       add_simple_coot_menu_menuitem(menu, "Flip Hand of Map",
                                     lambda func: flip_hand_local_func())
 
+      add_simple_coot_menu_menuitem(menu, "Align and Mutate using ClustalW2",
+                                    lambda func:
+                                    generic_chooser_entry_and_file_selector(
+                                       "Align Sequence to Model: ",
+                                       valid_model_molecule_qm,
+                                       "Chain ID",
+                                       "",
+                                       "Select PIR Alignment file",
+                                       lambda imol, chain_id, target_sequence_pif_file:
+                                       run_clustalw_alignment(imol, chain_id,
+                                                              target_sequence_pif_file)))
+
+      add_simple_coot_menu_menuitem(menu, "Interactive Nudge Residues...",
+                                    lambda func: interactive_nudge_func())
 
 
 def add_module_ccp4_gui():
@@ -5503,8 +5599,8 @@ def add_pdbe_gui():
          lambda func: generic_single_entry("Get PDBe accession code",
                                            "", " Get it ",
                                            lambda text:
-                                           pdbe_get_pdb_and_sfs_cif("include-sfs", text.rstrip().lstrip())))
-
+                                           pdbe_get_pdb_and_sfs_cif(
+                                              "include-sfs", text.rstrip().lstrip())))
 
 
 #### BL stuff

@@ -402,6 +402,10 @@ def molecule_number_list():
 def model_molecule_number_list():
     return filter(valid_model_molecule_qm, molecule_number_list())
 
+def display_all_maps():
+    map_list = map_molecule_list()
+    map(lambda imol: set_map_displayed(imol, 1), map_list)
+
 # c.f. graphics_info_t::undisplay_all_model_molecules_except(int imol)
 def undisplay_all_maps_except(imol_map):
 
@@ -413,8 +417,7 @@ def undisplay_all_maps_except(imol_map):
             set_map_displayed(imol, 0)
     set_map_displayed(imol_map, 1)
 
-#
-def just_one_or_next_map():
+def display_cycle_through_maps():
 
     def next_map(current_map_number, map_number_list):
         try:
@@ -444,10 +447,19 @@ def just_one_or_next_map():
             undisplay_all_maps_except(map_list[0])
     elif n_displayed == 1:
         if len(map_list) > 1:
-            undisplay_all_maps_except(next_map(current_displayed_maps[0],
-                                               map_list))
+            nm = next_map(current_displayed_maps[0], map_list)
+            currently_displayed_map = current_displayed_maps[0]
+            if nm > currently_displayed_map:
+                undisplay_all_maps_except(nm)
+            else:
+                display_all_maps()
     else:
-        undisplay_all_maps_except(current_displayed_maps[-1])
+        undisplay_all_maps_except(current_displayed_maps[0])
+
+# is isn't quite because one of the options is "all"
+# legacy for installed key bindings:
+def just_one_or_next_map():
+    return display_cycle_through_maps()
 
 
 # Test for prefix-dir (1) being a string (2) existing (3) being a
@@ -2370,6 +2382,14 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
             if is_purine(rn_2):
                 atom_list_1 = pyrimidine_to_purine_set
                 atom_list_2 = purine_to_pyrimidine_set
+
+        for atom_name_1, atom_name_2 in zip(atom_list_1, atom_list_2):
+            add_lsq_atom_pair(chain_id_ref, res_no_ref, ins_code_ref, atom_name_1, "",
+                              chain_id_mov, res_no_mov, ins_code_mov, atom_name_2, "")
+
+        print "applying matches!"
+        apply_lsq_matches(imol_ref, imol_mov)
+        print "done matches!"
         
     # get_monomer_and_dictionary, now we check to see if we have a
     # molecule already loaded that matches this residue, if we have,
@@ -2411,14 +2431,26 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
             else:
                 overlap_ligands(imol_ligand, imol, chain_id_in, resno)
 
+            if is_nucleotide(imol, chain_id_in, resno):
+                if residue_exists_qm(imol, chain_id_in, (resno - 1)):
+                    delete_atom(imol_ligand, "A", 1, "", " OP3", "")
+
+            if (is_nucleotide(imol_ligand, "A", 1) and
+                is_nucleotide(imol, chain_id_in, resno)):
+                overlap_by_base(imol_ligand, "A", 1, "", imol, chain_id_in, resno, "")
+            else:
+                overlap_ligands(imol_ligand, imol, chain_id_in, resno)
+
             if (not is_nucleotide(imol_ligand, "A", 1)):
                 match_ligand_torsions(imol_ligand, imol, chain_id_in, resno)
             delete_residue(imol, chain_id_in, resno, "")
             new_chain_id_info = merge_molecules([imol_ligand], imol)
             print "BL DEBUG:: new_chain_id_info: ", new_chain_id_info
             merge_status = new_chain_id_info[0]
+            # merge_status is sometimes a spec, sometimes a chain-id pair
+            # BL says:: isnt it the imol the molecules have been merged into?
             print "BL DEBUG:: merge status: ", merge_status
-            if merge_status == 1:
+            if merge_status == imol:
                 new_res_spec = new_chain_id_info[1]
                 new_chain_id = residue_spec_to_chain_id(new_res_spec)
                 print "BL DEBUG:: new_res_spec", new_res_spec
@@ -2431,8 +2463,7 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
                 print "BL DEBUG::  chain ids :", new_chain_id, chain_id_in
                 if not (new_chain_id == chain_id_in):
                     change_chain_id(imol, new_chain_id, chain_id_in, 1,
-                                    residue_spec_to_res_no(new_res_spec),
-                                    residue_spec_to_res_no(new_res_spec))
+                                    resno, resno) # 1 means "use range"
 
                 replacement_state = refinement_immediate_replacement_state()
                 imol_map = imol_refinement_map()
@@ -3758,14 +3789,14 @@ def file_to_preferences(filename):
 
     coot_python_dir = os.getenv("COOT_PYTHON_DIR")
     if not coot_python_dir:
-        if is_windows():
+        coot_python_dir = os.path.join(sys.prefix, 'lib', 'python2.7', 'site-packages', 'coot')
+        if not os.path.isdir(coot_python_dir) and is_windows():
+            # maybe its old an in another place!?!
             coot_python_dir = os.path.normpath(os.path.join(sys.prefix,
                                                             'lib', 'site-packages', 'coot'))
-        else:
-            coot_python_dir = os.path.join(sys.prefix, 'lib', 'python2.7', 'site-packages', 'coot')
 
     if not os.path.isdir(coot_python_dir):
-        add_status_bar_text("Missing COO_PYTHON_DIR")
+        add_status_bar_text("Missing COOT_PYTHON_DIR")
     else:
         ref_py = os.path.join(coot_python_dir, filename)
 
@@ -4683,27 +4714,61 @@ def rename_alt_confs_active_residue():
 def write_current_sequence_as_pir(imol, ch_id, file_name):
     print_sequence_chain_general(imol, ch_id, 1, 1, file_name)
 
+# Use clustalw to do the alignment. Then mutate using that alignement.
+# BL says:: to be in line with scheme core should be in coot_gui.py
+# or vice versa or not. Exists twice in scheme code....
+#
+
 def run_clustalw_alignment(imol, ch_id, target_sequence_pir_file):
+
+    def get_clustalw2_command():
+      clustalw2_command = "clustalw2"
+      if command_in_path_qm(clustalw2_command):
+         return clustalw2_command
+      else:
+         s = os.getenv("CCP4")
+         if not s:
+            return False
+         else:
+            file_path = os.path.join(s, "libexec", clustalw2_command)
+            if command_in_path_qm(file_path):
+               return file_path
+            else:
+               return False
 
     current_sequence_pir_file = "current-sequence.pir"
     aligned_sequence_pir_file = "aligned-sequence.pir"
     clustalw2_output_file_name = "clustalw2-output-file.log"
 
-    if os.path.exists("aligned-sequence.pir"):
-        os.remove("aligned-sequence.pir")
-    if os.path.exists("aligned-sequence.dnd"):
-        os.remove("aligned-sequence.dnd")
-    if os.path.exists("current-sequence.dnd"):
-        os.remove("current-sequence.dnd")
+    clustalw2_command = get_clustalw2_command()
+    if not clustalw2_command:
+      print "No clustalw2 command!"
+      return False
+    else:
+        # if these files are not deleted/renamed then the input to clustalw2
+        # goes wonky.
+        if os.path.exists(aligned_sequence_pir_file):
+            new_file_name = aligned_sequence_pir_file + ".old"
+            rename_file(aligned_sequence_pir_file, new_file_name)
 
-    write_current_sequence_as_pir(imol, ch_id, current_sequence_pir_file)
+        if os.path.exists("current-sequence.dnd"):
+            new_file_name = "current-sequence.dnd" + ".old"
+            rename_file("current-sequence.dnd", new_file_name)
 
-    data_lines = ["3", "1", target_sequence_pir_file, "2", current_sequence_pir_file,
-                  "9", "2", "", "4", "", aligned_sequence_pir_file, "", "x", "", "x"]
-    popen_command("clustalw2", [], data_lines, clustalw2_output_file_name, 0)
-    associate_pir_alignment_from_file(imol, ch_id, aligned_sequence_pir_file)
-    apply_pir_alignment(imol, ch_id)
-    simple_fill_partial_residues(imol)
+        if os.path.exists("current-sequence.aln"):
+            new_file_name = "current-sequence.aln" + ".old"
+            rename_file("current-sequence.aln", new_file_name)
+
+        write_current_sequence_as_pir(imol, ch_id, current_sequence_pir_file)
+
+        data_lines = ["3", "1", target_sequence_pir_file, "2", current_sequence_pir_file,
+                      "9", "2", "", "4", "", aligned_sequence_pir_file, "", "x", "", "x"]
+        popen_command(clustalw2_command, [], data_lines, clustalw2_output_file_name, 0)
+        associate_pir_alignment_from_file(imol, ch_id, aligned_sequence_pir_file)
+        apply_pir_alignment(imol, ch_id)
+        simple_fill_partial_residues(imol)
+        resolve_clashing_sidechains_by_deletion(imol)
+
 
 # Util function to pipe Coot C stdout to a file (Note: python stdout doesnt
 # touch C stdout, therefore this is needed. Of course could just tee out
@@ -4753,6 +4818,32 @@ def stdout_redirected(to=os.devnull, stdout=None):
             #NOTE: dup2 makes stdout_fd inheritable unconditionally
             stdout.flush()
             os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
+
+# rename file src to dst
+# On Windows there is an error if dst exists, so need to remove first.
+# return -1 on fail 0 on success
+#
+def rename_file(src, dest):
+    import os
+
+    if os.name != 'nt':
+        try:
+            os.rename(sr, dst)
+            return 0
+        except:
+            return -1
+    else:
+        # WINDOWS
+        if os.path.exists(dest):
+            try:
+                os.path.remove(dest)
+            except:
+                return -1
+        try:
+            os.rename(src, dest)
+            return 0
+        except:
+            return -1
 
 
 ####### Back to Paul's scripting.

@@ -120,7 +120,7 @@ def add_base_restraint(imol, spec_1, spec_2, atom_name_1, atom_name_2, dist):
 def a_u_restraints(spec_1, spec_2):
 
   imol = spec_1[1]
-  print "BL DEBUG:: add_base_restraint a u",imol, spec_1, spec_2, " N6 ", " O4 ", 3.12
+#  print "BL DEBUG:: add_base_restraint a u",imol, spec_1, spec_2, " N6 ", " O4 ", 3.12
   add_base_restraint(imol, spec_1, spec_2, " N6 ", " O4 ", 3.12)
   add_base_restraint(imol, spec_1, spec_2, " N1 ", " N3 ", 3.05)
   add_base_restraint(imol, spec_1, spec_2, " C2 ", " O2 ", 3.90)
@@ -131,7 +131,7 @@ def a_u_restraints(spec_1, spec_2):
 def g_c_restraints(spec_1, spec_2):
 
   imol = spec_1[1]
-  print "BL DEBUG:: add_base_restraint gc", imol, spec_1, spec_2, " O6 ", " N4 ", 3.08
+#  print "BL DEBUG:: add_base_restraint gc", imol, spec_1, spec_2, " O6 ", " N4 ", 3.08
   add_base_restraint(imol, spec_1, spec_2, " N6 ", " O4 ", 3.12)
   add_base_restraint(imol, spec_1, spec_2, " N1 ", " N3 ", 3.04)
   add_base_restraint(imol, spec_1, spec_2, " N2 ", " O2 ", 3.14)
@@ -279,49 +279,6 @@ def extra_restraints2refmac_restraints_file(imol, file_name):
         fin.write("VALUE %f SIGMA %f\n" %(value, esd))
     fin.close()
 
-# target is my molecule, ref is the homologous (high-res) model
-#
-# extra arg: include_side_chains=False
-#
-def run_prosmart(imol_target, imol_ref, include_side_chains=False):
-  """
-  target is my molecule, ref is the homologous (high-res) model
-
-  extra arg: include_side_chains=False
-  """
-
-  dir_stub = "coot-ccp4"
-  make_directory_maybe(dir_stub)
-  target_pdb_file_name = os.path.join(dir_stub,
-                                      molecule_name_stub(imol_target, 0).replace(" ", "_") + \
-                                      "-prosmart.pdb")
-  reference_pdb_file_name = os.path.join(dir_stub,
-                                         molecule_name_stub(imol_ref, 0).replace(" ", "_") + \
-                                         "-prosmart-ref.pdb")
-  prosmart_out = os.path.join("ProSMART_Output",
-                              molecule_name_stub(imol_target, 0).replace(" ", "_") + \
-                              "-prosmart.txt")
-
-  write_pdb_file(imol_target, target_pdb_file_name)
-  write_pdb_file(imol_ref, reference_pdb_file_name)
-  prosmart_exe = find_exe("prosmart")
-  if prosmart_exe:
-    l = ["-p1", target_pdb_file_name,
-         "-p2", reference_pdb_file_name,
-         "-restrain_seqid", "30"]
-    if include_side_chains:
-      l += ["-side"]
-    popen_command(prosmart_exe,
-                  l,
-                  [],
-                  os.path.join(dir_stub, "prosmart.log"),
-                  False)
-    if (not os.path.isfile(prosmart_out)):
-      print "file not found", prosmart_out
-    else:
-      print "Reading ProSMART restraints from", prosmart_out
-      add_refmac_extra_restraints(imol_target, prosmart_out)
-
 def res_name2plane_atom_name_list(res_name):
 
   if not (isinstance(res_name, str)):
@@ -456,48 +413,6 @@ if (have_coot_python):
       "DNA B form bond restraints...",
       lambda func: user_defined_DNA_B_form())
 
-    def launch_prosmart_gui():
-      def go_button_cb(*args):
-        imol_tar = get_option_menu_active_molecule(*option_menu_mol_list_pair_tar)
-        imol_ref = get_option_menu_active_molecule(*option_menu_mol_list_pair_ref)
-        do_side_chains = check_button.get_active()
-        run_prosmart(imol_tar, imol_ref, do_side_chains)
-        window.destroy()
-      window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-      hbox = gtk.HBox(False, 0)
-      vbox = gtk.VBox(False, 0)
-      h_sep = gtk.HSeparator()
-      chooser_hint_text_1 = " Target molecule "
-      chooser_hint_text_2 = " Reference (high-res) molecule "
-      go_button = gtk.Button(" ProSMART ")
-      cancel_button = gtk.Button("  Cancel  ")
-      check_button = gtk.CheckButton("Include Side-chains")
-
-      option_menu_mol_list_pair_tar = generic_molecule_chooser(vbox,
-                                                               chooser_hint_text_1)
-      option_menu_mol_list_pair_ref = generic_molecule_chooser(vbox,
-                                                               chooser_hint_text_2)
-
-      vbox.pack_start(check_button, False, False, 2)
-      vbox.pack_start(h_sep, False, False, 2)
-      vbox.pack_start(hbox, False, False, 2)
-      hbox.pack_start(go_button, False, False, 6)
-      hbox.pack_start(cancel_button, False, False, 6)
-      window.add(vbox)
-
-      cancel_button.connect("clicked", lambda w: window.destroy())
-
-      go_button.connect("clicked", go_button_cb, option_menu_mol_list_pair_tar,
-                        option_menu_mol_list_pair_ref)
-      window.show_all()
-      
-    add_simple_coot_menu_menuitem(
-      menu,
-      "ProSMART...",
-      lambda func: launch_prosmart_gui()
-      )
-
-
     add_simple_coot_menu_menuitem(
       menu,
       "Read Refmac Extra Restraints...",
@@ -599,18 +514,6 @@ if (have_coot_python):
                                         "4.0", " Delete Outlying Restraints ",
                                         lambda text: del_deviant_restr_func(text))
       )
-
-    add_simple_coot_menu_menuitem(
-      menu,
-      "Save as REFMAC restraints...",
-      lambda func:
-      generic_chooser_and_file_selector("Save REFMAC restraints for molecule",
-                                        valid_model_molecule_qm,
-                                        " Restraints file name:  ",
-                                        "refmac-restraints.txt",
-                                        lambda imol, file_name:
-                                          extra_restraints2refmac_restraints_file(imol, file_name)))
-
 
     add_simple_coot_menu_menuitem(
       menu,

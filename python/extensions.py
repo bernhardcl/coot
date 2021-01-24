@@ -56,6 +56,19 @@ if (have_coot_python):
        add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
                                      lambda func: water_coordination_gui())
 
+
+       def atom_overlap_func():
+         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
+                                    aa_ins_code, aa_atom_name, aa_alt_conf]:
+           molecule_atom_overlaps_gui(aa_imol)
+       add_simple_coot_menu_menuitem(menu, "Atom Overlaps",
+                                     lambda func: atom_overlap_func())
+
+
+       add_simple_coot_menu_menuitem(menu, "Pepflips from Difference Map...",
+                                     lambda func: pepflips_by_difference_map_gui())
+
+
        def validation_outliers_func():
          with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                     aa_ins_code, aa_atom_name, aa_alt_conf]:
@@ -69,6 +82,7 @@ if (have_coot_python):
 
        add_simple_coot_menu_menuitem(menu, "List Ramachandran outliers...",
                                      lambda func: rama_outlier_gui())
+
        add_simple_coot_menu_menuitem(
          menu,
          "Read REFMAC logfile...",
@@ -498,6 +512,16 @@ if (have_coot_python):
        "Assign HETATM to molecule...", 
        lambda func: molecule_chooser_gui("Assign HETATMs as per PDB definition", 
 		lambda imol: assign_hetatms(imol)))
+
+     def backrub_rotamers_for_chain_func():
+       with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
+                                  aa_ins_code, aa_atom_name, aa_alt_conf]:
+         backrub_rotamers_for_chain(aa_imol, aa_chain_id)
+
+     add_simple_coot_menu_menuitem(
+       submenu_models,
+       "Backrub Rotamers for Whole Chain",
+       lambda func: backrub_rotamers_for_chain_func())
 
      # in main menu now
      # add_simple_coot_menu_menuitem(
@@ -1881,3 +1905,40 @@ if (have_coot_python):
   else:
 	print "BL WARNING:: could not find the main_menubar! Sorry, no extensions menu!"
 
+# to be consistent with Scheme code should be in coot_gui.py but cant because of
+# issues importing it in rcrane
+
+if (have_coot_python):
+   if coot_python.main_menubar():
+      menu = coot_menubar_menu("Calculate")
+
+      # def align_mutate_func(imol, chain_id, target_pir_file_name):
+      #   print "BL DEBUG:: #x#x#x#x# params in func", imol, chain_id, target_pir_file_name
+      #   run_clustalw_alignment(imol, chain_id,
+      #                          target_pir_file_name)
+      #   print "BL DEBUG:: done with alignment, start associating"
+      #   associate_pir_file(imol, chain_id, target_pir_file_name)
+      #   print "BL DEBUG:: done associating do the gui"
+      #   alignment_mismatches_gui(imol)
+
+
+      # add_simple_coot_menu_menuitem(menu, "Use Clustalw for Alignment, then Mutate",
+      #                               lambda func:
+      #                               generic_chooser_entry_and_file_selector(
+      #                                 "Target PIR file: ",
+      #                                 valid_model_molecule_qm,
+      #                                 "Chain-ID", "A", "PIR file for target sequence",
+      #                                 lambda imol, chain_id, target_pir_file_name:
+      #                                 align_mutate_func(imol, chain_id, target_pir_file_name)))
+
+      add_simple_coot_menu_menuitem(menu, "Use Clustalw for Alignment, then Mutate",
+                                    lambda func:
+                                    generic_chooser_entry_and_file_selector(
+                                      "Target PIR file: ",
+                                      valid_model_molecule_qm,
+                                      "Chain-ID", "A", "PIR file for target sequence",
+                                      lambda imol, chain_id, target_pir_file_name:
+                                      (run_clustalw_alignment(imol, chain_id,
+                                                              target_pir_file_name),
+                                       associate_pir_file(imol, chain_id, target_pir_file_name),
+                                       alignment_mismatches_gui(imol))))
