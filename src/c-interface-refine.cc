@@ -69,6 +69,11 @@ float matrix_state() {
    return graphics_info_t::geometry_vs_map_weight;
 }
 
+float get_map_weight() {
+   return graphics_info_t::geometry_vs_map_weight;
+}
+
+
 void set_refine_auto_range_step(int i) { 
    graphics_info_t::refine_auto_range_step = i;
 } 
@@ -195,7 +200,7 @@ void set_refinement_immediate_replacement(int istate) {
 }
 
 int  refinement_immediate_replacement_state() {
-   return graphics_info_t::refinement_immediate_replacement_flag; 
+   return graphics_info_t::refinement_immediate_replacement_flag;
 } 
 
 
@@ -1364,6 +1369,13 @@ void set_refinement_geman_mcclure_alpha(float alpha) {
    g.set_geman_mcclure_alpha(alpha);
 
 }
+
+//! \brief get the Geman-McClure distance alpha value (weight)
+float get_refinement_geman_mcclure_alpha() {
+
+   return graphics_info_t::geman_mcclure_alpha;
+}
+
 
 //! \brief set the Lennard Jones epsilon parameter
 void set_refinement_lennard_jones_epsilon(float epsilon) {

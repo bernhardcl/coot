@@ -559,7 +559,7 @@ if (have_coot_python):
      
      # errr... move this...(??)
      submenu = gtk.Menu()
-     menuitem2 = gtk.MenuItem("Dock Sequence...")
+     menuitem2 = gtk.MenuItem("Assign Sequence...")
 
      menuitem2.set_submenu(submenu)
      menu.append(menuitem2)
@@ -567,9 +567,13 @@ if (have_coot_python):
      
      add_simple_coot_menu_menuitem(
        submenu,
-       "Dock Sequence...", 
-       lambda func: cootaneer_gui_bl())
+       "1: Associate Sequence to Chain...",
+       lambda func: associate_sequence_with_chain_gui()) # no alignment on OK press
 
+     add_simple_coot_menu_menuitem(
+       submenu,
+       "2: Assign Sequence...", 
+       lambda func: cootaneer_gui_bl())
 
      def associate_seq_func(imol, chain_id, pir_file):
        import os, re
@@ -614,11 +618,6 @@ if (have_coot_python):
      #                                            sequence_file_name)
      #  ))
      
-     add_simple_coot_menu_menuitem(
-       submenu,
-       "Associate Sequence to Chain...",
-       lambda func: associate_sequence_with_chain_gui()) # no alignment on OK press
-
 
      add_simple_coot_menu_menuitem(
        submenu_models,

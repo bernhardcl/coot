@@ -841,6 +841,12 @@ void set_scroll_by_wheel_mouse(int istate);
 /*! \brief return the internal state of the scroll-wheel map contouring */
 int scroll_by_wheel_mouse_state();
 
+/*! \brief turn off (0) or on (1) auto recontouring (on screen centre change) (default it on) */
+void  set_auto_recontour_map(int state);
+
+/*! \brief return the auto-recontour state */
+int get_auto_recontour_map();
+
 /*! \brief set the default inital contour for 2FoFc-style map
 
 in sigma */
@@ -3390,6 +3396,13 @@ void set_matrix(float f);
 /*! \brief return the relative weight of the geometric terms to the map terms. */
 float matrix_state();
 
+/*! \brief return the relative weight of the geometric terms to the map terms.
+
+A more sensible name for the matrix_state() function) */
+float get_map_weight();
+
+float estimate_map_weight(int imol_map);
+
 
 /*! \brief change the +/- step for autoranging (default is 1)
 
@@ -5126,6 +5139,11 @@ void delete_residue_sidechain(int imol, const char *chain_id, int resno, const c
 /*! \brief delete all hydrogens in molecule,
 
    @return number of hydrogens deleted. */
+int delete_hydrogen_atoms(int imol);
+
+/*! \brief delete all hydrogens in molecule,
+
+   @return number of hydrogens deleted. */
 int delete_hydrogens(int imol);
 
 /*! \brief delete all waters in molecule,
@@ -5610,7 +5628,7 @@ void setup_reverse_direction(short int i);
 /*! \name Terminal OXT Atom */
 /* c-interface-build */
 /*! \{ */
-short int add_OXT_to_residue(int imol, int reso, const char *insertion_code, const char *chain_id);
+short int add_OXT_to_residue(int imol, const char *chain_id, int reso, const char *insertion_code);
 
 /*! \} */
 

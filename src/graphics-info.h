@@ -1357,6 +1357,7 @@ public:
    // Calling this turns it on.
    void set_last_map_contour_level(float f);
    void set_last_map_contour_level_by_sigma(float f);
+   static bool auto_recontour_map_flag;
 
    //
    static float rotation_centre_cube_size;
@@ -2277,6 +2278,7 @@ public:
    int Imol_Refinement_Map() const;
    //
    int set_imol_refinement_map(int imol);
+   float get_estimated_map_weight(int imol_map);
 
    void make_moving_atoms_graphics_object(int imol, const atom_selection_container_t &asc);
    static short int moving_atoms_asc_type;
