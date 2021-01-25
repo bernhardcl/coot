@@ -33,6 +33,12 @@
 #define MAX_SEARCH_DEPTH 9
 
 #define DEG_TO_RAD .01745327 // defined elsewhere maybe.
+#ifndef M_PI
+#define M_PI       3.141592653589793238466
+#endif
+#ifndef M_PI_4
+#define M_PI_4     0.785398163397448309616
+#endif
 
 enum { UNASSIGNED_INDEX = -1 };
 

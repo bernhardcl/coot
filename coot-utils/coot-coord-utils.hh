@@ -23,6 +23,10 @@
 #ifndef HAVE_COOT_COORD_UTILS_HH
 #define HAVE_COOT_COORD_UTILS_HH
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #include <stdexcept>
 #include <sstream>
 #include <set>
