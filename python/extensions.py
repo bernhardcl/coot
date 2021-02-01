@@ -53,17 +53,22 @@ if (have_coot_python):
 
      menu = coot_menubar_menu("Validate")
      if menu:
+       add_simple_coot_menu_menuitem(menu, "Atom Overlaps (Coot)",
+                                     lambda func:
+                                     using_active_atom(
+                                       coot_all_atom_contact_dots,
+                                       "aa_imol"))
+       add_simple_coot_menu_menuitem(menu, "All-Atom Contact Dots (Molprobity)",
+                                     lambda func:
+                                     using_active_atom(probe, "aa_imol"))
+
+       add_simple_coot_menu_menuitem(menu,"Atom Overlaps Dialog",
+                                     lambda func:
+                                     using_active_atom(
+                                       molecule_atom_overlaps_gui, "aa_imol"))
+
        add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
                                      lambda func: water_coordination_gui())
-
-
-       def atom_overlap_func():
-         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
-                                    aa_ins_code, aa_atom_name, aa_alt_conf]:
-           molecule_atom_overlaps_gui(aa_imol)
-       add_simple_coot_menu_menuitem(menu, "Atom Overlaps",
-                                     lambda func: atom_overlap_func())
-
 
        add_simple_coot_menu_menuitem(menu, "Pepflips from Difference Map...",
                                      lambda func: pepflips_by_difference_map_gui())
@@ -473,10 +478,10 @@ if (have_coot_python):
        with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                   aa_ins_code, aa_atom_name, aa_alt_conf]:
          add_hydrogens_using_refmac(aa_imol)
-     
+
      add_simple_coot_menu_menuitem(
        submenu_models,
-       "Add Hydrogens",
+       "Add Hydrogen Atoms",
        lambda func: add_hydrogens_with_coot_reduce())
 
 
@@ -549,6 +554,15 @@ if (have_coot_python):
      #                                          False))
 
      # --- D ---
+
+     add_simple_coot_menu_menuitem(
+       submenu_models, "Delete Hydrogen Atoms",
+       lambda func: using_active_atom(delete_hydrogens, "aa_imol"))
+
+     add_simple_coot_menu_menuitem(
+       submenu_models, "Delete Side-chains for Active Chain",
+       lambda func: using_active_atom(
+         delete_sidechains_for_chain, "aa_imol", "aa_chain_id"))
 
      # now in main menu
 ##     add_simple_coot_menu_menuitem(
