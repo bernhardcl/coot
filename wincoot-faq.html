@@ -111,6 +111,7 @@ reference,
 
 
 
+
       citation and furtherinformation<br>
     </h2>
     <p>The official reference for WinCoot is published now:</p>
@@ -130,6 +131,7 @@ reference,
     <pre>@Article{emsley10:coot,<br> author = {Emsley P, Lohkamp B, Scott W, Cowtan K},<br> title = {Features and Development of Coot},<br> journal = {Acta Crystallographica Section D - Biological Crystallography},<br> year = 2010,<br> volume = 66,<br> pages = 486-501<br>}<br></pre>
     <p>The Coot paper is published in the <a
         href="http://journals.iucr.org/d/issues/2010/04/00/issconts.html">proceedings
+
 
 
 
@@ -299,12 +301,19 @@ href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=
     I guess you see something like <a href="images/ugly2.png">this</a>.
     This should not happen any more (from 0.3.3.1), however there is
     rare cases on Windows 7 where it occurs again (this is progress for
-    you!). Actually it happens randomlly on Windows 10 as well (usually
-    after merging of molecules). So if it does please let me know about
-    your system and try the following:<br>
-    <br>
-    It may be that you have a 'non-english speaking' computer and
-    changing some settings on your computer may fix this.<br>
+    you!). Actually it happens randomly on Windows 10 as well (usually
+    after merging of molecules). It is probably related to the fact that
+    you have a 'non-english speaking' computer. The following edit to
+    wincoot.bat seems to fix it (included after 0.9.4.1):<br>
+    <ul>
+      <li>insert in line 2 and 3:</li>
+    </ul>
+    <blockquote>
+      <pre>@set LC_ALL=en
+@set LC_NUMERIC=en</pre>
+    </blockquote>
+    Alternatively changing some locale/language settings on your
+    computer may fix this.<br>
     Go to <span style="font-style: italic;">Start</span> -&gt; <span
       style="font-style: italic;">Settings</span> -&gt; <span
       style="font-style: italic;">Control Panel</span> -&gt;&nbsp; <span
@@ -388,6 +397,7 @@ href="http://msdn.microsoft.com/en-us/library/dd318693%28v=vs.85%29.aspx">this</
 
 
 
+
       Panel-&gt;Display-&gt;Settings-&gt;Advanced-&gt;Troubleshoot</span>.
     Then move the slider to towards <span style="font-style: italic;">None</span>
     (usually one bar above <span style="font-style: italic;">None</span>
@@ -436,12 +446,9 @@ href="http://sourceforge.net/mailarchive/message.php?msg_id=896B75251BA19745A529
     <ul>
     </ul>
     <p>There may be other issues though which are related to the fact
-      that WinCoot is 32bit and some graphics card drivers don't seem
-      work well with 32bit applications. The hope is that this will go
-      away with 64bit WinCoot (in <a
-        href="https://bernhardcl.github.io/coot/wincoot-releases.html">beta
-        release</a> but packing issues at the moment). First test,
-      however, seem not too promising. Maybe related to one of above.<br>
+      that pre-0.9 WinCoot is 32bit and some graphics card drivers don't
+      seem work well with 32bit applications. This should be fixed in
+      64bit WinCoot (i.e. starting 0.9), certainly from 0.9.4.1 onwards.<br>
     </p>
     <ul>
     </ul>
@@ -545,6 +552,7 @@ your
 
 
 
+
           <span style="font-style: italic;">PATH&nbsp;</span>; for an
           alternative see 5) </li>
       </ul>
@@ -559,6 +567,7 @@ somewhere
 else
 in
 your
+
 
 
 
@@ -594,6 +603,7 @@ that
 probe_command
 and
 reduce_command
+
 
 
 
@@ -675,6 +685,7 @@ reduce_command
 
 
 
+
         describe the location of your files (e.g. probe_command =
         "C:\Mydirectory\probe.exe") </li>
     </ol>
@@ -703,11 +714,13 @@ or
 
 
 
+
       put a line in your <span style="font-style: italic;">YourWinCootDirectory</span>\.coot.py
 which
 reads
 something
 like
+
 
 
 
@@ -781,6 +794,7 @@ like
 
 
 
+
       WIKI page</a>.<br>
     <h3><a class="mozTocH3" name="mozTocId107913"></a>How do I use extra
       parameters in the Refmac interface?<br>
@@ -792,6 +806,7 @@ like
     which give refmac extra parameters is called <span
       style="font-style: italic;">refmac-extra-params.txt</span> for
     easy text editing (see an example <a href="refmac-extra-params.txt">here</a>).
+
 
 
 
