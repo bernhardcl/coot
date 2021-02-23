@@ -244,6 +244,7 @@ Section "!WinCoot" SEC01
 
   SetOverwrite on
   File /oname=$INSTDIR\wincoot.bat.tmp "C:\msys64\home\bernhard\Projects\coot\windows\wincoot.bat"
+  File /oname=$INSTDIR\wincoot-for-ccp4i2.bat.tmp "C:\msys64\home\bernhard\Projects\coot\windows\wincoot-for-ccp4i2.bat"
 
   SetOverwrite ifnewer
 ; bin DIR
@@ -554,7 +555,7 @@ Section Uninstall
   RMDir /r "$INSTDIR\examples"
   RMDir /r "$INSTDIR\doc"
   ; we shall only remove installed files here (to e.g. keep .coot.py untouched)
-  Delete "$INSTDIR\*wincoot.bat"
+  Delete "$INSTDIR\*wincoot*.bat"
   Delete "$INSTDIR\Coot.url"
 
   !insertmacro MUI_STARTMENU_GETFOLDER "Application" $ICONS_GROUP
@@ -697,10 +698,14 @@ Function .onGUIEnd
   ClearErrors
   ; remove tmp bat file if exists (Delete wont do, need to do it via DOS shell command)
   ; possibly an anti virus thing?!?
+  ; delete both bat files i.e. for i2 too
   IfFileExists "$INSTDIR\wincoot.bat.tmp" "" cont
      ;Delete "$INSTDIR\wincoot.bat.tmp"
      Exec 'cmd /c del "$INSTDIR\wincoot.bat.tmp"'
   cont:
+  IfFileExists "$INSTDIR\wincoot-for-ccp4i2.bat.tmp" "" conti2
+     Exec 'cmd /c del "$INSTDIR\wincoot-for-ccp4i2.bat.tmp"'
+  conti2:
 
   ; delete the installer
   ${If} $delete_installer = 1
@@ -723,7 +728,7 @@ Function .onGUIEnd
     SetErrorLevel 7
     IfSilent +2 0
         MessageBox MB_OK 'Error in Installation. Aborting!$\n$\r$\n$\rCould not write/edit runwincoot.bat.'
-    Abort "Error in installation. Could not write/edit runwincoot.bat. Aborting!"
+    Abort "Error in installation. Could not write/edit (run)wincoot.bat. Aborting!"
 
 FunctionEnd
 
@@ -881,19 +886,21 @@ FunctionEnd
 
 ; for changing wincoot [and gdk-pixbuf-loader] Not sure if here is a good place? Get's a bit messy
 Function FinishPagePreFunction
-   ; first apply changes to wincoot.bat
+   ; first apply changes to wincoot-for-ccp4i2.bat
+   ; this is for ccp4i2 only, not required for normal wincoot.bat
    Var /GLOBAL GUILE_INST_DIR
 ;   ${WordReplace} "$INSTDIR" "\" "/" "+" $GUILE_INST_DIR
-   !insertmacro ReplaceOnLine "yourWinCootdirectory" "$INSTDIR" "5" "$INSTDIR\wincoot.bat.tmp"
+   !insertmacro ReplaceOnLine "yourWinCootdirectory" "$INSTDIR" "5" "$INSTDIR\wincoot-for-ccp4i2.bat.tmp"
 ;   !insertmacro ReplaceOnLine "yourWinCootdirectoryGuile" "$GUILE_INST_DIR" "6" "$INSTDIR\wincoot.bat.tmp"
    ;we want to change more for Vista (and possibly for Windows 7 too FIXME!)
    ; Maybe not too much any more... (since graphics card issue)
    ${If} ${AtLeastWinVista}
        ; change to run on 1 core only (to enable compositing!)
-       !insertmacro AdvReplaceInFile "coot-bin.exe" "start /wait coot-bin.exe" "0" "1" "$INSTDIR\wincoot.bat.tmp"
+       !insertmacro AdvReplaceInFile "coot-bin.exe" "start /wait coot-bin.exe" "0" "1" "$INSTDIR\wincoot-for-ccp4i2.bat.tmp"
      ${EndIf}
 
    ; if we have an old bat file
+   ; this we only do for "normal" wincoot.bat; we dont care about i2 for now.
    ${If} $have_bat == "True"
      ; check if wincootbats are different
      Var /Global bat_differ
@@ -907,7 +914,7 @@ Function FinishPagePreFunction
         ${If} $update = 0
            IfSilent endifbat
             MessageBox MB_ICONQUESTION|MB_YESNO "You already have a (modified) WinCoot batch file (wincoot.bat).$\r$\n\
-            Do you want to keep it (dont if you upgrade from <0.8)?" IDYES endifbat
+            Do you want to keep it (dont if you upgrade from <0.9)?" IDYES endifbat
             StrCpy $keep_old_bat "False"
            endifbat:
         ${EndIf}  ; update
@@ -922,10 +929,13 @@ Function FinishPagePreFunction
   ${Else}
      ; dont have any wincoot.bat
      Rename "$INSTDIR\wincoot.bat.tmp" "$INSTDIR\wincoot.bat"
+     Rename "$INSTDIR\wincoot-for-ccp4i2.bat.tmp" "$INSTDIR\wincoot-for-ccp4i2.bat"
   ${EndIf}  ; have_bat nothing further to be one
   ; executable access to everyone
   AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\wincoot.bat" "(BA)" "FullAccess"
   AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\wincoot.bat" "(BU)" "GenericExecute"
+  AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\wincoot-for-ccp4i2.bat" "(BA)" "FullAccess"
+  AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\wincoot-for-ccp4i2.bat" "(BU)" "GenericExecute"
   AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\bin\dynarama.bat" "(BA)" "FullAccess"
   AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\bin\dynarama.bat" "(BU)" "GenericExecute"
 
