@@ -1662,9 +1662,11 @@
       (let ((imol (car args)))
 	(tf imol
 	    (identity-matrix)
-	    (list-ref args 1)
-	    (list-ref args 2)
-	    (list-ref args 3)
+            (list
+             (list-ref args 1)
+             (list-ref args 2)
+             (list-ref args 3))
+            (rotation-centre), (list-ref (cell imol) 0)
 	    (space-group imol)
 	    (cell imol))))
      ((= (length args) 3) ; no matrix or about point specified
@@ -2615,7 +2617,7 @@
 		(overlap-ligands imol-ligand imol chain-id-in resno))
 
             (if (is-nucleotide? imol chain-id-in resno)
-                (if (residue-exists? imol chain-id-in (- resno 1))
+                (if (residue-exists? imol chain-id-in (- resno 1) "")
                     (delete-atom imol-ligand "A" 1 "" " OP3" "")))
 
             (if (and (is-nucleotide? imol-ligand "A" 1)
@@ -3500,7 +3502,7 @@
 				   set-file-name-func)
 	 (set! continue-status #f))
        coot-updates-error-handler)
-    
+
       (while continue-status
 	     (if (string? file-name-for-progress-bar)
 		 (let ((curl-info (curl-progress-info file-name-for-progress-bar)))

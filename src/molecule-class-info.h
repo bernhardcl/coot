@@ -65,7 +65,7 @@ enum {CONTOUR_UP, CONTOUR_DOWN};
 #endif
 #endif
 
-#include "clipper/ccp4/ccp4_map_io.h"
+#include <clipper/ccp4/ccp4_map_io.h>
 
 #include "coords/Cartesian.h"
 #include "coords/mmdb-extras.h"
@@ -1336,6 +1336,7 @@ public:        //                      public
    int    add_atom_label(char *chain_id, int iresno, char *atom_id);
    int remove_atom_label(char *chain_id, int iresno, char *atom_id);
    void remove_atom_labels(); // and symm labels
+   int add_atom_labels_for_residue(mmdb::Residue *residue_p);
 
    // xmap information
    //
@@ -1349,6 +1350,7 @@ public:        //                      public
    bool xmap_is_diff_map;
    clipper::NXmap<float> nxmap;
    bool is_patterson;  // for (at least) contour level protection
+   std::string map_name;
 
 
    float contour_level;
@@ -2373,7 +2375,7 @@ public:        //                      public
 
 
    //
-   void set_map_is_difference_map();
+   void set_map_is_difference_map(bool flag);
    short int is_difference_map_p() const;
 
 

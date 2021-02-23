@@ -29,6 +29,8 @@
 #define GRAPHICS_INFO_H
 
 #include "compat/coot-sysdep.h"
+// need gtk things
+#include <gtk/gtk.h>
 
 #ifndef HAVE_VECTOR
 #define HAVE_VECTOR
@@ -36,9 +38,6 @@
 #endif // HAVE_VECTOR
 
 // #include <utils/backward.hpp>
-
-// need gtk things
-#include <gtk/gtk.h>
 
 #if __APPLE__
 #   include <OpenGL/gl.h>
