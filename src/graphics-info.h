@@ -619,10 +619,10 @@ class graphics_info_t {
    static coot::Cartesian baton_root;
    static coot::Cartesian baton_tip;
    static float baton_length;
-   static std::vector<coot::scored_skel_coord> *baton_next_ca_options;
+   static std::vector<coot::scored_skel_coord> baton_next_ca_options;
    // baton_previous_ca_positions->back() is the point closest to the new
    // baton tip (is the baton root)
-   static std::vector<clipper::Coord_orth> *baton_previous_ca_positions; // up to 3.
+   static std::vector<clipper::Coord_orth> baton_previous_ca_positions; // up to 3.
    coot::Cartesian non_skeleton_tip_pos() const;
    void baton_next_directions(int imol_for_skel, mmdb::Atom *atom, const coot::Cartesian& pos,
 			      const clipper::Coord_grid &cg_start,
@@ -937,11 +937,11 @@ public:
 
    static bool display_mode_use_secondary_p() {
 
-     bool r = 0;
+     bool r = false;
      if ((display_mode == coot::SIDE_BY_SIDE_STEREO) ||
 	 (display_mode == coot::SIDE_BY_SIDE_STEREO_WALL_EYE) ||
 	 (display_mode == coot::DTI_SIDE_BY_SIDE_STEREO)) {
-       r = 1;
+       r = true;
      }
      return r;
    }
@@ -1312,11 +1312,9 @@ public:
    float Y() { return rotation_centre_y; };
    float Z() { return rotation_centre_z; };
 
-   // why isn't this static? Make it static
-   coot::Cartesian RotationCentre() const
-      { return coot::Cartesian(rotation_centre_x,
-			       rotation_centre_y,
-			       rotation_centre_z);}
+   static coot::Cartesian RotationCentre() { return coot::Cartesian(rotation_centre_x,
+                                                                    rotation_centre_y,
+                                                                    rotation_centre_z);}
 
    // we need static, so that we don't need to instance a
    // graphics_info_t for every frame draw.
@@ -1464,7 +1462,7 @@ public:
 
    // 0: never run it
    // 1: ask to run it
-   // 2: alwasy run it
+   // 2: run it without asking
    static short int run_state_file_status;
    static bool state_file_was_run_flag;
    static bool run_startup_scripts_flag;

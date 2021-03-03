@@ -544,8 +544,7 @@ molecule_class_info_t::draw_density_map_internal(short int display_lists_for_map
             GLuint display_list_index = 0; // bad
 
             // These conditions have been validated by reversing them.
-            if (main_or_secondary == IN_STEREO_SIDE_BY_SIDE_LEFT ||
-                main_or_secondary == IN_STEREO_MONO)
+            if (main_or_secondary == IN_STEREO_SIDE_BY_SIDE_LEFT || main_or_secondary == IN_STEREO_MONO)
                display_list_index = theMapContours.first;
             if (main_or_secondary == IN_STEREO_SIDE_BY_SIDE_RIGHT)
                display_list_index = theMapContours.second;
@@ -555,8 +554,9 @@ molecule_class_info_t::draw_density_map_internal(short int display_lists_for_map
                   // 			 << " when main_or_secondary is " << main_or_secondary << std::endl;
                   glCallList(display_list_index);
             } else {
-                  std::cout << "ERROR:: using display list " << display_list_index
-                  << " when main_or_secondary is " << main_or_secondary << std::endl;
+               if (true) // too noisy
+                  std::cout << "ERROR:: using display list index " << display_list_index
+                            << " when main_or_secondary is " << main_or_secondary << std::endl;
             }
 
 
@@ -1942,7 +1942,7 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
    bool em = false;
    map_name = filename;
 
-   if ( map_file_type == CCP4 ) {
+   if (map_file_type == CCP4) {
 
       bool done = false;
       if (coot::util::is_basic_em_map_file(filename)) {
@@ -2057,7 +2057,11 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
       initialize_map_things_on_read_molecule(filename, is_diff_map_flag, is_anomalous_flag,
 					     graphics_info_t::swap_difference_map_colours);
 
+      auto tp_0 = std::chrono::high_resolution_clock::now();
       mean_and_variance<float> mv = map_density_distribution(xmap, 40, true, true);
+      auto tp_1 = std::chrono::high_resolution_clock::now();
+      auto d10 = chrono::duration_cast<chrono::milliseconds>(tp_1 - tp_0).count();
+      std::cout << "INFO:: map_density_distribution() took " << d10 << " milliseconds" << std::endl;
 
       float mean = mv.mean;
       float var = mv.variance;
