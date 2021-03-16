@@ -366,21 +366,22 @@ def make_quick_test_validation_buttons(imol):
     # remove the spec (and the baddie score for now)
     return map(lambda x: x[2:], i)
 
-if coot_python.main_menubar():
-    menu = coot_menubar_menu("Validate")
+if (have_coot_python):
+    if coot_python.main_menubar():
+        menu = coot_menubar_menu("Validate")
 
-    def make_quick_test_validation_dialog_func():
-        with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
-                               aa_ins_code, aa_atom_name, aa_alt_conf]:
-            update_button = quick_test_validation_outliers_dialog(aa_imol)
-            global post_manipulation_script
-            def post_manipulation_script(*args):
-                update_button.emit("clicked")
+        def make_quick_test_validation_dialog_func():
+            with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
+                                   aa_ins_code, aa_atom_name, aa_alt_conf]:
+                update_button = quick_test_validation_outliers_dialog(aa_imol)
+                global post_manipulation_script
+                def post_manipulation_script(*args):
+                    update_button.emit("clicked")
 
-    add_simple_coot_menu_menuitem(
-    menu, "Overlaps, Peptides, CBeta, Rama & Rota Outliers",
-    lambda func: make_quick_test_validation_dialog_func()
-    )
+        add_simple_coot_menu_menuitem(
+        menu, "Overlaps, Peptides, CBeta, Rama & Rota Outliers",
+        lambda func: make_quick_test_validation_dialog_func()
+        )
 
 register_extension("curlew_find_atom_overlap_baddies.py", "1.0")
 
