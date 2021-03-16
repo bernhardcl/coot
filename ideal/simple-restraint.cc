@@ -1602,7 +1602,7 @@ coot::restraints_container_t::minimize_inner(restraint_usage_Flags usage_flags,
 	 unlocked = false;
       }
 
-      std::cout << "DEBUG:: ---- free/delete/reset m_s and x" << std::endl; // works fine
+      // std::cout << "DEBUG:: ---- free/delete/reset m_s and x" << std::endl; // works fine
       gsl_multimin_fdfminimizer_free(m_s);
       gsl_vector_free(x);
       m_s = 0;
@@ -1664,7 +1664,8 @@ coot::restraints_container_t::add_details_to_refinement_results(refinement_resul
                   rama_baddies[restraint.atom_index_1] += 0.5 * dd;
                }
             } else {
-               double dd = distortion_score_rama(restraint, v, LogRama());
+               double w = get_rama_plot_weight();
+               double dd = distortion_score_rama(restraint, v, LogRama(), w);
                rama_distortion_score_sum += dd;
                // std::cout << "rama " << dd << std::endl; mean is about -200
                // this cutoff should be relative to the rama weight
@@ -2190,12 +2191,14 @@ coot::restraints_container_t::chi_squareds(std::string title, const gsl_vector *
 #endif		  
 
 	       } else {
-		  double dd = distortion_score_rama(restraint, v, lograma);
+                  double w = get_rama_plot_weight();
+		  double dd = distortion_score_rama(restraint, v, lograma, w);
 		  rama_distortion += dd;
 		  baddies["Rama"].update_if_worse(dd, i);
 	       }
 	       if (false) {
-		  double d1 = distortion_score_rama(restraint, v, LogRama());
+                  double w = get_rama_plot_weight();
+		  double d1 = distortion_score_rama(restraint, v, LogRama(), w);
 		  double d2 = coot::distortion_score_rama(restraint, v, ZO_Rama(), get_rama_plot_weight());
 		  std::cout << "distortion-comparision logramas " << d1 << " zo " << d2 << std::endl;
 	       }
@@ -3883,19 +3886,18 @@ coot::restraints_container_t::make_h_bond_restraints_from_res_vec_auto(const coo
             int udd_get_data_status_1 = hb.donor->GetUDData(   udd_atom_index_handle, index_1);
             int udd_get_data_status_2 = hb.acceptor->GetUDData(udd_atom_index_handle, index_2);
 
-
             if (udd_get_data_status_1 == mmdb::UDDATA_Ok &&
                 udd_get_data_status_2 == mmdb::UDDATA_Ok) {
 
+               double bl = sqrt(b.lengthsq()); // bond length
                std::vector<bool> fixed_flags = make_fixed_flags(index_1, index_2);
-               add(BOND_RESTRAINT, index_1, index_2,
-                   fixed_flags,
-                   sqrt(b.lengthsq()), 0.1,
-                   1.2);  // junk value
 
-               add_geman_mcclure_distance(GEMAN_MCCLURE_DISTANCE_RESTRAINT, index_1, index_2, fixed_flags,
-                                          sqrt(b.lengthsq()), 0.1);
-                                          
+               bool as_bond = true;
+               if (as_bond) {
+                  add_h_bond(BOND_RESTRAINT, index_1, index_2, fixed_flags, bl, 0.1);
+               } else {
+                  add_geman_mcclure_distance(GEMAN_MCCLURE_DISTANCE_RESTRAINT, index_1, index_2, fixed_flags, bl, 0.1);
+               }
                n_bonds++;
             }
          }
@@ -4087,7 +4089,7 @@ coot::restraints_container_t::make_monomer_restraints_by_residue(int imol, mmdb:
 	       std::string residue_type = residue_p->GetResName();
 	       if (residue_type != "PRO")
 		  local.n_torsion_restr += add_torsions(idr, res_selection, i_no_res_atoms,
-							residue_p, geom);
+							residue_p, geom, torsion_restraints_weight);
 	    }
 	 }
 
@@ -5090,7 +5092,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints(int imol, const
 	       simple_restraint r(NON_BONDED_CONTACT_RESTRAINT,
 				  nbcf,
 				  i, filtered_non_bonded_atom_indices[i][j],
-				  type_1, type_2, is_H_non_bonded_contact,
+				  is_H_non_bonded_contact,
 				  fixed_atom_flags, dist_min);
 
 	       if (false)
@@ -6523,6 +6525,8 @@ coot::restraints_container_t::add_bonds(int idr, mmdb::PPAtom res_selection,
 			      std::string te = dict.type_energy(atom_name);
 			      hb_t hbt = geom.get_h_bond_type(te);
 			      H_atom_parent_energy_type_atom_map[H_at] = hbt;
+                              // std::cout << "settings H_atom_parent route-A H_atom " << atom_spec_t(H_at) << " "
+                              //           << atom_spec_t(parent_at) << " type " << hbt << std::endl;
 			   }
 			   if (is_hydrogen(atom[index2])) {
 			      mmdb::Atom *H_at = atom[index2];
@@ -6531,11 +6535,31 @@ coot::restraints_container_t::add_bonds(int idr, mmdb::PPAtom res_selection,
 			      std::string te = dict.type_energy(atom_name);
 			      hb_t hbt = geom.get_h_bond_type(te);
 			      H_atom_parent_energy_type_atom_map[H_at] = hbt;
-			   }
+                              // std::cout << "settings H_atom_parent route-B H_atom " << atom_spec_t(H_at) << " "
+                              //           << atom_spec_t(parent_at) << " type " << hbt << std::endl;
+
+                              // It seems to me that NR5 in the dictionary for HIS and TRP is wrong. It should
+                              // be a donor.
+                              // So kludge that in here
+                              if (dict.residue_info.comp_id == "HIS") {
+                                 mmdb::Atom *parent_at = atom[index1];
+                                 std::string parent_atom_name(parent_at->name);
+                                 if (parent_atom_name == "ND1 ") // PDBv3 fixme
+                                    H_atom_parent_energy_type_atom_map[H_at] = HB_BOTH;
+                                 if (parent_atom_name == "NE2 ") // PDBv3 fixme
+                                    H_atom_parent_energy_type_atom_map[H_at] = HB_BOTH;
+                              }
+                              if (dict.residue_info.comp_id == "TRP") {
+                                 mmdb::Atom *parent_at = atom[index1];
+                                 std::string parent_atom_name(parent_at->name);
+                                 if (parent_atom_name == "NE1 ") // PDBv3 fixme
+                                    H_atom_parent_energy_type_atom_map[H_at] = HB_BOTH;
+                              }
+                           }
 			}
 
 			catch (const std::runtime_error &rte) {
-			   
+
 			   // do nothing, it's not really an error if the dictionary
 			   // doesn't have target geometry (the bonding description came
 			   // from a Chemical Component Dictionary entry for example).
@@ -6691,7 +6715,7 @@ coot::restraints_container_t::add_or_replace_torsion_restraints_with_closest_rot
                      std::cout << "debug:: in add_or_replace_torsion_restraints_with_closest_rotamer_restraints() replaced flag " << replaced << " for "
                                << new_torsion_restraint << std::endl;
                   if (! replaced)
-                     status = add_torsion_internal(new_torsion_restraint, residue_atoms, n_residue_atoms);
+                     status = add_torsion_internal(new_torsion_restraint, residue_atoms, n_residue_atoms, torsion_restraints_weight);
                }
             }
          }
@@ -6755,7 +6779,7 @@ coot::restraints_container_t::replace_torsion_restraint(const coot::dict_torsion
 
                                  if (idx_4 != rest.atom_index_4)
                                     rest.atom_index_4 = idx_4;
-                                 rest.target_value = new_torsion_restraint.angle();
+                                 rest.target_value = new_torsion_restraint.angle(); // angle mean "torsion" - hmm!
                                  replaced = true;
                                  if (true)
                                     std::cout << "debug:: in replace_torsion_restraint() replacing restraints with " << new_torsion_restraint << std::endl;
@@ -6774,9 +6798,19 @@ coot::restraints_container_t::replace_torsion_restraint(const coot::dict_torsion
 }
 
 
+void
+coot::restraints_container_t::set_torsion_restraints_weight(double w) {
+   // we make the changes as the refinement is running possibly. Might be dangerous.
+   torsion_restraints_weight = w;
+   for (auto &r : restraints_vec)
+      if (r.restraint_type == TORSION_RESTRAINT)
+         r.torsion_restraint_weight = w;
+}
+
 bool
 coot::restraints_container_t::add_torsion_internal(const coot::dict_torsion_restraint_t &torsion_restraint,
-                                                   mmdb::PPAtom res_selection, int i_no_res_atoms) {
+                                                   mmdb::PPAtom res_selection, int i_no_res_atoms,
+                                                   const double &torsion_restraint_weight) {
 
    bool status = false;
 
@@ -6856,10 +6890,11 @@ coot::restraints_container_t::add_torsion_internal(const coot::dict_torsion_rest
 					   fixed_flags,
 					   torsion_angle,
 					   torsion_restraint.esd(),
-					   1.2,  // junk value
+					   torsion_restraint_weight,
 					   torsion_restraint.periodicity());
 
-				       if (false)
+				       if (false) {
+                                          get_print_lock();
 				          std::cout << "debug:: Adding monomer torsion restraint: "
 						    << index1 << " "
 						    << index2 << " "
@@ -6867,9 +6902,11 @@ coot::restraints_container_t::add_torsion_internal(const coot::dict_torsion_rest
 						    << index4 << " torsion "
 						    << torsion_restraint.angle() << " esd "
 						    << torsion_restraint.esd() << " period "
-						    << torsion_restraint.periodicity()
+						    << torsion_restraint.periodicity() << " "
+                                                    << " weight " << torsion_restraint_weight
 						    << std::endl;
-
+                                          release_print_lock();
+                                       }
 				       status = true;
 				    }
 				 }
@@ -6890,14 +6927,15 @@ int
 coot::restraints_container_t::add_torsions(int idr, mmdb::PPAtom res_selection,
 					   int i_no_res_atoms,
 					   mmdb::PResidue SelRes,
-					   const coot::protein_geometry &geom) {
+					   const coot::protein_geometry &geom,
+                                           const double &torsion_restraints_weight) {
 
    int n_torsion_restr = 0;
    const std::vector<dict_torsion_restraint_t> &torsion_restraints = geom[idr].second.torsion_restraint;
 
    for (unsigned int ib=0; ib<torsion_restraints.size(); ib++) {
       const dict_torsion_restraint_t &torsion_restraint = torsion_restraints[ib];
-      bool status = add_torsion_internal(torsion_restraint, res_selection, i_no_res_atoms);
+      bool status = add_torsion_internal(torsion_restraint, res_selection, i_no_res_atoms, torsion_restraints_weight);
       if (status)
          n_torsion_restr++;
    }
@@ -7265,7 +7303,7 @@ coot::restraints_container_t::add_planes_as_improper_dihedrals(int idr, mmdb::PP
 
 
 void
-coot::restraints_container_t::convert_plane_restraints_to_improper_dihedral_restraints(const std::vector<std::pair<int, double> > atom_index_and_sigma,
+coot::restraints_container_t::convert_plane_restraints_to_improper_dihedral_restraints(const std::vector<std::pair<int, double> > &atom_index_and_sigma,
 										       const std::vector<bool> &fixed_atom_flags) {
 
    if (atom_index_and_sigma.size() == 4) {

@@ -192,6 +192,8 @@ graphics_info_t::copy_mol_and_refine(int imol_for_atoms,
 
    // This now wraps refine_residues_vec
 
+   // can this function be deleted now?
+
    if (false)
       std::cout << "DEBUG:: In copy_mol_and_refine() refine range: "
 		<< "chain  :" << chain_id_1 << ": "
@@ -530,6 +532,26 @@ void graphics_info_t::thread_for_refinement_loop_threaded() {
       r.detach();
    }
 
+}
+
+void
+graphics_info_t::poke_the_refinement() {
+
+   if (moving_atoms_asc) {
+      continue_threaded_refinement_loop = false;
+      while (restraints_lock) {
+         std::this_thread::sleep_for(std::chrono::milliseconds(2)); // not sure about the delay
+      }
+      if (last_restraints) {
+         double tw = last_restraints->get_torsion_restraints_weight();
+         last_restraints->set_map_weight(geometry_vs_map_weight);
+         last_restraints->set_torsion_restraints_weight(torsion_restraints_weight);
+         last_restraints->set_lennard_jones_epsilon(lennard_jones_epsilon);
+         last_restraints->set_geman_mcclure_alpha(geman_mcclure_alpha);
+         last_restraints->set_rama_plot_weight(rama_restraints_weight);
+         thread_for_refinement_loop_threaded(); // restart refinement if it's not running
+      }
+   }
 }
 
 // static
@@ -1015,14 +1037,14 @@ graphics_info_t::make_rotamer_torsions(const std::vector<std::pair<bool, mmdb::R
 
                if (cri.residue_chi_angles.size() != rotamer_atom_names.size()) {
 
-                  std::cout << "-------------- mismatch for " << coot::residue_spec_t(residue_p) << " " << cri.residue_chi_angles.size() << " "  << rotamer_atom_names.size()
+                  std::cout << "-------------- mismatch for " << coot::residue_spec_t(residue_p) << " "
+                            << cri.residue_chi_angles.size() << " "  << rotamer_atom_names.size()
                             << " ---------------" << std::endl;
-
                } else {
 
                   for (unsigned int ichi=0; ichi<cri.residue_chi_angles.size(); ichi++) {
                      // we have to convert chi angles to atom names
-                     double esd = 10.0;
+                     double esd = 3.0; // 20210315-PE was 10.0. I want them tighter than that.
                      int per = 1;
                      std::string id = "chi " + coot::util::int_to_string(cri.residue_chi_angles[ichi].first);
                      const std::string &atom_name_1 = rotamer_atom_names[ichi][0];
@@ -1030,7 +1052,8 @@ graphics_info_t::make_rotamer_torsions(const std::vector<std::pair<bool, mmdb::R
                      const std::string &atom_name_3 = rotamer_atom_names[ichi][2];
                      const std::string &atom_name_4 = rotamer_atom_names[ichi][3];
                      double torsion = cri.residue_chi_angles[ichi].second;
-                     coot::dict_torsion_restraint_t dr(id, atom_name_1, atom_name_2, atom_name_3, atom_name_4, torsion, esd, per);
+                     coot::dict_torsion_restraint_t dr(id, atom_name_1, atom_name_2, atom_name_3, atom_name_4,
+                                                       torsion, esd, per);
                      dictionary_vec.push_back(dr);
                   }
 
@@ -1094,6 +1117,8 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
 				   *Geom_p(),
 				   mol_for_residue_selection,
 				   fixed_atom_specs, xmap_p);
+
+   last_restraints->set_torsion_restraints_weight(torsion_restraints_weight);
 
    if (convert_dictionary_planes_to_improper_dihedrals_flag) {
       last_restraints->set_convert_plane_restraints_to_improper_dihedral_restraints(true);
@@ -1187,8 +1212,11 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
       }
 
    } else {
-      GtkWidget *widget = create_no_restraints_info_dialog();
-      gtk_widget_show(widget);
+      continue_threaded_refinement_loop = false;
+      if (use_graphics_interface_flag) {
+         GtkWidget *widget = create_no_restraints_info_dialog();
+         gtk_widget_show(widget);
+      }
    }
 
    return found_restraints_flag;
@@ -1301,7 +1329,7 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 
 	       // Oops. Just give us a dialog and don't start the refinement
 	       info_dialog_refinement_non_matching_atoms(icheck_atoms.second);
-	       
+
 	    } else { 
 
 	       moving_atoms_have_hydrogens_displayed = true;
@@ -2489,7 +2517,7 @@ graphics_info_t::refine_residue_range(int imol,
 		<< " " << ":" << altconf << ": " << is_water_like_flag << std::endl;
 
    coot::refinement_results_t rr;
-   
+
    int imol_map = Imol_Refinement_Map();
 
    if (imol_map == -1) { // magic number check,
@@ -2754,7 +2782,7 @@ graphics_info_t::rigid_body_fit(const coot::minimol::molecule &mol_without_movin
 
    bool success = false; // fail initially
    bool debug = false;
-   
+
    if (! is_valid_map_molecule(imol_ref_map)) {
       std::cout << "WARNING:: not a valid map: " << imol_ref_map << std::endl;
       return success;// false

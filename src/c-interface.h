@@ -3259,7 +3259,8 @@ void add_omega_torsion_restriants();
 void remove_omega_torsion_restriants();
 
 /*! \brief add or remove auto H-bond restraints */
-void set_auto_h_bond_restraints(int state);
+void set_refine_hydrogen_bonds(int state);
+
 
 /*! \brief set immediate replacement mode for refinement and
   regularization.  You need this (call with istate=1) if you are
@@ -3473,15 +3474,20 @@ void set_refine_ramachandran_restraints_weight(float w);
 float refine_ramachandran_restraints_weight();
 
 /* not ready yet \brief set the weight for torsion restraints (default 1.0)*/
-// void set_torsion_restraints_weight(double w);
+void set_torsion_restraints_weight(double w);
 
-/* \brief set the state for using rotamer restraints "drive" mode */
+/*! \brief set the state for using rotamer restraints "drive" mode
+
+1 in on, 0 is off (off by default) */
 void set_refine_rotamers(int state);
 
-void set_refinement_geman_mcclure_alpha_from_text(int idx, const char *t);
-void set_refinement_lennard_jones_epsilon_from_text(int idx, const char *t);
-void set_refinement_ramachandran_restraints_weight_from_text(int idx, const char *t);
+void set_refinement_geman_mcclure_alpha_from_text(int combobox_item_idx, const char *t);
+void set_refinement_lennard_jones_epsilon_from_text(int combobox_item_idx, const char *t);
+void set_refinement_ramachandran_restraints_weight_from_text(int combobox_item_idx, const char *t);
+void set_refinement_overall_weight_from_text(const char *t);
+void set_refinement_torsion_weight_from_text(int combobox_item_index, const char *t);
 void set_refine_params_dialog_more_control_frame_is_active(int state);
+
 
 int refine_ramachandran_angles_state();
 
@@ -4130,6 +4136,7 @@ void show_multi_residue_torsion_dialog(); /* show the rotatable bonds dialog */
 void setup_multi_residue_torsion();  /* show the pick dialog */
 
 
+float atom_overlap_score(int imol);
 
 /* \} */
 
@@ -4195,7 +4202,23 @@ void ramachandran_plot_differences_by_chain(int imol1, int imol2,
 /* \{ */
 /*! \brief display the sequence view dialog for molecule number imol */
 void do_sequence_view(int imol);
+
+/*!  \brief display the sequence view for molecule number imol */
+void nsv(int imol);
+/*!  \brief control where the sequence view is displayed
+
+in the main application or a new dialog */
+void set_sequence_view_is_docked(short int state);
+
+/*!  \brief set the pixel limit for sequence view windows */
+void set_nsv_canvas_pixel_limit(int cpl);
+
+/*!  \brief show old style sequence view */
+void sequence_view_old_style(int imol);
+
+/* this is a widget function, it shouldn't be here */
 void add_on_sequence_view_choices();
+
 /* \} */
 
 /*  ----------------------------------------------------------------------- */
@@ -7119,20 +7142,8 @@ void set_show_graphics_ligand_view(int state);
 /*  ----------------------------------------------------------------------- */
 /*                  experimental                                            */
 /*  ----------------------------------------------------------------------- */
-/*! \name Sequence View */
+/*! \name Experimental */
 /* \{ */
-
-/*!  \brief display the sequence view for molecule number imol */
-void nsv(int imol);
-/*!  \brief control where the sequence view is displayed
-
-in the main application or a new dialog */
-void set_sequence_view_is_docked(short int state);
-
-/*!  \brief set the pixel limit for sequence view windows */
-void set_nsv_canvas_pixel_limit(int cpl);
-
-void sequence_view_old_style(int imol);
 
 void add_ligand_builder_menu_item_maybe();
 

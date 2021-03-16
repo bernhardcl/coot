@@ -6008,6 +6008,14 @@ int refine_ramachandran_angles_state() {
    return graphics_info_t::do_rama_restraints;
 }
 
+/* \brief set the weight for torsion restraints (default 1.0)*/
+void set_torsion_restraints_weight(double w) {
+
+   graphics_info_t::torsion_restraints_weight = w;
+}
+
+
+
 void set_refine_rotamers(int state) {
    graphics_info_t::do_rotamer_restraints = state;
 }
@@ -6018,16 +6026,20 @@ void set_refine_rotamers(int state) {
 
 void set_refinement_geman_mcclure_alpha_from_text(int idx, const char *t) {
 
+   graphics_info_t g;
    float v = coot::util::string_to_float(t);
    set_refinement_geman_mcclure_alpha(v);
    graphics_info_t::refine_params_dialog_geman_mcclure_alpha_combobox_position = idx;
+   // poke the refinement if there are moving atoms
 }
 
 void set_refinement_lennard_jones_epsilon_from_text(int idx, const char *t) {
 
+   graphics_info_t g;
    float v = coot::util::string_to_float(t);
    set_refinement_lennard_jones_epsilon(v);
    graphics_info_t::refine_params_dialog_lennard_jones_epsilon_combobox_position = idx;
+   g.poke_the_refinement();
 }
 
 void set_refinement_ramachandran_restraints_weight_from_text(int idx, const char *t) {
@@ -6035,7 +6047,34 @@ void set_refinement_ramachandran_restraints_weight_from_text(int idx, const char
    float v = coot::util::string_to_float(t);
    set_refine_ramachandran_restraints_weight(v);
    graphics_info_t::refine_params_dialog_rama_restraints_weight_combobox_position = idx;
+   graphics_info_t g;
+   g.poke_the_refinement();
 }
+
+void set_refinement_overall_weight_from_text(const char *t) {
+
+   if (t) {
+      float v = coot::util::string_to_float(t);
+      graphics_info_t::geometry_vs_map_weight = v;
+      graphics_info_t g;
+      g.poke_the_refinement();
+      
+   } else {
+      std::cout << "in set_refinement_overall_weight_from_text() t null " << std::endl;
+   }
+
+}
+
+void set_refinement_torsion_weight_from_text(int idx, const char *t) {
+   
+   graphics_info_t g;
+   float v = coot::util::string_to_float(t);
+   graphics_info_t::refine_params_dialog_torsions_weight_combox_position = idx;
+   graphics_info_t::torsion_restraints_weight = v;
+   // poke the refinement if there are moving atoms
+   g.poke_the_refinement();
+}
+
 
 void set_refine_params_dialog_more_control_frame_is_active(int state) {
 
@@ -7184,27 +7223,27 @@ void print_sequence_chain_general(int imol, const char *chain_id,
 void do_sequence_view(int imol) {
 
    if (is_valid_model_molecule(imol)) {
-      bool do_old_style = 0; 
+      bool do_old_style = false;
       mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;
       std::vector<mmdb::Residue *> r = coot::util::residues_with_insertion_codes(mol);
       if (r.size() > 0) {
-	 do_old_style = 1;
+         do_old_style = 1;
       } else {
-	 // was it a big shelx molecule?
-	 if (graphics_info_t::molecules[imol].is_from_shelx_ins()) {
-	    std::pair<bool, int> max_resno =
-	       coot::util::max_resno_in_molecule(graphics_info_t::molecules[imol].atom_sel.mol);
-	    if (max_resno.first)
-	       if (max_resno.second > 3200)
-		  do_old_style = 1;
-	 } 
-      } 
+         // was it a big shelx molecule?
+         if (graphics_info_t::molecules[imol].is_from_shelx_ins()) {
+            std::pair<bool, int> max_resno =
+               coot::util::max_resno_in_molecule(graphics_info_t::molecules[imol].atom_sel.mol);
+            if (max_resno.first)
+               if (max_resno.second > 3200)
+                  do_old_style = 1;
+         }
+      }
 
 
-      if (do_old_style) { 
-	 sequence_view_old_style(imol);
+      if (do_old_style) {
+         sequence_view_old_style(imol);
       } else {
-	 nsv(imol);
+         nsv(imol);
       }
    }
 }
@@ -7217,7 +7256,7 @@ void do_sequence_view(int imol) {
 void change_peptide_carbonyl_by(double angle) { /* in degrees. */
    graphics_info_t g;
    g.change_peptide_carbonyl_by(angle);
-} 
+}
 
 void change_peptide_peptide_by(double angle) {   /* in degress */
    graphics_info_t g;
@@ -7229,16 +7268,20 @@ void execute_setup_backbone_torsion_edit(int imol, int atom_index) {
    g.execute_setup_backbone_torsion_edit(imol, atom_index);
 }
 
-void setup_backbone_torsion_edit(short int state) { 
+void setup_backbone_torsion_edit(short int state) {
 
    graphics_info_t g;
-   graphics_info_t::in_backbone_torsion_define = state;
-   if (state) { 
-      std::cout << "click on an atom in the peptide to change" << std::endl; 
-      g.pick_cursor_maybe();
-      g.pick_pending_flag = 1;
-   } else { 
-      g.normal_cursor();
+   if (g.moving_atoms_displayed_p()) {
+      g.add_status_bar_text("Edit Backbone is not available while moving atoms are active");
+   } else {
+      g.in_backbone_torsion_define = state;
+      if (state) {
+         std::cout << "click on an atom in the peptide to change" << std::endl;
+         g.pick_cursor_maybe();
+         g.pick_pending_flag = 1;
+      } else {
+         g.normal_cursor();
+      }
    }
 }
 
@@ -7255,7 +7298,7 @@ void set_refine_with_torsion_restraints(int istate) {
 
    graphics_info_t::do_torsion_restraints = istate;
 
-} 
+}
 
 
 int refine_with_torsion_restraints_state() {
