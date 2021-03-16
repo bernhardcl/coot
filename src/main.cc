@@ -95,6 +95,7 @@
 // since the follwing two include python graphics-info.h is moved up
 //
 #if defined (WINDOWS_MINGW)
+#include <locale.h>
 #ifdef DATADIR
 #undef DATADIR
 #endif // DATADIR
@@ -199,7 +200,7 @@ main (int argc, char *argv[]) {
 
   
    if (graphics_info_t::use_graphics_interface_flag) {
-      gtk_set_locale(); // gtk stuff
+      // gtk_set_locale(); // gtk stuff done by gtk_init!!
       load_gtk_resources();
       gtk_init (&argc, &argv);
       // activate to force icons in menus; cannot get it to work with 
@@ -227,7 +228,15 @@ main (int argc, char *argv[]) {
       SetErrorMode(SetErrorMode(SEM_NOGPFAULTERRORBOX) | SEM_NOGPFAULTERRORBOX);
 #endif // MINGW
    }
-  
+
+#ifdef WINDOWS_MINGW
+   // set locale here too (needs to be after gtk_init since this sets
+   // system locale); shouldnt be necessary but Windows...
+   _configthreadlocale(_DISABLE_PER_THREAD_LOCALE); // just for the sake of it
+   setlocale(LC_ALL, "C");
+#endif // MINGW
+
+
    // popup widget is only filled with graphics at the end of startup
    // which is not what we want.
    // 

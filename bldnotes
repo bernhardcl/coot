@@ -45,6 +45,7 @@ Windows:
  o change runwincoot.bat to (win)coot.bat
  o write things to WINDIR (rather than HOME)
  o check if    clipper::ClipperInstantiator::instance().destroy(); is still needed in c-interface-gui.cc
+ o try (again) using backward.cpp
 
 ---- FINISH URGENT ----
 
