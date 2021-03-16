@@ -6969,7 +6969,11 @@ molecule_class_info_t::make_backup() { // changes history details
 
          if (dirstat != 0) {
             // fallback to making a directory in $HOME
+#ifdef WINDOWS_MINGW
+            const char *home_dir = getenv("COOT_HOME");
+#else
             const char *home_dir = getenv("HOME");
+#endif // WINDOWS_MINGW
             if (home_dir) {
                backup_dir = coot::util::append_dir_dir(home_dir, "coot-backup");
                dirstat = make_maybe_backup_dir(backup_dir);
@@ -9375,13 +9379,12 @@ molecule_class_info_t::update_coordinates_molecule_if_changed(const updating_coo
          } else {
             // happy path
 #ifndef _POSIX_SOURCE
-		 #ifdef WINDOWS_MINGW
+#ifdef WINDOWS_MINGW
             ucp.ctime.tv_sec = s.st_ctime;
             ucp.ctime.tv_nsec = 0.; // not available!? Lets hope not necessary
 #else
 	    ucp.ctime = s.st_ctimespec; // Mac OS X?
 #endif //MINGW
-            ucp.ctime = s.st_ctimespec; // Mac OS X?
 #else
             ucp.ctime = s.st_ctim;
 #endif
