@@ -520,6 +520,7 @@ std::vector<int> auto_read_make_and_draw_maps_from_mtz(const char *mtz_file_name
 
    int imol1 = -1;
    int imol2 = -1;
+   short int is_anomalous_flag = 0;
    graphics_info_t g;
 
    std::vector<coot::mtz_column_trials_info_t> auto_mtz_pairs;
@@ -540,6 +541,8 @@ std::vector<int> auto_read_make_and_draw_maps_from_mtz(const char *mtz_file_name
    for (unsigned int i=0; i<auto_mtz_pairs.size(); i++) {
       const coot::mtz_column_trials_info_t &b = auto_mtz_pairs[i];
       if (valid_labels(mtz_file_name, b.f_col.c_str(), b.phi_col.c_str(), "", 0)) {
+          if (b.f_col == "FAN")
+              is_anomalous_flag = 1;
 	 int imol = make_and_draw_map_with_reso_with_refmac_params(mtz_file_name,
 								   b.f_col.c_str(),
 								   b.phi_col.c_str(),
@@ -551,7 +554,7 @@ std::vector<int> auto_read_make_and_draw_maps_from_mtz(const char *mtz_file_name
 								   "",    //   const char *sigfobs_col,
 								   "",    //   const char *r_free_col,
 								   0,     //   short int sensible_f_free_col,
-								   0,     //   short int is_anomalous_flag,
+                                   is_anomalous_flag,     //   short int is_anomalous_flag,
 								   0,     //   short int use_reso_limits,
 								   0,     //   float low_reso_limit,
 								   0);    //   float high_reso_limit
@@ -582,7 +585,7 @@ std::vector<int> auto_read_make_and_draw_maps_from_mtz(const char *mtz_file_name
 									 "",    //   const char *sigfobs_col,
 									 "",    //   const char *r_free_col,
 									 0,     //   short int sensible_f_free_col,
-									 0,     //   short int is_anomalous_flag,
+                                     0,     //   short int is_anomalous_flag,
 									 0,     //   short int use_reso_limits,
 									 0,     //   float low_reso_limit,
                                                                      0);    //   float high_reso_limit

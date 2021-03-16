@@ -1186,6 +1186,9 @@ molecule_class_info_t::map_fill_from_mtz(std::string mtz_file_name,
 
    short int use_reso_flag = 0;
    short int is_anomalous_flag = 0;
+   // Make a guess on anomalous since we currently cant set this otherwise
+   if (f_col == "FAN")
+       is_anomalous_flag = 1;
    map_fill_from_mtz_with_reso_limits(mtz_file_name,
 				      cwd,
 				      f_col,
