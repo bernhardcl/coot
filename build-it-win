@@ -3598,6 +3598,7 @@ if [ $build_enhanced_ligand = 1 ] ; then
                   -DRDK_INSTALL_INTREE=OFF \
                   -DBUILD_SHARED_LIBS=ON \
                   -DRDK_INSTALL_STATIC_LIBS=OFF \
+                  -DRDK_BUILD_CAIRO_SUPPORT=ON \
                   -DCMAKE_INSTALL_PREFIX=$install_top_dir ..
             $MAKE
             $MAKE install
