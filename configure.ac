@@ -292,7 +292,7 @@ if test x$rdkit_prefix = x ; then
 else
    rdkit_install_dir="$withval"
    RDKIT_CXXFLAGS="-I$rdkit_install_dir/include/rdkit -DRDKIT_HAS_CAIRO_SUPPORT"
-   rdkit_libs="-lRDKitMolDraw2D -lRDKitForceFieldHelpers -lRDKitDescriptors -lRDKitForceField -lRDKitSubstructMatch -lRDKitcoordgenlib -lRDKitOptimizer -lRDKitDistGeomHelpers -lRDKitDistGeometry -lRDKitAlignment -lRDKitEigenSolvers -lRDKitDepictor -lRDKitMolChemicalFeatures -lRDKitSubgraphs -lRDKitPartialCharges -lRDKitmaeparser -lRDKitFileParsers -lRDKitRDGeometryLib -lRDKitGraphMol -lRDKitSmilesParse -lRDKitSubgraphs -lRDKitDataStructs -lRDKitPartialCharges -lRDKitRDGeneral -lboost_python27 -lpython2.7"
+   rdkit_libs="-lRDKitMolDraw2D -lRDKitForceFieldHelpers -lRDKitDescriptors -lRDKitForceField -lRDKitSubstructMatch -lRDKitcoordgenlib -lRDKitOptimizer -lRDKitDistGeomHelpers -lRDKitDistGeometry -lRDKitAlignment -lRDKitEigenSolvers -lRDKitDepictor -lRDKitMolChemicalFeatures -lRDKitSubgraphs -lRDKitPartialCharges -lRDKitmaeparser -lRDKitFileParsers -lRDKitRDGeometryLib -lRDKitGraphMol -lRDKitSmilesParse -lRDKitSubgraphs -lRDKitDataStructs -lRDKitPartialCharges -lRDKitRDGeneral -l$BOOST_PYTHON_LIB -lpython2.7"
    RDKIT_LIBS="\"-L$rdkit_install_dir/lib $rdkit_libs\""
 fi
 
