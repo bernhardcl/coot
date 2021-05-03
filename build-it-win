@@ -3888,11 +3888,13 @@ else
    echo 1 ---------------------------------------------------------------
    echo '                                ' make install
    echo 1 ----------------------------------------------------------------
-   $MAKE install
-   if [ "$python_scripting" = '--with-python' ] ; then
-      echo copying src/coot.py $install_top_dir/share/coot/python
-      cp src/coot.py $install_top_dir/share/coot/python
-   fi
+   $MAKE install-strip
+   # BL says/asks:: is this necessary? Shouldnt coot.py be copied in install
+   # anyway? And its the wrong place now!? remove!
+   #if [ "$python_scripting" = '--with-python' ] ; then
+   #   echo copying src/coot.py $install_top_dir/share/coot/python
+   #   cp src/coot.py $install_top_dir/share/coot/python
+   #fi
 fi
 ) > $HOSTLOGDIR/16-coot.txt 2>&1
 
@@ -3977,11 +3979,6 @@ if [ -e $LOGS/gtk2${build_type}-test-status.log ] ; then
 fi
 # run tests
 echo running tests...
-
-# before we do lets slim the binary
-cd $install_top_dir/bin
-strip --strip-unneeded coot-bin.exe
-cd -
 
 if test "$run_tests" = true ; then
    # download the test data to make sure we have the latest version.
