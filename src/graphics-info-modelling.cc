@@ -664,8 +664,10 @@ graphics_info_t::update_restraints_with_atom_pull_restraints() {
                if (moving_atoms_asc->atom_selection) {
 		  // check that moving_atoms_currently_dragged_atom_index is set before using it
 		  if (moving_atoms_currently_dragged_atom_index > -1) {
-		     at_except = moving_atoms_asc->atom_selection[moving_atoms_currently_dragged_atom_index];
-		     except_dragged_atom = coot::atom_spec_t(at_except);
+                     if (moving_atoms_currently_dragged_atom_index < moving_atoms_asc->n_selected_atoms) {
+                        at_except = moving_atoms_asc->atom_selection[moving_atoms_currently_dragged_atom_index];
+                        except_dragged_atom = coot::atom_spec_t(at_except);
+                     }
 		  }
                } else {
                   std::cout << "WARNING:: attempted use moving_atoms_asc->atom_selection, but NULL"
@@ -767,8 +769,8 @@ graphics_info_t::regenerate_intermediate_atoms_bonds_timeout_function() {
    }
 
    if (moving_atoms_asc->atom_selection == NULL) {
-      // std::cout << "DEBUG:: regenerate_intermediate_atoms_bonds_timeout_function() no moving_atoms_asc->atom_selection"
-      // << std::endl;
+      // std::cout << "DEBUG:: regenerate_intermediate_atoms_bonds_timeout_function() no
+      // oving_atoms_asc->atom_selection" << std::endl;
       threaded_refinement_redraw_timeout_fn_id = -1; // we've finished
       continue_status = 0;
       return continue_status;
@@ -1117,6 +1119,8 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
 				   *Geom_p(),
 				   mol_for_residue_selection,
 				   fixed_atom_specs, xmap_p);
+
+   std::cout << "debug:: on creation last_restraints is " << last_restraints << std::endl;
 
    last_restraints->set_torsion_restraints_weight(torsion_restraints_weight);
 
@@ -2205,7 +2209,7 @@ graphics_info_t::auto_range_residues(int atom_index, int imol) const {
 
 #ifdef USE_GUILE
 SCM
-graphics_info_t::refinement_results_to_scm(coot::refinement_results_t &rr) {
+graphics_info_t::refinement_results_to_scm(const coot::refinement_results_t &rr) const {
 
    SCM r = SCM_BOOL_F;
 
@@ -2236,7 +2240,7 @@ graphics_info_t::refinement_results_to_scm(coot::refinement_results_t &rr) {
 
 #ifdef USE_PYTHON
 PyObject *
-graphics_info_t::refinement_results_to_py(coot::refinement_results_t &rr) {
+graphics_info_t::refinement_results_to_py(const coot::refinement_results_t &rr) const {
    PyObject *r = Py_False;
 
    if (rr.found_restraints_flag) {
@@ -2441,6 +2445,20 @@ graphics_info_t::refine(int imol, short int auto_range_flag, int i_atom_no_1, in
    }
    return rr;
 }
+
+coot::refinement_results_t
+graphics_info_t::get_refinement_results() const {
+
+   coot::refinement_results_t rr;
+
+   std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+   if (last_restraints)
+      rr = last_restraints->get_refinement_results();
+
+   return rr;
+}
+
 
 // I mean things like HOH, CL, BR etc
 bool
@@ -3712,10 +3730,10 @@ graphics_info_t::execute_torsion_general() {
 				    make_moving_atoms_graphics_object(im, residue_asc);
 
 				    std::vector<coot::atom_spec_t> as;
-				    as.push_back(atom_1);
-				    as.push_back(atom_2);
-				    as.push_back(atom_3);
-				    as.push_back(atom_4);
+				    as.push_back(coot::atom_spec_t(atom_1));
+				    as.push_back(coot::atom_spec_t(atom_2));
+				    as.push_back(coot::atom_spec_t(atom_3));
+				    as.push_back(coot::atom_spec_t(atom_4));
 				    torsion_general_atom_specs = as;
 				    graphics_draw();
 				    torsion_general_reverse_flag = 0;
@@ -4026,7 +4044,8 @@ graphics_info_t::nudge_active_residue_by_rotate(guint direction) {
       coot::Cartesian  back_centre = unproject(1.0);
       coot::Cartesian ftb = back_centre - front_centre;
       clipper::Coord_orth around_vec(ftb.x(), ftb.y(), ftb.z());
-     g.molecules[imol].rotate_residue(active_atom.second.second, around_vec, origin_offset, angle);
+      coot::residue_spec_t rs(active_atom.second.second);
+      g.molecules[imol].rotate_residue(rs, around_vec, origin_offset, angle);
       graphics_draw();
    }
 }
@@ -4052,7 +4071,7 @@ graphics_info_t::execute_db_main() {
    // std::string direction_string("forwards"); // forwards
    // execute_db_main(imol, chain_id, iresno_start, iresno_end, direction_string);
 
-   coot::residue_spec_t residue_spec(at_1);
+   coot::residue_spec_t residue_spec(at_1->GetResidue());
    std::pair<int, int> r = execute_db_main_fragment(imol, residue_spec);
 }
 

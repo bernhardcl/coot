@@ -727,6 +727,8 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_workpackage_ng(
          if (res_name_2 == "PRO") second_is_pro = true; // residues are sorted and j > i
          if (res_name_2 == "HYP") second_is_pro = true;
 
+         std::string element_1 = at_1->element;
+         std::string element_2 = at_2->element;
          const std::string &type_1 = energy_type_for_atom[i];
          const std::string &type_2 = energy_type_for_atom[j];
 
@@ -804,20 +806,23 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_workpackage_ng(
                if (mc_CC_atoms_tandem) {
                   dist_min = 3.05; // in a helix, more elsewhere.
                } else {
-                  dist_min = 2.82; // N-N
+                  dist_min = 2.82; // N-N, but captures all others, including H-H
                }
             }
 
-            // Hydrogens are handled below this if() also - I am not sure
-            // that this delta should be applied here
-
-            // Yeah... I don't think that it should be added here.
-            // if (atom_is_hydrogen[i]) dist_min -= 0.7;
-            // if (atom_is_hydrogen[j]) dist_min -= 0.7;
+            if (atom_is_hydrogen[i] && atom_is_hydrogen[j]) {
+               dist_min = 2.42; // shold depend on energy type
+            } else {
+               if (atom_is_hydrogen[i])
+                  dist_min -= 0.6;  // was 0.4
+               if (atom_is_hydrogen[j])
+                  dist_min -= 0.6;  // was 0.4
+            }
 
          } else {
-
+            // not 1-4 related
             std::pair<bool, double> nbc_dist = geom.get_nbc_dist_v2(type_1, type_2,
+                                                                    element_1, element_2,
                                                                     atom_is_metal[i],
                                                                     atom_is_metal[j],
                                                                     extended_atom_mode,
@@ -836,7 +841,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_workpackage_ng(
 
                   dist_min = nbc_dist.second;
 
-                  if (false) debug_print("0    ", i, j, at_1, at_2, fixed_atom_flags, dist_min);
+                  if (false) debug_print("0", i, j, at_1, at_2, fixed_atom_flags, dist_min);
 
                   // Perhaps we don't have angle restraints to both atoms because one
                   // of the atoms is fixed (and thus miss that these have a 1-4 relationship).
@@ -860,7 +865,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_workpackage_ng(
 
                }
             } else {
-               // short/standard value
+               // missing NBC distance so use this fallback. short/standard value
                dist_min = 2.8;
             }
 
@@ -898,7 +903,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_workpackage_ng(
          non_bonded_contacts_atom_indices[i].insert(j);
          simple_restraint::nbc_function_t nbcf = simple_restraint::LENNARD_JONES;
          simple_restraint r(NON_BONDED_CONTACT_RESTRAINT,
-                            nbcf, i, *it,
+                            nbcf, i, j,
                             is_H_non_bonded_contact,
                             fixed_atom_flags, dist_min);
          nbc_restraints_fragment_p->push_back(r);
@@ -1178,6 +1183,8 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_ng(int imol,
 
          std::string atom_name_1 = at_1->GetAtomName();
          std::string atom_name_2 = at_2->GetAtomName();
+         std::string element_1   = at_1->element;
+         std::string element_2   = at_2->element;
 
          if (in_same_ring_flag) {
 
@@ -1236,6 +1243,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_ng(int imol,
          } else {
 
             std::pair<bool, double> nbc_dist = geom.get_nbc_dist_v2(type_1, type_2,
+                                                                    element_1, element_2,
                                                                     atom_is_metal[i],
                                                                     atom_is_metal[j],
                                                                     extended_atom_mode,
@@ -1262,8 +1270,6 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_ng(int imol,
                   bool strange_exception = false;
                   int rn_diff = abs(res_no_2 - res_no_1);
                   if (rn_diff == 1) {
-                     std::string atom_name_1 = at_1->GetAtomName();
-                     std::string atom_name_2 = at_2->GetAtomName();
                      if (fixed_atom_flags.size()) {
                         if (fixed_atom_flags[0] || fixed_atom_flags[1]) {
                            if (atom_name_1 == " O  ")
@@ -1332,8 +1338,6 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_ng(int imol,
                   if (rn_diff == 2) {
                      if (fixed_atom_flags.size()) {
                         if (fixed_atom_flags[0] || fixed_atom_flags[1]) {
-                           std::string atom_name_1 = at_1->GetAtomName();
-                           std::string atom_name_2 = at_2->GetAtomName();
                            if (atom_name_1 == " C  ")
                               if (atom_name_2 == " N  ")
                                  strange_exception = true;
@@ -2250,7 +2254,7 @@ coot::restraints_container_t::make_link_restraints_ng(const coot::protein_geomet
 void
 coot::restraints_container_t::analyze_for_bad_restraints() {
 
-   double interesting_distortion_limit = 1.0;
+   double interesting_distortion_limit = 5.0;
    analyze_for_bad_restraints(     CHIRAL_VOLUME_RESTRAINT,     interesting_distortion_limit);
    analyze_for_bad_restraints(              BOND_RESTRAINT,     interesting_distortion_limit);
    analyze_for_bad_restraints(NON_BONDED_CONTACT_RESTRAINT,     interesting_distortion_limit);
@@ -2306,11 +2310,11 @@ coot::restraints_container_t::analyze_for_bad_restraints(restraint_type_t r_type
       if (r_type == CHIRAL_VOLUME_RESTRAINT) {
          mmdb::Atom *at_c = atom[rest.atom_index_centre];
          std::cout << "INFO:: Model: Bad Chiral Volume: "
-                   << atom_spec_t(at_c) << " " << std::setw(5)
-                   << " delta "      << std::get<2>(d)
-                   << " target "     << rest.target_chiral_volume
-                   << " sigma "      << rest.sigma
-                   << " distortion " << std::get<3>(d) << "\n";
+                   << atom_spec_t(at_c)
+                   << " delta "      << std::setw(6) << std::get<2>(d)
+                   << " target "     << std::setw(5) <<rest.target_chiral_volume
+                   << " sigma "      << std::setw(4) << rest.sigma
+                   << " distortion " << std::setw(4) << std::right << std::get<3>(d) << "\n";
       }
 
       // How can I know if this was a Hydrogen bond restraint?
@@ -2328,7 +2332,7 @@ coot::restraints_container_t::analyze_for_bad_restraints(restraint_type_t r_type
 
       if (r_type == NON_BONDED_CONTACT_RESTRAINT)
          std::cout << "INFO:: Model: Bad Non-Bonded Contact: " << std::setw(5)
-                   << atom_spec_t(at_1) << " " << at_1->GetResName()
+                   << atom_spec_t(at_1) << " " << std::setw(3) << at_1->GetResName()
                    << " to " << atom_spec_t(at_2) << " " << std::setw(3) << at_2->GetResName()
                    << " delta "      << std::get<2>(d)
                    << " target "     << rest.target_value

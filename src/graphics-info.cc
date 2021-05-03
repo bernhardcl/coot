@@ -701,6 +701,9 @@ graphics_info_t::reorienting_next_residue(bool dir) {
 void
 graphics_info_t::setRotationCentre(int index, int imol) {
 
+   if (! is_valid_model_molecule(imol))
+      return;
+
    mmdb::PAtom atom = molecules[imol].atom_sel.atom_selection[index];
 
    float x = atom->x;
@@ -883,7 +886,7 @@ graphics_info_t::get_closest_atom() const {
    // int index, int imol
 
    std::pair <float, int> dist_info;
-   float dist_min = 999999999;
+   float dist_min = 999999999.0;
    coot::Cartesian rc = RotationCentre();
    int imol_close = -1;
    int index_close = -1;
@@ -1510,7 +1513,7 @@ graphics_info_t::set_refinement_map(int i) {
 // We want to put the moving parts back into the object that we were
 // regularizing (imol_moving_atoms).
 //
-void
+coot::refinement_results_t
 graphics_info_t::accept_moving_atoms() {
 
    while (continue_threaded_refinement_loop) {
@@ -1524,6 +1527,8 @@ graphics_info_t::accept_moving_atoms() {
       std::cout << ":::: INFO:: accept_moving_atoms() imol moving atoms type is "
                 << moving_atoms_asc_type << " vs " << coot::NEW_COORDS_REPLACE << std::endl;
    }
+
+   coot::refinement_results_t rr = get_refinement_results();
 
    if (moving_atoms_asc_type == coot::NEW_COORDS_ADD) { // not used!
       molecules[imol_moving_atoms].add_coords(*moving_atoms_asc);
@@ -1595,6 +1600,8 @@ graphics_info_t::accept_moving_atoms() {
 
    int mode = MOVINGATOMS;
    run_post_manipulation_hook(imol_moving_atoms, mode);
+
+   return rr;
 }
 
 void
@@ -2437,6 +2444,43 @@ graphics_info_t::draw_environment_graphics_object() {
       }
    }
 }
+
+
+#include "pick.h"
+
+pick_info
+graphics_info_t::pick_moving_atoms(const coot::Cartesian &front, const coot::Cartesian &back) const {
+
+   pick_info p_i;
+   if (moving_atoms_asc) {
+      if (moving_atoms_asc->mol) {
+         short int pick_mode = PICK_ATOM_ALL_ATOM;
+         bool verbose_mode = true;
+         pick_info impi = pick_atom(*moving_atoms_asc, -1, front, back, pick_mode, verbose_mode);
+
+         if (impi.success) {
+            mmdb::Atom *at = moving_atoms_asc->atom_selection[impi.atom_index];
+            if (at) {
+               p_i = impi;
+               p_i.is_intermediate_atoms_molecule = true;
+            }
+         }
+      }
+   }
+   return p_i;
+}
+
+mmdb::Atom *
+graphics_info_t::get_moving_atom(const pick_info &pi) const {
+   mmdb::Atom *at  = 0;
+   if (moving_atoms_asc) {
+      if (moving_atoms_asc->mol) {
+         at = moving_atoms_asc->atom_selection[pi.atom_index];
+      }
+   }
+   return at;
+}
+
 
 // static
 void

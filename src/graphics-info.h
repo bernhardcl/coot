@@ -700,8 +700,6 @@ class graphics_info_t {
 			     const clipper::Xmap<float> *xmap_p);
 #endif // HAVE_GSL
 
-   // the mode flag is public:
-   void run_post_manipulation_hook(int imol, int mode);
    // which uses the following...
 #ifdef USE_GUILE
    void run_post_manipulation_hook_scm(int imol, int mode);
@@ -1299,6 +1297,8 @@ public:
    void setRotationCentre(const symm_atom_info_t &symm_atom_info);
    void setRotationCentre(const coot::clip_hybrid_atom &hybrid_atom);
 
+   void run_post_manipulation_hook(int imol, int mode);
+
    void update_things_on_move();
    void update_things_on_move_and_redraw();
    void update_ramachandran_plot_point_maybe(int imol, mmdb::Atom *atom);
@@ -1425,10 +1425,10 @@ public:
                                                       // atoms move
 
 #ifdef USE_GUILE
-   SCM refinement_results_to_scm(coot::refinement_results_t &rr);
+   SCM refinement_results_to_scm(const coot::refinement_results_t &rr) const;
 #endif
 #ifdef USE_PYTHON
-   PyObject *refinement_results_to_py(coot::refinement_results_t &rr);
+   PyObject *refinement_results_to_py(const coot::refinement_results_t &rr) const;
 #endif
    static bool cryo_EM_refinement_flag;
 
@@ -1618,6 +1618,9 @@ public:
    pick_info find_atom_index_from_goto_info(int imol);
    // int find_atom_index_in_moving_atoms(char *chain_id, int resno, char *atom_name) const;
    mmdb::Atom *find_atom_in_moving_atoms(const coot::atom_spec_t &at) const;
+
+   pick_info pick_moving_atoms(const coot::Cartesian &front, const coot::Cartesian &back) const;
+   mmdb::Atom *get_moving_atom(const pick_info &pi) const; // return 0 on lookup failure
 
    coot::Symm_Atom_Pick_Info_t symmetry_atom_pick() const;
    coot::Symm_Atom_Pick_Info_t symmetry_atom_pick(const coot::Cartesian &front, const coot::Cartesian &back) const;
@@ -1842,6 +1845,7 @@ public:
 						   const std::string &ins_code_2,
 						   const std::string &altconf,
 						   short int is_water_flag);
+   coot::refinement_results_t get_refinement_results() const;
 
    // used by above:
    void flash_selection(int imol, int resno_1,
@@ -2185,7 +2189,7 @@ public:
    void clear_moving_atoms_object();
    // copy the contents of moving_atoms_asc into the molecule being refined.
    //
-   void accept_moving_atoms();
+   coot::refinement_results_t accept_moving_atoms();
 
    void update_moving_atoms_from_molecule_atoms(const coot::minimol::molecule &mm);
 

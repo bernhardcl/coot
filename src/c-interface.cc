@@ -6525,10 +6525,10 @@ SCM twisted_trans_peptides(int imol) {
       for (unsigned int i=0; i<v.size(); i++) {
 	 if (v[i].type == coot::util::cis_peptide_quad_info_t::TWISTED_TRANS) {
 	    try {
-	       coot::residue_spec_t r1(v[i].quad.atom_1);
-	       coot::residue_spec_t r2(v[i].quad.atom_4);
-	       SCM scm_r1 = residue_spec_to_scm(r1);
-	       SCM scm_r2 = residue_spec_to_scm(r2);
+	       coot::residue_spec_t r1(v[i].quad.atom_1->GetResidue());
+	       coot::residue_spec_t r2(v[i].quad.atom_4->GetResidue());
+	       SCM scm_r1 = residue_spec_to_scm(coot::residue_spec_t(r1));
+	       SCM scm_r2 = residue_spec_to_scm(coot::residue_spec_t(r2));
 	       double omega = v[i].quad.torsion();
 	       SCM scm_omega = scm_double2num(omega);
 	       SCM scm_residue_info = scm_list_3(scm_r1, scm_r2, scm_omega);
@@ -6622,10 +6622,10 @@ PyObject *twisted_trans_peptides_py(int imol) {
 	 if (v[i].type == coot::util::cis_peptide_quad_info_t::TWISTED_TRANS) {
 	    try {
 	       PyObject *py_r1, *py_r2, *py_residue_info;
-	       coot::residue_spec_t r1(v[i].quad.atom_1);
-	       coot::residue_spec_t r2(v[i].quad.atom_4);
-	       py_r1 = residue_spec_to_py(r1);
-	       py_r2 = residue_spec_to_py(r2);
+	       coot::residue_spec_t r1(v[i].quad.atom_1->GetResidue());
+               coot::residue_spec_t r2(v[i].quad.atom_4->GetResidue());
+               py_r1 = residue_spec_to_py(coot::residue_spec_t(r1));
+	       py_r2 = residue_spec_to_py(coot::residue_spec_t(r2));
 	       py_residue_info = PyList_New(3);
 	       PyObject *py_omega = PyFloat_FromDouble(v[i].quad.torsion());
 	       PyList_SetItem(py_residue_info, 0, py_r1);
@@ -7839,26 +7839,24 @@ void set_background_colour(double red, double green, double blue) {
 
    graphics_info_t g;
 
+   g.background_colour[0] = red; 
+   g.background_colour[1] = green; 
+   g.background_colour[2] = blue; 
+
    if (g.use_graphics_interface_flag) {
-     if(g.glarea_2) {
-       g.make_current_gl_context(g.glarea_2);
-       glClearColor(red,green,blue,1.0);
-       g.background_colour[0] = red; 
-       g.background_colour[1] = green; 
-       g.background_colour[2] = blue; 
-       glFogfv(GL_FOG_COLOR, g.background_colour);
-     }
-     g.make_current_gl_context(g.glarea);
-     glClearColor(red,green,blue,1.0);
-     g.background_colour[0] = red; 
-     g.background_colour[1] = green; 
-     g.background_colour[2] = blue; 
-     glFogfv(GL_FOG_COLOR, g.background_colour);
-     if (g.do_anti_aliasing_flag) {
-       // update the antialias?!
-       g.draw_anti_aliasing();
-     }
-     graphics_draw();
+      if(g.glarea_2) {
+         g.make_current_gl_context(g.glarea_2);
+         glClearColor(red,green,blue,1.0);
+         glFogfv(GL_FOG_COLOR, g.background_colour);
+      }
+      g.make_current_gl_context(g.glarea);
+      glClearColor(red,green,blue,1.0);
+      glFogfv(GL_FOG_COLOR, g.background_colour);
+      if (g.do_anti_aliasing_flag) {
+         // update the antialias?!
+         g.draw_anti_aliasing();
+      }
+      graphics_draw();
    }
 }
 
@@ -7870,16 +7868,17 @@ redraw_background() {
    double red   = g.background_colour[0];
    double green = g.background_colour[1]; 
    double blue  = g.background_colour[2]; 
+
    if (g.use_graphics_interface_flag && !background_is_black_p()) {
-     if(g.glarea_2) {
-       g.make_current_gl_context(g.glarea_2);
-       glClearColor(red,green,blue,1.0);
-       glFogfv(GL_FOG_COLOR, g.background_colour);
-     }
-     g.make_current_gl_context(g.glarea);
-     glClearColor(red,green,blue,1.0);
-     glFogfv(GL_FOG_COLOR, g.background_colour);
-     graphics_draw();
+      if(g.glarea_2) {
+         g.make_current_gl_context(g.glarea_2);
+         glClearColor(red,green,blue,1.0);
+         glFogfv(GL_FOG_COLOR, g.background_colour);
+      }
+      g.make_current_gl_context(g.glarea);
+      glClearColor(red,green,blue,1.0);
+      glFogfv(GL_FOG_COLOR, g.background_colour);
+      graphics_draw();
    }
 
 }
