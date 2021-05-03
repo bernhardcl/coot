@@ -5612,7 +5612,7 @@ def add_module_ccp4_gui():
       add_simple_coot_menu_menuitem(menu, "Make LINK via Acedrg",
                                     lambda func: acedrg_link_generation_control_window())
 
-def add_pdbe_gui():
+def add_module_pdbe_gui():
    if coot_python.main_menubar():
       menu = coot_menubar_menu("PDBe")
 
@@ -5621,7 +5621,7 @@ def add_pdbe_gui():
       # ---------------------------------------------------------------------
       #
       add_simple_coot_menu_menuitem(
-         submenu_pdbe, "PDBe recent structures...",
+         menu, "PDBe recent structures...",
          lambda func: pdbe_latest_releases_gui())
 
       # we do test for refmac at startup not runtime (for simplicity)
@@ -5631,7 +5631,7 @@ def add_pdbe_gui():
          mess = "\n  WARNING::refmac5 not in the path - SF calculation will fail  \n\n"
 
       add_simple_coot_menu_menuitem(
-         submenu_pdbe, "Get from PDBe...",
+         menu, "Get from PDBe...",
          lambda func: generic_single_entry("Get PDBe accession code",
                                            "", " Get it ",
                                            lambda text:
