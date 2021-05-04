@@ -552,8 +552,8 @@ graphics_info_t::import_all_refmac_cifs() {
 				    }
 				 }
 			      }
-			   }
-			   closedir(sub_dir);
+                              closedir(sub_dir);
+                           }
 			}
 		     } // not "."
 		  }
@@ -6628,4 +6628,28 @@ graphics_info_t::quick_save() {
    save_state_file("0-coot.state.py", il);
 #endif
 
+}
+
+
+// run glColor3f())
+// static
+void
+graphics_info_t::set_bond_colour_from_user_defined_colours(int icol) {
+
+   if (use_graphics_interface_flag) {
+      int n_user_defined_colours = user_defined_colours.size();
+      if (icol < n_user_defined_colours) {
+         if (icol >= 0) {
+            const coot::colour_holder &ch = user_defined_colours[icol];
+            glColor3f(ch.red, ch.green, ch.blue);
+         } else {
+            coot::colour_holder ch;
+            glColor3f(ch.red, ch.green, ch.blue);
+         }
+      } else {
+         coot::colour_holder ch;
+         glColor3f(ch.red, ch.green, ch.blue);
+      }
+   }
+   
 }

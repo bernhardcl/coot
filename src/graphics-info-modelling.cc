@@ -885,9 +885,11 @@ graphics_info_t::debug_refinement() {
 
 
    if (do_tabulate_geometric_distortions_flag) {
-      get_restraints_lock(__FUNCTION__);
-      tabulate_geometric_distortions(*last_restraints);
-      release_restraints_lock(__FUNCTION__);
+      if (last_restraints) {
+         get_restraints_lock(__FUNCTION__);
+         tabulate_geometric_distortions(*last_restraints);
+         release_restraints_lock(__FUNCTION__);
+      }
    }
 }
 
@@ -4694,7 +4696,7 @@ graphics_info_t::place_dummy_atom_at_pointer() {
 }
 
 void 
-graphics_info_t::place_typed_atom_at_pointer(const std::string &type) { 
+graphics_info_t::place_typed_atom_at_pointer(const std::string &type) {
 
    int imol = user_pointer_atom_molecule;
    graphics_info_t g;

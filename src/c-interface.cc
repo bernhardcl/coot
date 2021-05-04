@@ -753,16 +753,16 @@ int handle_read_draw_molecule_with_recentre(const char *filename,
 	    g.molecules[imol].no_dictionary_for_residue_type_as_yet(*g.Geom_p());
 
 	 int first_n_types_with_no_dictionary = types_with_no_dictionary.size();
-	 
-	 std::cout << "DEBUG:: there were " << types_with_no_dictionary.size()
-		   << " types with no dictionary " << std::endl;
+
+         if (false)
+            std::cout << "DEBUG:: there were " << types_with_no_dictionary.size()
+                      << " types with no dictionary " << std::endl;
 
 	 for (unsigned int i=0; i<types_with_no_dictionary.size(); i++) {
-	    if (0)
+	    if (false)
 	       std::cout << "DEBUG:: calling try_dynamic_add: " << types_with_no_dictionary[i]
 			 << " with read number " << g.cif_dictionary_read_number << std::endl;
-	    int n_bonds = g.Geom_p()->try_dynamic_add(types_with_no_dictionary[i],
-						      g.cif_dictionary_read_number);
+	    g.Geom_p()->try_dynamic_add(types_with_no_dictionary[i], g.cif_dictionary_read_number);
 	    g.cif_dictionary_read_number++;
 	 }
 	 
@@ -4412,7 +4412,7 @@ read_phs_and_make_map_using_cell_symm_from_mol(const char *phs_filename_str, int
    short int got_cell_symm_flag = 0;
    int imol = -1;// set bad molecule initally
    
-   graphics_info_t g; 
+   graphics_info_t g;
 //       std::cout << "DEBUG:: read_phs_and_make_map_using_cell_symm_from_mol "
 // 		<< g.molecules[imol_ref].atom_sel.mol->get_cell().a << "  " 
 // 		<< g.molecules[imol_ref].atom_sel.mol->get_cell().b << "  " 
@@ -4494,7 +4494,7 @@ read_phs_and_make_map_using_cell_symm_from_mol_using_implicit_phs_filename(int i
       }
 
       if (got_cell_symm_flag) {
-	 std::string phs_filename(graphics_get_phs_filename()); 
+	 std::string phs_filename(g.get_phs_filename());
 
 	 imol = g.create_molecule();
 	 g.molecules[imol].make_map_from_phs(spacegroup, cell, phs_filename);
@@ -4537,13 +4537,6 @@ graphics_store_phs_filename(const gchar *phs_filename) {
    g.set_phs_filename(std::string(phs_filename));
 }
 
-
-const char *
-graphics_get_phs_filename() {
-
-   graphics_info_t g;
-   return g.get_phs_filename().c_str(); 
-}
 
 short int possible_cell_symm_for_phs_file() {
 
@@ -5063,7 +5056,7 @@ void graphics_to_user_defined_atom_colours_all_atoms_representation(int imol) {
 
    if (is_valid_model_molecule(imol)) {
       graphics_info_t g;
-      bool all_atoms_flag = false;
+      bool all_atoms_flag = true;
       g.molecules[imol].user_defined_colours_representation(g.Geom_p(), all_atoms_flag, g.draw_missing_loops_flag);
       std::vector<std::string> command_strings;
       command_strings.push_back("graphics-to-user-defined-colours-representation");
@@ -8561,10 +8554,6 @@ int go_to_view_number(int view_number, int snap_to_view_flag) {
    if ((int(graphics_info_t::views.size()) > view_number) && (view_number >= 0)) {
       coot::view_info_t view = graphics_info_t::views[view_number];
       if (view.is_simple_spin_view_flag) {
-	 int nsteps = 2000;
-         nsteps = 500;
-	 if (graphics_info_t::views_play_speed > 0.000000001)
-	    nsteps = int(static_cast<float>(nsteps)/graphics_info_t::views_play_speed);
 	 float play_speed = 1.0; 
 	 if (graphics_info_t::views_play_speed > 0.0)
 	    play_speed = graphics_info_t::views_play_speed;
@@ -8603,7 +8592,6 @@ int go_to_view_number(int view_number, int snap_to_view_flag) {
 
 /*! \brief return the number of views */
 int n_views() {
-
 
    if (true) {
       std::cout << "debug in n_views(): with n_views " <<  graphics_info_t::views.size() << std::endl;
