@@ -1,0 +1,42 @@
+--- Makefile.orig	2021-05-27 15:13:00.929662600 +0200
++++ Makefile	2021-05-27 15:26:55.434191400 +0200
+@@ -184,6 +184,25 @@
+ 	@echo FFLAGS = \${CFLAGS}               >> Makefile.incl
+ 	@echo RM = /bin/rm -f                 >> Makefile.incl
+ 
++win64:
++	@cp Makefile.template Makefile.incl
++	@echo OS = win64                      >> Makefile.incl
++	@echo CC = gcc                        >> Makefile.incl
++	@echo INCDIRS =          >> Makefile.incl
++	@echo LIBDIRS =              >> Makefile.incl
++	@echo CFLAGS = -g -Wall -Dgfortran -I/mingw64/include   >> Makefile.incl
++	@echo LDFLAGS = -L/mingw64/lib -lgd -lpng -ltiff -ljpeg -lz    >> Makefile.incl
++	@echo FC = gfortran                   >> Makefile.incl
++	@echo FFLAGS = -g -w -O3 -Wtabs -ffixed-line-length-132 -fallow-argument-mismatch -fallow-invalid-boz>> Makefile.incl
++	@echo RM = /bin/rm -f                 >> Makefile.incl
++	@echo OSDEFS =  -DGD_SUPPORT -DPNG_SUPPORT -DTIFF_SUPPORT -DJPEG_SUPPORT -DLINUX -DWIN32 -D__MSVCRT__       >> Makefile.incl
++	@echo include Makefile.package        >> Makefile.incl
++	@echo                                 >> Makefile.incl
++	@echo qinp.o: qinp.f                  >> Makefile.incl
++	@echo "	\$$(FC) -g -O0 -Wall -Wtabs -c -o qinp.o qinp.f" >> Makefile.incl
++	@echo                                 >> Makefile.incl
++
++
+ 
+ #
+ # These source files are dependent on parameters.incl
+--- avs2ps.c.orig	2021-05-25 20:45:30.014416100 +0200
++++ avs2ps.c	2021-05-25 20:45:32.028015800 +0200
+@@ -10,7 +10,11 @@
+ #include	<math.h>
+ #include	<string.h>
+ #include	<stdlib.h>
++#ifdef WIN32
++#include <Winsock2.h>
++#else
+ #include	<netinet/in.h>
++#endif
+ 
+ #ifdef WIN32
+ #define random rand
