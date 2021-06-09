@@ -201,7 +201,7 @@ main (int argc, char *argv[]) {
   
    if (graphics_info_t::use_graphics_interface_flag) {
       // gtk_set_locale(); // gtk stuff done by gtk_init!!
-      load_gtk_resources();
+      load_gtk_resources();  // before gtk_init()
       gtk_init (&argc, &argv);
       // activate to force icons in menus; cannot get it to work with 
       // cootrc. Bug?
@@ -210,9 +210,7 @@ main (int argc, char *argv[]) {
       // gtk_settings_set_long_property
       g_type_class_unref (g_type_class_ref (GTK_TYPE_IMAGE_MENU_ITEM));
       g_object_set(gtk_settings_get_default(), "gtk-menu-images", TRUE, NULL);
-#ifndef WINDOWS_MINGW
-      g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", TRUE, NULL);
-#endif
+      // g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", TRUE, NULL);
       glutInit(&argc, argv);
    } else {
 
@@ -268,7 +266,7 @@ main (int argc, char *argv[]) {
    check_reference_structures_dir();
 #ifdef USE_MYSQL_DATABASE
    setup_database();
-#endif  
+#endif
 
    // static vector usage
    // and reading in refmac geometry restratints info:
@@ -480,6 +478,8 @@ void desensitive_scripting_menu_item_maybe(GtkWidget *window1) {
 
 void load_gtk_resources() {
 
+   // this needs to be called before gtk_init()
+
    std::string gtkrcfile = PKGDATADIR;
    gtkrcfile += "/cootrc";
 
@@ -488,8 +488,8 @@ void load_gtk_resources() {
    if (s) {
       gtkrcfile = s;
    }
-  
-   // std::cout << "Acquiring application resources from " << gtkrcfile << std::endl;
+
+   // std::cout << "############# Acquiring application resources from " << gtkrcfile << std::endl;
    gtk_rc_add_default_file(gtkrcfile.c_str());
 
 }
