@@ -20,10 +20,6 @@
  * 02110-1301, USA
  */
 
-#ifndef M_PI_2
-#define M_PI_2      1.57079632679489661923132169163975144
-#endif
-
 #include <fstream>
 #include "clipper/ccp4/ccp4_map_io.h"
 // #include "clipper/contrib/skeleton.h" // needed?
