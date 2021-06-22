@@ -91,11 +91,11 @@
       },
       {
          "name": "Dynamic Validation",
-         "version": "1.0",
+         "version": "1.1",
          "description": "Dynamic Validation Dialog",
          "file-name": "curlew_find_atom_overlap_baddies.py",
-         "date": "2020-06-23",
-         "checksum": "5715"
+         "date": "2021-03-16",
+         "checksum": "54527"
       },
       {
          "name": "Keyboard Mutate",

@@ -383,5 +383,5 @@ if (have_coot_python):
         lambda func: make_quick_test_validation_dialog_func()
         )
 
-register_extension("curlew_find_atom_overlap_baddies.py", "1.0")
+register_extension("curlew_find_atom_overlap_baddies.py", "1.1")
 
