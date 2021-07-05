@@ -274,6 +274,8 @@ Section "!WinCoot" SEC01
   File "${src_dir}\bin\findwaters"
   File "${src_dir}\bin\coot-fix-nomenclature-errors.exe"
   File "${src_dir}\bin\gdk-pixbuf-query-loaders.exe"
+  ; render (or more?) from raster3d?!
+  File "${src_dir}\bin\render.exe"
   ;gunzip needed?? dont think so
   File "C:\msys64\home\bernhard\autobuild\extras\gunzip"
   File "C:\msys64\home\bernhard\autobuild\extras\gzip.exe"
@@ -540,6 +542,7 @@ Section Uninstall
   Delete "$INSTDIR\bin\gzip.exe"
   Delete "$INSTDIR\bin\lidia.exe"
   Delete "$INSTDIR\bin\mini-rsr-bin.exe"
+  Delete "$INSTDIR\bin\render.exe"
   Delete "$INSTDIR\bin\Microsoft.VC90.CRT.manifest"
   Delete "$INSTDIR\bin\ppm2bmp.exe"
   ; probe & reduce (optional?)
