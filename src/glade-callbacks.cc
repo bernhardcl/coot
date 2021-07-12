@@ -858,7 +858,7 @@ on_show_aniso_close_button_clicked_gtkbuilder_callback     (GtkButton       *but
 }
 
 extern "C" G_MODULE_EXPORT
-void aniso_probability_adjustment_changed(GtkAdjustment *adj, GtkWidget *window) {
+void aniso_probability_adjustment_changed_gktbuilder_callback (GtkAdjustment *adj, GtkWidget *window) {
 
   set_aniso_probability(gtk_adjustment_get_value(adj));
 }
@@ -9470,7 +9470,8 @@ on_save_coords_filechooserdialog1_destroy_gtkbuilder_callback
 
 extern "C" G_MODULE_EXPORT
 void
-on_cif_dictionary_filechooserdialog1_response(GtkDialog * dialog,
+on_cif_dictionary_filechooserdialog1_response_gtkbuilder_callback
+                                              (GtkDialog * dialog,
                                               gint response_id,
                                               gpointer user_data) {
 
@@ -9942,7 +9943,8 @@ on_all2_activate_gtkbuilder_callback                       (GtkMenuItem     *men
 
 extern "C" G_MODULE_EXPORT
 void
-on_residue_editor_select_monomer_type_ok_button_clicked (GtkButton       *button,
+on_residue_editor_select_monomer_type_ok_button_clicked_gtkbuilder_callback
+                                                         (GtkButton       *button,
                                                          gpointer         user_data) {
 
 
@@ -10047,7 +10049,8 @@ on_save_restraint_chooserdialog_confirm_overwrite_gtkbuilder_callback
 
 extern "C" G_MODULE_EXPORT
 void
-on_save_restraint_chooserdialog_response(GtkDialog       *dialog,
+on_save_restraint_chooserdialog_response_gtkbuilder_callback
+                                         (GtkDialog       *dialog,
 					 gint             response_id,
 					 gpointer         user_data) {
 /* Maybe there are responses other than OK and cancel, so don't factor
@@ -10920,8 +10923,8 @@ on_mogul_geometry_dialog_close_button_clicked_gtkbuilder_callback
 
 extern "C" G_MODULE_EXPORT
 void
-on_ligand_check_okbutton_clicked(GtkButton       *button,
-                                 gpointer         user_data) {
+on_ligand_check_okbutton_clicked_gtkbuilder_callback (GtkButton       *button,
+                                                     gpointer         user_data) {
 
   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "ligand_check_dialog");
   gtk_widget_destroy(w);

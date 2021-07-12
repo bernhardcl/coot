@@ -1,4 +1,6 @@
 
+#include "compat/coot-sysdep.h"
+
 #include "bonded-atoms.hh"
 
 #include "coot-coord-utils.hh"

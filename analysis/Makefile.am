@@ -10,7 +10,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	$(CLIPPER_CXXFLAGS)		\
 	$(COOT_GSL_FLAGS) $(GSL_CFLAGS)	\
-	$(MMDB_CXXFLAGS)
+	$(MMDB_CXXFLAGS) $(COOT_WINDOWS_CFLAGS)
 
 libcoot_analysis_la_SOURCES = bfkurt.cc mogul.cc kolmogorov.hh kolmogorov.cc stats.cc \
 	cablam.hh cablam.cc typed-distances.cc typed-distances.hh \
@@ -20,9 +20,9 @@ libcoot_analysis_la_SOURCES = bfkurt.cc mogul.cc kolmogorov.hh kolmogorov.cc sta
 # one of these libraries?
 libcoot_analysis_la_LIBADD = \
    $(top_builddir)/coot-utils/libcoot-coord-utils.la    \
-   $(top_builddir)/geometry/libcoot-geometry.la    	\
-   $(top_builddir)/mini-mol/libcoot-mini-mol.la    	\
-   $(top_builddir)/utils/libcoot-utils.la 		\
+   $(top_builddir)/geometry/libcoot-geometry.la	\
+   $(top_builddir)/mini-mol/libcoot-mini-mol.la	\
+   $(top_builddir)/utils/libcoot-utils.la		\
    $(CLIPPER_LIBS) $(MMDB_LIBS)  \
    $(GSL_LIBS) $(RDKIT_LIBS)
 

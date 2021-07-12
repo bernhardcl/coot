@@ -6,3 +6,5 @@ pkgincludedir = $(includedir)/coot/compat
 
 libcoot_compat_la_SOURCES = getopt.cc getopt1.cc
 
+libcoot_compat_la_LDFLAGS = $(SHARED_LDFLAGS)
+
