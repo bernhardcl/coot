@@ -29,6 +29,7 @@ function GetLatestReleaseInfo() {
          var releaseInfo = release.name + " was updated " + timeAgo + " and downloaded " + downloadCount.toLocaleString() + " times.";
          $(".coot-download-href").attr("href", asset.browser_download_url);
          $(".coot-download-action").attr("action", asset.browser_download_url);
+         $(".coot-download-info").attr("value", "Download " + release.name);
          $(".release-info").text(releaseInfo);
          $(".version-info").text(release.name);
       });
