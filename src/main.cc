@@ -202,6 +202,9 @@ main (int argc, char *argv[]) {
    if (graphics_info_t::use_graphics_interface_flag) {
       // gtk_set_locale(); // gtk stuff done by gtk_init!!
       load_gtk_resources();  // before gtk_init()
+#ifdef WINDOWS_MINGW
+      gtk_disable_setlocale();
+#endif // MINGW
       gtk_init (&argc, &argv);
       // activate to force icons in menus; cannot get it to work with 
       // cootrc. Bug?
