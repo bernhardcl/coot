@@ -27,8 +27,8 @@ href="https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/docs/coot-faq.html">p
     following and please don't tell me about these ones again.<br>
     <ul id="mozToc">
       <!--mozToc h2 1 h3 2 h4 3 h5 4 h6 5 h6 6-->
-      <li><a href="#mozTocId444230">(Win)Coot reference, citation and
-          furtherinformation </a></li>
+      <li><a href="#mozTocId444230">(Win)Coot
+          reference, citation and furtherinformation </a></li>
       <li><a href="#mozTocId876747">Installation and Windows problems</a>
         <ul>
           <li><a href="#mozTocId169986">Which Windows version does
@@ -48,6 +48,8 @@ href="https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/docs/coot-faq.html">p
                   full screen mode</a></li>
               <li><a href="#mozTocId514994">WinCoot hangs opening and/or
                   saving files </a></li>
+              <li><a href="#mozTocId358284">WinCoot crashes upon Save
+                  coordinates... </a></li>
               <li><a href="#mozTocId358284">WinCoot "automatically"
                   loads pdb files repeatedly </a></li>
               <li><a href="#mozTocId562996">WinCoot does not
@@ -112,6 +114,8 @@ reference,
 
 
 
+
+
       citation and furtherinformation<br>
     </h2>
     <p>The official reference for WinCoot is published now:</p>
@@ -131,6 +135,8 @@ reference,
     <pre>@Article{emsley10:coot,<br> author = {Emsley P, Lohkamp B, Scott W, Cowtan K},<br> title = {Features and Development of Coot},<br> journal = {Acta Crystallographica Section D - Biological Crystallography},<br> year = 2010,<br> volume = 66,<br> pages = 486-501<br>}<br></pre>
     <p>The Coot paper is published in the <a
         href="http://journals.iucr.org/d/issues/2010/04/00/issconts.html">proceedings
+
+
 
 
 
@@ -251,6 +257,14 @@ reference,
       Selection tab</i>; top pane change to <i>Classic File Selector</i>)
     or avoid using the GUI for file selections by using e.g. drag'n'drop
     to open files and Quick Save (Ctrl s) for saving files.<br>
+    <h4><a class="mozTocH4" name="mozTocId358284"></a>WinCoot crashes
+      upon <i>Save coordinates...</i><br>
+    </h4>
+    This is most likely cause by another software interfering with
+    WinCoot. Bluestack is known to cause these issues. Uninstalling the
+    offending software solves the issue. Possibly, deactivation of
+    background processes connected to bluestack will help as well
+    (untested). [Thanks to Amy Chu]<br>
     <h4><a class="mozTocH4" name="mozTocId358284"></a>WinCoot
       "automatically" loads pdb files repeatedly<br>
     </h4>
@@ -259,7 +273,7 @@ reference,
       software called "youdao". So, either close the offending program
       or in the case of "youdao" just close the function of automatic
       translation when select or mouse move. In this way you can even
-      use WinCoot and "youdao" together.<br>
+      use WinCoot and "youdao" together. [Thanks to Shoude Zhang]<br>
     </p>
     <h4><a name="mozTocId562996" class="mozTocH4"></a>WinCoot does not
       start/crashes immediately<br>
@@ -299,21 +313,14 @@ href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=
       connectivity of coordinate files<br>
     </h4>
     I guess you see something like <a href="images/ugly2.png">this</a>.
-    This should not happen any more (from 0.3.3.1), however there is
-    rare cases on Windows 7 where it occurs again (this is progress for
-    you!). Actually it happens randomly on Windows 10 as well (usually
-    after merging of molecules). It is probably related to the fact that
-    you have a 'non-english speaking' computer. The following edit to
-    wincoot.bat seems to fix it (included after 0.9.4.1):<br>
-    <ul>
-      <li>insert in line 2 and 3:</li>
-    </ul>
-    <blockquote>
-      <pre>@set LC_ALL=en
-@set LC_NUMERIC=en</pre>
-    </blockquote>
-    Alternatively changing some locale/language settings on your
-    computer may fix this.<br>
+    This should finally, really not happen any more (from 0.9.6.1),
+    however there is rare cases on Windows 7+ where it occurs. It is
+    related to the fact that you have a 'non-english speaking' computer.
+    Well, what you need is a "." (dot) and not a "," (comma) as a
+    decimal symbol.<br>
+    <br>
+    FIX 1: Change some locale/language settings on your computer will
+    fix this.<br>
     Go to <span style="font-style: italic;">Start</span> -&gt; <span
       style="font-style: italic;">Settings</span> -&gt; <span
       style="font-style: italic;">Control Panel</span> -&gt;&nbsp; <span
@@ -326,8 +333,8 @@ href="https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=ind1501&amp;L=CCP4BB&amp;P=
     possible confusions. This is the procedure for 'British' Windows XP,
     but should be similar on other Windows systems and/or languages.<br>
     <br>
-    In a more permanent fix (without messing with your usual setting)
-    you can try the following:<br>
+    FIX2: In a more permanent fix (without messing with your usual
+    setting) you can try the following:<br>
     <ul>
       <li>download the language setting <a
           href="software/extras/language.zip">files</a>.</li>
@@ -381,6 +388,8 @@ href="http://msdn.microsoft.com/en-us/library/dd318693%28v=vs.85%29.aspx">this</
       display window</h3>
     Turning down your graphics card acceleration should solve this. To
     do so go to <span style="font-style: italic;">Start-&gt;Settings-&gt;Control
+
+
 
 
 
@@ -553,6 +562,8 @@ your
 
 
 
+
+
           <span style="font-style: italic;">PATH&nbsp;</span>; for an
           alternative see 5) </li>
       </ul>
@@ -567,6 +578,8 @@ somewhere
 else
 in
 your
+
+
 
 
 
@@ -603,6 +616,8 @@ that
 probe_command
 and
 reduce_command
+
+
 
 
 
@@ -686,6 +701,8 @@ reduce_command
 
 
 
+
+
         describe the location of your files (e.g. probe_command =
         "C:\Mydirectory\probe.exe") </li>
     </ol>
@@ -715,11 +732,15 @@ or
 
 
 
+
+
       put a line in your <span style="font-style: italic;">YourWinCootDirectory</span>\.coot.py
 which
 reads
 something
 like
+
+
 
 
 
@@ -795,6 +816,8 @@ like
 
 
 
+
+
       WIKI page</a>.<br>
     <h3><a class="mozTocH3" name="mozTocId107913"></a>How do I use extra
       parameters in the Refmac interface?<br>
@@ -806,6 +829,8 @@ like
     which give refmac extra parameters is called <span
       style="font-style: italic;">refmac-extra-params.txt</span> for
     easy text editing (see an example <a href="refmac-extra-params.txt">here</a>).
+
+
 
 
 
