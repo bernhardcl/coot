@@ -51,5 +51,6 @@ coot_tiddly_LDADD = libcoot-tw.la \
 	$(GTKCANVAS_LIBS) \
 	@GTK_LIBS@
 
+
 # cootsound_LDADD = -L/sw/lib -lvorbisfile -logg -lao
 

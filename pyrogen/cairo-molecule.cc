@@ -30,11 +30,7 @@ coot::cairo_molecule_t::import_rdkit_mol(RDKit::ROMol *rdkm, int iconf) {
       double sum_y = 0;
       double min_y = 9e9;
       for (unsigned int iat=0; iat<n_mol_atoms; iat++) {
-#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
 	 const RDKit::Atom *at_p = (*rdkm)[iat];
-#else
-	 RDKit::ATOM_SPTR at_p = (*rdkm)[iat];
-#endif
 	 RDGeom::Point3D &r_pos = conf.getAtomPos(iat);
 	 sum_x += r_pos.x;
 	 sum_y += r_pos.y;
@@ -77,11 +73,7 @@ coot::cairo_molecule_t::import_rdkit_mol(RDKit::ROMol *rdkm, int iconf) {
       }
 
       for (unsigned int iat=0; iat<n_mol_atoms; iat++) {
-#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
 	 const RDKit::Atom *at_p = (*rdkm)[iat];
-#else
-	 RDKit::ATOM_SPTR at_p = (*rdkm)[iat];
-#endif
 	 RDGeom::Point3D &r_pos = conf.getAtomPos(iat);
 	 std::string name = "";
 	 try {

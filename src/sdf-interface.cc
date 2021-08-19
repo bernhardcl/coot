@@ -417,11 +417,7 @@ chemical_features::get_normal_info_donor(RDKit::MolChemicalFeature *feat,
       boost::tie(nbrIdx, endNbrs) = mol.getAtomNeighbors(feat_atoms[0]);
       std::vector<clipper::Coord_orth> neighbour_positions;
       while(nbrIdx != endNbrs){
-#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
 	 const RDKit::Atom *at = mol[*nbrIdx];
-#else
-	 const RDKit::ATOM_SPTR at = mol[*nbrIdx];
-#endif
 	 if (at->getAtomicNum() != 1) {
 	    RDGeom::Point3D r_pos = conf.getAtomPos(*nbrIdx);
 	    neighbour_positions.push_back(clipper::Coord_orth(r_pos.x, r_pos.y, r_pos.z));

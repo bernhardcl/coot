@@ -514,6 +514,15 @@ if (have_coot_python):
 
      # --- D ---
 
+     add_simple_coot_menu_menuitem(
+       submenu_models, "Delete Hydrogen Atoms",
+       lambda func: using_active_atom(delete_hydrogens, "aa_imol"))
+
+     add_simple_coot_menu_menuitem(
+       submenu_models, "Delete Side-chains for Active Chain",
+       lambda func: using_active_atom(
+         delete_sidechains_for_chain, "aa_imol", "aa_chain_id"))
+
      # now in main menu
 ##     add_simple_coot_menu_menuitem(
 ##       submenu_models,
@@ -632,6 +641,12 @@ if (have_coot_python):
        lambda func: generic_single_entry("Fetch PDBe Ligand Desciption for comp_id:",
                                          "", " Fetch ", lambda comp_id: get_pdbe_ligand_func(comp_id)))
 
+     def fpr():
+         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
+                                    aa_ins_code, aa_atom_name, aa_alt_conf]:
+           fill_partial_residues(aa_imol)
+
+     add_simple_coot_menu_menuitem(submenu_models, "Fill Partial Residues", lambda m: fpr())
 
      add_simple_coot_menu_menuitem(
        submenu_models,

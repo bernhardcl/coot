@@ -2106,58 +2106,58 @@ PyObject *alignment_mismatches_py(int imol) {
     PyObject *r = Py_False;
     PyObject *list_of_alignments_as_text;
 
-    std::vector<std::pair<coot::residue_spec_t,std::string> > mutations;
-    std::vector<std::pair<coot::residue_spec_t,std::string> > insertions;
-    std::vector<std::pair<coot::residue_spec_t,std::string> > deletions;
+   std::vector<std::pair<coot::residue_spec_t,std::string> > mutations;
+   std::vector<std::pair<coot::residue_spec_t,std::string> > insertions;
+   std::vector<std::pair<coot::residue_spec_t,std::string> > deletions;
 
-    if (is_valid_model_molecule(imol)) {
-        std::pair<bool, std::vector<coot::chain_mutation_info_container_t> > ar =
-                graphics_info_t::molecules[imol].residue_mismatches(graphics_info_t::alignment_wgap,
-                                                                    graphics_info_t::alignment_wspace);
-        if (ar.first)
-            r = PyList_New(0);
-        for (unsigned int ir=0; ir<ar.second.size(); ir++) {
-            for (unsigned int im=0; im<ar.second[ir].mutations.size(); im++) {
-                mutations.push_back(ar.second[ir].mutations[im]);
-            }
-            for (unsigned int is=0; is<ar.second[ir].single_insertions.size(); is++) {
-                insertions.push_back(ar.second[ir].single_insertions[is]);
-            }
-            for (unsigned int id=0; id<ar.second[ir].deletions.size(); id++) {
-                coot::residue_spec_t del = ar.second[ir].deletions[id];
-                std::pair<coot::residue_spec_t, std::string> d(del, "Delete");
-                deletions.push_back(d);
-            }
-        }
+   if (is_valid_model_molecule(imol)) {
+      std::pair<bool, std::vector<coot::chain_mutation_info_container_t> > ar =
+      	 graphics_info_t::molecules[imol].residue_mismatches(graphics_info_t::alignment_wgap,
+							     graphics_info_t::alignment_wspace);
+      if (ar.first)
+	r = PyList_New(0);
+      for (unsigned int ir=0; ir<ar.second.size(); ir++) {
+	 for (unsigned int im=0; im<ar.second[ir].mutations.size(); im++) {
+	    mutations.push_back(ar.second[ir].mutations[im]);
+	 }
+	 for (unsigned int is=0; is<ar.second[ir].single_insertions.size(); is++) {
+	    insertions.push_back(ar.second[ir].single_insertions[is]);
+	 }
+	 for (unsigned int id=0; id<ar.second[ir].deletions.size(); id++) {
+	    coot::residue_spec_t del = ar.second[ir].deletions[id];
+	    std::pair<coot::residue_spec_t, std::string> d(del, "Delete");
+	    deletions.push_back(d);
+	 }
+      }
 
-        if ((mutations.size() > 0) || (insertions.size() > 0) || (deletions.size() > 0)) {
-            PyObject *insertions_py = PyList_New(0);
-            PyObject *deletions_py = PyList_New(0);
-            PyObject * mutations_py = PyList_New(0);
-            for (unsigned int i=0; i<mutations.size(); i++) {
-                PyObject *rs_py = residue_spec_to_py(mutations[i].first);
-                PyObject *str = PyString_FromString(mutations[i].second.c_str());
-                PyList_Insert(rs_py, 0, str);
-                PyList_Append(mutations_py, rs_py);
-                Py_XDECREF(str);
-                Py_XDECREF(rs_py);
-            }
-            for (unsigned int i=0; i<insertions.size(); i++) {
-                PyObject *rs_py = residue_spec_to_py(insertions[i].first);
-                PyObject *str = PyString_FromString(insertions[i].second.c_str());
-                PyList_Insert(rs_py, 0, str);
-                PyList_Append(insertions_py, rs_py);
-                Py_XDECREF(str);
-                Py_XDECREF(rs_py);
-            }
-            for (unsigned int i=0; i<deletions.size(); i++) {
-                PyObject *rs_py = residue_spec_to_py(deletions[i].first);
-                PyObject *str = PyString_FromString(deletions[i].second.c_str());
-                PyList_Insert(rs_py, 0, str);
-                PyList_Append(deletions_py, rs_py);
-                Py_XDECREF(str);
-                Py_XDECREF(rs_py);
-            }
+   if ((mutations.size() > 0) || (insertions.size() > 0) || (deletions.size() > 0)) {
+     PyObject *insertions_py = PyList_New(0);
+     PyObject *deletions_py = PyList_New(0);
+     PyObject * mutations_py = PyList_New(0);
+     for (unsigned int i=0; i<mutations.size(); i++) {
+	 PyObject *rs_py = residue_spec_to_py(mutations[i].first);
+	 PyObject *str = PyString_FromString(mutations[i].second.c_str());
+	 PyList_Insert(rs_py, 0, str);
+	 PyList_Append(mutations_py, rs_py);
+	 Py_XDECREF(str);
+	 Py_XDECREF(rs_py);
+      }
+      for (unsigned int i=0; i<insertions.size(); i++) {
+	 PyObject *rs_py = residue_spec_to_py(insertions[i].first);
+	 PyObject *str = PyString_FromString(insertions[i].second.c_str());
+	 PyList_Insert(rs_py, 0, str);
+	 PyList_Append(insertions_py, rs_py);
+	 Py_XDECREF(str);
+	 Py_XDECREF(rs_py);
+      }
+      for (unsigned int i=0; i<deletions.size(); i++) {
+	 PyObject *rs_py = residue_spec_to_py(deletions[i].first);
+	 PyObject *str = PyString_FromString(deletions[i].second.c_str());
+	 PyList_Insert(rs_py, 0, str);
+	 PyList_Append(deletions_py, rs_py);
+	 Py_XDECREF(str);
+	 Py_XDECREF(rs_py);
+      }
             r = PyList_New(4);
             // These are reversed so that the residue numbers come out in
             // numerical order (not backwards) and the returned list is
@@ -2187,10 +2187,10 @@ PyObject *alignment_mismatches_py(int imol) {
 
         }
     }
-    if (PyBool_Check(r)) {
-        Py_INCREF(r);
-    }
-    return r;
+   if (PyBool_Check(r)) {
+     Py_INCREF(r);
+   }
+   return r;
 }
 #endif // USE_PYTHON
 

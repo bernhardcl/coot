@@ -62,35 +62,20 @@ cod::atom_level_2_type::atom_level_2_type(const RDKit::Atom *base_atom_p,
    RDKit::ROMol::ADJ_ITER nbrIdx, endNbrs;
    boost::tie(nbrIdx, endNbrs) = rdkm.getAtomNeighbors(base_atom_p);
    while(nbrIdx != endNbrs) {
-#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
       const RDKit::Atom *at_neighb = rdkm[*nbrIdx];
       unsigned int degree = at_neighb->getDegree();
       int n = at_neighb->getAtomicNum();
       std::pair<int,std::string> ring_info = make_ring_info_string(at_neighb);
       
-         std::string atom_ele = tbl->getElementSymbol(n);
-
-         // std::string s = atom_ele;
-         // s += ring_info.second;
-         // s += "-";
-
-         atom_level_2_component_type c(at_neighb, rdkm);
-         components.push_back(c);
-#else
-         RDKit::ATOM_SPTR at_neighb = rdkm[*nbrIdx];
-      unsigned int degree = at_neighb->getDegree();
-      int n = at_neighb->getAtomicNum();
-      std::pair<int,std::string> ring_info = make_ring_info_string(at_neighb.get());
       std::string atom_ele = tbl->getElementSymbol(n);
 
       // std::string s = atom_ele;
       // s += ring_info.second;
       // s += "-";
       
-      atom_level_2_component_type c(at_neighb.get(), rdkm);
+      atom_level_2_component_type c(at_neighb, rdkm);
       components.push_back(c);
-#endif
-
+      
       nbrIdx++;
    }
 
@@ -465,11 +450,7 @@ cod::atom_level_2_type::atom_level_2_component_type::atom_level_2_component_type
    RDKit::ROMol::ADJ_ITER nbrIdx_n, endNbrs_n;
    boost::tie(nbrIdx_n, endNbrs_n) = rdkm.getAtomNeighbors(at);
    while(nbrIdx_n != endNbrs_n) {
-#if (RDKIT_VERSION >= RDKIT_VERSION_CHECK(2018, 3, 1))
-         const RDKit::Atom *at_neighb_n = rdkm[*nbrIdx_n];
-#else
-         RDKit::ATOM_SPTR at_neighb_n = rdkm[*nbrIdx_n];
-#endif
+      const RDKit::Atom *at_neighb_n = rdkm[*nbrIdx_n];
       hv.push_back(at_neighb_n->getHybridization());
       int n_extra_elect = at_neighb_n->getExplicitValence() - at_neighb_n->getDegree() + at_neighb_n->getFormalCharge();
       neighb_extra_elect.push_back(n_extra_elect);
