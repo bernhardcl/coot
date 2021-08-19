@@ -88,13 +88,6 @@ if (have_coot_python):
        add_simple_coot_menu_menuitem(menu, "List Ramachandran outliers...",
                                      lambda func: rama_outlier_gui())
 
-       add_simple_coot_menu_menuitem(
-         menu,
-         "Read REFMAC logfile...",
-         lambda func: generic_chooser_and_file_selector("Read Refmac log file",
-                                     valid_model_molecule_qm, "Logfile name: ", "",
-                                     lambda imol, text: read_refmac_log(imol, text)))
-
 
      # --------------------------------------------------
      #           user_define_restraints plugin
@@ -108,96 +101,72 @@ if (have_coot_python):
      
      # ---------------------------------------------
      #           extensions
-     #
-     # NOT ANY MORE, they are within everything else now...
      # ---------------------------------------------
 
-     # show_extensions = False
-     # extensions_menu = coot_menubar_menu("E_xtensions")
-
-     # return the menuitem with menuitem_label in menubar_menu_label
-     # if not there return False
-     #
-     def get_coot_menu_from_item(menubar_menu_label, menuitem_label):
-       menu = coot_menubar_menu(menubar_menu_label)
-       for menu_child in menu.get_children():
-         if not isinstance(menu_child, gtk.SeparatorMenuItem):
-           label = menu_child.get_label()
-           if label == menuitem_label:
-             # found it, return it
-             return menu_child
-       return False
-
-     # Add submenu to the existing menuitem, if not found make a new one
-     # under extensions
-     # return True on success or the newly created menuitem
-     #
-     def coot_menu_add_submenu(menubar_menu_label, menuitem_label, submenu):
-       menuitem = get_coot_menu_from_item(menubar_menu_label, menuitem_label)
-       if menuitem:
-         menuitem.set_submenu(submenu)
-         return True
-       else:
-         return False
-         # add to extensions - not really working since I somehow cant
-         # remove/hide the Extensions Menu once it's created
-         # menuitem = gtk.MenuItem(menuitem_label)
-         # menuitem.set_submenu(submenu)
-         # extensions_menu.append(menuitem)
-         # menuitem.show()
-         # return menuitem
+     menu = coot_menubar_menu("E_xtensions")
 
      # make submenus:
      submenu_all_molecule = gtk.Menu()
-     menuitem_2 = coot_menu_add_submenu("Calculate", "All Molecule...",
-                                        submenu_all_molecule)
-     # if isinstance(menuitem_2, gtk.MenuItem):
-     #   show_extensions = True
-
+     menuitem_2 = gtk.MenuItem("All Molecule...")
      submenu_maps = gtk.Menu()
-     menuitem_3 = coot_menu_add_submenu("Calculate", "Map Tools...",
-                                        submenu_maps)
-
+     menuitem_3 = gtk.MenuItem("Maps...")
      submenu_models = gtk.Menu()
-     menuitem_4 = coot_menu_add_submenu("Calculate", "Modelling...",
-                                        submenu_models)
-
-     submenu_pisa = gtk.Menu()
-     menuitem_pisa = coot_menu_add_submenu("Calculate", "PISA...",
-                                           submenu_pisa)
-
-     submenu_modules = gtk.Menu()
-     menuitem_modules = coot_menu_add_submenu("Calculate", "Modules...",
-                                              submenu_modules)
-
-     submenu_ncs = gtk.Menu()
-     menuitem_ncs = coot_menu_add_submenu("Calculate", "NCS Tools...",
-                                          submenu_ncs)
-
+     menuitem_4 = gtk.MenuItem("Modelling...")
+     submenu_refine = gtk.Menu()
+     menuitem_5 = gtk.MenuItem("Refine...")
      submenu_representation = gtk.Menu()
-     menuitem_6 = coot_menu_add_submenu("Draw", "Representation Tools...",
-                                        submenu_representation)
-
+     menuitem_6 = gtk.MenuItem("Representations")
      submenu_settings = gtk.Menu()
-     menuitem_7 = coot_menu_add_submenu("Edit", "Settings...",
-                                        submenu_settings)
+     menuitem_7 = gtk.MenuItem("Settings...")
+     submenu_pisa = gtk.Menu()
+     menuitem_pisa = gtk.MenuItem("PISA...")
+     submenu_pdbe = gtk.Menu()
+     menuitem_pdbe = gtk.MenuItem("PDBe...")
+     submenu_modules = gtk.Menu()
+     menuitem_modules = gtk.MenuItem("Modules...")
+     submenu_ncs = gtk.Menu()
+     menuitem_ncs = gtk.MenuItem("NCS...")
 
+     menuitem_2.set_submenu(submenu_all_molecule)
+     menu.append(menuitem_2)
+     menuitem_2.show()
+     
+     menuitem_3.set_submenu(submenu_maps)
+     menu.append(menuitem_3)
+     menuitem_3.show()
+     
+     menuitem_4.set_submenu(submenu_models)
+     menu.append(menuitem_4)
+     menuitem_4.show()
+     
+     menuitem_ncs.set_submenu(submenu_ncs)
+     menu.append(menuitem_ncs)
+     menuitem_ncs.show()
+     
+     menuitem_5.set_submenu(submenu_refine)
+     menu.append(menuitem_5)
+     menuitem_5.show()
+     
+     menuitem_6.set_submenu(submenu_representation)
+     menu.append(menuitem_6)
+     menuitem_6.show()
+     
+     menuitem_pisa.set_submenu(submenu_pisa)
+     menu.append(menuitem_pisa)
+     menuitem_pisa.show()
 
-     # submenu_refine = gtk.Menu()
-     # menuitem_5 = gtk.MenuItem("Refine...")
-     # menuitem_5.set_submenu(submenu_refine)
-     # menu.append(menuitem_5)
-     # menuitem_5.show()
+     menuitem_7.set_submenu(submenu_settings)
+     menu.append(menuitem_7)
+     menuitem_7.show()
 
-     # submenu_pdbe = gtk.Menu()
-     # menuitem_pdbe = gtk.MenuItem("PDBe...")
-     #menuitem_pdbe.set_submenu(submenu_pdbe)
-     #menu.append(menuitem_pdbe)
-     #menuitem_pdbe.show()
+     menuitem_modules.set_submenu(submenu_modules)
+     menu.append(menuitem_modules)
+     menuitem_modules.show()
 
-     # not yet - not working - see above
-     # if not show_extensions:
-     #   extensions_menu.hide_all()
+     menuitem_pdbe.set_submenu(submenu_pdbe)
+     menu.append(menuitem_pdbe)
+     menuitem_pdbe.show()
+     
      
 
      #---------------------------------------------------------------------
@@ -478,10 +447,10 @@ if (have_coot_python):
        with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                   aa_ins_code, aa_atom_name, aa_alt_conf]:
          add_hydrogens_using_refmac(aa_imol)
-
+     
      add_simple_coot_menu_menuitem(
        submenu_models,
-       "Add Hydrogen Atoms",
+       "Add Hydrogens",
        lambda func: add_hydrogens_with_coot_reduce())
 
 
@@ -518,16 +487,6 @@ if (have_coot_python):
        lambda func: molecule_chooser_gui("Assign HETATMs as per PDB definition", 
 		lambda imol: assign_hetatms(imol)))
 
-     def backrub_rotamers_for_chain_func():
-       with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
-                                  aa_ins_code, aa_atom_name, aa_alt_conf]:
-         backrub_rotamers_for_chain(aa_imol, aa_chain_id)
-
-     add_simple_coot_menu_menuitem(
-       submenu_models,
-       "Backrub Rotamers for Whole Chain",
-       lambda func: backrub_rotamers_for_chain_func())
-
      # in main menu now
      # add_simple_coot_menu_menuitem(
      #   submenu_models,
@@ -554,15 +513,6 @@ if (have_coot_python):
      #                                          False))
 
      # --- D ---
-
-     add_simple_coot_menu_menuitem(
-       submenu_models, "Delete Hydrogen Atoms",
-       lambda func: using_active_atom(delete_hydrogens, "aa_imol"))
-
-     add_simple_coot_menu_menuitem(
-       submenu_models, "Delete Side-chains for Active Chain",
-       lambda func: using_active_atom(
-         delete_sidechains_for_chain, "aa_imol", "aa_chain_id"))
 
      # now in main menu
 ##     add_simple_coot_menu_menuitem(

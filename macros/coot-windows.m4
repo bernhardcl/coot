@@ -56,7 +56,7 @@ AC_MSG_CHECKING([if this is MINGW on Windows])
     ;;
   esac
 
-AM_CONDITIONAL([OS_WIN32], [test x$windows = xtrue])
+AM_CONDITIONAL([OS_WIN32], [test x$windows    = xtrue])
 AM_CONDITIONAL([OS_WIN64], [test x$have_win64 = xyes])
 AC_MSG_RESULT([$have_windows_mingw])
 AC_SUBST(COOT_WINDOWS_CFLAGS)

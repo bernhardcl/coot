@@ -936,6 +936,15 @@ if [ "$use_sqlite" = "yes" ] ; then
 else
     sqlite_config_args=
 fi
+# Do we link with sqlite (for the ligands database)?
+# We allow the calling script to set use_sqlite=yes
+use_sqlite=${use_sqlite:=no}
+
+if [ "$use_sqlite" = "yes" ] ; then
+    sqlite_config_args=--with-sqlite3
+else
+    sqlite_config_args=
+fi
 
 # We want to add some compiler info in the directory name.
 # If CC is set, use that,
@@ -2213,7 +2222,7 @@ if [ $build_enhanced_ligand = 1 ]  ; then
 	      build_boost=
         else
             echo $install_top_dir/include/boost/version.hpp not exist, building boost
-	      build_boost=1
+  	        build_boost=1
         fi
     fi
     if [ -n "$build_rdkit" ] ; then
@@ -2222,7 +2231,7 @@ if [ $build_enhanced_ligand = 1 ]  ; then
 	      build_rdkit=
         else
             echo $install_top_dir/include/rdkit/RDGeneral/versions.h not exist, building rdkit
-	      build_rdkit=1
+  	        build_rdkit=1
         fi
     fi
 else
@@ -3725,7 +3734,6 @@ gsl_version=2.2.1
 ( 
 date
 pwd
-#if [ -n "$shared_flag" ] ; then
 if [ 0 == 1 ] ; then
 gzip -dc ${AUTOBUILD_SOURCES}/gsl-$gsl_version.tar.gz | tar xf -
 cd gsl-$gsl_version
@@ -4004,6 +4012,8 @@ fi
 #       scripting='--with-python'
 #   fi
 # fi
+
+
 
 
 ###############################################################################
