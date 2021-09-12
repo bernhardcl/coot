@@ -66,6 +66,7 @@ coot::uri_to_file_name(const std::string &uri) {
 
 }
 
+#ifdef WINDOWS_MINGW
 int
 coot::rename_win(const char *old_filename, const char *new_filename) {
     // BL says:: on windows (non POSIX) rename wont overwrite, so
@@ -119,3 +120,4 @@ coot::rename_win(const char *old_filename, const char *new_filename) {
     return ret;
 
 }
+#endif // WINDOWS_MINGW

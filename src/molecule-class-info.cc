@@ -3581,7 +3581,7 @@ molecule_class_info_t::make_bonds_type_checked() {
 
    bool debug = false;
    if (debug)
-      std::cout << "--- make_bonds_type_checked() called  with bonds_box_type "
+      std::cout << "--- make_bonds_type_checked() called with bonds_box_type "
                 << bonds_box_type << " vs "
                 << "NORMAL_BONDS " << coot::NORMAL_BONDS << " "
                 << "BONDS_NO_HYDROGENS " << coot::BONDS_NO_HYDROGENS << " "
@@ -5641,6 +5641,18 @@ molecule_class_info_t::close_yourself() {
       was_nxmap = true;
    }
 
+   bool delete_stored_data = false; // does this stop the crash on charybdis?
+   if (delete_stored_data) {
+      if (original_fphis_filled)
+         delete original_fphis_p;
+      
+      if (original_fobs_sigfobs_filled)
+         delete original_fobs_sigfobs_p;
+      
+      if (original_r_free_flags_p) // no flag for filled?
+         delete original_r_free_flags_p;
+   }
+      
    // delete from display manager combo box
    //
    graphics_info_t g;
