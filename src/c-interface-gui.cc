@@ -1502,6 +1502,12 @@ coot_no_state_real_exit(int retval) {
 void
 coot_save_state_and_exit(int retval, int save_state_flag) {
 
+   // wait for refinement to finish (c.f conditionally_wait_for_refinement_to_finish())
+
+   while (graphics_info_t::restraints_lock) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(30));
+   }
+
    if (save_state_flag) {
       save_state(); // we get error message in save_state()
    }
@@ -4232,24 +4238,28 @@ void set_map_colour(int imol, float red, float green, float blue) {
 
 
 #include "widget-headers.hh"
-
+#include "widget-from-builder.hh"
 
 void add_on_map_colour_choices(GtkWidget *menu) {
 
-   GCallback callback = G_CALLBACK(map_colour_mol_selector_activate);
-   std::string sub_menu_name = "map_colour1_menu";
-   GtkWidget *sub_menu = lookup_widget(menu, sub_menu_name.c_str());
+   std::cout << "in add_on_map_colour_choices()" << std::endl;
+
+   // GtkWidget *sub_menu = lookup_widget(menu, sub_menu_name.c_str());
+   // GtkWidget *sub_menu = widget_from_builder(sub_menu_name); // No, because it's dynamically added
+   //                                                           // in create_initial_map_color_submenu()
+
+   GtkWidget *sub_menu = gtk_menu_item_get_submenu(GTK_MENU_ITEM(menu));
    if (!sub_menu) {
-      std::cout << "ERROR: sub menu not found in add_on_map_colour_choices\n";
+      std::cout << "ERROR:: sub menu map_colour1_menu not found in add_on_map_colour_choices()\n";
    } else {
       gtk_container_foreach(GTK_CONTAINER(sub_menu),
                             my_delete_menu_items,
                             (gpointer) sub_menu);
+      GCallback callback = G_CALLBACK(map_colour_mol_selector_activate);
       for (int imol=0; imol<graphics_info_t::n_molecules(); imol++) {
          if (graphics_info_t::molecules[imol].has_xmap() ||
              graphics_info_t::molecules[imol].has_nxmap()) { // NXMAP-FIXME
-            std::string name;
-            name = graphics_info_t::molecules[imol].dotted_chopped_name();
+            std::string name = graphics_info_t::molecules[imol].dotted_chopped_name();
             add_map_colour_mol_menu_item(imol, name, sub_menu, callback);
          }
       }
@@ -4260,12 +4270,10 @@ void
 add_map_colour_mol_menu_item(int imol, const std::string &name,
                              GtkWidget *menu, GCallback callback) {
 
-   int *imol_data = new int;
-   *imol_data = imol;
    GtkWidget *menu_item = gtk_menu_item_new_with_label(name.c_str());
    gtk_container_add(GTK_CONTAINER(menu), menu_item);
    g_signal_connect(G_OBJECT(menu_item), "activate",
-                    callback, (gpointer) imol_data);
+                    callback, GINT_TO_POINTER(imol));
    gtk_widget_show(menu_item);
 
 }
@@ -4276,28 +4284,37 @@ void my_delete_menu_items(GtkWidget *widget, void *data) {
 }
 
 
+void show_map_colour_selector(int imol) {
+
+   if (is_valid_map_molecule(imol)) {
+      GtkWidget *color_selection_dialog = gtk_color_selection_dialog_new("Map Colour Selection");
+      GdkRGBA map_colour = get_map_colour(imol);
+      struct map_colour_data_type *map_colour_data = (struct map_colour_data_type *) malloc(sizeof(struct map_colour_data_type));
+      map_colour_data->imol = imol;
+      map_colour_data->color_selection = GTK_COLOR_SELECTION(gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_selection_dialog)));
+      GtkColorSelection *color_selection = GTK_COLOR_SELECTION(gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_selection_dialog)));
+      g_signal_connect(G_OBJECT(gtk_color_selection_dialog_get_color_selection(GTK_COLOR_SELECTION_DIALOG(color_selection_dialog))),
+                       "color_changed", G_CALLBACK(on_map_color_changed), map_colour_data);
+      GdkRGBA *map_colour_p = new GdkRGBA;
+      *map_colour_p = map_colour;
+      GdkColor map_gdk_color;      /* old style used by the Color Selection  */
+      map_gdk_color.red   = map_colour.red;
+      map_gdk_color.green = map_colour.green;
+      map_gdk_color.blue  = map_colour.blue;
+      gtk_color_selection_set_current_color(color_selection, &map_gdk_color);
+      gtk_widget_show(color_selection_dialog);
+      g_signal_connect(color_selection_dialog, "response", G_CALLBACK(on_map_color_selection_dialog_response), map_colour_p);
+      g_object_set_data(G_OBJECT(color_selection_dialog), "imol", GINT_TO_POINTER(imol));
+   }
+}
+
+
 void map_colour_mol_selector_activate (GtkMenuItem     *menuitem,
 				       gpointer         user_data) {
 
-   std::cout << "GTK-FIXME use modern color selector" << std::endl;
-   /*
-   GtkWidget *col_sel_window;
-   GtkWidget  *colorseldlg;
-   GtkColorSelection *colorsel;
-   gdouble *colour;
+   int imol = GPOINTER_TO_INT(user_data);
+   show_map_colour_selector(imol);
 
-   struct map_colour_data_type *map_colour_data;
-   map_colour_data = (struct map_colour_data_type *) user_data;
-
-   col_sel_window = create_map_colour_selection_window(map_colour_data);
-   colorseldlg = GTK_WIDGET(lookup_widget(col_sel_window, "map_colour_selection"));
-   colorsel = GTK_COLOR_SELECTION(GTK_COLOR_SELECTION_DIALOG(colorseldlg)->colorsel);
-
-   colour = get_map_colour(map_colour_data->imol);
-   gtk_color_selection_set_color(colorsel, colour);
-   gtk_widget_show(col_sel_window);
-   free(colour);
-   */
 }
 
 // ---------------------------------------------------------
@@ -5220,25 +5237,28 @@ void add_additional_representation_by_widget(GtkWidget *dialog) {
    graphics_draw();
 }
 
+#include "widget-from-builder.hh"
 
 GtkWidget *wrapped_create_residue_editor_select_monomer_type_dialog() {
-   GtkWidget *w = create_residue_editor_select_monomer_type_dialog();
-   GtkWidget *combo_box = lookup_widget(w, "residue_editor_select_monomer_type_combobox");
+
+   std::cout << "---------------- in wrapped_create_residue_editor_select_monomer_type_dialog()"
+             << std::endl;
+
+   // GtkWidget *w = create_residue_editor_select_monomer_type_dialog();
+   GtkWidget *w = widget_from_builder("residue_editor_select_monomer_type_dialog");
+   GtkWidget *combo_box = widget_from_builder("residue_editor_select_monomer_type_combobox");
+
+   std::cout << "debug::  in wrapped_create_residue_editor_select_monomer_type_dialog() w " << w
+             << " and combobox " << combo_box << std::endl;
+
    graphics_info_t g;
    std::vector<std::string> v = g.Geom_p()->monomer_types();
 
    // remove the 2 items that are already there from the glade interface (I suppose).
 
-   std::cout << "GTK-FIXME no gtk_combo_box_remove_text" << std::endl;
-
-   // gtk_combo_box_remove_text(GTK_COMBO_BOX(combo_box), 0);
-   // gtk_combo_box_remove_text(GTK_COMBO_BOX(combo_box), 0);
-
-
    for (unsigned int i=0; i<v.size(); i++) {
       std::string s = v[i];
-      std::cout << "GTK-FIXME no gtk_combo_box_append_text" << std::endl;
-      // gtk_combo_box_append_text (GTK_COMBO_BOX (combo_box), s.c_str());
+      gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT(combo_box), s.c_str());
       gtk_combo_box_set_active(GTK_COMBO_BOX(combo_box), i);
    }
    return w;
@@ -5266,13 +5286,13 @@ void clear_restraints_editor_by_dialog(GtkWidget *dialog) { /* close button pres
 
 
 
-void show_restraints_editor(const char *monomer_type) {
+void show_restraints_editor(std::string monomer_type) {
 
    int imol = 0; // maybe this should be passed? Pretty esoteric though.
 
    if (graphics_info_t::use_graphics_interface_flag) {
 
-      if (! monomer_type) {
+      if (false) {
 	 std::cout << "ERROR:: null monomer_type - no restraints editor" << std::endl;
       } else {
 	 graphics_info_t g;

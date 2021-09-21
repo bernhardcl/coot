@@ -1607,19 +1607,25 @@ set_main_window_title(const char *s) {
    }
 }
 
+#include "widget-from-builder.hh"
+
 /*! function to show or hide the vertical modelling toolbar */
 void set_show_modelling_toolbar(short int state) {
 
    if (graphics_info_t::use_graphics_interface_flag) {
-      std::string n = "model_fit_refine_toolbar_handlebox";
+      std::string wn = "model_fit_refine_toolbar_handlebox";
+      wn = "main_window_model_fit_dialog_frame"; // gtkbuilder name
 
-      GtkWidget *w = lookup_widget(graphics_info_t::get_main_window(), n.c_str());
+      // GtkWidget *w = lookup_widget(graphics_info_t::get_main_window(), n.c_str());
+      GtkWidget *w = widget_from_builder(wn);
       if (w) {
          if (state == 0) {
             gtk_widget_hide(w);
          } else {
             gtk_widget_show(w);
          }
+      } else {
+         std::cout << "ERROR:: widget with name " << wn << " not found" << std::endl;
       }
    }
 }
@@ -2182,16 +2188,21 @@ void set_symmetry_whole_chain(int imol, int state) {
 }
 
 
-
-
-void set_fps_flag(int thing) {
+/*! \brief set show frame-per-second flag */
+void set_show_fps(int flag) {
 
    graphics_info_t g;
-   g.SetShowFPS(thing);
+   g.SetShowFPS(flag);
    std::string cmd = "set-fps-flag";
    std::vector<coot::command_arg_t> args;
-   args.push_back(thing);
+   args.push_back(flag);
    add_to_history_typed(cmd, args);
+}
+
+
+void set_fps_flag(int flag) {
+
+   set_show_fps(flag);
 }
 
 // For people without PCs with fast graphics cards :)  [like me]
@@ -2736,9 +2747,9 @@ set_clipping_front(float v) {
    std::string cmd = "set-clipping-front";
    std::vector<coot::command_arg_t> args;
    args.push_back(v);
-   std::cout << "mid-1 adding to historyin in set_clipping_front" << std::endl;
+   // std::cout << "mid-1 adding to historyin in set_clipping_front" << std::endl;
    add_to_history_typed(cmd, args);
-   std::cout << "done set_clipping_front" << std::endl;
+   // std::cout << "done set_clipping_front" << std::endl;
 }
 
 
@@ -3565,7 +3576,7 @@ void set_smooth_scroll_steps_str(const char *text) {
 
 // useful interface for scripting
 void set_smooth_scroll_steps(int v) {
-      graphics_info_t::smooth_scroll_steps = v;
+      graphics_info_t::smooth_scroll_n_steps = v;
 }
 
 
@@ -3574,7 +3585,7 @@ char *get_text_for_smooth_scroll_steps() {
    char *text;
 
    text = (char *) malloc(100);
-   snprintf(text, 99, "%-5d", graphics_info_t::smooth_scroll_steps);
+   snprintf(text, 99, "%-5d", graphics_info_t::smooth_scroll_n_steps);
 
    return text;
 }
@@ -7143,7 +7154,7 @@ GtkWidget *wrapped_create_run_state_file_dialog() {
       w = graphics_info_t::get_widget_from_builder("run_state_file_dialog");
       vbox_mols = graphics_info_t::get_widget_from_builder("mols_vbox");
       if (w) {
-         std::cout << "wrapped_create_run_state_file_dialog():: got widget w " << w << std::endl;
+         // std::cout << "wrapped_create_run_state_file_dialog():: got widget w " << w << std::endl;
       } else {
          std::cout << "wrapped_create_run_state_file_dialog():: widget w was null " << std::endl;
       }

@@ -97,6 +97,8 @@
 #include "cc-interface.hh"
 #include "cc-interface-scripting.hh"
 
+#include "widget-from-builder.hh"
+
 #include "ligand/ligand.hh" // for rigid body fit by atom selection.
 
 #include "cmtz-interface.hh" // for valid columns mtz_column_types_info_t
@@ -794,11 +796,16 @@ void do_merge_molecules(GtkWidget *dialog) {
 
 GtkWidget *wrapped_create_mutate_sequence_dialog() {
 
+   // also used by wrapped_fit_loop_rama_search_dialog();
+
+   printf("DEBUG:: wrapped_fit_loop_rama_search_dialog(): -------------------------- start --------------\n");
+
    graphics_info_t g;
 
-   GtkWidget *w = create_mutate_sequence_dialog();
-
-   set_transient_and_position(COOT_MUTATE_RESIDUE_RANGE_WINDOW, w);
+   // GtkWidget *w = create_mutate_sequence_dialog();
+   GtkWidget *dialog = widget_from_builder("mutate_sequence_dialog");
+   printf("DEBUG:: wrapped_fit_loop_rama_search_dialog(): -------------------------- dialog: %p\n", dialog);
+   set_transient_and_position(COOT_MUTATE_RESIDUE_RANGE_WINDOW, dialog);
 
    // GtkWidget *molecule_option_menu = lookup_widget(w, "mutate_molecule_optionmenu");
    // GtkWidget *chain_option_menu    = lookup_widget(w, "mutate_molecule_chain_optionmenu");
@@ -807,12 +814,14 @@ GtkWidget *wrapped_create_mutate_sequence_dialog() {
    //    GtkWidget *entry2 = lookup_widget(w, "mutate_molecule_resno_2_entry");
    //    GtkWidget *textwindow = lookup_widget(w, "mutate_molecule_sequence_text");
 
-   GtkWidget *combobox_molecule = lookup_widget(w, "mutate_molecule_combobox");
-   GtkWidget *combobox_chain    = lookup_widget(w, "mutate_molecule_chain_combobox");
+   GtkWidget *combobox_molecule = widget_from_builder("mutate_molecule_combobox");
+   GtkWidget *combobox_chain    = widget_from_builder("mutate_molecule_chain_combobox");
    // GCallback callback_func      = G_CALLBACK(mutate_sequence_molecule_menu_item_activate);
    GCallback callback_func      = G_CALLBACK(mutate_sequence_molecule_combobox_changed);
 
-   // Get the default molecule and fill chain optionmenu with the molecules chains:
+   printf("DEBUG:: wrapped_fit_loop_rama_search_dialog(): -------------------------- combobox_molecule: %p\n", combobox_molecule);
+   printf("DEBUG:: wrapped_fit_loop_rama_search_dialog(): -------------------------- combobox_chain   : %p\n", combobox_chain);
+   // Get the default molecule and fill chain combobox with the molecules chains:
    int imol = -1;
    for (int i=0; i<graphics_info_t::n_molecules(); i++) {
       if (graphics_info_t::molecules[i].has_model()) {
@@ -824,21 +833,23 @@ GtkWidget *wrapped_create_mutate_sequence_dialog() {
       graphics_info_t::mutate_sequence_imol = imol;
       // GCallback callback = G_CALLBACK(mutate_sequence_chain_option_menu_item_activate);
 
+      printf("DEBUG:: wrapped_fit_loop_rama_search_dialog(): -------------------------- calling fill_combobox_with_coordinates_options()\n");
+      g.fill_combobox_with_coordinates_options(combobox_molecule, callback_func, imol);
+      printf("DEBUG:: wrapped_fit_loop_rama_search_dialog(): --------------------------    done fill_combobox_with_coordinates_options()\n");
+
       GCallback callback = G_CALLBACK(mutate_sequence_chain_combobox_changed);
+      printf("DEBUG:: wrapped_fit_loop_rama_search_dialog(): -------------------------- calling fill_combobox_with_chain_options()\n");
       std::string set_chain = graphics_info_t::fill_combobox_with_chain_options(combobox_chain, imol, callback);
       graphics_info_t::mutate_sequence_chain_from_combobox = set_chain;
 
    } else {
       graphics_info_t::mutate_sequence_imol = -1; // flag for can't mutate
    }
-
-   std::cout << "DEBUG:: filling option menu with default molecule " << imol << std::endl;
-   g.fill_combobox_with_coordinates_options(combobox_molecule, callback_func, imol);
-   return w;
+   return dialog;
 }
 
 
-void mutate_sequence_molecule_combobox_changed(GtkWidget *combobox, gpointer data) {
+void mutate_sequence_molecule_combobox_changed(GtkWidget *combobox, gpointer data) { // don't use this
 
    int imol = my_combobox_get_imol(GTK_COMBO_BOX(combobox));
 
@@ -850,6 +861,7 @@ void mutate_sequence_molecule_combobox_changed(GtkWidget *combobox, gpointer dat
    // graphics_info_t::mutate_sequence_chain_from_optionmenu = set_chain;
    graphics_info_t::mutate_sequence_chain_from_combobox = set_chain;
 
+   printf("DEBUG:: wrapped_fit_loop_rama_search_dialog(): -------------------------- end --------------\n");
 }
 
 void mutate_sequence_molecule_menu_item_activate(GtkWidget *item,
@@ -1044,13 +1056,13 @@ GtkWidget *wrapped_fit_loop_rama_search_dialog() {
 
    GtkWidget *w = wrapped_create_mutate_sequence_dialog();
 
-   GtkWidget *label              = lookup_widget(w, "function_for_molecule_label");
-   GtkWidget *method_frame       = lookup_widget(w, "loop_fit_method_frame");
-   GtkWidget *mutate_ok_button   = lookup_widget(w, "mutate_sequence_ok_button");
-   GtkWidget *fit_loop_ok_button = lookup_widget(w, "fit_loop_ok_button");
-   GtkWidget *checkbutton        = lookup_widget(w, "mutate_sequence_do_autofit_checkbutton");
+   GtkWidget *label              = widget_from_builder("function_for_molecule_label");
+   GtkWidget *method_frame       = widget_from_builder("loop_fit_method_frame");
+   GtkWidget *mutate_ok_button   = widget_from_builder("mutate_sequence_ok_button");
+   GtkWidget *fit_loop_ok_button = widget_from_builder("fit_loop_ok_button");
+   GtkWidget *checkbutton        = widget_from_builder("mutate_sequence_do_autofit_checkbutton");
 
-   GtkWidget *rama_checkbutton   = lookup_widget(w, "mutate_sequence_use_ramachandran_restraints_checkbutton");
+   GtkWidget *rama_checkbutton   = widget_from_builder("mutate_sequence_use_ramachandran_restraints_checkbutton");
 
    gtk_label_set_text(GTK_LABEL(label), "\nFit loop in Molecule:\n");
    gtk_widget_hide(mutate_ok_button);
@@ -1071,8 +1083,11 @@ void wrapped_fit_loop_db_loop_dialog() {
 
    if (graphics_info_t::prefer_python) {
 #ifdef USE_PYTHON
+      safe_python_command("import coot_gui");
+      std::cout << "debug:: wrapped_fit_loop_db_loop_dialog() safe_python_command coot_gui.click_protein_db_loop_gui()"
+                << std::endl;
       std::string c = graphics_info_t::pythonize_command_strings(v);
-      safe_python_command(c);
+      safe_python_command("coot_gui.click_protein_db_loop_gui()");
 #endif
    } else {
 #ifdef USE_GUILE
@@ -1083,157 +1098,17 @@ void wrapped_fit_loop_db_loop_dialog() {
 }
 
 
-// And the function called by the Fit Loop (OK) button.
-//
-void fit_loop_from_widget(GtkWidget *dialog) {
-
-#ifdef USE_PYTHON
-#ifdef USE_GUILE
-   short int state_lang = coot::STATE_SCM;
-#else
-   short int state_lang = coot::STATE_PYTHON;
-#endif
-#else // python not used
-#ifdef USE_GUILE
-   short int state_lang = coot::STATE_SCM;
-#else
-   short int state_lang = 0;
-#endif
-#endif
-
-   // decode the dialog here
-
-   GtkWidget *entry1 = lookup_widget(dialog, "mutate_molecule_resno_1_entry");
-   GtkWidget *entry2 = lookup_widget(dialog, "mutate_molecule_resno_2_entry");
-
-   int t;
-   int res1 = -9999, res2 = -99999;
-   graphics_info_t g;
-
-   const gchar *entry_text = gtk_entry_get_text(GTK_ENTRY(entry1));
-   t = atoi(entry_text);
-   if ((t > -999) && (t < 9999))
-      res1 = t;
-   entry_text = gtk_entry_get_text(GTK_ENTRY(entry2));
-   t = atoi(entry_text);
-   if ((t > -999) && (t < 9999))
-      res2 = t;
-
-// BL says: we should set a flag that we swapped the direction and swap back
-// before we call fit-gap to actually build backwards!!
-   int swap_flag = 0;
-   if (res2 < res1) {
-      t = res1;
-      res1 = res2;
-      res2 = t;
-      swap_flag = 1;
-   }
-
-
-   // set the imol and chain_id:
-   //
-   int imol = graphics_info_t::mutate_sequence_imol;
-
-   std::string chain_id = graphics_info_t::mutate_sequence_chain_from_combobox;
-
-   // Auto fit?
-   GtkWidget *checkbutton = lookup_widget(dialog, "mutate_sequence_do_autofit_checkbutton");
-   short int autofit_flag = 0;
-
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
-      autofit_flag = 1;
-
-   // use Ramachandran restraints?
-   int use_rama_restraints = 0;
-   GtkWidget *rama_checkbutton   = lookup_widget(dialog, "mutate_sequence_use_ramachandran_restraints_checkbutton");
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(rama_checkbutton)))
-      use_rama_restraints = 1;
-
-   if (imol >= 0) { // redundant
-      if (is_valid_model_molecule(imol)) {
-
-	 // get the sequence:
-	 GtkWidget *text = lookup_widget(dialog, "mutate_molecule_sequence_text");
-	 char *txt = NULL;
-
-	 GtkTextView *tv = GTK_TEXT_VIEW(text);
-	 GtkTextBuffer* tb = gtk_text_view_get_buffer(tv);
-	 GtkTextIter startiter;
-	 GtkTextIter enditer;
-	 gtk_text_buffer_get_iter_at_offset(tb, &startiter, 0);
-	 gtk_text_buffer_get_iter_at_offset(tb, &enditer, -1);
-	 txt = gtk_text_buffer_get_text(tb, &startiter, &enditer, 0);
-
-	 if (txt) {
-	    std::string sequence(txt);
-	    sequence = coot::util::plain_text_to_sequence(sequence);
-	    int text_widget_sequence_length = sequence.length();
-	    std::cout << "INFO:: mutating to the sequence :" << sequence
-		      << ":" << std::endl;
-
-	    if (int(sequence.length()) == (res2 - res1 + 1) ||
-	        sequence == "") {
-	    } else {
-	       // so set sequence to poly-ala and give us a message:
-	       sequence = "";
-	       for (int i=0; i<(res2 - res1 + 1); i++)
-		  sequence += "A";
-
-	       std::cout << "WARNING:: Sequence of length: "
-			 << text_widget_sequence_length << " but residue range size: "
-			 << res2 - res1 + 1 << ".  Using Poly-Ala\n";
-	       std::string s("WARNING:: Mis-matched sequence length\nUsing Poly Ala");
-	       GtkWidget *w = wrapped_nothing_bad_dialog(s);
-	       gtk_widget_show(w);
-	    }
-            if (swap_flag == 1) {
-               t = res1;
-               res1 = res2;
-               res2 = t;
-            }
-
-	    std::vector<std::string> cmd_strings;
-	    cmd_strings.push_back("gap.fit_gap"); // was just "fit-gap" - safe_scheme_command will have to deal with that.
-	    cmd_strings.push_back(graphics_info_t::int_to_string(imol));
-	    cmd_strings.push_back(single_quote(chain_id));
-	    cmd_strings.push_back(graphics_info_t::int_to_string(res1));
-	    cmd_strings.push_back(graphics_info_t::int_to_string(res2));
-	    cmd_strings.push_back(single_quote(sequence));
-	    cmd_strings.push_back(graphics_info_t::int_to_string(use_rama_restraints));
-	    std::string cmd = g.state_command(cmd_strings, state_lang);
-
-#ifdef USE_GUILE
-	    if (state_lang == coot::STATE_SCM) {
-	       safe_scheme_command(cmd);
-	    }
-#else
-#ifdef USE_PYTHON
-            if (state_lang == coot::STATE_PYTHON) {
-               safe_python_command(cmd);
-            }
-#endif // PYTHON
-#endif // GUILE
-	 }
-      }
-   }
-}
-
-
 /*  ----------------------------------------------------------------------- */
 /*                         Align and Mutate GUI                             */
 /*  ----------------------------------------------------------------------- */
 GtkWidget *wrapped_create_align_and_mutate_dialog() {
 
    graphics_info_t g;
-   GtkWidget *w = create_align_and_mutate_dialog();
+   // GtkWidget *w = create_align_and_mutate_dialog();
+   GtkWidget *w = widget_from_builder("align_and_mutate_dialog");
 
-   // GtkWidget *mol_optionmenu   = lookup_widget(w, "align_and_mutate_molecule_optionmenu");
-   // GtkWidget *chain_optionmenu = lookup_widget(w, "align_and_mutate_chain_optionmenu");
-   GtkWidget *mol_combobox   = lookup_widget(w, "align_and_mutate_molecule_combobox");
-   GtkWidget *chain_combobox = lookup_widget(w, "align_and_mutate_chain_combobox");
-
-   // GCallback callback = G_CALLBACK(align_and_mutate_molecule_menu_item_activate);
-   // GCallback chain_callback = GCallback(align_and_mutate_chain_option_menu_item_activate);
+   GtkWidget *mol_combobox   = widget_from_builder("align_and_mutate_molecule_combobox");
+   GtkWidget *chain_combobox = widget_from_builder("align_and_mutate_chain_combobox");
 
    GCallback molecule_callback = G_CALLBACK(align_and_mutate_molecule_combobox_changed);
    GCallback    chain_callback = G_CALLBACK(align_and_mutate_chain_combobox_changed);
@@ -1281,28 +1156,28 @@ int do_align_mutate_sequence(GtkWidget *w) {
    bool renumber_residues_flag = 0; // make this derived from the GUI one day
    int imol = graphics_info_t::align_and_mutate_imol;
 
-   GtkWidget *molecule_combobox = lookup_widget(w, "align_and_mutate_molecule_combobox");
-   GtkWidget    *chain_combobox = lookup_widget(w, "align_and_mutate_chain_combobox");
+   GtkWidget *molecule_combobox = widget_from_builder("align_and_mutate_molecule_combobox");
+   GtkWidget    *chain_combobox = widget_from_builder("align_and_mutate_chain_combobox");
    std::string chain_id = get_active_label_in_combobox(GTK_COMBO_BOX(chain_combobox));
    imol = my_combobox_get_imol(GTK_COMBO_BOX(molecule_combobox));
 
-   GtkWidget *autofit_checkbutton = lookup_widget(w, "align_and_mutate_autofit_checkbutton");
+   GtkWidget *autofit_checkbutton = widget_from_builder("align_and_mutate_autofit_checkbutton");
 
-   std::cout << "--- in do_align_mutate_sequence(): combobox " << molecule_combobox
-	     << " " << GTK_IS_COMBO_BOX(molecule_combobox) << " chain-id:" << chain_id << ":"
-	     << std::endl;
+   // std::cout << "--- in do_align_mutate_sequence(): combobox " << molecule_combobox
+   //           << " " << GTK_IS_COMBO_BOX(molecule_combobox) << " chain-id:" << chain_id << ":"
+   //           << std::endl;
 
-   short int do_auto_fit = 0;
+   bool do_auto_fit = false;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(autofit_checkbutton)))
-      do_auto_fit = 1;
+      do_auto_fit = true;
 
    graphics_info_t g;
    int imol_refinement_map = g.Imol_Refinement_Map();
 
-   short int early_stop = 0;
-   if (do_auto_fit == 1)
+   bool early_stop = false;
+   if (do_auto_fit)
       if (imol_refinement_map == -1)
-	 early_stop = 1;
+	 early_stop = true;
 
    if (early_stop) {
       std::string s = "WARNING:: autofit requested, but \n   refinement map not set!";
@@ -1314,7 +1189,7 @@ int do_align_mutate_sequence(GtkWidget *w) {
 
       handled_state = 1;
       if (imol >= 0) {
-	 GtkWidget *text = lookup_widget(w, "align_and_mutate_sequence_text");
+	 GtkWidget *text = widget_from_builder("align_and_mutate_sequence_text");
 	 char *txt = NULL;
 
 	 // text is a GtkTextView in GTK2
@@ -1762,6 +1637,8 @@ void  do_edit_copy_molecule() {
 
    // std::string cmd = "(molecule-chooser-gui \"Molecule to Copy...\" (lambda (imol) (copy-molecule imol)))";
 
+   // This and do_edit_copy_fragment() are hideous. Do it in pure gtk/C++ - how hard can it be!?
+
    std::string cmd =
       "(generic-chooser-and-entry-and-checkbutton \"Copy Molecule\" \"Selection\" \"/\" \"Move Molecule Here?\" (lambda (imol text button-state) (let ((imol-new (copy-molecule imol))) (if button-state (move-molecule-to-screen-centre imol-new) (valid-model-molecule? imol-new)))))";
 
@@ -1772,7 +1649,7 @@ void  do_edit_copy_molecule() {
 #ifdef USE_PYTHON
    if (state_lang == coot::STATE_PYTHON) {
 
-      std::string cmd = "molecule_chooser_gui(\"Molecule to Copy...\", lambda imol: copy_molecule(imol))";
+      std::string cmd = "import coot_gui; coot_gui.molecule_chooser_gui(\"Molecule to Copy...\", lambda imol: coot.copy_molecule(imol))";
       safe_python_command(cmd);
    }
 #endif // PYTHON
@@ -1813,7 +1690,7 @@ void  do_edit_copy_fragment() {
       // This is a tricky, long winded one. We first make a function which is
       // then executed and all has to reside within exec as we cannot have
       // multiple line statements in python... lets try
-      std::string cmd = "exec(\'def atom_selection_from_fragment_func(imol, text, button_state): \\n \\t jmol = new_molecule_by_atom_selection(imol, text) \\n \\t if button_state: move_molecule_to_screen_centre(jmol) \\n \\t return valid_model_molecule_qm(jmol) \\ngeneric_chooser_and_entry_and_check_button(\"From which molecule shall we copy the fragment?\", \"Atom selection for fragment\", \"//A/1-10\", \"Move new molecule here?\", lambda imol, text, button_state: atom_selection_from_fragment_func(imol, text, button_state), False)\')";
+      std::string cmd = "exec(\'import coot_gui\\ndef atom_selection_from_fragment_func(imol, text, button_state):\\n \\t jmol = coot.new_molecule_by_atom_selection(imol, text) \\n \\t if button_state: coot.move_molecule_to_screen_centre_internal(jmol) \\n \\t return coot_utils.valid_model_molecule_qm(jmol) \\ncoot_gui.generic_chooser_and_entry_and_check_button(\"From which molecule shall we copy the fragment?\", \"Atom selection for fragment\", \"//A/1-10\", \"Move new molecule here?\", lambda imol, text, button_state: atom_selection_from_fragment_func(imol, text, button_state), False)\')";
       safe_python_command(cmd);
    }
 #endif // PYTHON
@@ -1846,7 +1723,7 @@ void  do_edit_replace_residue() {
 #ifdef USE_PYTHON
    if (state_lang == coot::STATE_PYTHON) {
 
-      std::string cmd = "generic_single_entry(\"Replace this residue with residue of type:\", \"ALA\", \"Mutate\", lambda text: using_active_atom(mutate_by_overlap, \"aa_imol\", \"aa_chain_id\", \"aa_res_no\", text))";
+      std::string cmd = "import coot_gui\ncoot_gui.generic_single_entry(\"Replace this residue with residue of type:\", \"ALA\", \"Mutate\", lambda text: coot_utils.using_active_atom(coot_utils.mutate_by_overlap, \"aa_imol\", \"aa_chain_id\", \"aa_res_no\", text))";
       safe_python_command(cmd);
    }
 #endif // PYTHON
@@ -1882,7 +1759,7 @@ void  do_edit_replace_fragment() {
    if (state_lang == coot::STATE_PYTHON) {
 
       std::string cmd =
-         "molecule_chooser_gui(\"Define the molecule that needs updating\", lambda imol_base: generic_chooser_and_entry(\"Molecule that contains the new fragment:\", \"Atom Selection\", \"//\", lambda imol_fragment, atom_selection_str: replace_fragment(imol_base, imol_fragment, atom_selection_str)))";
+         "import coot_gui\ncoot_gui.molecule_chooser_gui(\"Define the molecule that needs updating\", lambda imol_base: coot_gui.generic_chooser_and_entry(\"Molecule that contains the new fragment:\", \"Atom Selection\", \"//\", lambda imol_fragment, atom_selection_str: coot.replace_fragment(imol_base, imol_fragment, atom_selection_str)))";
       safe_python_command(cmd);
    }
 #endif // PYTHON

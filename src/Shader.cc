@@ -77,7 +77,7 @@ void Shader::init(const std::string &file_name, Shader::Entity_t e) {
    std::stringstream ss;
    ss << std::setw(33) << fn;
    fn = ss.str();
-   
+
    std::cout << "Shader compile " << fn << " " << message << std::endl;
 }
 
@@ -292,6 +292,13 @@ Shader::set_vec2_for_uniform(const std::string &u_name, const glm::vec2 &v) {
 
    GLuint idx = glGetUniformLocation_internal(u_name);
    glUniform2fv(idx, 1, glm::value_ptr(v));
+   GLenum err = glGetError();
+   std::string e;
+   if (err == GL_INVALID_OPERATION)
+      e = " GL_INVALID_OPERATION";
+   if (err)
+      std::cout << "GL ERROR:: Shader::set_vec2_for_uniform() error: " << err
+                << " for location idx " << idx << e << std::endl;
 }
 
 void Shader::set_more_uniforms_for_molecular_triangles() {
@@ -385,18 +392,23 @@ Shader::create() const {
    glAttachShader(program, fs);
    glLinkProgram(program);
    glValidateProgram(program);
+   GLint status;
+   glGetProgramiv(program, GL_VALIDATE_STATUS, &status);
+   if (status == GL_TRUE) {
+      // good
+      message = "success";
+   } else {
+      message = "fail";
+   }
    GLuint err = glGetError();
    if (err) {
       std::cout << "Shader::create() err " << err << std::endl;
       message = "error"; // this value is tested in init().
-   } else {
-      // std::cout << "   Shader::create() link was good " << std::endl;
-      message = "success";
    }
-
    glDeleteShader(vs);
    glDeleteShader(fs);
 
+   // std::cout << "create() for " << name << " returns message " << message << std::endl;
    return std::pair<unsigned int, std::string> (program, message);
 }
 

@@ -214,6 +214,7 @@ void set_draw_mesh(int imol, int mesh_index, short int state) {
       int size = graphics_info_t::molecules[imol].meshes.size();
       if (mesh_index >= 0 && mesh_index < size) {
          graphics_info_t::molecules[imol].meshes[mesh_index].draw_this_mesh = state;
+         graphics_info_t::graphics_draw();
       }
    }
 }
@@ -232,6 +233,7 @@ void set_map_material_specular(int imol, float specular_strength, float shinines
 
    if (is_valid_map_molecule(imol)) {
       molecule_class_info_t &m = graphics_info_t::molecules[imol];
+      m.material_for_maps.turn_specularity_on(true);
       m.material_for_maps.specular_strength = specular_strength;
       m.material_for_maps.shininess         = shininess;
       graphics_draw();

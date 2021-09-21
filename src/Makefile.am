@@ -118,7 +118,9 @@ dist_cootdata_DATA = atom-label.shader blur.shader central-cube.shader \
                      instanced-objects.shader particles.shader lines.shader \
                      draw-map-cap.shader lines-pulse.shader rama-balls.shader \
 		     hud-geometry-tooltip-text.shader happy-face-residue-markers.shader \
-		     model-as-mesh.shader ligand-view.shader symmetry-atoms-lines.shader
+		     model-as-mesh.shader ligand-view.shader symmetry-atoms-lines.shader \
+		     rama-plot-phi-psi-markers.shader rama-plot-axes-and-ticks.shader \
+		     hud-image-texture.shader
 
 
 # use -DHAVE_MMDBSSM or use (expanded from) $(MMDBSSM) works.
@@ -392,6 +394,7 @@ libcootsumo_la_SOURCES = \
 	c-interface-test.cc      \
 	cc-interface.hh		 \
 	cc-interface-alignment.cc \
+	cc-interface-graphics.cc \
 	cc-interface-merge.cc    \
 	cc-interface-alignment.hh \
 	cc-interface-ncs.hh      \
@@ -461,6 +464,8 @@ libcootsumo_la_SOURCES = \
 	drag-and-drop.cc         \
 	draw-generic-display-objects.cc \
 	eyes.cc eyes.hh		 \
+	fit-loop-gui.cc          \
+	fit-loop-gui.hh          \
 	flev.hh			 \
 	flev.cc                  \
         framebuffer.cc           \
@@ -478,6 +483,8 @@ libcootsumo_la_SOURCES = \
 	get-residue.cc           \
 	get-monomer.hh           \
 	get-monomer.cc           \
+	gl-rama-plot.cc          \
+	gl-rama-plot.hh          \
 	gl-bits.hh		 \
 	globjects.cc 		 \
 	globjects.h gl-matrix.h  \
@@ -550,7 +557,7 @@ libcootsumo_la_SOURCES = \
 	matrix-utils.cc          \
         map-statistics.hh        \
 	Mesh.cc Mesh.hh          \
-	Mesh-from-graphical-bonds.cc     \
+	Mesh-from-graphical-bonds-instanced.cc     \
 	meshed-generic-display-object.hh \
 	meshed-generic-display-object.cc \
 	merge-molecule-results-info-t.hh \
@@ -649,8 +656,12 @@ libcootsumo_la_SOURCES = \
 	xmap-utils.cc 		 \
 	xmap-utils.h             \
 	remarks-browser-gtk-widgets.hh \
+	rama-plot-phi-psi.cc     \
+	rama-plot-phi-psi.hh     \
 	rama-rota-score.hh 	 \
 	spherical-density.cc     \
+	single-map-properties-dialog.cc \
+	single-map-properties-dialog.hh \
 	fragment-info.hh 	 \
 	atom-name-bits.hh 	 \
 	additional-representation.hh 	   \

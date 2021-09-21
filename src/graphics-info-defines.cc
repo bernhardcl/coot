@@ -316,6 +316,7 @@ graphics_info_t::check_if_in_residue_info_define(GdkEventButton *event) {
 	 int im = nearest_atom_index_info.imol; 
 	 // std::cout << "info: clicked on imol: " << im << std::endl;
 	 // a c-interface-info function...
+         std::cout << "--------------- debug:: in check_if_in_residue_info_define() calling output_residue_info_dialog() " << std::endl;
 	 output_residue_info_dialog(im, nearest_atom_index_info.atom_index); 
 	 info.in_residue_info_define = 0;
 	 normal_cursor();
@@ -819,7 +820,7 @@ graphics_info_t::check_if_in_delete_item_define(GdkEventButton *event,
       delete_item_pulse_centres = positions;
       gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
       bool broken_line_mode = true;
-      lines_mesh_for_delete_item_pulse.setup_pulse(&shader_for_lines_pulse, broken_line_mode);
+      lines_mesh_for_delete_item_pulse.setup_pulse(broken_line_mode);
       gtk_widget_add_tick_callback(glareas[0], delete_item_pulse_func, user_data, NULL);
 
    };
@@ -832,7 +833,7 @@ graphics_info_t::check_if_in_delete_item_define(GdkEventButton *event,
       delete_item_pulse_centres = positions;
       gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
       bool broken_line_mode = true;
-      lines_mesh_for_delete_item_pulse.setup_pulse(&shader_for_lines_pulse, broken_line_mode);
+      lines_mesh_for_delete_item_pulse.setup_pulse(broken_line_mode);
       gtk_widget_add_tick_callback(glareas[0], delete_item_pulse_func, user_data, NULL);
 
    };
@@ -851,7 +852,7 @@ graphics_info_t::check_if_in_delete_item_define(GdkEventButton *event,
       delete_item_pulse_centres = all_positions;
       gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
       bool broken_line_mode = true;
-      lines_mesh_for_delete_item_pulse.setup_pulse(&shader_for_lines_pulse, broken_line_mode);
+      lines_mesh_for_delete_item_pulse.setup_pulse(broken_line_mode);
       gtk_widget_add_tick_callback(glareas[0], delete_item_pulse_func, user_data, NULL);
 
    };

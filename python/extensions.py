@@ -89,6 +89,24 @@ if True:
      if menu:
        coot_gui.add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
                                      lambda func: coot_gui.water_coordination_gui())
+       coot_gui.add_simple_coot_menu_menuitem(menu, "Atom Overlaps (Coot)",
+                                     lambda func:
+                                              coot_utils.using_active_atom(coot_all_atom_contact_dots, "aa_imol"))
+       coot_gui.add_simple_coot_menu_menuitem(menu, "All-Atom Contact Dots (Molprobity)",
+                                     lambda func:
+                                              coot_utils.using_active_atom(probe, "aa_imol"))
+
+       coot_gui.add_simple_coot_menu_menuitem(menu,"Atom Overlaps Dialog",
+                                     lambda func:
+                                     using_active_atom(
+                                       coot_gui.molecule_atom_overlaps_gui, "aa_imol"))
+
+       coot_gui.add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
+                                     lambda func: coot_gui.water_coordination_gui())
+
+       coot_gui.add_simple_coot_menu_menuitem(menu, "Pepflips from Difference Map...",
+                                     lambda func: coot_gui.pepflips_by_difference_map_gui())
+
 
        def validation_outliers_func():
          with coot_utils.UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
@@ -118,21 +136,25 @@ if True:
      #           extensions
      # ---------------------------------------------
 
-     menu = coot_gui.coot_menubar_menu("Extensions")
+     # menu = coot_gui.coot_menubar_menu("Extensions")
+
+     # calculate_menu = menu
+     # draw_menu = menu
+     # edit_menu = menu
 
      calculate_menu = coot_gui.coot_menubar_menu("Calculate")
      draw_menu      = coot_gui.coot_menubar_menu("Draw")
      edit_menu      = coot_gui.coot_menubar_menu("Edit")
      edit_settings_menu = get_existing_submenu(edit_menu, "Settings...")
-     print("###### debug edit_settings_menu", edit_settings_menu)
-     print("###### debug dir on edit_settings_menu", dir(edit_settings_menu))
-
-     calculate_menu = menu
-     draw_menu = menu
-     edit_menu = menu
+     calculate_all_molecule_menu = get_existing_submenu(calculate_menu, "All Molecule...")
 
      # make submenus:
      submenu_all_molecule = Gtk.Menu()
+
+     # print("DEBUG::::::::::::::::::::: edit_settings_menu:", edit_settings_menu)
+     # print("DEBUG::::::::::::::::::::: calculate_all_molecule_menu:", calculate_menu)
+     # print("DEBUG::::::::::::::::::::: submenu_all_molecule:", submenu_all_molecule)
+
      menuitem_2 = Gtk.MenuItem("All Molecule...")
      submenu_maps = Gtk.Menu()
      menuitem_3 = Gtk.MenuItem("Maps...")
@@ -153,7 +175,8 @@ if True:
      submenu_ncs = Gtk.Menu()
      menuitem_ncs = Gtk.MenuItem("NCS...")
 
-     menuitem_2.set_submenu(submenu_all_molecule)
+     # menuitem_2.set_submenu(submenu_all_molecule) replace by the following
+     calculate_all_molecule_menu.set_submenu(submenu_all_molecule)
      calculate_menu.append(menuitem_2)
      menuitem_2.show()
 
@@ -177,7 +200,8 @@ if True:
      draw_menu.append(menuitem_pisa)
      menuitem_pisa.show()
 
-     menuitem_7.set_submenu(submenu_settings)
+     # menuitem_7.set_submenu(submenu_settings)
+     edit_settings_menu.set_submenu(submenu_settings)
      menu.append(menuitem_7)
      menuitem_7.show()
 
@@ -185,15 +209,15 @@ if True:
      calculate_menu.append(menuitem_modules)
      menuitem_modules.show()
 
-     menuitem_7.set_submenu(submenu_settings)
-     edit_menu.append(menuitem_7)
-     menuitem_7.show()
+     # menuitem_7.set_submenu(submenu_settings) # already set
+     # edit_menu.append(menuitem_7)
+     # menuitem_7.show()
 
      # where does the Refine submenu go? In Edit -> Settings
      edit_settings_submenu = menuitem_7
-     menuitem_5.set_submenu(submenu_refine)
-     edit_settings_submenu.append(menuitem_5)
-     menuitem_5.show()
+     # menuitem_5.set_submenu(submenu_refine)
+     # edit_settings_submenu.append(menuitem_5)
+     # menuitem_5.show()
 
      # give edit_settings_menu a submenu
      # submenu_settings = Gtk.Menu()
@@ -207,7 +231,6 @@ if True:
      # menuitem_pdbe.set_submenu(submenu_pdbe)
      # menu.append(menuitem_pdbe)
      # menuitem_pdbe.show()
-     
      
 
      #---------------------------------------------------------------------
@@ -302,18 +325,18 @@ if True:
      #---------------------------------------------------------------------
 
      def mask_map_func():
-       f = ""
-       molecule_list = coot_utils.molecule_number_list()
-       if not molecule_list == []:
-          for i in molecule_list:
-            if coot.is_valid_map_molecule(molecule_list[i]):
-              print("%s is a valid map molecule" %molecule_list[i])
-              f = str(molecule_list[i])
-              break
-          else:
-            print("BL WARNING:: dunno what to do!? No map found")
-            f = False
-       return f
+         f = ""
+         molecule_list = coot_utils.molecule_number_list()
+         if not molecule_list == []:
+             for i in molecule_list:
+                 if coot.is_valid_map_molecule(molecule_list[i]):
+                     print("%s is a valid map molecule" %molecule_list[i])
+                     f = str(molecule_list[i])
+                     break
+         else:
+             print("BL WARNING:: dunno what to do!? No map found")
+             f = False
+         return f
 
      def mask_map_func1(active_state):
          print("changed active_state to ", active_state)
@@ -491,7 +514,7 @@ if True:
      
      coot_gui.add_simple_coot_menu_menuitem(
        submenu_models,
-       "Add Hydrogens",
+       "Add Hydrogen Atoms",
        lambda func: add_hydrogens_with_coot_reduce())
 
 
@@ -554,6 +577,15 @@ if True:
      #                                          False))
 
      # --- D ---
+
+     coot_gui.add_simple_coot_menu_menuitem(
+       submenu_models, "Delete Hydrogen Atoms",
+       lambda func: using_active_atom(delete_hydrogens, "aa_imol"))
+
+     coot_gui.add_simple_coot_menu_menuitem(
+       submenu_models, "Delete Side-chains for Active Chain",
+       lambda func: using_active_atom(
+         delete_sidechains_for_chain, "aa_imol", "aa_chain_id"))
 
      # now in main menu
 ##     coot_gui.add_simple_coot_menu_menuitem(
@@ -776,7 +808,7 @@ if True:
        lambda func: morph_fit_chain_func(7)
        )
      
-     
+
      # -- N --
 
      def new_mol_sphere_func1(imol, text):
@@ -990,7 +1022,6 @@ if True:
          "Which molecule to check for Atoms with zero occupancies?",
          lambda imol: coot_gui.zero_occ_atoms_gui(imol)))
 
-     
      #---------------------------------------------------------------------
      #     NCS functions
      #
@@ -1676,6 +1707,10 @@ if True:
      # ---------------------------------------------------------------------
 
      coot_gui.add_simple_coot_menu_menuitem(
+         submenu_modules, "Carbohydrate",
+         lambda func: add_module_carbohydrate_gui())
+
+     coot_gui.add_simple_coot_menu_menuitem(
        submenu_modules, "CCP4...",
        lambda func: coot_gui.add_module_ccp4())
 
@@ -1694,12 +1729,11 @@ if True:
      coot_gui.add_simple_coot_menu_menuitem(
          submenu_modules, "Carbohydrate",
          lambda func: gui_add_linked_cho.add_module_carbohydrate_gui())
-     
+
      coot_gui.add_simple_coot_menu_menuitem(
          submenu_modules, "Cryo-EM",
          lambda func: coot_gui.add_module_cryo_em())
 
-     
      # ---------------------------------------------------------------------
      #     Settings
      # ---------------------------------------------------------------------

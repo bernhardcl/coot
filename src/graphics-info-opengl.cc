@@ -23,14 +23,19 @@ graphics_info_t::init_shaders() {
                                                            shader_for_hud_geometry_bars,
                                                            shader_for_hud_geometry_labels,
                                                            shader_for_hud_geometry_tooltip_text,
+                                                           shader_for_hud_buttons,
+                                                           shader_for_hud_image_texture,
                                                            shader_for_atom_labels,
                                                            shader_for_moleculestotriangles,
+                                                           shader_for_hud_lines,
                                                            shader_for_lines,
                                                            shader_for_lines_pulse,
                                                            shader_for_rama_balls,
                                                            shader_for_particles,
                                                            shader_for_instanced_objects,
                                                            shader_for_happy_face_residue_markers,
+                                                           shader_for_rama_plot_phi_phis_markers,
+                                                           shader_for_rama_plot_axes_and_ticks,
                                                            shader_for_ligand_view,
                                                            shader_for_screen,
                                                            shader_for_blur};
@@ -53,6 +58,7 @@ graphics_info_t::init_shaders() {
    shader_for_hud_text.init("hud-text.shader", Shader::Entity_t::HUD_TEXT);
    shader_for_hud_geometry_bars.init("hud-bars.shader", Shader::Entity_t::HUD_TEXT);
    shader_for_hud_geometry_labels.init("hud-labels.shader", Shader::Entity_t::HUD_TEXT);
+   shader_for_hud_image_texture.init("hud-image-texture.shader", Shader::Entity_t::HUD_TEXT);
    shader_for_atom_labels.init("atom-label.shader", Shader::Entity_t::MODEL);
    shader_for_moleculestotriangles.init("moleculestotriangles.shader", Shader::Entity_t::GENERIC_DISPLAY_OBJECT);
    shader_for_lines.init("lines.shader", Shader::Entity_t::GENERIC_DISPLAY_OBJECT);
@@ -65,6 +71,13 @@ graphics_info_t::init_shaders() {
    shader_for_ligand_view.init("ligand-view.shader", Shader::Entity_t::NONE);
    shader_for_model_as_meshes.init("model-as-mesh.shader", Shader::Entity_t::MODEL);
    shader_for_symmetry_atoms_bond_lines.init("symmetry-atoms-lines.shader", Shader::Entity_t::MAP);
+   shader_for_hud_buttons.init("hud-bars.shader", Shader::Entity_t::HUD_TEXT); // ! needs a better name
+   shader_for_rama_plot_axes_and_ticks.init("rama-plot-axes-and-ticks.shader", Shader::Entity_t::HUD_TEXT);
+   shader_for_rama_plot_phi_phis_markers.init("rama-plot-phi-psi-markers.shader", Shader::Entity_t::HUD_TEXT);
+   shader_for_hud_lines.init("hud-lines.shader", Shader::Entity_t::MODEL);
+
+   // testing image textures
+   camera_facing_quad_shader.init("camera-facing-quad-shader-for-testing.shader", Shader::Entity_t::MODEL);
 
    // we use the above to make an image/texture in the framebuffer and use then
    // shader_for_screen to convert that framebuffer to the screen buffer.
@@ -76,9 +89,7 @@ graphics_info_t::init_shaders() {
          status = false;
       }
    }
-
    return status;
-
 }
 
 

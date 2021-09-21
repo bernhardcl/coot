@@ -380,15 +380,15 @@ bool init_from_gtkbuilder() {
          graphics_info_t::set_main_window(main_window);
 
       graphics_info_t::statusbar = sb;
+
       GtkWidget *glarea = create_and_pack_gtkglarea(graphics_hbox, true);
       if (glarea) {
          graphics_info_t::glareas.push_back(glarea);
 
-         // gtk_gl_area_make_current(GTK_GL_AREA(glarea));
          GError *err = gtk_gl_area_get_error(GTK_GL_AREA(glarea));
          if (err)
-            std::cout << "ERROR in init()" << err << std::endl;
-         
+            std::cout << "ERROR:: GL error in init_from_gtkbuilder()" << err << std::endl;
+
          gtk_builder_connect_signals(builder, main_window);
          gtk_widget_show(main_window);
 
@@ -409,6 +409,7 @@ bool init_from_gtkbuilder() {
    return status;
 }
 
+#include "widget-from-builder.hh"
 
 // This main is used for both python/guile useage and unscripted.
 int
@@ -500,9 +501,16 @@ main (int argc, char *argv[]) {
 
             gtk_widget_show(glarea);
             my_glarea_add_signals_and_events(glarea);
-            std::cout << "............ done setup signals and events " << std::endl;
             on_glarea_realize(GTK_GL_AREA(glarea)); // hacketty hack. I don't know why realize is not called
-            // without this.
+                                                    // without this.
+
+            // We need to connect the submenu to the menus (which are
+            // accessible via window1)
+            GtkWidget *main_window = widget_from_builder("main_window");
+            create_initial_map_color_submenu(main_window);
+            // create_initial_ramachandran_mol_submenu(main_window);
+            //  create_initial_sequence_view_mol_submenu(main_window);
+
             // std::cout << "------------------------- calling setup_python" << std::endl;
             setup_python(argc, argv);
          } else {
@@ -560,7 +568,7 @@ main (int argc, char *argv[]) {
    // Must be the last thing in this function, code after it does not get
    // executed (if we are using guile)
    //
-   std::cout << "------------------------------- into scm_boot_guile we go!" << std::endl;
+   // std::cout << "------------------------------- into scm_boot_guile we go!" << std::endl;
    my_wrap_scm_boot_guile(argc, argv);
 #endif
 

@@ -1352,7 +1352,7 @@ molecule_class_info_t::update_symmetry() {
    // a bit of a hack...
    int shift_search_size = g.symmetry_shift_search_size;
 
-   std::cout << "DEBUG:: ---- update_symmetry start ----- " << std::endl;
+   // std::cout << "DEBUG:: ---- update_symmetry start ----- " << std::endl;
 
    if ((graphics_info_t::show_symmetry == 1) && (show_symmetry == 1)) {
 
@@ -1436,6 +1436,8 @@ molecule_class_info_t::update_symmetry() {
 void
 molecule_class_info_t::draw_extra_restraints_representation() {
 
+   std::cout << "old code in draw_extra_restraints_representation() " << std::endl;
+#if 0
    if (draw_it) {
       if (draw_it_for_extra_restraints) {
          if (extra_restraints_representation.bonds.size() > 0) {
@@ -1483,11 +1485,15 @@ molecule_class_info_t::draw_extra_restraints_representation() {
    }
 
    draw_parallel_plane_restraints_representation();
+#endif
 }
 
 void
 molecule_class_info_t::draw_parallel_plane_restraints_representation() {
 
+   std::cout << "old code in draw_parallel_plane_restraints_representation() " << std::endl;
+
+#if 0
    if (draw_it) {
       if (draw_it_for_extra_restraints) {
          if (extra_restraints_representation.parallel_planes.size() > 0) {
@@ -1547,6 +1553,7 @@ molecule_class_info_t::draw_parallel_plane_restraints_representation() {
          glEnd();
       }
    }
+#endif
 }
 
 void
@@ -1557,7 +1564,7 @@ molecule_class_info_t::setup_unit_cell(Shader *shader_p) {
                     const clipper::Cell &cell,
                     Shader *shader_p) {
                    lines_mesh_for_cell = LinesMesh(cell);
-                   lines_mesh_for_cell.setup(shader_p);
+                   lines_mesh_for_cell.setup();
                 };
 
    if (lines_mesh_for_cell.empty()) {
@@ -1779,7 +1786,8 @@ molecule_class_info_t::initialize_map_things_on_read_molecule(std::string molecu
                 << " is difference map " << is_diff_map << " swapcol: " << swap_difference_map_colours
                 << std::endl;
 
-   material_for_maps.specular_strength = 0.0; // non-shiny maps by default.
+   material_for_maps.do_specularity = false;
+   material_for_maps.specular_strength = 1.2; // non-shiny maps by default.
 
    // unset coordinates, this is not a set of coordinates:
    atom_sel.n_selected_atoms = 0;
@@ -2380,7 +2388,8 @@ molecule_class_info_t::draw_fixed_atom_positions() const {
 void
 molecule_class_info_t::display_ghost_bonds(int ighost) {
 
-
+   std::cout << "old code FIXME in display_ghost_bonds() " << std::endl;
+#if 0
    // hack in a value
    bool against_a_dark_background = true;
 
@@ -2407,6 +2416,7 @@ molecule_class_info_t::display_ghost_bonds(int ighost) {
          }
       }
    }
+#endif
 }
 
 
@@ -2461,6 +2471,9 @@ molecule_class_info_t::get_vector_pependicular_to_screen_z(const coot::Cartesian
 void
 molecule_class_info_t::display_symmetry_bonds() {
 
+   std::cout << "old code FIXME in display_symmetry_bonds() " << std::endl;
+
+#if 0
    // We may come here after having done additional_representations -
    // which would change the line width.
    //
@@ -2621,6 +2634,7 @@ molecule_class_info_t::display_symmetry_bonds() {
          }
       }
    }
+#endif
 }
 
 // publically accessible
@@ -2690,6 +2704,9 @@ molecule_class_info_t::delete_dipole(int dipole_number) {
 void
 molecule_class_info_t::draw_dipoles() const {
 
+   std::cout << "old code in draw_dipoles() " << std::endl;
+
+#if 0
    if (! draw_it)
       return;
 
@@ -2780,6 +2797,7 @@ molecule_class_info_t::draw_dipoles() const {
       }
       glPopMatrix();
    }
+#endif
 }
 
 std::string
@@ -3458,9 +3476,12 @@ molecule_class_info_t::make_bonds_type_checked(const char *caller) {
 
    // Note caller can be 0 (e.g. with clang) - so be aware of that when debugging.
 
+   std::string caller_s("NULL");
+   if (caller) caller_s = std::string(caller);
+
    if (debug)
       std::cout << "debug:: plain make_bonds_type_checked() --------start--------- called by "
-                << caller << "() with is_intermediate_atoms_molecule: " << is_intermediate_atoms_molecule
+                << caller_s << "() with is_intermediate_atoms_molecule: " << is_intermediate_atoms_molecule
                 << std::endl;
    if (debug)
       std::cout << "--- make_bonds_type_checked() called with bonds_box_type "
@@ -3607,12 +3628,12 @@ molecule_class_info_t::get_glm_colour_func(int idx_col, int bonds_box_type) {
 
 void molecule_class_info_t::make_glsl_bonds_type_checked(const char *caller) {
 
-   if (true)
+   if (false)
       std::cout << "debug:: make_glsl_bonds_type_checked() called by " << caller << "()"
                 << " with is_intermediate_atoms_molecule " << is_intermediate_atoms_molecule
                 << std::endl;
 
-   if (true)
+   if (false)
       // if (! is_intermediate_atoms_molecule)
          std::cout << "--- make_glsl_bonds_type_checked() start " << std::endl;
 
@@ -4015,8 +4036,8 @@ molecule_class_info_t::setup_glsl_bonds_buffers(const std::vector<vertex_with_ro
 
    // Indices
    n_indices_for_model_triangles = triangles.size() * 3;
-   if (! is_intermediate_atoms_molecule)
-      std::cout << "DEBUG:: n_triangles in model: " << triangles.size() << std::endl;
+   // if (! is_intermediate_atoms_molecule)
+   // std::cout << "DEBUG:: n_triangles in model: " << triangles.size() << std::endl;
    unsigned int n_bytes = triangles.size() * 3 * sizeof(unsigned int);
    if (model_mesh_first_time) {
       glGenBuffers(1, &m_IndexBuffer_for_model_ID);
@@ -4041,10 +4062,14 @@ void
 molecule_class_info_t::make_bonds_type_checked(const std::set<int> &no_bonds_to_these_atom_indices,
                                                const char *caller) {
 
-   if (false)
+   if (false) {
+      std::string caller_s = "NULL";
+      if (caller)
+         caller_s = std::string(caller);
       std::cout << "debug::make_bonds_type_checked() no-bonds-to-these_atoms-set size "
                 << no_bonds_to_these_atom_indices.size() << " called by "
-                << caller << std::endl;
+                << caller_s << std::endl;
+   }
 
    if (false) {
       for (auto it=no_bonds_to_these_atom_indices.begin();
@@ -7495,8 +7520,8 @@ molecule_class_info_t::make_backup() { // changes history details
 
          if (dirstat != 0) {
             // fallback to making a directory in $HOME
-            const char *home_dir = getenv("HOME");
-            if (home_dir) {
+            std::string home_dir = coot::get_home_dir();
+            if (! home_dir.empty()) {
                backup_dir = coot::util::append_dir_dir(home_dir, "coot-backup");
                dirstat = make_maybe_backup_dir(backup_dir);
                if (dirstat != 0) {

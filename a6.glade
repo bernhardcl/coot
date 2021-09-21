@@ -1115,7 +1115,15 @@ any acceptable configuration here.</property>
                   </packing>
                 </child>
                 <child>
-                  <placeholder/>
+                  <object class="GtkComboBoxText" id="align_and_mutate_molecule_combobox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
                 </child>
                 <child>
                   <object class="GtkBox" id="hbox121">
@@ -1136,7 +1144,15 @@ any acceptable configuration here.</property>
                       </packing>
                     </child>
                     <child>
-                      <placeholder/>
+                      <object class="GtkComboBoxText" id="align_and_mutate_chain_combobox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
                     </child>
                   </object>
                   <packing>
@@ -8396,6 +8412,197 @@ Do you want to continue?
       <placeholder/>
     </child>
   </object>
+  <object class="GtkDialog" id="general_coot_molecule_chooser_dialog">
+    <property name="can_focus">False</property>
+    <property name="type_hint">dialog</property>
+    <signal name="close" handler="on_general_coot_molecule_chooser_dialog_close_gtkbuilder_callback" swapped="no"/>
+    <signal name="response" handler="on_general_coot_molecule_chooser_dialog_response_gtkbuilder_callback" swapped="no"/>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="general_coot_molecule_chooser_vbox">
+        <property name="can_focus">False</property>
+        <property name="halign">center</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkLabel" id="general_coot_molecule_choose">
+                <property name="name">general_coot_molecule_chooser_label</property>
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">some_calller_defined_label_here</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">6</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText">
+                <property name="name">general_coot_molecule_chooser_comboboxtext</property>
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">8</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+  </object>
+  <object class="GtkDialog" id="general_coot_molecule_chooser_with_entry_and_checkbutton_dialog">
+    <property name="can_focus">False</property>
+    <property name="type_hint">dialog</property>
+    <signal name="close" handler="on_general_coot_molecule_chooser_with_entry_and_checkbutton_dialog_close_gtkbuilder_callback" swapped="no"/>
+    <signal name="response" handler="on_general_coot_molecule_chooser_with_entry_and_checkbutton_dialog_response_gtkbuilder_callback" swapped="no"/>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox" id="general_coot_molecule_chooser_with_entry_and_checkbutton_vbox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkLabel" id="general_coot_molecule_chooser_with_entry_and_checkbutton_lablel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">callerlabelhere</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText" id="general_coot_molecule_chooser_with_entry_and_checkbutton_comboboxtext">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="spacing">8</property>
+                <child>
+                  <object class="GtkLabel" id="general_coot_molecule_chooser_with_entry_and_checkbutton_label_for_entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes"> label </property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="padding">6</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="general_coot_molecule_chooser_with_entry_and_checkbutton_entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkCheckButton" id="general_coot_molecule_chooser_with_entry_and_checkbutton_checkbutton">
+                <property name="label" translatable="yes">checkbutton</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="draw_indicator">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+  </object>
   <object class="GtkDialog" id="generate_diff_map_peaks_dialog">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Difference Map Peak Analysis</property>
@@ -10326,12 +10533,112 @@ Do you want to continue?
                       <object class="GtkMenu" id="edit1_menu">
                         <property name="can_focus">False</property>
                         <child>
-                          <object class="GtkMenuItem" id="align_&amp;_mutate1">
+                          <object class="GtkImageMenuItem" id="change_chain_ids2">
+                            <property name="label" translatable="yes">Change Chain IDs...</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="label" translatable="yes">Align &amp; Mutate...</property>
                             <property name="use_underline">True</property>
-                            <signal name="activate" handler="on_align_and_mutate1_activate_gtkbuilder_callback" swapped="no"/>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="on_change_chain_ids2_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="edit_copy_molecule">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Copy Molecule...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_edit_copy_molecule_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="edit_copy_fragment">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Copy Fragment...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_edit_copy_fragment_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImageMenuItem" id="merge_molecules1">
+                            <property name="label" translatable="yes">Merge Molecules...</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="use_underline">True</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="on_merge_molecules1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="move_molecule_here1">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Move Molecule Here...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_move_molecule_here1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="mutate_molecule1">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Mutate Residue Range...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_mutate_molecule1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="edit_replace_fragment">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Replace Fragment...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_edit_replace_fragment_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="edit_replace_residue">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Replace Residue...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_edit_replace_residue_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImageMenuItem" id="renumber_residues1">
+                            <property name="label" translatable="yes">Renumber Residues...</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="use_underline">True</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="on_renumber_residues1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImageMenuItem" id="residue_info2">
+                            <property name="label" translatable="yes">Residue Info...</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="use_underline">True</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="on_residue_info2_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="edit_restraints">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Restraints...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_edit_restraints_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSeparatorMenuItem">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
                           </object>
                         </child>
                         <child>
@@ -10391,16 +10698,6 @@ Do you want to continue?
                           </object>
                         </child>
                         <child>
-                          <object class="GtkImageMenuItem" id="change_chain_ids2">
-                            <property name="label" translatable="yes">Change Chain IDs...</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="on_change_chain_ids2_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
                           <object class="GtkImageMenuItem" id="map_colour1">
                             <property name="label" translatable="yes">Map Colour...</property>
                             <property name="visible">True</property>
@@ -10418,54 +10715,6 @@ Do you want to continue?
                             <property name="use_underline">True</property>
                             <property name="use_stock">False</property>
                             <signal name="activate" handler="on_density_size1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="merge_molecules1">
-                            <property name="label" translatable="yes">Merge Molecules...</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="on_merge_molecules1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkMenuItem" id="move_molecule_here1">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="label" translatable="yes">Move Molecule Here...</property>
-                            <property name="use_underline">True</property>
-                            <signal name="activate" handler="on_move_molecule_here1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkMenuItem" id="mutate_molecule1">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="label" translatable="yes">Mutate Residue Range...</property>
-                            <property name="use_underline">True</property>
-                            <signal name="activate" handler="on_mutate_molecule1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="residue_info2">
-                            <property name="label" translatable="yes">Residue Info...</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="on_residue_info2_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="renumber_residues1">
-                            <property name="label" translatable="yes">Renumber Residues...</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="on_renumber_residues1_activate_gtkbuilder_callback" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -10548,6 +10797,15 @@ Do you want to continue?
                       <object class="GtkMenu" id="calculate1_menu">
                         <property name="can_focus">False</property>
                         <child>
+                          <object class="GtkMenuItem" id="calculate_align_and_mutate">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Align &amp; Mutate...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_calculate_align_and_mutate_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkMenuItem" id="calculate_all_molecule">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
@@ -10563,16 +10821,30 @@ Do you want to continue?
                             <property name="label" translatable="yes">Fit Loop...</property>
                             <property name="use_underline">True</property>
                             <signal name="activate" handler="on_fit_loop1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="frames/sec1">
-                            <property name="label" translatable="yes">Frames/Sec...</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="on_fps1_activate_gtkbuilder_callback" swapped="no"/>
+                            <child type="submenu">
+                              <object class="GtkMenu">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <child>
+                                  <object class="GtkMenuItem" id="fit_loop_by_database_search1">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">False</property>
+                                    <property name="label" translatable="yes">Fit Loop by Database Search...</property>
+                                    <property name="use_underline">True</property>
+                                    <signal name="activate" handler="on_fit_loop_by_database_search1_activate_gtkbuilder_callback" swapped="no"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkMenuItem" id="fit_loop_by_rama_search1">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">False</property>
+                                    <property name="label" translatable="yes">Fit Loop by Rama Search...</property>
+                                    <property name="use_underline">True</property>
+                                    <signal name="activate" handler="on_fit_loop_by_rama_search1_activate_gtkbuilder_callback" swapped="no"/>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
                           </object>
                         </child>
                         <child>
@@ -10649,6 +10921,14 @@ Do you want to continue?
                           </object>
                         </child>
                         <child>
+                          <object class="GtkMenuItem" id="calculate_modules">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Modules...</property>
+                            <property name="use_underline">True</property>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkImageMenuItem" id="ncs_maps1">
                             <property name="label" translatable="yes">NCS Maps...</property>
                             <property name="visible">True</property>
@@ -10659,6 +10939,15 @@ Do you want to continue?
                           </object>
                         </child>
                         <child>
+                          <object class="GtkMenuItem" id="calculate_ncs_tools">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">NCS Tools...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_calculate_ncs_tools_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkImageMenuItem" id="other_modelling_tools1">
                             <property name="label" translatable="yes">Other Modelling Tools...</property>
                             <property name="visible">True</property>
@@ -10666,6 +10955,15 @@ Do you want to continue?
                             <property name="use_underline">True</property>
                             <property name="use_stock">False</property>
                             <signal name="activate" handler="on_other_modelling_tools1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="calculate_pisa">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">PISA...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_calculate_pisa_activate_gtkbuilder_callback" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -10735,6 +11033,15 @@ Do you want to continue?
                       <object class="GtkMenu" id="draw1_menu">
                         <property name="can_focus">False</property>
                         <child>
+                          <object class="GtkMenuItem" id="draw_additional_representations">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Additional Representations....</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_draw_additional_representations_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkImageMenuItem" id="anisotropic_atoms1">
                             <property name="label" translatable="yes">Anisotropic Atoms...</property>
                             <property name="visible">True</property>
@@ -10742,26 +11049,6 @@ Do you want to continue?
                             <property name="use_underline">True</property>
                             <property name="use_stock">False</property>
                             <signal name="activate" handler="on_anisotropic_atoms1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="map_and_mol_control1">
-                            <property name="label" translatable="yes">Display Manager...</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="on_map_and_mol_control1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="undo_last_navigation1">
-                            <property name="label" translatable="yes">Undo Last Navigation</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="on_undo_last_navigation1_activate_gtkbuilder_callback" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -10785,6 +11072,15 @@ Do you want to continue?
                           </object>
                         </child>
                         <child>
+                          <object class="GtkMenuItem" id="draw_central_atom_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Central Atom Label...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_draw_central_atom_label_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkMenuItem" id="clipping1">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
@@ -10801,6 +11097,24 @@ Do you want to continue?
                             <property name="use_underline">True</property>
                             <property name="use_stock">False</property>
                             <signal name="activate" handler="on_crosshairs1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="draw_display_only_active">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Display Only Active</property>
+                            <property name="use_underline">True</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImageMenuItem" id="frames/sec1">
+                            <property name="label" translatable="yes">Frames/Sec...</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="use_underline">True</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="on_fps1_activate_gtkbuilder_callback" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -10824,6 +11138,24 @@ Do you want to continue?
                           </object>
                         </child>
                         <child>
+                          <object class="GtkMenuItem" id="draw_label_atoms_in_residue">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Label Atoms in Residue</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_draw_label_atoms_in_residue_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="draw_label_neighbours">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Label Neighbours</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_draw_label_neighbours_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkImageMenuItem" id="ncs_ghost_control1">
                             <property name="label" translatable="yes">NCS Ghost Control...</property>
                             <property name="visible">True</property>
@@ -10831,6 +11163,34 @@ Do you want to continue?
                             <property name="use_underline">True</property>
                             <property name="use_stock">False</property>
                             <signal name="activate" handler="on_ncs_ghost_control1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="draw_representation_tools">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Representation Tools...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_draw_representation_tools_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImageMenuItem" id="spin_view_on/off1">
+                            <property name="label" translatable="yes">Spin View On/Off</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="use_underline">True</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="on_spin_view_on_off1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="draw_rock_view">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Rock View...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_draw_rock_view_activate_gtkbuilder_callback" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -10885,16 +11245,6 @@ Do you want to continue?
                           </object>
                         </child>
                         <child>
-                          <object class="GtkImageMenuItem" id="spin_view_on/off1">
-                            <property name="label" translatable="yes">Spin View On/Off</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="on_spin_view_on_off1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
                           <object class="GtkImageMenuItem" id="stereo1">
                             <property name="label" translatable="yes">Stereo...</property>
                             <property name="visible">True</property>
@@ -10902,6 +11252,16 @@ Do you want to continue?
                             <property name="use_underline">True</property>
                             <property name="use_stock">False</property>
                             <signal name="activate" handler="on_stereo1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImageMenuItem" id="undo_last_navigation1">
+                            <property name="label" translatable="yes">Undo Last Navigation</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="use_underline">True</property>
+                            <property name="use_stock">False</property>
+                            <signal name="activate" handler="on_undo_last_navigation1_activate_gtkbuilder_callback" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -11349,6 +11709,60 @@ Do you want to continue?
                     <property name="homogeneous">False</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkToolButton" id="go_to_atom_toolbutton">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Go To Atom</property>
+                    <property name="use_underline">True</property>
+                    <property name="icon_name">applets-screenshooter</property>
+                    <signal name="clicked" handler="on_go_to_atom_toolbutton_clicked_gtkbuilder_callback" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToolButton" id="go_to_ligand_toolbutton">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="tooltip_text" translatable="yes">Go to (Next) Ligand</property>
+                    <property name="label" translatable="yes">Go To Ligand</property>
+                    <property name="use_underline">True</property>
+                    <property name="icon_name">office-contact</property>
+                    <signal name="clicked" handler="on_go_to_ligand_toolbutton_clicked_gtkbuilder_callback" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToolButton" id="clear_atom_pull_restraints_toolbutton">
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Clear Atom Pull Restraints</property>
+                    <property name="use_underline">True</property>
+                    <signal name="clicked" handler="on_clear_atom_pull_restraints_toolbutton_clicked_gtkbuilder_callback" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToggleToolButton" id="auto_clear_atom_pull_restraints_togglebutton">
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Auto-clear Atom Pull Restraints</property>
+                    <property name="use_underline">True</property>
+                    <property name="active">True</property>
+                    <signal name="toggled" handler="on_auto_clear_atom_pull_restraints_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -11413,332 +11827,417 @@ Do you want to continue?
             <property name="can_focus">False</property>
             <property name="label_xalign">0</property>
             <child>
-              <object class="GtkToolbar" id="main_window_model_toolbar">
-                <property name="height_request">380</property>
+              <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">29</property>
                 <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkToolButton" id="model_toolbar_refine_control_button">
+                  <object class="GtkToolbar" id="main_window_model_toolbar">
+                    <property name="height_request">380</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">R/RC</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_refine_control_button_clicked_gtkbuilder_callback" swapped="no"/>
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkToolButton" id="model_toolbar_refine_control_button">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">R/RC</property>
+                        <property name="use_underline">True</property>
+                        <signal name="clicked" handler="on_model_toolbar_refine_control_button_clicked_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToolButton" id="model_toolbar_select_map_button">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Map...</property>
+                        <property name="use_underline">True</property>
+                        <signal name="clicked" handler="on_model_toolbar_select_map_button_clicked_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_refine_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Real Space Refinement</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_refine_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_regularize_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Regularization</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_regularize_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_fixed_atoms_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Fixed Atoms...</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_fixed_atoms_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_rigid_body_fit_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Rigid Body Fit</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_rigid_body_fit_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_rot_trans_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Rotation/Translation</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_rot_trans_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_auto_fit_rotamer_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Autofit Rotamer</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_auto_fit_rotamer_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_rotamers_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Rotamers</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_rotamers_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_edit_chi_angles_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Edit Chi Angles</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_edit_chi_angles_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_torsion_general_toggletoolbutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Torsion General</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_torsion_general_toggletoolbutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_flip_peptide_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Flip Peptide</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_flip_peptide_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_sidechain_180_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes"> Sidechain 180° Flip</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_sidechain_180_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_edit_backbone_torsions_toggletoolbutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Edit Backbone Torsions</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_edit_backbone_torsions_toggletoolbutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorToolItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_mutate_and_autofit_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Mutate &amp; Auto-fit</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_mutate_and_autofit_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_simple_mutate_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Simple Mutate</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_simple_mutate_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleToolButton" id="model_toolbar_add_terminal_residue_togglebutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Add Terminal Residue</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_model_toolbar_add_terminal_residue_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToolButton" id="model_toolbar_add_alt_conf_toolbutton">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Add Alt Conf...</property>
+                        <property name="use_underline">True</property>
+                        <signal name="clicked" handler="on_model_toolbar_add_alt_conf_toolbutton_clicked_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToolButton" id="model_toolbar_add_atom_button">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Place Atom at Pointer</property>
+                        <property name="use_underline">True</property>
+                        <signal name="clicked" handler="on_model_toolbar_add_atom_button_clicked_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToolButton" id="model_toolbar_clear_pending_picks_button">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Clear Pending Picks</property>
+                        <property name="use_underline">True</property>
+                        <signal name="clicked" handler="on_model_toolbar_clear_pending_picks_button_clicked_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkToolButton" id="model_toolbar_select_map_button">
+                  <object class="GtkMenuBar">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Map...</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_select_map_button_clicked_gtkbuilder_callback" swapped="no"/>
+                    <child>
+                      <object class="GtkMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">             Delete This...              </property>
+                        <property name="use_underline">True</property>
+                        <child type="submenu">
+                          <object class="GtkMenu">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Atom</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Water</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Residue</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Sidechain</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Residue Hydrogen Atoms</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Chain</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSeparatorMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkImageMenuItem">
+                                <property name="label">gtk-quit</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="use_underline">True</property>
+                                <property name="use_stock">True</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_refine_togglebutton">
+                  <object class="GtkToolbar">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Real Space Refinement</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_refine_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkToolButton" id="model_toolbar_undo_button">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Undo</property>
+                        <property name="use_underline">True</property>
+                        <signal name="clicked" handler="on_model_toolbar_undo_button_clicked_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToolButton" id="model_toolbar_redo_button">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Redo</property>
+                        <property name="use_underline">True</property>
+                        <signal name="clicked" handler="on_model_toolbar_redo_button_clicked_gtkbuilder_callback" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="homogeneous">True</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_regularize_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Regularization</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_regularize_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_fixed_atoms_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Fixed Atoms...</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_fixed_atoms_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_rigid_body_fit_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Rigid Body Fit</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_rigid_body_fit_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_rot_trans_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Rotation/Translation</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_rot_trans_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_auto_fit_rotamer_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Autofit Rotamer</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_auto_fit_rotamer_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_rotamers_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Rotamers</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_rotamers_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_edit_chi_angles_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Edit Chi Angles</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_edit_chi_angles_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_torsion_general_toggletoolbutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Torsion General</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_torsion_general_toggletoolbutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_flip_peptide_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Flip Peptide</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_flip_peptide_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_sidechain_180_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes"> Sidechain 180° Flip</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_sidechain_180_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_edit_backbone_torsions_toggletoolbutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Edit Backbone Torsions</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_edit_backbone_torsions_toggletoolbutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkSeparatorToolItem">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_mutate_and_autofit_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Mutate &amp; Auto-fit</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_mutate_and_autofit_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_simple_mutate_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Simple Mutate</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_simple_mutate_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToggleToolButton" id="model_toolbar_add_terminal_residue_togglebutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Add Terminal Residue</property>
-                    <property name="use_underline">True</property>
-                    <signal name="toggled" handler="on_model_toolbar_add_terminal_residue_togglebutton_toggled_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToolButton" id="model_toolbar_add_alt_conf_toolbutton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Add Alt Conf...</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_add_alt_conf_toolbutton_clicked_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToolButton" id="model_toolbar_add_atom_button">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Place Atom at Pointer</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_add_atom_button_clicked_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToolButton" id="model_toolbar_clear_pending_picks_button">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Clear Pending Picks</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_clear_pending_picks_button_clicked_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToolButton" id="model_toolbar_delete_button">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Delete...</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_delete_button_clicked_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToolButton" id="model_toolbar_undo_button">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Undo</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_undo_button_clicked_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToolButton" id="model_toolbar_redo_button">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Redo</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_redo_button_clicked_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkToolButton" id="model_toolbar_refmac_button">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Run Refmac</property>
-                    <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_model_toolbar_refmac_button_clicked_gtkbuilder_callback" swapped="no"/>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="homogeneous">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">2</property>
                   </packing>
                 </child>
               </object>
@@ -11753,7 +12252,6 @@ Do you want to continue?
         <child>
           <object class="GtkFrame" id="gtk_frame_for_html_or_other_big_window_packed_widget">
             <property name="can_focus">False</property>
-            <property name="margin_left">43</property>
             <property name="label_xalign">0</property>
             <child>
               <placeholder/>
@@ -14926,7 +15424,19 @@ Move Molecule Here:</property>
                   </packing>
                 </child>
                 <child>
-                  <placeholder/>
+                  <object class="GtkBox" id="mutate_sequence_hbox_for_molecule_combobox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
                 </child>
                 <child>
                   <object class="GtkBox" id="hbox90">
@@ -14947,7 +15457,19 @@ Move Molecule Here:</property>
                       </packing>
                     </child>
                     <child>
-                      <placeholder/>
+                      <object class="GtkBox" id="mutate_sequence_hbox_for_molecule_chain_combobox_text">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
                     </child>
                   </object>
                   <packing>
@@ -14980,6 +15502,7 @@ Move Molecule Here:</property>
                         <property name="can_focus">True</property>
                         <property name="primary_icon_activatable">False</property>
                         <property name="secondary_icon_activatable">False</property>
+                        <signal name="changed" handler="on_mutate_molecule_resno_1_entry_changed_gtkbuilder_callback" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -15006,6 +15529,7 @@ Move Molecule Here:</property>
                         <property name="can_focus">True</property>
                         <property name="primary_icon_activatable">False</property>
                         <property name="secondary_icon_activatable">False</property>
+                        <signal name="changed" handler="on_mutate_molecule_resno_2_entry_changed_gtkbuilder_callback" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -15108,6 +15632,9 @@ search (this may not work well)</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="wrap_mode">word</property>
+                        <signal name="button-release-event" handler="on_mutate_molecule_sequence_text_button_release_event_gtkbuilder_callback" swapped="no"/>
+                        <signal name="insert-at-cursor" handler="on_mutate_molecule_sequence_text_insert_at_cursor_gtkbuilder_callback" swapped="no"/>
+                        <signal name="key-release-event" handler="on_mutate_molecule_sequence_text_key_release_event_gtkbuilder_callback" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -15130,6 +15657,69 @@ search (this may not work well)</property>
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Match: </property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="padding">6</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="mutate_sequence_green_light_image">
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-yes</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="padding">6</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="mutate_sequence_red_light_image">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-no</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="padding">6</property>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="mutate_residue_range_counts_label">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Counts: Residue numbers: -: Sequence: -</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="padding">6</property>
+                        <property name="pack_type">end</property>
+                        <property name="position">3</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">8</property>
+                  </packing>
+                </child>
+                <child>
                   <object class="GtkCheckButton" id="mutate_sequence_do_autofit_checkbutton">
                     <property name="label" translatable="yes"> Autofit the mutated residues?</property>
                     <property name="visible">True</property>
@@ -15142,8 +15732,26 @@ search (this may not work well)</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">8</property>
+                    <property name="fill">True</property>
+                    <property name="position">9</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="mutate_sequence_use_ramachandran_restraints_checkbutton">
+                    <property name="label" translatable="yes">Use Ramachandran restraints to fit the loop?</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="border_width">4</property>
+                    <property name="use_underline">True</property>
+                    <property name="active">True</property>
+                    <property name="draw_indicator">True</property>
+                    <signal name="toggled" handler="on_mutate_sequence_use_ramachandran_restraints_checkbutton_toggled_gtkbuilder_callback" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">10</property>
                   </packing>
                 </child>
               </object>
@@ -16337,7 +16945,7 @@ If you need symmetry, setup ccp4 before starting coot
     <property name="title" translatable="yes">Info:</property>
     <property name="type_hint">dialog</property>
     <child internal-child="vbox">
-      <object class="GtkBox" id="dialog-vbox72">
+      <object class="GtkBox" id="nothing_bad_dialog_vbox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
@@ -16373,7 +16981,8 @@ If you need symmetry, setup ccp4 before starting coot
           </packing>
         </child>
         <child>
-          <object class="GtkFrame" id="frame128">
+          <object class="GtkFrame" id="nothing_bad_frame">
+            <property name="name">nothing_bad_frame</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="border_width">6</property>
@@ -16382,9 +16991,12 @@ If you need symmetry, setup ccp4 before starting coot
               <object class="GtkLabel" id="nothing_bad_label">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xpad">80</property>
-                <property name="ypad">40</property>
+                <property name="margin_start">50</property>
+                <property name="margin_end">50</property>
+                <property name="margin_top">50</property>
+                <property name="margin_bottom">50</property>
                 <property name="label" translatable="yes">Nothing Bad</property>
+                <property name="use_markup">True</property>
                 <property name="justify">center</property>
               </object>
             </child>
@@ -19386,6 +19998,99 @@ just the cell and symmetry)
       <placeholder/>
     </child>
   </object>
+  <object class="GtkDialog" id="residue_editor_select_monomer_type_dialog">
+    <property name="can_focus">False</property>
+    <property name="type_hint">dialog</property>
+    <signal name="close" handler="on_residue_editor_select_monomer_type_dialog_close_gtkbuilder_callback" swapped="no"/>
+    <signal name="response" handler="on_residue_editor_select_monomer_type_dialog_response_gtkbuilder_callback" swapped="no"/>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="residue_editor_select_monomer_type_ok_button">
+                <property name="label" translatable="yes">OK</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="residue_editor_select_monomer_type_cancel_button">
+                <property name="label" translatable="yes">Cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Select Monomer Type</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">6</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText" id="residue_editor_select_monomer_type_combobox">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="-5">residue_editor_select_monomer_type_ok_button</action-widget>
+      <action-widget response="-6">residue_editor_select_monomer_type_cancel_button</action-widget>
+    </action-widgets>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+  </object>
   <object class="GtkDialog" id="residue_info_dialog">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Residue Info</property>
@@ -19533,7 +20238,7 @@ just the cell and symmetry)
         </child>
         <child>
           <object class="GtkBox" id="vbox65">
-            <property name="height_request">380</property>
+            <property name="height_request">450</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
@@ -19541,8 +20246,6 @@ just the cell and symmetry)
               <object class="GtkLabel" id="residue_info_residue_label">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xpad">2</property>
-                <property name="ypad">6</property>
                 <property name="label" translatable="yes">Residue: </property>
                 <property name="justify">center</property>
               </object>
@@ -19554,10 +20257,21 @@ just the cell and symmetry)
               </packing>
             </child>
             <child>
+              <object class="GtkLabel" id="residue_info_residue_name_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">residue_name_label</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkLabel" id="label97">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xpad">10</property>
                 <property name="label" translatable="yes">   Atom Info:                       Occupancy                  Temperature Factor</property>
                 <property name="justify">center</property>
               </object>
@@ -19565,7 +20279,7 @@ just the cell and symmetry)
                 <property name="expand">False</property>
                 <property name="fill">False</property>
                 <property name="padding">6</property>
-                <property name="position">1</property>
+                <property name="position">2</property>
               </packing>
             </child>
             <child>
@@ -19656,6 +20370,7 @@ just the cell and symmetry)
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
+                        <property name="border_width">4</property>
                         <property name="use_underline">True</property>
                         <property name="draw_indicator">True</property>
                         <signal name="toggled" handler="on_residue_info_b_factor_apply_all_checkbutton_toggled_gtkbuilder_callback" swapped="no"/>
@@ -19679,7 +20394,7 @@ just the cell and symmetry)
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
-                <property name="position">2</property>
+                <property name="position">3</property>
               </packing>
             </child>
             <child>
@@ -19700,8 +20415,9 @@ just the cell and symmetry)
                           <object class="GtkBox" id="residue_info_hbox">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="orientation">vertical</property>
                             <child>
-                              <object class="GtkTable" id="residue_info_atom_table">
+                              <object class="GtkGrid" id="residue_info_atom_grid">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <child>
@@ -19731,103 +20447,11 @@ just the cell and symmetry)
                                 <child>
                                   <placeholder/>
                                 </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                                <child>
-                                  <placeholder/>
-                                </child>
                               </object>
                               <packing>
-                                <property name="expand">True</property>
+                                <property name="expand">False</property>
                                 <property name="fill">True</property>
+                                <property name="padding">6</property>
                                 <property name="position">0</property>
                               </packing>
                             </child>
@@ -19841,7 +20465,107 @@ just the cell and symmetry)
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="position">3</property>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <object class="GtkFrame" id="residue_info_chi_angle_frame">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label_xalign">0</property>
+                <property name="shadow_type">none</property>
+                <child>
+                  <object class="GtkAlignment">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="left_padding">12</property>
+                    <child>
+                      <object class="GtkBox" id="residue_info_chi_1_vbox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkLabel" id="residue_info_chi_1_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">chi1</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="residue_info_chi_2_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">chi2</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="residue_info_chi_3_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">chi3</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="residue_info_chi_4_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">label</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">3</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="residue_info_chi_5_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">label</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">4</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child type="label">
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Chi Angles</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">6</property>
               </packing>
             </child>
           </object>
@@ -22134,8 +22858,6 @@ Then use "Run Refmac..." from the "Model/Fit/Refine" dialog.
           <object class="GtkLabel" id="label44">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="xpad">3</property>
-            <property name="ypad">5</property>
             <property name="label" translatable="yes">Symmetry &amp; Unit Cell</property>
             <property name="justify">center</property>
           </object>

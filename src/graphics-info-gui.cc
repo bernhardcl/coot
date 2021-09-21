@@ -88,15 +88,35 @@
 #include "manipulation-modes.hh"
 #include "guile-fixups.h"
 
+void do_accept_reject_dialog(std::string fit_type, const coot::refinement_results_t &rr) {
+
+#if 0 // old style
+
+   do_accept_reject_dialog_with_a_dialog(fit_type, rr);
+
+#else
+
+   do_accept_reject_hud_buttons(fit_type, rr); // not that we use the args (yet?)
+
+#endif
+
+}
+
+void do_accept_reject_hud_buttons(std::string fit_type, const coot::refinement_results_t &rr) {
+
+   graphics_info_t g;
+   g.show_atom_pull_toolbar_buttons();
+   g.show_accept_reject_hud_buttons();
+
+}
 
 
 // e.g. fit type is "Rigid Body Fit" or "Regularization" etc.
 //
 // if fit_type is "Torsion General" show the Reverse button.
 //
-void do_accept_reject_dialog(std::string fit_type, const coot::refinement_results_t &rr) {
+void do_accept_reject_dialog_with_a_dialog(std::string fit_type, const coot::refinement_results_t &rr) {
 
-   bool debug = false;
    GtkWidget *window = wrapped_create_accept_reject_refinement_dialog();
    GtkWindow *main_window = GTK_WINDOW(graphics_info_t::get_main_window());
    GtkWidget *label = NULL;
@@ -1369,6 +1389,234 @@ graphics_info_t::handle_rama_plot_update(coot::rama_plot *plot) {
 //                 residue info widget
 // --------------------------------------------------------------------------------
 
+#include "widget-from-builder.hh"
+#include "ligand/primitive-chi-angles.hh"
+
+
+// 23 Oct 2003: Why is this so difficult?  Because we want to attach
+// atom info (what springs to mind is a pointer to the atom) for each
+// entry, so that when the text in the entry is changed, we know to
+// modify the atom.
+//
+// The problem with that is that behind our backs, that atom could
+// disappear (e.g close molecule or delete residue, mutate or
+// whatever), we are left with a valid looking (i.e. non-NULL)
+// pointer, but the memory to which is points is invalid -> crash when
+// we try to reference it.
+//
+// How shall we get round this?  refcounting?
+//
+// Instead, let's make a trivial class that contains the information
+// we need to do a SelectAtoms to find the pointer to the atom, that
+// class shall be called select_atom_info, it shall contain the
+// molecule number, the chain id, the residue number, the insertion
+// code, the atom name, the atom altconf.
+//
+
+
+void
+graphics_info_t::output_residue_info_as_text(int atom_index, int imol) {
+
+   // It would be cool to flash the residue here.
+   // (heh - it is).
+   //
+   graphics_info_t g;
+   mmdb::Atom *picked_atom = g.molecules[imol].atom_sel.atom_selection[atom_index];
+
+   if (picked_atom) {
+
+      g.flash_selection(imol,
+                        picked_atom->residue->seqNum,
+                        picked_atom->GetInsCode(),
+                        picked_atom->residue->seqNum,
+                        picked_atom->GetInsCode(),
+                        picked_atom->altLoc,
+                        picked_atom->residue->GetChainID());
+
+      mmdb::PAtom *atoms = NULL;
+      int n_atoms = 0;
+      mmdb::Residue *residue_p = picked_atom->residue;
+      if (residue_p) {
+         residue_p->GetAtomTable(atoms,n_atoms);
+         if (atoms) {
+            for (int i=0; i<n_atoms; i++) {
+               mmdb::Atom *at = atoms[i];
+               if (at) {
+                  std::string segid = atoms[i]->segID;
+                  std::cout << "(" << imol << ") \""
+                            << at->name << "\"/"
+                            << at->GetModelNum()
+                            << "/\""
+                            << at->GetChainID()  << "\"/"
+                            << at->GetSeqNum()   << "/\""
+                            << at->GetResName()
+                            << "\", \""
+                            << segid
+                            << "\" occ: "
+                            << at->occupancy
+                            << " with B-factor: "
+                            << at->tempFactor
+                            << " element: \""
+                            << at->element
+                            << "\""
+                            << " at " << "("
+                            << at->x << ","
+                            << at->y << ","
+                            << at->z << ")" << std::endl;
+               }
+            }
+         }
+      }
+
+      // chi angles:
+      coot::primitive_chi_angles chi_angles(picked_atom->residue);
+      try {
+         std::vector<coot::alt_confed_chi_angles> chis = chi_angles.get_chi_angles();
+         if (chis.size() > 0) {
+            unsigned int i_chi_set = 0;
+            std::cout << "   Chi Angles:" << std::endl;
+            for (unsigned int ich=0; ich<chis[i_chi_set].chi_angles.size(); ich++) {
+               std::cout << "     chi "<< chis[i_chi_set].chi_angles[ich].first << ": "
+                         << chis[i_chi_set].chi_angles[ich].second
+                         << " degrees" << std::endl;
+            }
+         } else {
+            std::cout << "No Chi Angles for this residue" << std::endl;
+         }
+      }
+      catch (const std::runtime_error &mess) {
+         std::cout << mess.what() << std::endl;
+      }
+
+   }
+}
+
+
+// Called from a graphics-info-defines routine, would you believe? :)
+//
+// This should be a graphics_info_t function.
+//
+// The reader is graphics_info_t::apply_residue_info_changes(GtkWidget *dialog);
+//
+void
+graphics_info_t::output_residue_info_dialog(int imol, int atom_index) {
+
+   auto add_chi_angles = [] (mmdb::Residue *residue, GtkWidget *dialog) {
+                            try {
+                               coot::primitive_chi_angles chi_angles(residue);
+                               std::vector<coot::alt_confed_chi_angles> chis = chi_angles.get_chi_angles();
+                               // GtkWidget *chi_angles_frame = lookup_widget(dialog, "chi_angles_frame");
+                               GtkWidget *chi_angles_frame = widget_from_builder("residue_info_chi_angles_frame");
+                               gtk_widget_show(chi_angles_frame);
+                               if (chis.size() > 0) {
+                                  unsigned int i_chi_set = 0;
+                                  // undisplay all chi angles
+                                  for (unsigned int i=1; i<=5; i++) {
+                                     std::string label_name = "residue_info_chi_" + std::to_string(i) + "_label";
+                                     GtkWidget *label = widget_from_builder(label_name.c_str());
+                                     if (label) {
+                                        gtk_widget_hide(label);
+                                     }
+                                  }
+                                  // now display
+                                  for (unsigned int ich=0; ich<chis[i_chi_set].chi_angles.size(); ich++) {
+
+                                     int ic = chis[i_chi_set].chi_angles[ich].first;
+                                     std::string label_name = "residue_info_chi_";
+                                     label_name += coot::util::int_to_string(ic);
+                                     label_name += "_label";
+                                     // GtkWidget *label = lookup_widget(dialog, label_name.c_str());
+                                     GtkWidget *label = widget_from_builder(label_name.c_str());
+                                     if (label) {
+                                        std::string text = "Chi ";
+                                        text += coot::util::int_to_string(ic);
+                                        text += ":  ";
+                                        if (chis[i_chi_set].alt_conf != "") {
+                                           text += " alt conf: ";
+                                           text += chis[i_chi_set].alt_conf;
+                                           text += " ";
+                                        }
+                                        text += coot::util::float_to_string(chis[i_chi_set].chi_angles[ich].second);
+                                        text += " degrees";
+                                        gtk_label_set_text(GTK_LABEL(label), text.c_str());
+                                        gtk_widget_show(label);
+                                     } else {
+                                        std::cout << "WARNING:: chi label not found " << label_name << std::endl;
+                                     }
+                                  }
+                               }
+                            }
+                            catch (const std::runtime_error &mess) {
+                               std::cout << mess.what() << std::endl;
+                            }
+                         };
+
+   if (graphics_info_t::residue_info_edits->size() > 0) {
+
+      std::string s =  "You have pending (un-Applied) residue edits.\n";
+      s += "Deal with them first.";
+      GtkWidget *w = wrapped_nothing_bad_dialog(s);
+      gtk_widget_show(w);
+
+   } else {
+
+      std::cout << "--------------------------- here A in output_residue_info_dialog -------------------" << std::endl;
+
+      if (imol <graphics_info_t::n_molecules()) {
+         if (graphics_info_t::molecules[imol].has_model()) {
+            if (atom_index < graphics_info_t::molecules[imol].atom_sel.n_selected_atoms) {
+
+               graphics_info_t g;
+               output_residue_info_as_text(atom_index, imol);
+               mmdb::Atom *selected_atom = g.molecules[imol].atom_sel.atom_selection[atom_index];
+               std::string residue_name = selected_atom->GetResName();
+               mmdb::PPAtom atoms;
+               int n_atoms;
+               selected_atom->residue->GetAtomTable(atoms,n_atoms);
+               // GtkWidget *dialog = wrapped_create_residue_info_dialog(); // just the (unfilled) dialog
+               GtkWidget *dialog = widget_from_builder("residue_info_dialog");
+
+               mmdb::Residue *residue = selected_atom->residue;
+               coot::residue_spec_t *res_spec_p = new coot::residue_spec_t(residue->GetChainID(), residue->GetSeqNum(), residue->GetInsCode());
+
+               // fill the master atom
+               // GtkWidget *master_occ_entry      = lookup_widget(widget, "residue_info_master_atom_occ_entry");
+               // GtkWidget *master_b_factor_entry = lookup_widget(widget, "residue_info_master_atom_b_factor_entry");
+
+               GtkWidget *master_occ_entry      = widget_from_builder("residue_info_master_atom_occ_entry");
+               GtkWidget *master_b_factor_entry = widget_from_builder("residue_info_master_atom_b_factor_entry");
+
+               // Do I need to clear the signals from the previous time that this widget was shown?
+               // Or how do I add these just once?
+
+               g_signal_connect (G_OBJECT (master_occ_entry), "changed",
+                                   G_CALLBACK (graphics_info_t::on_residue_info_master_atom_occ_changed),
+                                   NULL);
+
+               g_signal_connect (G_OBJECT (master_b_factor_entry),
+                                   "changed", G_CALLBACK (graphics_info_t::on_residue_info_master_atom_b_factor_changed),
+                                   NULL);
+
+               gtk_entry_set_text(GTK_ENTRY(master_occ_entry), "1.0");
+
+               std::string b_entry_text = graphics_info_t::float_to_string(graphics_info_t::default_new_atoms_b_factor);
+               gtk_entry_set_text(GTK_ENTRY(master_b_factor_entry), b_entry_text.c_str());
+
+               g_object_set_data(G_OBJECT(dialog), "res_spec_p",  res_spec_p);
+               g.fill_output_residue_info_widget(dialog, imol, residue_name, atoms, n_atoms);
+               gtk_widget_show(dialog);
+               g.reset_residue_info_edits();
+
+               add_chi_angles(residue, dialog);
+
+            }
+         }
+      }
+   }
+
+}
+
+
 
 void
 graphics_info_t::fill_output_residue_info_widget(GtkWidget *widget, int imol,
@@ -1376,8 +1624,11 @@ graphics_info_t::fill_output_residue_info_widget(GtkWidget *widget, int imol,
 						 mmdb::PPAtom atoms, int n_atoms) {
 
    // first do the label of the dialog
-   GtkWidget *label_widget = lookup_widget(widget, "residue_info_residue_label");
-   GtkWidget *residue_name_widget = lookup_widget(widget, "residue_info_residue_name_label");
+   // GtkWidget *label_widget = lookup_widget(widget, "residue_info_residue_label");
+   // GtkWidget *residue_name_widget = lookup_widget(widget, "residue_info_residue_name_label");
+
+   GtkWidget *label_widget        = widget_from_builder("residue_info_residue_label");
+   GtkWidget *residue_name_widget = widget_from_builder("residue_info_residue_name_label");
 
    std::string label = "Molecule: ";
    label += int_to_string(imol);
@@ -1385,7 +1636,10 @@ graphics_info_t::fill_output_residue_info_widget(GtkWidget *widget, int imol,
    label += molecules[imol].name_;
 
    gtk_label_set_text(GTK_LABEL(label_widget), label.c_str());
-   GtkWidget *table = lookup_widget(widget, "residue_info_atom_table");
+   // GtkWidget *table = lookup_widget(widget, "residue_info_atom_table");
+   GtkWidget *grid = widget_from_builder("residue_info_atom_grid");
+
+   std::cout << "::::::::::::::::: fill_output_residue_info_widget() grid " << grid << std::endl;
 
    // name
    graphics_info_t g;
@@ -1397,24 +1651,21 @@ graphics_info_t::fill_output_residue_info_widget(GtkWidget *widget, int imol,
 
    residue_info_n_atoms = n_atoms;
    for (int i=0; i<n_atoms; i++)
-      graphics_info_t::fill_output_residue_info_widget_atom(table, imol, atoms[i], i);
+      graphics_info_t::fill_output_residue_info_widget_atom(grid, imol, atoms[i], i);
 }
 
 void
-graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol, mmdb::PAtom atom,
+graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *grid, int imol, mmdb::PAtom atom,
 						      int iatom) {
 
-   GtkWidget *residue_info_dialog_local = lookup_widget(table, "residue_info_dialog");
+   // GtkWidget *residue_info_dialog_local = lookup_widget(table, "residue_info_dialog");
+   GtkWidget *residue_info_dialog_local = widget_from_builder("residue_info_dialog");
+
    gint left_attach = 0;
-   gint right_attach = 1;
    gint top_attach = iatom;
-   gint bottom_attach = top_attach + 1;
-   GtkAttachOptions xopt = GTK_FILL, yopt=GTK_FILL;
-   guint xpad=0, ypad=0;
 
    // The text label of the atom name:
    left_attach = 0;
-   right_attach = left_attach + 1;
    std::string label_str = "  ";
    label_str += atom->GetChainID();
    label_str += "/";
@@ -1426,7 +1677,7 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
    label_str += atom->GetResName();
    label_str += "/";
    label_str += atom->name;
-   if (0) { // do alt locs in the atom label (20090914, not now that we have altloc entries)
+   if (false) { // do alt locs in the atom label (20090914, not now that we have altloc entries)
       if (std::string(atom->altLoc) != std::string("")) {
 	 label_str += ",";
 	 label_str += atom->altLoc;
@@ -1442,18 +1693,14 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
    // gtk_table_attach(GTK_TABLE(table), residue_info_atom_info_label,
    //      	    left_attach, right_attach, top_attach, bottom_attach,
    //      	    xopt, yopt, xpad, ypad);
-   gtk_grid_attach(GTK_GRID(table), residue_info_atom_info_label,
-                   left_attach, right_attach, 1, 1);
-   // gtk_widget_ref (residue_info_atom_info_label);
-   g_object_set_data_full(G_OBJECT (residue_info_dialog_local),
-			  "residue_info_atom_info_label", residue_info_atom_info_label,
-			  NULL);
-   gtk_widget_show (residue_info_atom_info_label);
 
+   gtk_grid_attach(GTK_GRID(grid), residue_info_atom_info_label, left_attach, top_attach, 1, 1);
+   // gtk_widget_ref (residue_info_atom_info_label);
+   g_object_set_data_full(G_OBJECT (residue_info_dialog_local), "residue_info_atom_info_label", residue_info_atom_info_label, NULL);
+   gtk_widget_show (residue_info_atom_info_label);
 
    // The Occupancy entry:
    left_attach = 1;
-   right_attach = left_attach + 1;
    coot::select_atom_info *ai = new coot::select_atom_info;
    *ai = coot::select_atom_info(iatom, imol,
 				std::string(atom->GetChainID()),
@@ -1465,22 +1712,22 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
    std::string widget_name = "residue_info_occ_entry_";
    widget_name += int_to_string(iatom);
    //
-   GtkWidget *residue_info_occ_entry = gtk_entry_new ();
+   GtkWidget *residue_info_occ_entry = gtk_entry_new();
    // gtk_widget_ref (residue_info_occ_entry);
    g_object_set_data_full(G_OBJECT (residue_info_dialog_local),
 			  widget_name.c_str(), residue_info_occ_entry,
 			  NULL);
-   gtk_widget_set_size_request(residue_info_occ_entry, 90, -1);
-   gtk_widget_show (residue_info_occ_entry);
+   gtk_widget_set_size_request(residue_info_occ_entry, 40, -1);
+   gtk_entry_set_width_chars(GTK_ENTRY(residue_info_occ_entry), 8);
+   gtk_widget_show(residue_info_occ_entry);
    g_object_set_data(G_OBJECT(residue_info_occ_entry), "select_atom_info", ai);
    gtk_entry_set_text(GTK_ENTRY(residue_info_occ_entry),
 		      graphics_info_t::float_to_string(atom->occupancy).c_str());
    // gtk_table_attach(GTK_TABLE(table), residue_info_occ_entry,
    //      	    left_attach, right_attach, top_attach, bottom_attach,
    //      	    xopt, yopt, xpad, ypad);
-   gtk_grid_attach(GTK_GRID(table), residue_info_occ_entry,
-                   left_attach, right_attach, 1, 1);
 
+   gtk_grid_attach(GTK_GRID(grid), residue_info_occ_entry, left_attach, top_attach, 1, 1);
 
       // Note that we have to use key_release_event because if we use
    // key_press_event, when we try to get the value from the widget
@@ -1489,7 +1736,6 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
 
    // B-factor entry:
    left_attach = 2;
-   right_attach = left_attach + 1;
 
    widget_name = "residue_info_b_factor_entry_";
    widget_name += int_to_string(iatom);
@@ -1500,12 +1746,12 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
 			  widget_name.c_str(), residue_info_b_factor_entry,
 			  NULL);
 
-   gtk_widget_set_size_request(residue_info_b_factor_entry, 90, -1);
+   // gtk_widget_set_size_request(residue_info_b_factor_entry, 40, -1);
+   gtk_entry_set_width_chars(GTK_ENTRY(residue_info_b_factor_entry), 8);
 
    gtk_widget_show (residue_info_b_factor_entry);
    gtk_entry_set_text(GTK_ENTRY(residue_info_b_factor_entry),
 		      graphics_info_t::float_to_string(atom->tempFactor).c_str());
-   gtk_widget_set_size_request(residue_info_b_factor_entry, 40, -2);
    g_object_set_data(G_OBJECT(residue_info_b_factor_entry), "select_atom_info", ai);
    gtk_widget_set_events(residue_info_b_factor_entry,
 			 GDK_KEY_PRESS_MASK     |
@@ -1513,25 +1759,21 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
    // gtk_table_attach(GTK_TABLE(table), residue_info_b_factor_entry,
    //      	    left_attach, right_attach, top_attach, bottom_attach,
    //      	    xopt, yopt, xpad, ypad);
-   gtk_grid_attach(GTK_GRID(table), residue_info_b_factor_entry,
-                   left_attach, right_attach, 1, 1);
+   gtk_grid_attach(GTK_GRID(grid), residue_info_b_factor_entry, left_attach, top_attach, 1, 1);
 
 
    // Alt Conf label:
-   GtkWidget *alt_conf_label = gtk_label_new("  Alt-conf: ");
+   GtkWidget *alt_conf_label = gtk_label_new("  Alt-conf:  ");
    gtk_widget_show(alt_conf_label);
    left_attach = 3;
-   right_attach = left_attach + 1;
    // gtk_table_attach(GTK_TABLE(table), alt_conf_label,
    //      	    left_attach, right_attach, top_attach, bottom_attach,
    //      	    xopt, yopt, xpad, ypad);
-   gtk_grid_attach(GTK_GRID(table), alt_conf_label,
-                   left_attach, right_attach, 1, 1);
+   gtk_grid_attach(GTK_GRID(grid), alt_conf_label, left_attach, top_attach, 1, 1);
 
 
    // The Alt Conf entry:
    left_attach = 4;
-   right_attach = left_attach + 1;
    ai = new coot::select_atom_info;
    *ai = coot::select_atom_info(iatom, imol,
 				std::string(atom->GetChainID()),
@@ -1547,7 +1789,8 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
    g_object_set_data_full(G_OBJECT (residue_info_dialog_local),
 			  widget_name.c_str(), residue_info_altloc_entry,
 			  NULL);
-   gtk_widget_set_size_request(residue_info_altloc_entry, 60, -1);
+   // gtk_widget_set_size_request(residue_info_altloc_entry, 20, -1);
+   gtk_entry_set_width_chars(GTK_ENTRY(residue_info_altloc_entry), 8);
 
    gtk_widget_show (residue_info_altloc_entry);
    g_object_set_data(G_OBJECT(residue_info_altloc_entry), "select_atom_info", ai);
@@ -1555,9 +1798,7 @@ graphics_info_t::fill_output_residue_info_widget_atom(GtkWidget *table, int imol
    // gtk_table_attach(GTK_TABLE(table), residue_info_altloc_entry,
    //      	    left_attach, right_attach, top_attach, bottom_attach,
    //      	    xopt, yopt, xpad, ypad);
-   gtk_grid_attach(GTK_GRID(table), residue_info_altloc_entry,
-                   left_attach, right_attach, 1, 1);
-
+   gtk_grid_attach(GTK_GRID(grid), residue_info_altloc_entry, left_attach, top_attach, 1, 1);
 
 }
 
@@ -1608,13 +1849,16 @@ void
 graphics_info_t::residue_info_edit_b_factor_apply_to_other_entries_maybe(GtkWidget *start_entry) {
 
    // first find the checkbox:
-   GtkWidget *dialog = lookup_widget(start_entry, "residue_info_dialog");
-   GtkWidget *checkbutton = lookup_widget(dialog, "residue_info_b_factor_apply_all_checkbutton");
+   // GtkWidget *dialog = lookup_widget(start_entry, "residue_info_dialog");
+   // GtkWidget *checkbutton = lookup_widget(dialog, "residue_info_b_factor_apply_all_checkbutton");
+   GtkWidget *dialog      = widget_from_builder("residue_info_dialog");
+   GtkWidget *checkbutton = widget_from_builder("residue_info_b_factor_apply_all_checkbutton");
+
    std::string widget_name;
    GtkWidget *entry;
 
    if (! checkbutton) {
-      std::cout << "ERROR:: could not find checkbutton" << std::endl;
+      std::cout << "ERROR:: residue_info_edit_b_factor_apply_to_other_entries_maybe() could not find checkbutton" << std::endl;
    } else {
       if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton))) {
 
@@ -1640,16 +1884,23 @@ void
 graphics_info_t::residue_info_edit_occ_apply_to_other_entries_maybe(GtkWidget *master_occ_entry) {
 
    // first find the checkbox:
-   GtkWidget *dialog = lookup_widget(master_occ_entry, "residue_info_dialog");
-   GtkWidget *occ_checkbutton = lookup_widget(dialog, "residue_info_occ_apply_all_checkbutton");
-   GtkWidget *alt_checkbutton = lookup_widget(dialog, "residue_info_occ_apply_to_altconf_checkbutton");
-   GtkWidget *alt_entry       = lookup_widget(dialog, "residue_info_occ_apply_to_alt_conf_entry");
+   // GtkWidget *dialog = lookup_widget(master_occ_entry, "residue_info_dialog");
+   // GtkWidget *occ_checkbutton = lookup_widget(dialog, "residue_info_occ_apply_all_checkbutton");
+   // GtkWidget *alt_checkbutton = lookup_widget(dialog, "residue_info_occ_apply_to_altconf_checkbutton");
+   // GtkWidget *alt_entry       = lookup_widget(dialog, "residue_info_occ_apply_to_alt_conf_entry");
+
+   GtkWidget *dialog = widget_from_builder("residue_info_dialog");
+   GtkWidget *occ_checkbutton = widget_from_builder("residue_info_occ_apply_all_checkbutton");
+   GtkWidget *alt_checkbutton = widget_from_builder("residue_info_occ_apply_to_altconf_checkbutton");
+   GtkWidget *alt_entry       = widget_from_builder("residue_info_occ_apply_to_alt_conf_entry");
+
+
    std::string widget_name;
    GtkWidget *atom_occ_entry;
    GtkWidget *atom_alt_conf_entry;
 
    if (! occ_checkbutton) {
-      std::cout << "ERROR:: could not find checkbutton" << std::endl;
+      std::cout << "ERROR:: residue_info_edit_occ_apply_to_other_entries_maybe(): could not find checkbutton" << std::endl;
    } else {
       if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(occ_checkbutton))) {
 
@@ -1738,14 +1989,16 @@ graphics_info_t::residue_info_add_occ_edit(coot::select_atom_info sai,
 void
 graphics_info_t::apply_residue_info_changes(GtkWidget *dialog) {
 
+   std::cout << "::::::::::::::::::: apply_residue_info_changes() :::: start " << std::endl;
 
    int imol = -1;
    // This is where we accumulate the residue edits:
    std::vector<coot::select_atom_info> local_atom_edits;
 
-   GtkWidget *table = lookup_widget(dialog, "residue_info_atom_table");
+   // GtkWidget *table = lookup_widget(dialog, "residue_info_atom_table");
+   GtkWidget *grid = widget_from_builder("residue_info_atom_grid");
 
-   GList *container_list = gtk_container_get_children(GTK_CONTAINER(table));
+   GList *container_list = gtk_container_get_children(GTK_CONTAINER(grid));
 
    // The children are a list, gone in "backward", just like we'd been
    // consing onto a list as we added widgets to the table.
@@ -1906,6 +2159,8 @@ graphics_info_t::fill_combobox_with_molecule_options(GtkWidget *combobox,
 						     int imol_active_position,
 						     const std::vector<int> &molecules_index_vec) {
 
+   // This might be OK if combobox had been created by us, not glade code, and has been added to an hbox already.
+
    GtkListStore *store = gtk_list_store_new(2, G_TYPE_INT, G_TYPE_STRING);
    GtkTreeIter iter;
    int active_idx = 0;
@@ -1927,7 +2182,6 @@ graphics_info_t::fill_combobox_with_molecule_options(GtkWidget *combobox,
 
       if (imol == imol_active_position)
 	 active_idx = imap;
-
    }
 
    if (signal_func)
@@ -1948,12 +2202,19 @@ void
 graphics_info_t::fill_combobox_with_coordinates_options(GtkWidget *combobox,
 							GCallback callback_func,
 							int imol_active) {
+
+   printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- don't use this function -----\n");
+
+   printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- start -----\n");
+
    std::vector<int> fill_with_these_molecules;
    for (int imol=0; imol<n_molecules(); imol++) {
       if (molecules[imol].has_model()) {
          fill_with_these_molecules.push_back(imol);
       }
    }
+
+   printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- Here A -----\n");
 
    if (false)
       std::cout << "debug:: --- in fill_combobox_with_coordinates_options() n_molecules: "
@@ -1964,6 +2225,8 @@ graphics_info_t::fill_combobox_with_coordinates_options(GtkWidget *combobox,
    GtkTreeIter iter;
    int active_idx = 0;
    int n_mol = fill_with_these_molecules.size();
+
+   printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- Here B -----\n");
 
    for (int idx=0; idx<n_mol; idx++) {
       int imol = fill_with_these_molecules[idx];
@@ -1987,6 +2250,8 @@ graphics_info_t::fill_combobox_with_coordinates_options(GtkWidget *combobox,
 
    }
 
+   printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- Here C -----\n");
+
    if (callback_func)
       g_signal_connect(combobox, "changed", callback_func, NULL);
    GtkTreeModel *model = GTK_TREE_MODEL(store);
@@ -1995,10 +2260,13 @@ graphics_info_t::fill_combobox_with_coordinates_options(GtkWidget *combobox,
    gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT(combobox), renderer, "text", 1, NULL);
    gtk_combo_box_set_model(GTK_COMBO_BOX(combobox), model);
 
+   printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- Here D with combobox %p\n", combobox);
+
    // maybe this can go into the above loop?
-   if (fill_with_these_molecules.size() > 0)
+   if (! fill_with_these_molecules.empty())
       gtk_combo_box_set_active(GTK_COMBO_BOX(combobox), active_idx);
 
+   printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- end -----\n");
 }
 
 
@@ -3909,7 +4177,7 @@ graphics_info_t::fill_bond_colours_dialog_internal(GtkWidget *w) {
 				NULL);
 	 gtk_box_pack_start (GTK_BOX (coords_colours_vbox), frame_molecule_N, TRUE, TRUE, 0);
 
-	 gtk_widget_set_size_request(frame_molecule_N, 171, -2);
+	 gtk_widget_set_size_request(frame_molecule_N, 171, -1);
 	 gtk_container_set_border_width (GTK_CONTAINER (frame_molecule_N), 6);
 
 	 hbox136 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
@@ -4073,16 +4341,16 @@ graphics_info_t::get_active_label_in_combobox(GtkComboBox *combobox) const {
 
 // static
 std::string
-graphics_info_t::fill_combobox_with_chain_options(GtkWidget *combobox,
+graphics_info_t::fill_combobox_with_chain_options(GtkWidget *combobox_text,
 						  int imol,
 						  GCallback f) {
 
-   return fill_combobox_with_chain_options(combobox, imol, f, "unset-chain");
+   return fill_combobox_with_chain_options(combobox_text, imol, f, "unset-chain");
 }
 
 // static
 std::string
-graphics_info_t::fill_combobox_with_chain_options(GtkWidget *combobox,
+graphics_info_t::fill_combobox_with_chain_options(GtkWidget *combobox_text,
 						  int imol,
 						  GCallback f,
 						  const std::string &acid) {
@@ -4099,7 +4367,7 @@ graphics_info_t::fill_combobox_with_chain_options(GtkWidget *combobox,
 
    std::string r("no-chain");
 
-   GtkComboBoxText *cb_as_text = GTK_COMBO_BOX_TEXT(combobox);
+   GtkComboBoxText *cb_as_text = GTK_COMBO_BOX_TEXT(combobox_text);
 
 #if (GTK_MAJOR_VERSION > 2)
    gtk_combo_box_text_remove_all(cb_as_text);
@@ -4116,14 +4384,14 @@ graphics_info_t::fill_combobox_with_chain_options(GtkWidget *combobox,
 	 const std::string &ch_id = chains[i];
 	 gtk_combo_box_text_append_text(cb_as_text, ch_id.c_str());
 	 if ((i==0) || (ch_id == acid)) {
-	    gtk_combo_box_set_active(GTK_COMBO_BOX(combobox), i);
+	    gtk_combo_box_set_active(GTK_COMBO_BOX(combobox_text), i);
 	    r = ch_id;
 	 }
       }
    }
 
    if (f)
-      g_signal_connect(combobox, "changed", f, NULL);
+      g_signal_connect(combobox_text, "changed", f, NULL);
 
    return r;
 }

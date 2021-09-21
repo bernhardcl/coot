@@ -166,6 +166,7 @@ enum { N_ATOMS_MEANS_BIG_MOLECULE = 400 };
 
 #include "simple-distance-object.hh"
 
+#include "gl-rama-plot.hh"
 
 namespace coot {
    enum {NEW_COORDS_UNSET = 0,       // moving_atoms_asc_type values
@@ -919,20 +920,18 @@ public:
 
    static bool do_expose_swap_buffers_flag;
 
-   static std::queue<std::chrono::time_point<std::chrono::high_resolution_clock> > frame_draw_queue;
+   // static std::queue<std::chrono::time_point<std::chrono::high_resolution_clock> > frame_draw_queue;
    static std::chrono::time_point<std::chrono::high_resolution_clock> previous_frame_time;
    static std::chrono::time_point<std::chrono::high_resolution_clock> previous_frame_time_for_per_second_counter;
 
    static void graphics_draw() {
-      if (glareas.size()) {
+      // Don't put timing things here - it's not called when tick function is used (somehow). Put it in render()
+      if (! glareas.empty()) {
          for (unsigned int i=0; i<glareas.size(); i++) {
             GtkWidget *glarea = glareas[i];
-            if (glarea) {
-               // frame_draw_queue.push(tp_now);
-               gtk_widget_queue_draw(glarea);
-               if (make_movie_flag)
-                  dump_a_movie_image();
-            }
+            gtk_widget_queue_draw(glarea);
+            if (make_movie_flag)
+               dump_a_movie_image();
          }
       }
    }
@@ -940,7 +939,6 @@ public:
    // sometimes (when we have 100s of molecules, we don't want to redraw when a molecule
    // is displayed or undisplayed)
    static bool mol_displayed_toggle_do_redraw; // normally true
-
 
    static bool is_valid_model_molecule(int imol) {
 
@@ -1273,7 +1271,7 @@ public:
 
    // expose so that they can be used in c-interface.cc
    static int smooth_scroll;
-   static int smooth_scroll_steps;
+   static int smooth_scroll_n_steps;
    static float smooth_scroll_limit;
    static float smooth_scroll_zoom_limit; // above this value we zoom, if zoom is on.
    static int   smooth_scroll_do_zoom;
@@ -1283,6 +1281,10 @@ public:
    gboolean smooth_scroll_animation_func(GtkWidget *widget,
                                          GdkFrameClock *frame_clock,
                                          gpointer data);
+   static
+   gboolean smooth_sinusoidal_scroll_animation_func(GtkWidget *widget,
+                                                    GdkFrameClock *frame_clock,
+                                                    gpointer data);
    // in that function, we need to know the current step
    static int smooth_scroll_current_step;
    // and the position delta (position at the end of the animation - the postion at the start of the animation)
@@ -1393,6 +1395,9 @@ public:
    static float RotationCentre_x() { return rotation_centre_x; }
    static float RotationCentre_y() { return rotation_centre_y; }
    static float RotationCentre_z() { return rotation_centre_z; }
+
+   static coot::Cartesian smooth_scroll_start_point;
+   static coot::Cartesian smooth_scroll_target_point;
 
    // possibly for multi-threading, public access.
    void update_maps();
@@ -2404,14 +2409,20 @@ public:
    static TextureMesh tmesh_for_labels;
    static HUDMesh mesh_for_hud_geometry;
    static std::string label_for_hud_geometry_tooltip;
-   static Texture texture_for_hud_geometry_labels;     // image to texture for
+   static std::map<std::string, Texture> texture_for_hud_geometry_labels_map;     // image to texture for
    static HUDTextureMesh mesh_for_hud_geometry_labels; // labels for the bars
    static HUDTextureMesh mesh_for_hud_tooltip_background;
    static Texture texture_for_hud_tooltip_background;
    static HUDTextureMesh tmesh_for_hud_geometry_tooltip_label;
+   static HUDTextureMesh tmesh_for_hud_image_testing;
    static Shader shader_for_hud_geometry_tooltip_text; // shader for the above tmesh (not like atom labels
                                                        // HUD labels are in 2D, don't need mvp, eye position
                                                        // etc.).
+   static float get_x_base_for_hud_geometry_bars();
+
+   static Texture texture_for_camera_facing_quad; // debugging            
+   static TextureMesh tmesh_for_camera_facing_quad;
+   static Shader camera_facing_quad_shader;  // uses camera-facing-quad-shader-for-testing.shader
 
    void add_label(const std::string &l, const glm::vec3 &p, const glm::vec4 &c);
 
@@ -2530,6 +2541,10 @@ public:
 			       const coot::residue_spec_t &res_2);
    void delete_active_residue();
    // c-info functions really, but we cant have mmdb_manager there, so the are moved here.
+
+   static void output_residue_info_as_text(int atom_index, int imol);
+
+   static void output_residue_info_dialog(int imol, int atom_index);
    //
    static void fill_output_residue_info_widget(GtkWidget *widget, int imol,
 					       std::string residue_name,
@@ -2834,6 +2849,11 @@ public:
    std::pair<bool, mmdb::Atom *> check_if_moused_over_hud_bar(double mouse_x, double mouse_y);
    // most of the above function is comment, so put it here:
    std::pair<bool, mmdb::Atom *> check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(double mouse_x, double mouse_y, bool act_on_hit);
+
+   bool check_if_hud_button_clicked(double x, double y);
+   bool check_if_hud_button_moused_over(double x, double y, bool button_1_is_down);
+   bool check_if_hud_button_moused_over_or_act_on_hit(double x, double y, bool act_on_hit, bool button_1_is_down);
+
 
    void unset_moving_atoms_currently_dragged_atom_index() {
      moving_atoms_currently_dragged_atom_index = -1;
@@ -3697,6 +3717,8 @@ public:
      return index;
    }
 
+   static void myglLineWidth(int n_pixels);
+
    // ---- active atom:
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec();
    static std::pair<bool, std::pair<int, coot::atom_spec_t> > active_atom_spec(int imol);
@@ -4154,7 +4176,10 @@ string   static std::string sessionid;
    static GLuint central_cube_array_buffer_id;
    static GLuint central_cube_index_buffer_id;
    static GLuint hud_text_vertexarray_id;
-   // static GLuint framebuffer_id;  // now we get access from the framebuffer class
+   static GLuint rotation_centre_crosshairs_vertexarray_id;
+   static GLuint rotation_centre_crosshairs_vertex_buffer_id;
+   static GLuint rotation_centre_crosshairs_index_buffer_id;
+   // STATIC GLuint framebuffer_id;  // now we get access from the framebuffer class
    static GLuint screen_quad_vertex_array_id;
    static GLuint blur_quad_vertex_array_id;
    static GLuint textureColorbuffer_screen;
@@ -4168,6 +4193,8 @@ string   static std::string sessionid;
    static Shader shader_for_origin_cube;
    static Shader shader_for_central_cube;
    static Shader shader_for_hud_text;
+   static Shader shader_for_hud_buttons;
+   static Shader shader_for_hud_image_texture;
    static Shader shader_for_atom_labels;
    static Shader shader_for_screen;
    static Shader shader_for_blur;
@@ -4181,7 +4208,11 @@ string   static std::string sessionid;
    static Shader shader_for_lines_pulse; // "you are here" pulse
    static Shader shader_for_ligand_view;
    static Shader shader_for_happy_face_residue_markers;
+   static Shader shader_for_rama_plot_axes_and_ticks;
+   static Shader shader_for_rama_plot_phi_phis_markers;
+   static Shader shader_for_hud_lines; // actally in 3D because it uses LinesMesh class
    static long frame_counter;
+   static float fps; // for on-screen FPS (fps is not calculated every frame)
    static long frame_counter_at_last_display;
    static bool perspective_projection_flag;
    static float screen_z_near_perspective;
@@ -4215,6 +4246,7 @@ string   static std::string sessionid;
    static glm::vec4 unproject(float x, float y, float z);
    static glm::vec3 unproject_to_world_coordinates(const glm::vec3 &projected_coords);
    static glm::vec3 get_screen_y_uv();
+   static glm::vec3 get_screen_x_uv();
 
    static glm::mat4 get_view_rotation();
    static void setup_map_uniforms(Shader *shader_p, // in the draw loop
@@ -4239,14 +4271,25 @@ string   static std::string sessionid;
    static void draw_cube(GtkGLArea *glarea, unsigned int cube_type);
    static void draw_central_cube(GtkGLArea *glarea);
    static void draw_origin_cube(GtkGLArea *glarea);
+   static void draw_rotation_centre_crosshairs(GtkGLArea *glarea);
    static void draw_ligand_view();
+   static void draw_hud_buttons();
+   static void draw_hud_fps();
+   static std::list<std::chrono::time_point<std::chrono::high_resolution_clock> > frame_time_history_list;
    void set_do_ambient_occlusion(bool s) { shader_do_ambient_occlusion_flag = s; } // caller redraws
+
+   static gl_rama_plot_t gl_rama_plot;
+   static void draw_ramachandran_plot(); // OpenGL rama plot
+   void clear_gl_rama_plot();
 
    void reset_frame_buffers(int width, int height);
    void setup_lights();
+   void translate_in_screen_x(float step_size);
    void translate_in_screen_z(float step_size);
    void move_forwards();
    void move_backwards();
+   void step_screen_left();
+   void step_screen_right();
 
    int blob_under_pointer_to_screen_centre();
 
@@ -4261,6 +4304,8 @@ string   static std::string sessionid;
    void sfcalc_genmap(int imol_model,
                       int imol_map_with_data_attached,
                       int imol_updating_difference_map);
+
+   static bool refinement_has_finished_moving_atoms_representation_update_needed_flag;
 
 #ifdef HAVE_CXX_THREAD
    static std::atomic<bool> restraints_lock;
@@ -4374,6 +4419,22 @@ string   static std::string sessionid;
    static float hud_geometry_distortion_to_bar_size_rama(float distortion);
    static float hud_geometry_distortion_to_rotation_amount_rama(float distortion);
 
+   void setup_hud_buttons();
+   static HUDMesh mesh_for_hud_buttons;
+   static std::vector<HUD_button_info_t> hud_button_info;
+
+
+   void show_test_buttons(); // testing function
+   // when the HUD buttons are shown, we want to show the atom pull buttons too
+   // (they are in the GTK toolbar, not in OpenGL)
+
+   void show_atom_pull_toolbar_buttons();
+   void hide_atom_pull_toolbar_buttons();
+
+   void show_accept_reject_hud_buttons();
+   void reset_hud_buttons_size_and_position();
+   void clear_hud_buttons(); // called by clear_up_moving_atoms_wrapper();
+
    // Mesh mesh_for_particles("mesh-for-particles");
    // int n_particles = 100;
    static Mesh mesh_for_particles;
@@ -4409,6 +4470,9 @@ string   static std::string sessionid;
    static LinesMesh lines_mesh_for_boids_box;
    void setup_draw_for_boids();
 
+   static LinesMesh lines_mesh_for_hud_lines; // Used 3d but actually is just HUD lines, but there is no
+                                              // HUDLinesMesh class - so I will use this (for now)
+
    // Let's base dynamic hydrogen bonds on how boids worked.
    static Mesh mesh_for_hydrogen_bonds; // with instancing, because dynamic
    void setup_draw_for_hydrogen_bonds();
@@ -4420,7 +4484,9 @@ string   static std::string sessionid;
    static bool do_tick_spin;
    static bool do_tick_boids;
    static bool do_tick_hydrogen_bonds_mesh;
+   static bool do_tick_constant_draw;
 
+   static gboolean tick_function_is_active();
 };
 
 
@@ -4433,6 +4499,11 @@ class molecule_rot_t {
 
 
 void do_accept_reject_dialog(std::string fit_type, const coot::refinement_results_t &ref_results);
+// old real GTK dialog interface:
+void do_accept_reject_dialog_with_a_dialog(std::string fit_type, const coot::refinement_results_t &ref_results);
+// new OpenGL buttons interface
+void do_accept_reject_hud_buttons(std::string fit_type, const coot::refinement_results_t &ref_results);
+
 void add_accept_reject_lights(GtkWidget *window, const coot::refinement_results_t &ref_results);
 // return a pointer to a "new" object
 GdkColor colour_by_distortion(float dist);

@@ -1147,7 +1147,29 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
 
    graphics_info_t g;
    PyObject *r = Py_False;
+
    if (true) {
+      GtkWidget *glarea = g.glareas[0];
+      std::cout << "DEBUG:: sending " << glarea << " size request 900 00 " << std::endl;
+      gtk_widget_set_size_request(glarea, 900, 900);
+      g.graphics_draw();
+   }
+
+   if (false) {
+      int imol = 0;
+      if (is_valid_model_molecule(imol)) {
+            molecule_class_info_t &m = g.molecules[imol];
+            gl_rama_plot_t rama;
+            rama.setup_from(imol, m.atom_sel.mol);
+      }
+   }
+
+   if (false) {
+      // g.show_test_buttons(); // it got renamed show_accept_reject_hud_buttons()
+      g.show_accept_reject_hud_buttons();
+   }
+
+   if (false) {
       graphics_info_t g;
       int imol = g.create_molecule();
 
@@ -1166,7 +1188,7 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
       d.face(0);
    }
 
-   if (0) {
+   if (false) {
      int i = PyLong_AsLong(i_py); // map molecule
      int j = PyLong_AsLong(j_py);
 
@@ -1210,6 +1232,7 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
        }
      }
    }
+
    if (PyBool_Check(r)) {
      Py_INCREF(r);
    }

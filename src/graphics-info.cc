@@ -306,24 +306,29 @@ void graphics_info_t::SetMouseClicked(double x, double y) {
    mouse_clicked_begin.second = y;
 }
 
+#include "widget-from-builder.hh"
+
 // static
 GtkWidget *graphics_info_t::wrapped_nothing_bad_dialog(const std::string &label) {
 
-   GtkWidget *w = NULL;
+   GtkWidget *dialog = NULL;
    if (use_graphics_interface_flag) {
-      w = create_nothing_bad_dialog();
-      GtkWidget *label_widget = lookup_widget(w, "nothing_bad_label");
-      gtk_label_set_use_markup(GTK_LABEL(label_widget), TRUE); // needed?
+      // w = create_nothing_bad_dialog();
+      dialog = widget_from_builder("nothing_bad_dialog");
+      GtkWidget *label_widget = widget_from_builder("nothing_bad_label");
+      gtk_widget_show(label_widget);
+      gtk_label_set_text(GTK_LABEL(label_widget), label.c_str());
 
       // for gtk2
       // gtk_misc_set_alignment(GTK_MISC(label_widget), 0.0, 0.5);
       // for gtk3
       gtk_label_set_xalign(GTK_LABEL(label_widget), 0.0);
+      gtk_label_set_use_markup(GTK_LABEL(label_widget), TRUE);
 
-      gtk_label_set_text(GTK_LABEL(label_widget), label.c_str());
-      gtk_window_set_transient_for(GTK_WINDOW(w), GTK_WINDOW(lookup_widget(graphics_info_t::glareas[0], "window1")));
+      GtkWidget *main_window = widget_from_builder("main_window");
+      gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(main_window));
    }
-   return w;
+   return dialog;
 }
 
 void
@@ -642,7 +647,7 @@ graphics_info_t::reorienting_next_residue(bool dir) {
 
                coot::view_info_t view1(glm_quat,    rot_centre, zoom, "current");
                coot::view_info_t view2(target_quat, target_pos, zoom, "next");
-               int nsteps = smooth_scroll_steps * 2;
+               int nsteps = smooth_scroll_n_steps * 2;
 
                coot::view_info_t::interpolate(view1, view2, nsteps); // sets up a gtk_widget_add_tick_callback with
                                                                      // a (no-capture) lambda function, so we don't
@@ -906,12 +911,12 @@ graphics_info_t::smooth_scroll_animation_func(GtkWidget *widget,
    // this is not sinusoidal. The first step is 1.
 
    float frac = 1.0;
-   graphics_info_t::smooth_scroll_steps = 20; // should be user choice?
-   if (graphics_info_t::smooth_scroll_steps > 0)
-      frac = 1.0/static_cast<float>(graphics_info_t::smooth_scroll_steps);
+   graphics_info_t::smooth_scroll_n_steps = 20; // should be user choice?
+   if (graphics_info_t::smooth_scroll_n_steps > 0)
+      frac = 1.0/static_cast<float>(graphics_info_t::smooth_scroll_n_steps);
    smooth_scroll_current_step += 1;
 
-   if (smooth_scroll_current_step <= smooth_scroll_steps) {
+   if (smooth_scroll_current_step <= smooth_scroll_n_steps) {
 
       double theta = 2.0 * M_PI * frac * smooth_scroll_current_step; // not used!
       coot::Cartesian this_step_delta = smooth_scroll_delta * frac;
@@ -932,14 +937,45 @@ graphics_info_t::smooth_scroll_animation_func(GtkWidget *widget,
    }
 }
 
+// static
+gboolean
+graphics_info_t::smooth_sinusoidal_scroll_animation_func(GtkWidget *widget,
+                                                         GdkFrameClock *frame_clock,
+                                                         gpointer data) {
+
+   smooth_scroll_n_steps = 20; // make this user-defined, or use frame_clock
+
+   smooth_scroll_current_step++;
+   if (smooth_scroll_current_step <= smooth_scroll_n_steps) {
+      double frac_now  = static_cast<double>(smooth_scroll_current_step  )/static_cast<double>(smooth_scroll_n_steps);
+      double frac_next = static_cast<double>(smooth_scroll_current_step+1)/static_cast<double>(smooth_scroll_n_steps);
+      double theta_now  = M_PI * frac_now;
+      double theta_next = M_PI * frac_next;
+      double cos_theta_now  = cos(theta_now);
+      double cos_theta_next = cos(theta_next);
+      double fp_1 = 0.5 * (1.0 - cos_theta_now);
+      double fp_2 = 0.5 * (1.0 - cos_theta_next);
+      coot::Cartesian full_delta = smooth_scroll_target_point - smooth_scroll_start_point;
+      coot::Cartesian delta_path = full_delta * fp_2 - full_delta * fp_1;
+      add_vector_to_rotation_centre(delta_path);
+      graphics_draw();
+      return G_SOURCE_CONTINUE;
+   } else {
+      // finished moving
+      graphics_info_t g;
+      g.update_things_on_move_and_redraw();
+      return G_SOURCE_REMOVE;
+   }
+}
+
+
+
 bool
 graphics_info_t::smooth_scroll_maybe_sinusoidal_acceleration(float x, float y, float z,
                                                              short int do_zoom_and_move_flag,
                                                              float target_zoom) {
 
    bool done_the_move = false; // well, "set it up to go" to be more accurate
-
-   // std::cout << "------------ start smooth_scroll_maybe_sinusoidal_acceleration --------------\n";
 
    // This is more like how PyMOL does it (and is better than stepped
    // acceleration).
@@ -958,6 +994,9 @@ graphics_info_t::smooth_scroll_maybe_sinusoidal_acceleration(float x, float y, f
    float yd = y - rotation_centre_y;
    float zd = z - rotation_centre_z;
 
+   smooth_scroll_start_point  = get_rotation_centre_cart();
+   smooth_scroll_target_point = coot::Cartesian(x,y,z);
+
    if (false)
       std::cout << "debug:: in smooth_scroll_maybe_sinusoidal_acceleration "
                 << "current centre " << X() << " " << Y() << " " << Z()
@@ -967,8 +1006,8 @@ graphics_info_t::smooth_scroll_maybe_sinusoidal_acceleration(float x, float y, f
       float pre_zoom = zoom;
 
       float frac = 1;
-      if (smooth_scroll_steps > 0)
-         frac = 1/float (smooth_scroll_steps);
+      if (smooth_scroll_n_steps > 0)
+         frac = 1/float (smooth_scroll_n_steps);
       float stepping_x = frac*xd;
       float stepping_y = frac*yd;
       float stepping_z = frac*zd;
@@ -992,7 +1031,7 @@ graphics_info_t::smooth_scroll_maybe_sinusoidal_acceleration(float x, float y, f
                    << std::endl;
       }
 
-      gtk_widget_add_tick_callback(glareas[0], smooth_scroll_animation_func, user_data, NULL);
+      gtk_widget_add_tick_callback(glareas[0], smooth_sinusoidal_scroll_animation_func, user_data, NULL);
       done_the_move = true;
 
       // restore state
@@ -1098,6 +1137,7 @@ graphics_info_t::setRotationCentreSimple(const coot::Cartesian &c) {
 }
 
 // return true if this function did the (simple and immediate) jump to the centre
+// force_jump is default false
 bool
 graphics_info_t::setRotationCentre(coot::Cartesian new_centre, bool force_jump) {
 
@@ -1128,7 +1168,7 @@ graphics_info_t::setRotationCentre(coot::Cartesian new_centre, bool force_jump) 
    //
    bool already_here = false;
    coot::Cartesian position_delta = new_centre - current_centre;
-   if (position_delta.amplitude() < 0.4) {
+   if (position_delta.amplitude() < 0.3) {
 
       {
          auto identification_pulse_func = [] (GtkWidget *widget,
@@ -1156,7 +1196,7 @@ graphics_info_t::setRotationCentre(coot::Cartesian new_centre, bool force_jump) 
          identification_pulse_centre = cartesian_to_glm(current_centre);
          gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
          bool broken_line_mode = true;
-         lines_mesh_for_identification_pulse.setup_pulse(&shader_for_lines_pulse, broken_line_mode);
+         lines_mesh_for_identification_pulse.setup_pulse(broken_line_mode);
          gtk_widget_add_tick_callback(glareas[0], identification_pulse_func, user_data, NULL);
 
       }
@@ -1209,6 +1249,8 @@ graphics_info_t::setRotationCentreAndZoom(coot::Cartesian centre,
 void
 graphics_info_t::ShowFPS(){
 
+   std::cout << "............. in ShowFPS()" << std::endl;
+
    long t = 0;
 
    t = 0; // glutGet(GLUT_ELAPSED_TIME);
@@ -1233,6 +1275,8 @@ graphics_info_t::ShowFPS(){
    }
 }
 
+#include "draw-2.hh"
+
 // We need to reset the Frames so that the first time we get a FPS
 // response we are not including all those frames that were made
 // without the timer being on.
@@ -1242,6 +1286,17 @@ graphics_info_t::SetShowFPS(int t) {
 
    show_fps_flag = t;
    Frames = 0;
+   if (t == 0) {
+      // turn it off
+      do_tick_constant_draw = false;
+   } else {
+      // turn it on
+      if (! tick_function_is_active()) {
+         int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+         idle_function_spin_rock_token = new_tick_id;  // fix this name!
+      }
+      do_tick_constant_draw = true;
+   }
 }
 
 //
@@ -1562,6 +1617,8 @@ graphics_info_t::accept_moving_atoms() {
    clear_all_atom_pull_restraints(false); // no re-refine
    clear_up_moving_atoms();
    update_environment_distances_by_rotation_centre_maybe(imol_moving_atoms);
+
+   hide_atom_pull_toolbar_buttons();
 
    normal_cursor(); // we may have had fleur cursor.
    // and set the rotation translation atom index to unknown again:
@@ -1991,6 +2048,11 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
          bonds.do_Ca_plus_ligands_bonds(*moving_atoms_asc, imol, Geom_p(), 1.0, 4.7,
                                         draw_missing_loops_flag, draw_hydrogens_flag);
 
+         // 20210725-PE I got a lock-up with one of these locks (not sure which) when playing with
+         //             the fun start GM demo model and dragging a CA model around. Something
+         //             somewhere else was not unlocking? I think that it may be a pull atom
+         //             restraint.
+
          unsigned int unlocked = 0;
          // Neither of these seems to make a difference re: the intermediate atoms python representation
          // while (! moving_atoms_bonds_lock.compare_exchange_weak(unlocked, 1)) {
@@ -2006,10 +2068,10 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
          if (moving_atoms_asc->atom_selection) {
 
             // moving_atoms_lock is a bool
-            bool unlocked = false;
-            while (! moving_atoms_lock.compare_exchange_weak(unlocked, 1) && !unlocked) {
+            bool unlocked_ma = false;
+            while (! moving_atoms_lock.compare_exchange_weak(unlocked_ma, 1) && !unlocked_ma) {
                  std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                 unlocked = false;
+                 unlocked_ma = false;
             }
 
             regularize_object_bonds_box.clear_up();
@@ -2033,10 +2095,10 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
          if (moving_atoms_asc->atom_selection) {
 
             // moving_atoms_lock is a bool
-            bool unlocked = false;
-            while (! moving_atoms_lock.compare_exchange_weak(unlocked, 1) && !unlocked) {
+            bool unlocked_ma = false;
+            while (! moving_atoms_lock.compare_exchange_weak(unlocked_ma, 1) && !unlocked) {
                  std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                 unlocked = false;
+                 unlocked_ma = false;
             }
 
             regularize_object_bonds_box.clear_up();
@@ -2076,9 +2138,10 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
          draw_hydrogens_flag = 1;
       std::set<int> dummy;
       bool do_sticks_for_waters = true; // otherwise waters are (tiny) discs.
+      bool draw_missing_loops_flag_local = false;
       Bond_lines_container bonds(*moving_atoms_asc, imol_moving_atoms, dummy, Geom_p(),
                                  do_disulphide_flag, draw_hydrogens_flag,
-                                 draw_missing_loops_flag, 0, "dummy",
+                                 draw_missing_loops_flag_local, 0, "dummy",
                                  do_rama_markup, do_rota_markup, do_sticks_for_waters, tables_pointer);
       unsigned int unlocked = false;
       while (! moving_atoms_bonds_lock.compare_exchange_weak(unlocked, 1) && !unlocked) {
@@ -2335,6 +2398,9 @@ graphics_info_t::environment_graphics_object_internal(const graphical_bonds_cont
 //
 void
 graphics_info_t::environment_graphics_object_internal_lines(const graphical_bonds_container &env_bonds_box) const {
+
+#if 0 // old - delete this one day.
+
    if (environment_show_distances == 1) {
 
       if (env_bonds_box.num_colours > 0) {
@@ -2396,6 +2462,8 @@ graphics_info_t::environment_graphics_object_internal_lines(const graphical_bond
          glDisable(GL_LINE_STIPPLE);
       }
    }
+
+#endif
 }
 
 // This is the GL rendering of the environment bonds box
@@ -2668,6 +2736,7 @@ graphics_info_t::graphics_object_internal_arrow(const coot::Cartesian &base_poin
 #endif
 }
 
+
 void
 graphics_info_t::graphics_object_internal_torus(const coot::Cartesian &base_point,
                                                 const coot::Cartesian &end_point,
@@ -2718,6 +2787,7 @@ graphics_info_t::graphics_object_internal_torus(const coot::Cartesian &base_poin
    }
 #endif
 }
+
 
 void
 graphics_info_t::graphics_object_internal_arc(float start_angle,
@@ -4989,6 +5059,7 @@ graphics_info_t::setup_flash_bond(int imol,
 // static
 void graphics_info_t::draw_chi_angles_flash_bond() {
 
+#if 0
    if (draw_chi_angle_flash_bond_flag) {
       glLineWidth(10);
       glColor3f(0.3,1.0,0.3);
@@ -5001,6 +5072,7 @@ void graphics_info_t::draw_chi_angles_flash_bond() {
     graphics_info_t::flash_bond.second.z());
       glEnd();
    }
+#endif
 }
 
 
@@ -5113,6 +5185,7 @@ graphics_info_t::set_last_map_sigma_step(float f) {
 void
 graphics_info_t::draw_geometry_objects() {
 
+#if 0 // old
    // 20090715 We change the type of distance_object_vec, and attach a
    // molecule from which the distance was made.  Don't display the
    // distance if the molecule corresponding to the start or end point
@@ -5171,12 +5244,16 @@ graphics_info_t::draw_geometry_objects() {
    if (dynamic_distances.size() > 0) {
       draw_dynamic_distances();
    }
+#endif
 }
 
 // static
 void
 graphics_info_t::draw_dynamic_distances() {
 
+   std::cout << "graphics_info_t:: draw_dynamic_distances() needs to be replaced " << std::endl;
+
+#if 0
    if (dynamic_distances.size() > 0) {
       glLineWidth(2.0);
       glColor3f(0.5, 0.8, 0.6);
@@ -5187,11 +5264,15 @@ graphics_info_t::draw_dynamic_distances() {
       }
       glDisable(GL_LINE_STIPPLE);
    }
+#endif
 }
 
 void
 coot::intermediate_atom_distance_t::draw_dynamic_distance() const {
 
+   std::cout << "graphics_info_t:: draw_dynamic_distance() needs to be replaced " << std::endl;
+
+#if 0
    //glEnable(GL_LINE_STIPPLE);
    glBegin(GL_LINES);
    glVertex3d(dynamic_atom->x,
@@ -5217,6 +5298,7 @@ coot::intermediate_atom_distance_t::draw_dynamic_distance() const {
    // glRasterPos3d();
    std::string t = coot::util::float_to_string(dist);
    graphics_info_t::printString(t, text_pos.x(), text_pos.y(), text_pos.z());
+#endif
 }
 
 void
@@ -5224,6 +5306,9 @@ graphics_info_t::draw_pointer_distances_objects() {
 
    // and pointer distances:
 
+   std::cout << "graphics_info_t:: draw_pointer_distances_objects() needs to be replaced " << std::endl;
+
+#if 0
    if (pointer_distances_object_vec->size() > 0) {
       double dist;
       clipper::Coord_orth text_pos;
@@ -5250,6 +5335,7 @@ graphics_info_t::draw_pointer_distances_objects() {
       }
       glDisable(GL_LINE_STIPPLE);
    }
+#endif
 }
 
 // update_pointer_distances() you might say
@@ -5257,33 +5343,33 @@ void
 graphics_info_t::make_pointer_distance_objects() {
 
    clipper::Coord_orth cen(rotation_centre_x,
-      rotation_centre_y,
-      rotation_centre_z);
+                           rotation_centre_y,
+                           rotation_centre_z);
 
    std::vector<clipper::Coord_orth> distances;
    std::vector<clipper::Coord_orth> mol_distances;
 
    if (show_pointer_distances_flag) {
       for (int imol=0; imol<n_molecules(); imol++) {
-    if (molecules[imol].has_model()) {
-       if (molecules[imol].is_displayed_p()) {
-          if (molecules[imol].atom_selection_is_pickable()) {
-     mol_distances = molecules[imol].distances_to_point(cen,
-        pointer_min_dist,
-        pointer_max_dist);
-     if (mol_distances.size() > 0) {
-        // append
-        for (unsigned int id=0; id<mol_distances.size(); id++)
-   distances.push_back(mol_distances[id]);
-     }
-          }
-       }
-    }
+         if (molecules[imol].has_model()) {
+            if (molecules[imol].is_displayed_p()) {
+               if (molecules[imol].atom_selection_is_pickable()) {
+                  mol_distances = molecules[imol].distances_to_point(cen,
+                                                                     pointer_min_dist,
+                                                                     pointer_max_dist);
+                  if (mol_distances.size() > 0) {
+                     // append
+                     for (unsigned int id=0; id<mol_distances.size(); id++)
+                        distances.push_back(mol_distances[id]);
+                  }
+               }
+            }
+         }
       }
 
       pointer_distances_object_vec->clear();
       for (unsigned int id=0; id<distances.size(); id++) {
-    pointer_distances_object_vec->push_back(std::pair<clipper::Coord_orth, clipper::Coord_orth> (distances[id], cen));
+         pointer_distances_object_vec->push_back(std::pair<clipper::Coord_orth, clipper::Coord_orth> (distances[id], cen));
       }
    }
 }
@@ -5897,10 +5983,9 @@ void graphics_info_t::run_user_defined_click_func() {
    if (scm_is_true(scm_procedure_p(user_defined_click_scm_func))) {
       SCM arg_list = SCM_EOL;
       for (unsigned int i=0; i<user_defined_atom_pick_specs.size(); i++) {
-    SCM spec_scm = atom_spec_to_scm(user_defined_atom_pick_specs[i]);
-    SCM spec_with_model_num = scm_cons(scm_from_int(user_defined_atom_pick_specs[i].model_number),
-       spec_scm);
-    arg_list = scm_cons(spec_with_model_num, arg_list);
+         SCM spec_scm = atom_spec_to_scm(user_defined_atom_pick_specs[i]);
+         SCM spec_with_model_num = scm_cons(scm_from_int(user_defined_atom_pick_specs[i].model_number), spec_scm);
+         arg_list = scm_cons(spec_with_model_num, arg_list);
       }
       arg_list = scm_reverse(arg_list);
 
@@ -5909,7 +5994,7 @@ void graphics_info_t::run_user_defined_click_func() {
       SCM mess = scm_from_locale_string("~s");
       SCM ds = scm_simple_format(dest, mess, scm_list_1(user_defined_click_scm_func));
       SCM da = scm_simple_format(dest, mess, scm_list_1(arg_list));
-      std::cout << "INFO applying " << scm_to_locale_string(ds) << " on "
+      std::cout << "INFO:: run_user_defined_click_func() applying " << scm_to_locale_string(ds) << " on "
                 << scm_to_locale_string(da) << std::endl;
 
       SCM rest = SCM_EOL;
@@ -5923,48 +6008,65 @@ void graphics_info_t::run_user_defined_click_func() {
    if (user_defined_click_py_func) {
 
       if (!PyCallable_Check(user_defined_click_py_func)) {
-    std::cout<<"(PYTHON) ERROR:: user_defined_click function must be callable, is "
-     << user_defined_click_py_func->ob_type->tp_name<<std::endl;
+         std::cout<<"(PYTHON) ERROR:: user_defined_click function must be callable, is "
+                  << user_defined_click_py_func->ob_type->tp_name<<std::endl;
       } else {
-    // what are we running? Print it out.
-    std::cout << "INFO applying > "
-      << PyEval_GetFuncName(user_defined_click_py_func)
-      << " < on ";
+         // what are we running? Print it out.
+         std::cout << "INFO:: (py) run_user_defined_click_func() applying > "
+                   << PyEval_GetFuncName(user_defined_click_py_func) << " < on:\n";
 
-    PyObject *arg_list_py = PyTuple_New(user_defined_atom_pick_specs.size());
-    for (unsigned int i=0; i<user_defined_atom_pick_specs.size(); i++) {
-       PyObject *spec_py = atom_spec_to_py(user_defined_atom_pick_specs[i]);
-       // we need to add the model number too
-       PyObject *model_number_py = PyLong_FromLong(user_defined_atom_pick_specs[i].model_number);
-       PyList_Insert(spec_py, 0, model_number_py);
+         PyObject *arg_list_py = PyTuple_New(user_defined_atom_pick_specs.size());
+         for (unsigned int i=0; i<user_defined_atom_pick_specs.size(); i++) {
+            PyObject *spec_py = atom_spec_to_py(user_defined_atom_pick_specs[i]);
+            // we need to add the model number too
+            PyObject *model_number_py = PyLong_FromLong(user_defined_atom_pick_specs[i].model_number);
+            PyList_Insert(spec_py, 0, model_number_py);
 
-       // continue output from above
-       PyObject *fmt = myPyString_FromString("[%i,%i,'%s',%i,'%s','%s','%s']");
-       PyObject *msg = PyUnicode_Format(fmt, PyList_AsTuple(spec_py));
-       std::cout << myPyString_AsString(msg) << " ";
-       PyTuple_SetItem(arg_list_py, i, spec_py);
-       Py_DECREF(fmt);
-       Py_DECREF(msg);
-    }
-    std::cout <<std::endl; // end ouput
+            // continue output from above
+            PyObject *fmt = myPyString_FromString("[%i,%i,'%s',%i,'%s','%s','%s']");
+            PyObject *msg = PyUnicode_Format(fmt, PyList_AsTuple(spec_py));
+            std::cout << "   " << myPyString_AsString(msg) << "\n";
+            PyTuple_SetItem(arg_list_py, i, spec_py);
+            Py_DECREF(fmt);
+            Py_DECREF(msg);
+         }
 
-    if (PyTuple_Check(arg_list_py)) {
-       if (!PyCallable_Check(user_defined_click_py_func)) {
-          std::cout << "WARNING:: python user click function should have been callable." << std::endl;
-          std::cout << "WARNING:: Ignoring it." << std::endl;
-          return;
-       }
-       PyObject *result = PyEval_CallObject(user_defined_click_py_func, arg_list_py);
-       Py_DECREF(arg_list_py);
-       if (result) {
-          Py_DECREF(result);
-       }
-    } else {
-       Py_DECREF(arg_list_py);
-       std::cout<<"ERROR:: executing user_defined_click" <<std::endl;
-    }
+         if (PyTuple_Check(arg_list_py)) {
+            if (!PyCallable_Check(user_defined_click_py_func)) {
+               std::cout << "WARNING:: python user click function should have been callable." << std::endl;
+               std::cout << "WARNING:: Ignoring it." << std::endl;
+               return;
+            }
+            PyObject *result = PyEval_CallObject(user_defined_click_py_func, arg_list_py);
+            PyObject *error_thing = PyErr_Occurred();
+            if (! error_thing) {
+               std::cout << "No Python error" << std::endl;
+            } else {
+               std::cout << "ERROR:: while executing py run_user_defined_click_func() a python error occured "
+                         << error_thing << std::endl;
+               PyObject *type, *value, *traceback;
+               PyErr_Fetch(&type, &value, &traceback);
+               PyErr_NormalizeException(&type, &value, &traceback);
+               PyObject *exception_string = PyObject_Repr(value);
+               const char *em = myPyString_AsString(exception_string);
+               std::cout << "ERROR:: " << em << std::endl;
+
+               Py_XDECREF(value);
+               Py_XDECREF(traceback);
+               Py_XDECREF(type);
+            }
+            Py_DECREF(arg_list_py);
+            if (result) {
+               Py_DECREF(result);
+            }
+         } else {
+            Py_DECREF(arg_list_py);
+            std::cout<<"ERROR:: executing user_defined_click" <<std::endl;
+         }
       }
    }
+
+   std::cout << "DEBUG:: --------------- run_user_defined_click_func() --- finished " << std::endl;
 
 #endif // USE_PYTHON
 }

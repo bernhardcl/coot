@@ -3654,6 +3654,8 @@ on_single_map_properties_colour_button_clicked (GtkButton       *button,
 						gpointer         user_data)
 {
 
+   printf("in callbacks.c on_single_map_properties_colour_button_clicked() \n");
+
    GtkWidget *window = lookup_widget(GTK_WIDGET(button),
                                      "single_map_properties_dialog");
    struct map_colour_data_type *map_colour_data;
@@ -3664,12 +3666,11 @@ on_single_map_properties_colour_button_clicked (GtkButton       *button,
    GtkWidget *parent = lookup_widget(GTK_WIDGET(button), "single_map_properties_dialog");
    GtkWindow *parent_w = GTK_WINDOW(parent);
    int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(window), "imol"));
+   GtkWindow *color_selection_dialog;
+   GtkColorSelection *color_selection;
 
-   GtkWidget *color_selection_dialog;
-   GtkWidget *color_selection;
-
-   printf("in on_single_map_properties_colour_button_clicked() imol %d\n", imol);
-   printf("in on_single_map_properties_colour_button_clicked() parent 0%p\n", parent);
+   printf("in callbacks.c on_single_map_properties_colour_button_clicked() imol %d\n", imol);
+   printf("in callbacks.c on_single_map_properties_colour_button_clicked() parent 0%p\n", parent);
 
    if (is_valid_map_molecule(imol)) {
 
@@ -3683,7 +3684,7 @@ on_single_map_properties_colour_button_clicked (GtkButton       *button,
       gtk_widget_show(col_chooser);
 #endif
 
-      color_selection_dialog = gtk_color_selection_dialog_new ("Map Colour Selection");
+      color_selection_dialog = gtk_color_selection_dialog_new("Map Colour Selection");
 
       map_colour = get_map_colour(imol);
       map_colour_data = (struct map_colour_data_type *) malloc(sizeof(struct map_colour_data_type));
@@ -8105,7 +8106,7 @@ on_fit_loop_ok_button_clicked          (GtkButton       *button,
                                         gpointer         user_data)
 {
    GtkWidget *w = lookup_widget(GTK_WIDGET(button), "mutate_sequence_dialog");
-   fit_loop_from_widget(w);
+   // fit_loop_from_widget(w); 20210820-PE  the function has been deleted and replaced.
    gtk_widget_destroy(w);
 
 }
@@ -11045,14 +11046,14 @@ on_residue_editor_select_monomer_type_ok_button_clicked (GtkButton       *button
 						    gpointer         user_data) {
 
 
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "residue_editor_select_monomer_type_dialog");
-  GtkWidget *combo_box = lookup_widget(GTK_WIDGET(button), "residue_editor_select_monomer_type_combobox");
-  gchar *t = 0;
+  /* GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "residue_editor_select_monomer_type_dialog"); */
+  /* GtkWidget *combo_box = lookup_widget(GTK_WIDGET(button), "residue_editor_select_monomer_type_combobox"); */
+  /* gchar *t = 0; */
 
-  // naughty?
-  t = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX(combo_box));
-  show_restraints_editor(t);
-  gtk_widget_destroy(dialog);
+  /* // naughty? */
+  /* t = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX(combo_box)); */
+  /* show_restraints_editor(t); */
+  /* gtk_widget_destroy(dialog); */
 }
 
 

@@ -90,12 +90,13 @@ graphics_info_t::init_buffers() {
    init_central_cube();
    init_screen_quads();
    init_blur_quads();
+
 }
 
 void
 graphics_info_t::init_central_cube() {
 
-   float positions[24] = {
+   float cube_positions[24] = {
                           -0.5,  -0.5, -0.5,
                           -0.5,  -0.5,  0.5,
                           -0.5,   0.5, -0.5,
@@ -106,12 +107,23 @@ graphics_info_t::init_central_cube() {
                            0.5,   0.5,  0.5
    };
 
-   glUseProgram(graphics_info_t::shader_for_central_cube.get_program_id());
+   float crosshair_positions[18] = {
+                                    -0.5f,  0.0f,  0.0,
+                                     0.5f,  0.0f,  0.0,
+                                     0.0f, -0.5f,  0.0,
+                                     0.0f,  0.5f,  0.0,
+                                     0.0f,  0.0f, -0.5,
+                                     0.0f,  0.0f,  0.5
+   };
+
+   graphics_info_t::shader_for_central_cube.Use();
    GLenum err = glGetError();
    if (err) std::cout << "init_central_cube() glUseProgram() err is " << err << std::endl;
 
    // number of lines * 2:
-   unsigned int indices[24] { 0,1, 1,5, 5,4, 4,0, 2,3, 3,7, 7,6, 6,2, 0,2, 1,3, 5,7, 4,6 };
+   unsigned int cube_indices[24] { 0,1, 1,5, 5,4, 4,0, 2,3, 3,7, 7,6, 6,2, 0,2, 1,3, 5,7, 4,6 };
+
+   unsigned int crosshair_indices[6] = {0,1,2,3,4,5};
 
    // GLuint VertexArrayID;
    glGenVertexArrays(1, &graphics_info_t::central_cube_vertexarray_id);
@@ -120,7 +132,7 @@ graphics_info_t::init_central_cube() {
    // GLuint vertexbuffer;
    glGenBuffers(1, &graphics_info_t::central_cube_array_buffer_id);
    glBindBuffer(GL_ARRAY_BUFFER, graphics_info_t::central_cube_array_buffer_id);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 24, &positions[0], GL_STATIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 24, &cube_positions[0], GL_STATIC_DRAW);
    glEnableVertexAttribArray(0);
    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
@@ -129,15 +141,39 @@ graphics_info_t::init_central_cube() {
    err = glGetError();
    if (err) std::cout << "init_central_cube() index glGenBuffers() err is " << err << std::endl;
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, graphics_info_t::central_cube_index_buffer_id);
-   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 24, &indices[0], GL_STATIC_DRAW);
+   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 24, &cube_indices[0], GL_STATIC_DRAW);
    err = glGetError();
    if (err) std::cout << "init_central_cube() glBufferData() err is " << err << std::endl;
+   glBindVertexArray(0);
+
+   // now the crosshairs
+
+   glGenVertexArrays(1, &graphics_info_t::rotation_centre_crosshairs_vertexarray_id);
+   glBindVertexArray(graphics_info_t::rotation_centre_crosshairs_vertexarray_id);
+   // positions
+   glGenBuffers(1, &graphics_info_t::rotation_centre_crosshairs_vertex_buffer_id);
+   glBindBuffer(GL_ARRAY_BUFFER, graphics_info_t::rotation_centre_crosshairs_vertex_buffer_id);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 18, &crosshair_positions[0], GL_STATIC_DRAW);
+   glEnableVertexAttribArray(0);
+   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+   // indices
+   glGenBuffers(1, &graphics_info_t::rotation_centre_crosshairs_index_buffer_id);
+   err = glGetError();
+   if (err) std::cout << "init_central_cube() index buffer glGenBuffers() for crosshairs A err is "
+                      << err << std::endl;
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, graphics_info_t::rotation_centre_crosshairs_index_buffer_id);
+   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, &crosshair_indices[0], GL_STATIC_DRAW);
+   if (err) std::cout << "init_central_cube() index buffer glGenBuffers() for crosshairs B err is "
+                      << err << std::endl;
    glBindVertexArray(0);
 
 }
 
 void
 graphics_info_t::init_hud_text() {
+
+   std::cout << ":::::::::::: init_hud_text() " << std::endl;
 
    graphics_info_t g;
    g.load_freetype_font_textures();
@@ -175,7 +211,7 @@ graphics_info_t::handle_delete_item_curor_change(GtkWidget *widget) {
          window = gtk_widget_get_window(GTK_WIDGET(widget));
 #endif
          if (window) {
-            GdkCursor *current_cursor = gdk_window_get_cursor(window);
+            // GdkCursor *current_cursor = gdk_window_get_cursor(window);
             // std::cout << "current cursor " << gdk_cursor_get_cursor_type(current_cursor) << std::endl;
             if (naii.success == GL_TRUE) {
                int imol = naii.imol;
@@ -535,6 +571,27 @@ graphics_info_t::setup_map_uniforms(Shader *shader_p,
 }
 
 
+// If the next time you want to use this, but don't have access to graphics_info_t, then move
+// this function outside the graphics_info_t class - mabye it's own file/header!
+//
+void
+graphics_info_t::myglLineWidth(int n_pixels) {
+
+#ifdef __APPLE__
+
+   GLint range[2];
+   glGetIntegerv(GL_ALIASED_LINE_WIDTH_RANGE, range);
+   if (n_pixels < range[1])
+      glLineWidth(n_pixels);
+   else
+      glLineWidth(range[1]);
+#else
+   glLineWidth(n_pixels);
+#endif
+   GLenum err = glGetError();
+   if (err) std::cout << "GL ERROR:: in myglLineWidth()  " << n_pixels << " " << err << std::endl;
+}
+
 void
 graphics_info_t::draw_map_molecules(bool draw_transparent_maps) {
 
@@ -585,7 +642,7 @@ graphics_info_t::draw_map_molecules(bool draw_transparent_maps) {
 
    if (!draw_transparent_maps || n_transparent_maps > 0) {
 
-      glLineWidth(map_line_width * framebuffer_scale);
+      myglLineWidth(map_line_width * framebuffer_scale);
       err = glGetError();
       if (err) std::cout << "gtk3_draw_map_molecules() glLineWidth " << err << std::endl;
 
@@ -647,11 +704,17 @@ graphics_info_t::draw_map_molecules(bool draw_transparent_maps) {
             // --- material ---
 
             Material &material = m.material_for_maps;
+            shader.set_bool_for_uniform("do_specular",         material.do_specularity);
             shader.set_vec4_for_uniform( "material.ambient",   material.ambient);
             shader.set_vec4_for_uniform( "material.diffuse",   material.diffuse);
-            shader.set_vec4_for_uniform( "material.specular",  material.specular);
+            shader.set_vec4_for_uniform( "material.specular",  material.specular * material.do_specularity); // binary multiply
             shader.set_float_for_uniform("material.shininess", material.shininess);
             shader.set_float_for_uniform("material.specular_strength", material.specular_strength);
+
+            if (false)
+               std::cout << "draw_map_molecules(): do_specular " << material.do_specularity
+                         << " strength " << material.specular_strength
+                         << " shiny " << material.shininess << std::endl;
 
             // --- background ---
 
@@ -662,6 +725,11 @@ graphics_info_t::draw_map_molecules(bool draw_transparent_maps) {
             if (err) std::cout << "   draw_map_molecules() glUniform4fv() for bg  " << err << std::endl;
 
             // --- fresnel ---
+
+            if (false)
+               std::cout << "debug fresnel settings state: " << m.fresnel_settings.state
+                         << " bias " << m.fresnel_settings.bias << " scale "
+                         << m.fresnel_settings.scale << " power " << m.fresnel_settings.power << std::endl;
 
             shader.set_bool_for_uniform("do_fresnel",     m.fresnel_settings.state);
             shader.set_float_for_uniform("fresnel_bias",  m.fresnel_settings.bias);
@@ -1084,8 +1152,10 @@ graphics_info_t::update_rama_balls(std::vector<Instanced_Markup_Mesh_attrib_t> *
          cc.rotate(ra);
          glm::vec4 col = cc.to_glm();
          Instanced_Markup_Mesh_attrib_t ball(col, ball_position, size);
-         float d1 = d + 85.0;
-         float d2 = - d1 * 0.016;
+         // float d1 = d + 85.0; 20210902-PE Hmm.
+         float d1 = d + 16.0;
+         float d2 = - d1 * 0.4; // 20210902-PE was 0.016;
+         // std::cout << "d2: " << d2 << std::endl;
          if (d2 < 0.0) d2 = 0.0;
          if (d2 > 1.0) d2 = 1.0;
          ball.specular_strength = 0.01 + d2;
@@ -1727,12 +1797,11 @@ graphics_info_t::draw_cube(GtkGLArea *glarea, unsigned int cube_type) {
    glm::mat4 mvp = get_molecule_mvp();
    glm::mat4 view_rotation = get_view_rotation(); // hhmm... naming
 
-   glBindVertexArray(graphics_info_t::central_cube_vertexarray_id);
+   glBindVertexArray(central_cube_vertexarray_id);
    err = glGetError(); if (err) std::cout << "   error::draw_central_cube() B err " << err << std::endl;
-   glUseProgram(graphics_info_t::shader_for_central_cube.get_program_id());
+   glUseProgram(shader_for_central_cube.get_program_id());
    err = glGetError(); if (err) std::cout << "   error::draw_central_cube() C err " << err << std::endl;
-   glm::mat4 view_orientation = glm::toMat4(graphics_info_t::glm_quat);
-   glm::vec3 rc = graphics_info_t::get_rotation_centre();
+   glm::vec3 rc = get_rotation_centre();
    if (cube_type == VIEW_CENTRAL_CUBE) {
       mvp = glm::translate(mvp, rc);
       float s = rotation_centre_cube_size;
@@ -1746,7 +1815,7 @@ graphics_info_t::draw_cube(GtkGLArea *glarea, unsigned int cube_type) {
 
    // we don't diverge here on the cube tye. Maybe change the name of the shader
    // because it does both
-   Shader &shader = graphics_info_t::shader_for_central_cube;
+   Shader &shader = shader_for_central_cube;
 
    // we do this for all the shaders - Hmm.
    {
@@ -1796,6 +1865,67 @@ graphics_info_t::draw_origin_cube(GtkGLArea *glarea) {
    draw_cube(glarea, ORIGIN_CUBE);
 }
 
+void
+graphics_info_t::draw_rotation_centre_crosshairs(GtkGLArea *glarea) {
+
+   gtk_gl_area_make_current(glarea); // needed?
+   GLenum err = glGetError();
+   if (err) std::cout << "error draw_rotation_centre_crosshairs() A0 err " << err << std::endl;
+
+   glLineWidth(1.0);
+   err = glGetError();
+   if (err) std::cout << "error draw_rotation_centre_crosshairs() A1 err " << err << std::endl;
+
+   glm::mat4 mvp = get_molecule_mvp();
+   glm::mat4 view_rotation = get_view_rotation();
+
+   glBindVertexArray(rotation_centre_crosshairs_vertexarray_id);
+   if (err) std::cout << "error draw_rotation_centre_crosshairs() B err " << err << std::endl;
+
+   shader_for_central_cube.Use(); // (it's drawing the crosshairs though - same shader)
+
+   glm::vec3 rc = graphics_info_t::get_rotation_centre();
+   mvp = glm::translate(mvp, rc);
+   float s = 6.0f * rotation_centre_cube_size;
+   glm::vec3 sc(s,s,s);
+   mvp = glm::scale(mvp, sc);
+
+   GLuint mvp_location           = shader_for_central_cube.mvp_uniform_location;
+   GLuint view_rotation_location = shader_for_central_cube.view_rotation_uniform_location;
+
+   glUniformMatrix4fv(mvp_location, 1, GL_FALSE, &mvp[0][0]);
+   err = glGetError();
+   if (err) std::cout << "error::draw_rotation_centre_crosshairs() glUniformMatrix4fv() for mvp " << err << std::endl;
+   glUniformMatrix4fv(view_rotation_location, 1, GL_FALSE, &view_rotation[0][0]);
+   err = glGetError();
+   if (err) std::cout << "error::draw_rotation_centre_crosshairs() glUniformMatrix4fv() for view_rotation " << err
+                      << std::endl;
+
+    bool is_bb = graphics_info_t::background_is_black_p();
+   glm::vec4 line_colour(0.8f, 0.8f, 0.8f, 1.0f);
+   if (! is_bb) 
+      line_colour = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+
+   GLuint line_colour_uniform_location = shader_for_central_cube.line_colour_uniform_location;
+   glUniform4fv(line_colour_uniform_location, 1, glm::value_ptr(line_colour));
+
+   GLuint background_colour_uniform_location = shader_for_central_cube.background_colour_uniform_location;
+   glm::vec4 bgc(graphics_info_t::background_colour, 1.0);
+   glUniform4fv(background_colour_uniform_location, 1, glm::value_ptr(bgc));
+
+   err = glGetError();
+   if (err) std::cout << "error::draw_rotation_centre_crosshairs() glUniformMatrix4fv() for background " << err
+                      << std::endl;
+
+   glDrawElements(GL_LINES, 6, GL_UNSIGNED_INT, nullptr);
+   if (err) std::cout << "error::draw_rotation_centre_crosshairs() glDrawElements " << err << std::endl;
+   glBindVertexArray(0); // unbind
+   glUseProgram(0);
+
+}
+
+
+
 GtkWidget *create_and_pack_gtkglarea(GtkWidget *vbox, bool use_gtk_builder) {
 
    // the use_gtk_builder flag really means "was invoked from the path that..."
@@ -1826,13 +1956,14 @@ GtkWidget *create_and_pack_gtkglarea(GtkWidget *vbox, bool use_gtk_builder) {
       std::string e2s(e2);
       opengl_minor_version = std::stoi(e2s);
    }
-   std::cout << "DEBUG:: seting OpenGL required version to "
+   std::cout << "DEBUG:: setting OpenGL required version to "
              << opengl_major_version << " " << opengl_minor_version << std::endl;
 
    gtk_gl_area_set_required_version(GTK_GL_AREA(w), opengl_major_version, opengl_minor_version);
 
    unsigned int dimensions = 700;
    if (! use_gtk_builder) dimensions = 900;
+   dimensions = 900;
    int gl_widget_dimension_scale_factor = get_gl_widget_dimension_scale_factor();
    gtk_widget_set_size_request(w,
                                gl_widget_dimension_scale_factor * dimensions,
@@ -1871,43 +2002,62 @@ graphics_info_t::setup_hud_geometry_bars() {
    shader_for_hud_geometry_bars.Use();
 
    mesh_for_hud_geometry.setup_camera_facing_quad_for_bar();
-   mesh_for_hud_geometry.setup_instancing_buffer(500);
+   mesh_for_hud_geometry.setup_instancing_buffer(500, sizeof(HUD_bar_attribs_t));
 
    // If not found in this directory, then try default directory.
-   texture_for_hud_geometry_labels.set_default_directory(coot::package_data_dir());
-   texture_for_hud_geometry_labels.init("hud-label-nbc-rama.png");
+   texture_for_hud_geometry_labels_map["Rama"].set_default_directory(coot::package_data_dir());
+   texture_for_hud_geometry_labels_map["Rama"].init("hud-label-rama-small.png");
+   // texture_for_hud_geometry_labels_map["Rama"].init("rama-plot-other-normal.png");
+   texture_for_hud_geometry_labels_map["NBC"].set_default_directory(coot::package_data_dir());
+   texture_for_hud_geometry_labels_map["NBC"].init("hud-label-NBC-small.png");
+   //texture_for_hud_geometry_labels_map["NBC"].init("rama-plot-other-normal.png");
+   texture_for_hud_geometry_labels_map["Rota"].set_default_directory(coot::package_data_dir());
+   texture_for_hud_geometry_labels_map["Rota"].init("hud-label-rota-small.png");
+   //texture_for_hud_geometry_labels_map["Rota"].init("rama-plot-other-normal.png");
+   texture_for_hud_geometry_labels_map["Pull"].set_default_directory(coot::package_data_dir());
+   texture_for_hud_geometry_labels_map["Pull"].init("hud-label-pull-small.png");
+   // texture_for_hud_geometry_labels_map["Pull"].init("rama-plot-other-normal.png");
 
-   // above?
    texture_for_hud_tooltip_background.set_default_directory(coot::package_data_dir());
-   // texture_for_hud_tooltip_background.init("hud-label-nbc-rama.png");
    texture_for_hud_tooltip_background.init("hud-tooltip.png"); // 94x47
-   float sc_x = 0.001 * static_cast<float>(103) / aspect_ratio;
-   float sc_y = 0.001 * static_cast<float>(50);
+   float sc_x = 0.1 * static_cast<float>(103) / aspect_ratio;
+   float sc_y = 0.01 * static_cast<float>(50);
 
    // Do I need to Use() the shader_for_hud_geometry_labels here?
    shader_for_hud_geometry_labels.Use();
    mesh_for_hud_geometry_labels.setup_quad();
-   glm::vec2 position(-0.98, 0.903);
-   glm::vec2 scales(0.04/aspect_ratio, 0.06);
-   mesh_for_hud_geometry_labels.set_position_and_scales(position, scales); // ""NBC, Pull"" texture
+   // glm::vec2 position(-0.98, 0.903);
+   // glm::vec2 position(-0.0, 0.0);
+   // glm::vec2 scales(0.56/aspect_ratio, 0.56);
+   // mesh_for_hud_geometry_labels.set_position_and_scales(position, scales); // ""NBC, Pull"" texture
 
    mesh_for_hud_tooltip_background.setup_quad(); // does setup_buffers()
    mesh_for_hud_tooltip_background.set_scales(glm::vec2(sc_x, sc_y));
-   // mesh_for_hud_tooltip_background.setup_texture_coords_for_nbcs_and_rama();  // surely not needed?
 
    tmesh_for_hud_geometry_tooltip_label.setup_quad();
-   glm::vec2 label_scale(0.00015/aspect_ratio, 0.00015);
+   glm::vec2 label_scale(0.000095/aspect_ratio, 0.000095);
    tmesh_for_hud_geometry_tooltip_label.set_scales(label_scale);
 
 }
 
-float
-graphics_info_t::hud_geometry_distortion_to_bar_size_rama(float distortion) {
-   float d1 = distortion + 200.0;
-   float d2 = d1 * 0.0003;
-   if (d2 < 0.0) d2 = 0.0;
-   float d3 = 100.0 * d2 * d2;
-   return d3;
+void
+graphics_info_t::setup_hud_buttons() {
+
+   if (! glareas[0]) return;
+
+   gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
+   shader_for_hud_buttons.Use();
+   mesh_for_hud_buttons.setup_vertices_and_triangles_for_button(); // instanced button
+   unsigned int n_buttons_max = 20; // surely 6 is enough?
+   mesh_for_hud_buttons.setup_instancing_buffer(n_buttons_max, sizeof(HUD_button_info_t));
+   // maybe mesh_for_hud_buttons.close() ?
+}
+
+void
+graphics_info_t::clear_hud_buttons() {
+
+   hud_button_info.clear();
+   mesh_for_hud_buttons.update_instancing_buffer_data(hud_button_info); // empty
 }
 
 float
@@ -1923,13 +2073,437 @@ graphics_info_t::hud_geometry_distortion_to_bar_size_atom_pull(float distortion)
 
 
 float
+graphics_info_t::hud_geometry_distortion_to_bar_size_rama(float distortion) {
+
+#if 0 // 20210902-PE this is how it was
+   float d1 = distortion + 200.0;
+   float d2 = d1 * 0.0003;
+   if (d2 < 0.0) d2 = 0.0;
+   float d3 = 100.0 * d2 * d2;
+   return d3;
+#endif
+
+   float d1 = distortion + 16.0;
+   float d2 = d1 / 6.0;
+   if (d2 < 0.0) d2 = 0.0;
+   float d3 = 0.1 * d2 * d2;
+
+   return d3;
+}
+
+// this function is used to colour the rama balla and colour the HUD geometry bars for rama
+// (a good idea to use the same function, it turns out).
+//
+float
 graphics_info_t::hud_geometry_distortion_to_rotation_amount_rama(float distortion) {
-   distortion += 200.0;
-   // float rotation_amount = 1.0 - 0.0022 * distortion;
-   float rotation_amount = 1.0 - 0.0028 * distortion;
+
+   // 20210902-PE note to self - the numbers coming here (distortion) need to be unscaled
+   // by the rama restraints weight.
+   // But ignoring that for now... Good values are less than -15 (all the way down to ~ -24)
+   // Bad numbers are -9
+   //
+   // Final rotation amounts: 1.0 is pure green
+   // 0.68 is pure red
+
+   // When we don't have ramachandran restraints, then the rama balls are calculated
+   // by make_generic_vertices_for_rama_balls() called by make_glsl_bonds_type_checked()
+   // (if graphics_info_t::do_rama_restraints is false)
+   //
+   // Note also that cis peptides don't have ramachandran restraints.
+   //
+   float d2 = distortion + 16.0;
+   float rotation_amount = 1.0 - 0.1 * d2;
    if (rotation_amount < 0.68) rotation_amount = 0.68; // red cap
-   if (rotation_amount > 1.0) rotation_amount = 1.0;
+   if (rotation_amount > 1.00) rotation_amount = 1.0;
+
+   // std::cout << "debug:: distortion " << distortion << " rotation_amount " << rotation_amount << std::endl;
+
    return rotation_amount;
+}
+
+void
+graphics_info_t::draw_hud_buttons() {
+
+   if (hud_button_info.empty()) return;
+
+   glEnable(GL_DEPTH_TEST); // needed?
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+   GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+   GtkAllocation allocation;
+   gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
+   int w = allocation.width;
+   int h = allocation.height;
+   float aspect_ratio = static_cast<float>(w)/static_cast<float>(h);
+
+   mesh_for_hud_buttons.draw(&shader_for_hud_buttons); // we have added the button instances before now.
+                                                       // (actually in show_accept_reject_hud_buttons()).
+
+   // do the texture for the labels all on the fly - is that sound?
+   //
+   float height_adjust = static_cast<float>(900)/static_cast<float>(h);
+   float button_width  = HUD_button_info_t::button_width  * static_cast<float>(900)/static_cast<float>(w);
+   float button_height = HUD_button_info_t::button_height * static_cast<float>(900)/static_cast<float>(h);
+   glm::vec4 text_colour_white(0.95f, 0.95f, 0.95f, 1.0f);
+   Shader &shader = shader_for_hud_geometry_tooltip_text;
+   shader.Use();
+   for (unsigned int i=0; i<hud_button_info.size(); i++) {
+      const auto &button = hud_button_info[i];
+      const std::string &label = button.button_label;
+      if (! label.empty()) {
+         std::string mesh_name = "HUDTexturemesh for button with label" + label;
+         HUDTextureMesh htm(mesh_name);
+         htm.setup_quad();
+         float text_scale_raw = 0.4 * 0.00018;
+         // text_scale_raw *= 100.0;
+         float text_scale = text_scale_raw * height_adjust;
+         glm::vec2 label_scale(text_scale / aspect_ratio, text_scale);
+         htm.set_scales(label_scale);
+         unsigned int n_chars = label.size(); // really I want the sum of x_advance for the letters. Can I get that?
+         float x_advance = htm.get_sum_x_advance(label, ft_characters);
+         float width_adjust = static_cast<float>(900)/static_cast<float>(w);
+         float tl_adjust = - static_cast<float>(n_chars-1) * text_scale_raw * 2.5 * 50.0 * width_adjust;
+         glm::vec2 pos = button.position_offset;
+         pos += glm::vec2(0.0, 0.3 * button_height); // vertical adjustment for label
+         pos += glm::vec2(0.5 * button_width, 0.00); // horizontal adjustment for label (lefttext is middle of button)
+         pos += glm::vec2(tl_adjust, 0.00); // horizontal adjustment for text length
+         htm.set_position(pos);
+         htm.draw_label(label, text_colour_white, &shader, ft_characters);
+      }
+   }
+}
+
+void
+graphics_info_t::clear_gl_rama_plot() {
+
+   gl_rama_plot.clear();
+}
+
+void
+graphics_info_t::draw_ramachandran_plot() {
+
+   GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+   GtkAllocation allocation;
+   gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
+   int w = allocation.width;
+   int h = allocation.height;
+
+   // auto tp_0 = std::chrono::high_resolution_clock::now();
+   bool draw_gl_ramachandran_plot = true;
+   if (draw_gl_ramachandran_plot) { // make this a member of graphics_info_t
+      if (moving_atoms_asc) {
+         if (moving_atoms_asc->n_selected_atoms > 0) {
+            gl_rama_plot.setup_from(imol_moving_atoms, moving_atoms_asc->mol); // checks to see if an update is acutally needed.
+            gl_rama_plot.draw(&shader_for_rama_plot_axes_and_ticks,
+                              &shader_for_rama_plot_phi_phis_markers, // instanced
+                              &shader_for_hud_image_texture, w, h); // background texture (not text!), uses window_resize_position_correction
+         }
+      }
+   }
+
+   // auto tp_1 = std::chrono::high_resolution_clock::now();
+   // auto d10 = std::chrono::duration_cast<std::chrono::microseconds>(tp_1 - tp_0).count();
+   // std::cout << "INFO:: draw_ramachandran_plot() " << d10 << " microseconds" << std::endl;
+}
+
+void
+graphics_info_t::draw_hud_fps() {
+
+   // these are "relative to"
+   enum screen_position_origins_t { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT};
+
+   auto get_munged_offset_and_scale = [] (screen_position_origins_t spo,
+                                          const glm::vec2 &offset_natural,
+                                          float scale_x_natural, float scale_y_natural) {
+
+                                         glm::vec2 offset_new = offset_natural;
+
+                                         // glm::vec2 scales_new(scale_x_natural, scale_y_natural);
+
+                                         // calculating the aspect_ratio like this takes 0.22 microseconds
+
+                                         GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+                                         GtkAllocation allocation;
+                                         gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
+                                         int w = allocation.width;
+                                         int h = allocation.height;
+
+                                         // for 900 pixels and offset if 0.1 is 90 pixels.
+                                         // 90 pixels in a 1000 pixels widths is 0.1/wr
+
+                                         float wr = static_cast<float>(w)/static_cast<float>(900);
+                                         float hr = static_cast<float>(h)/static_cast<float>(900);
+
+                                         if (spo == TOP_LEFT)
+                                            offset_new = glm::vec2(-1.0 + offset_natural.x/wr, 1.0 + offset_natural.y/hr);
+                                         if (spo == BOTTOM_LEFT)
+                                            offset_new = glm::vec2(-1.0 + offset_natural.x/wr, -1.0 + offset_natural.y/hr);
+                                         if (spo == BOTTOM_RIGHT)
+                                            offset_new = glm::vec2(1.0 + offset_natural.x/wr, -1.0 + offset_natural.y/hr);
+                                         if (spo == TOP_RIGHT)
+                                            offset_new = glm::vec2(1.0 + offset_natural.x/wr, 1.0 + offset_natural.y/hr);
+
+                                         glm::vec2 scales_new(scale_x_natural/wr, scale_y_natural/hr);
+
+                                         return std::pair<glm::vec2, glm::vec2>(offset_new, scales_new);
+                                      };
+
+   if (GetFPSFlag()) {
+
+      // ----------------- HUD FPS string ---------------------------------
+
+      std::string s = "FPS: " + coot::util::float_to_string_using_dec_pl(fps, 2);
+      if (fps > 0) {
+         float ms_per_frame = 1000.0 / fps;
+         s += "  " + coot::util::float_to_string_using_dec_pl(ms_per_frame, 2) + " ms/frame";
+      }
+      HUDTextureMesh htm("mesh for FPS");
+      htm.setup_quad();
+      Shader &shader = shader_for_hud_geometry_tooltip_text;  // change the name of this - it's for general (real) HUD text
+      glm::vec4 col(0.7, 0.7, 0.4, 1.0);
+      glm::vec4 grey(0.5, 0.5, 0.5, 0.4);
+      glm::vec4 full_grey(0.5, 0.5, 0.5, 1.0);
+      auto p_s = get_munged_offset_and_scale(TOP_LEFT, glm::vec2(0.1, -0.1), 0.0001, 0.0001);
+      const glm::vec2 &munged_position_offset = p_s.first;
+      const glm::vec2 &munged_scales = p_s.second;
+      htm.set_scales(munged_scales);
+      htm.set_position(munged_position_offset);
+      htm.draw_label(s, col, &shader, ft_characters);
+
+
+      // ----------------- HUD graph for ms/frame ---------------------------------
+
+      if (frame_time_history_list.size() > 2) {
+         std::vector<glm::vec2> data;
+         data.reserve(frame_time_history_list.size()+2);
+
+         // base line
+         float x_o = munged_position_offset.x;
+         float y_o = munged_position_offset.y - 0.3;
+
+         //LinesMesh lines_mesh; // 3D! (because I don't have a HUDLines class)
+
+         // now convert those data to 3D vertices indices to be used by lines_mesh...
+         // (we'll just use a unit matrix for the mvp when drawing them)
+         std::vector<s_generic_vertex> vertices;
+         vertices.reserve(data.size() + 6);
+         std::vector<unsigned int> indices;
+         glm::vec3 norm(0,0,1);  // not used
+
+         // make glm::vec2 data and then convert that to OpenGL screen coordinates
+         //
+         unsigned int time_count = 0;
+         std::list<std::chrono::time_point<std::chrono::high_resolution_clock> >::const_iterator it;
+         for (it = frame_time_history_list.begin(); it != frame_time_history_list.end(); it++) {
+            if (it != frame_time_history_list.begin()) {
+               float x = static_cast<float>(time_count);
+               const std::chrono::time_point<std::chrono::high_resolution_clock> &tp_this = *it;
+               const std::chrono::time_point<std::chrono::high_resolution_clock> &tp_prev = *std::prev(it);
+               auto delta_t = std::chrono::duration_cast<std::chrono::milliseconds>(tp_this - tp_prev).count();
+               data.push_back(glm::vec2(x_o + 0.001 * x, y_o + 0.003 * delta_t));
+               time_count++;
+            }
+         }
+
+         // base line and grid lines into vertices first
+         //
+         float y_tick_mark = 20.0 * 0.003; // 20ms converted to OpenGL y coord
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o,                   -1), norm, full_grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o,                   -1), norm, full_grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o + y_tick_mark,     -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o + y_tick_mark,     -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o + 2 * y_tick_mark, -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o + 2 * y_tick_mark, -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o + 3 * y_tick_mark, -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o + 3 * y_tick_mark, -1), norm, grey));
+
+         for (unsigned int i=0; i<data.size(); i++)
+            vertices.push_back(s_generic_vertex(glm::vec3(data[i], -1), norm, col));
+
+         for (unsigned int i=0; i<(data.size()-2+6); i++) {
+            if (i == 1 || i == 3 || i == 5 || i == 7) {
+               // no line betwween base line and grid lines and start of real data
+            } else {
+               indices.push_back(i);
+               indices.push_back(i+1);
+            }
+         }
+
+         // this looks like it can, from time to time, draw to the wrong framebuffer. Hmm.
+
+         lines_mesh_for_hud_lines.update_vertices_and_indices(vertices, indices);
+         glm::mat4 dummy_mat4(1.0);
+         lines_mesh_for_hud_lines.draw(&shader_for_hud_lines, dummy_mat4, dummy_mat4);
+      }
+   }
+}
+
+void
+graphics_info_t::show_atom_pull_toolbar_buttons() {
+
+   if (use_graphics_interface_flag) {
+      GtkWidget *button_1 = get_widget_from_builder("clear_atom_pull_restraints_toolbutton");
+      GtkWidget *button_2 = get_widget_from_builder("auto_clear_atom_pull_restraints_togglebutton");
+
+      gtk_widget_show(button_1);
+      gtk_widget_show(button_2);
+   }
+}
+
+
+void
+graphics_info_t::hide_atom_pull_toolbar_buttons() {
+
+   if (use_graphics_interface_flag) {
+      GtkWidget *button_1 = get_widget_from_builder("clear_atom_pull_restraints_toolbutton");
+      GtkWidget *button_2 = get_widget_from_builder("auto_clear_atom_pull_restraints_togglebutton");
+      
+      gtk_widget_hide(button_1);
+      gtk_widget_hide(button_2);
+   }
+}
+
+void
+graphics_info_t::show_accept_reject_hud_buttons() {
+
+   // add some HUD buttons
+
+   GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+   GtkAllocation allocation;
+   gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
+   int w = allocation.width;
+   int h = allocation.height;
+
+   HUD_button_info_t button_1("OK");
+   HUD_button_info_t button_2("Cancel");
+   HUD_button_info_t button_3("Sidechain 180"); // failure to lookup glyph for degree symbol ° :-(
+   HUD_button_info_t button_4("Pep-Flip This");
+   HUD_button_info_t button_5("Pep-Flip Next");
+   HUD_button_info_t button_6("Backrub Rotamer");
+   HUD_button_info_t button_7("JED Flip");
+   HUD_button_info_t button_8("Cis/Trans");
+
+   button_1.set_colour(glm::vec4(0.4, 0.7, 0.4, 0.5));
+   button_2.set_colour(glm::vec4(0.7, 0.4, 0.4, 0.5));
+
+   button_1.set_scales_and_position_offset(0, w, h);
+   button_2.set_scales_and_position_offset(1, w, h);
+   button_3.set_scales_and_position_offset(2, w, h);
+   button_7.set_scales_and_position_offset(3, w, h);
+   button_8.set_scales_and_position_offset(4, w, h);
+   button_6.set_scales_and_position_offset(5, w, h);
+   button_5.set_scales_and_position_offset(6, w, h);
+   button_4.set_scales_and_position_offset(7, w, h);
+
+   auto button_1_func = [] () {
+                           graphics_info_t g;
+                           g.stop_refinement_internal();
+                           g.accept_moving_atoms();
+                           g.hud_button_info.clear();
+                           g.graphics_draw();
+                           g.hide_atom_pull_toolbar_buttons();
+                           g.clear_gl_rama_plot();
+                           return true;
+                   };
+
+   auto button_2_func = [] () {
+                           graphics_info_t g;
+                           g.stop_refinement_internal();
+                           g.clear_up_moving_atoms();
+                           g.hud_button_info.clear();
+                           g.graphics_draw();
+                           g.hide_atom_pull_toolbar_buttons();
+                           g.clear_gl_rama_plot();
+                           return true;
+                        };
+   auto button_3_func = [] () {
+                           graphics_info_t g;
+                           g.side_chain_flip_180_intermediate_atoms();
+                           return true;
+                        };
+
+   auto button_4_func = [] () {
+                           graphics_info_t g;
+                           g.pepflip_intermediate_atoms();
+                           return true;
+                        };
+
+   auto button_5_func = [] () {
+                           graphics_info_t g;
+                           g.pepflip_intermediate_atoms_other_peptide();
+                           return true;
+                        };
+
+   auto button_6_func = [] () {
+                           graphics_info_t g;
+                           return g.backrub_rotamer_intermediate_atoms();
+                        };
+
+   auto button_7_func = [] () {
+                           graphics_info_t g;
+                           g.jed_flip_intermediate_atoms(false);
+                           return true;
+                        };
+
+   auto button_8_func = [] () {
+                           graphics_info_t g;
+                           g.cis_trans_conversion_intermediate_atoms();
+                           return true;
+                        };
+
+   button_1.connect(button_1_func);
+   button_2.connect(button_2_func);
+   button_3.connect(button_3_func);
+   button_4.connect(button_4_func);
+   button_5.connect(button_5_func);
+   button_6.connect(button_6_func);
+   button_7.connect(button_7_func);
+   button_8.connect(button_8_func);
+
+   hud_button_info.push_back(button_1);
+   hud_button_info.push_back(button_2);
+   hud_button_info.push_back(button_3);
+   hud_button_info.push_back(button_4);
+   hud_button_info.push_back(button_5);
+   hud_button_info.push_back(button_6);
+   hud_button_info.push_back(button_7);
+   hud_button_info.push_back(button_8);
+
+   gtk_gl_area_attach_buffers(gl_area);
+   mesh_for_hud_buttons.update_instancing_buffer_data(hud_button_info);
+
+}
+
+void
+graphics_info_t::reset_hud_buttons_size_and_position() {
+
+   GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+   GtkAllocation allocation;
+   gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
+   int w = allocation.width;
+   int h = allocation.height;
+
+   for (unsigned int i=0; i<hud_button_info.size(); i++) {
+      auto &button = hud_button_info[i];
+      button.set_scales_and_position_offset(i, w, h);
+   }
+}
+
+// static
+float
+graphics_info_t::get_x_base_for_hud_geometry_bars() {
+
+   GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+   GtkAllocation allocation;
+   gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
+   int w = allocation.width;
+
+   float w_adjust = static_cast<float>(w)/static_cast<float>(900);
+
+   // shift to more negative x when the window is wider
+   return -0.83 - 0.04 * w_adjust;
+
 }
 
 
@@ -1943,22 +2517,53 @@ graphics_info_t::draw_hud_geometry_bars() {
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-   // first draw the text (labels) texture
+   GLenum err = glGetError(); if (err) std::cout << "GL ERROR:: draw_hud_geometry_bars() A error " << err << std::endl;
+
+   GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+   GtkAllocation allocation;
+   gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
+   int w = allocation.width;
+   int h = allocation.height;
 
    coot::refinement_results_t &rr = saved_dragged_refinement_results;
 
-   if (! rr.refinement_results_contain_overall_rama_plot_score) {
-      // std::cout << "chopping the texture " << std::endl;
-      mesh_for_hud_geometry_labels.setup_texture_coords_for_nbcs_only();
-   } else {
-      mesh_for_hud_geometry_labels.setup_texture_coords_for_nbcs_and_rama();
+   // --------------------- first draw the text (labels) texture -----------------------
+
+   class hud_label_info_t {
+   public:
+      std::string name;
+      unsigned int bar_index;
+      float label_relative_width;
+      hud_label_info_t(const std::string &n, unsigned int i, float rw) : name(n), bar_index(i), label_relative_width(rw) {}
+      hud_label_info_t(const std::string &n, unsigned int i) : name(n), bar_index(i) { label_relative_width = 1.0; }
+   };
+   std::vector<hud_label_info_t> hud_label_info;
+   hud_label_info.push_back(hud_label_info_t("Pull", 0, 0.7));
+   hud_label_info.push_back(hud_label_info_t("Rama", 2));
+   hud_label_info.push_back(hud_label_info_t("Rota", 3, 0.9));
+   hud_label_info.push_back(hud_label_info_t("NBC",  1, 0.9));
+   float x_base = get_x_base_for_hud_geometry_bars();
+
+   // Note that the x-positions are are not the left-most edge of the label (hmm)
+
+   // Don't forget these are *images* not actual text.
+
+   for (const auto &hud_label : hud_label_info) {
+      texture_for_hud_geometry_labels_map[hud_label.name].Bind(0);
+      unsigned int bar_index = hud_label.bar_index;
+      float text_y_offset = 0.017; // relative to the the bars in add_bars()
+      float y = 0.943 + text_y_offset - 0.05 * static_cast<float>(bar_index); // c.f. add_bars()
+      float width_adjust = static_cast<float>(900)/static_cast<float>(w);
+      glm::vec2 scales(0.046 * hud_label.label_relative_width * width_adjust, 0.015);
+      glm::vec2 position(x_base - 0.05 * width_adjust, y);
+      mesh_for_hud_geometry_labels.set_position_and_scales(position, scales);
+      mesh_for_hud_geometry_labels.draw(&shader_for_hud_geometry_labels);
+      err = glGetError();
+      if (err) std::cout << "GL ERROR:: draw_hud_geometry_bars() error Textures "
+                         << hud_label.name << " " << err << std::endl;
    }
 
-   // Restore me when fixed                                                       
-   // texture_for_hud_geometry_labels.Bind(0);
-   // mesh_for_hud_geometry_labels.draw(&shader_for_hud_geometry_labels);
-
-   // now draw the bars
+      // ----------------------- now draw the bars -----------------------
 
    auto probability_to_rotation_amount = [] (float probability) {
                                             // high probability should have low rotation
@@ -1981,47 +2586,49 @@ graphics_info_t::draw_hud_geometry_bars() {
    auto add_bars = [] (const std::vector<std::pair<coot::atom_spec_t, float> > &baddies,
                        unsigned int bar_index,
                        std::vector<HUD_bar_attribs_t> *new_bars_p,
+                       float x_base_for_hud_geometry_bars,
                        float (*distortion_to_rotation_amount)(float),
                        float (*distortion_to_bar_size)(float)) {
 
-                         glm::vec2 to_top_left(-0.90, 0.943 - 0.05 * static_cast<float>(bar_index));
-                         float sum_l = 0;
-                         int n = baddies.size();
-                         glm::vec4 col_white(0.8,0.8, 0.8, 0.7);
-                         for (int i=(n-1); i>=0; i--) {
-                            coot::colour_t cc(0.1, 0.9, 0.2);
-                            float d = baddies[i].second;
-                            float rotation_amount = distortion_to_rotation_amount(d);
-                            cc.rotate(rotation_amount);
-                            glm::vec4 col = cc.to_glm();
-                            col.w = 0.7;
-                            glm::vec2 position_offset = to_top_left + glm::vec2(sum_l, 0.0);
-                            float bar_length = distortion_to_bar_size(d);
-                            bool this_atom_is_in_a_moving_atoms_residue = baddies[i].first.int_user_data;
+                      // to_top_left() needs to be the same as check_bars()
+                      glm::vec2 to_top_left(x_base_for_hud_geometry_bars, 0.943 - 0.05 * static_cast<float>(bar_index));
+                      float sum_l = 0;
+                      int n = baddies.size();
+                      glm::vec4 col_white(0.8,0.8, 0.8, 0.7);
+                      for (int i=(n-1); i>=0; i--) {
+                         coot::colour_t cc(0.1, 0.9, 0.2);
+                         float d = baddies[i].second;
+                         float rotation_amount = distortion_to_rotation_amount(d);
+                         cc.rotate(rotation_amount);
+                         glm::vec4 col = cc.to_glm();
+                         col.w = 0.7;
+                         glm::vec2 position_offset = to_top_left + glm::vec2(sum_l, 0.0);
+                         float bar_length = distortion_to_bar_size(d);
+                         bool this_atom_is_in_a_moving_atoms_residue = baddies[i].first.int_user_data;
 
-                            // the vector of HUD_bar_attribs_t is fed directly to a opengl buffer.
-                            // So I need "expand" to 2 bars right here - one with a "thin bar" attribute
-                            //
-                            if (! this_atom_is_in_a_moving_atoms_residue) {
-                               float bar_height = 0.03; // universal
-                               float bar_slither_y_scale = 0.3; // looks nice
-                               float y_offset_main = bar_height * bar_slither_y_scale;
-                               glm::vec2 position_offset_for_main = position_offset + glm::vec2(0, y_offset_main);
-                               HUD_bar_attribs_t bar_main(col, position_offset_for_main, bar_length);
-                               bar_main.scale_y = 1.0 - bar_slither_y_scale;
-                               new_bars_p->push_back(bar_main);
-                               // slither bar
-                               glm::vec2 position_offset_for_slither = position_offset + glm::vec2(0,0);
-                               HUD_bar_attribs_t bar_slither(col_white, position_offset_for_slither, bar_length);
-                               bar_slither.scale_y = bar_slither_y_scale;
-                               new_bars_p->push_back(bar_slither);
-                            } else {
-                               HUD_bar_attribs_t bar(col, position_offset, bar_length);
-                               new_bars_p->push_back(bar);
-                            }
-                            sum_l += bar_length + 0.005; // with a gap between bars
-                          }
-                       };
+                         // the vector of HUD_bar_attribs_t is fed directly to a opengl buffer.
+                         // So I need "expand" to 2 bars right here - one with a "thin bar" attribute
+                         //
+                         if (! this_atom_is_in_a_moving_atoms_residue) {
+                            float bar_height = 0.03; // universal
+                            float bar_slither_y_scale = 0.3; // looks nice
+                            float y_offset_main = bar_height * bar_slither_y_scale;
+                            glm::vec2 position_offset_for_main = position_offset + glm::vec2(0, y_offset_main);
+                            HUD_bar_attribs_t bar_main(col, position_offset_for_main, bar_length);
+                            bar_main.scale_y = 1.0 - bar_slither_y_scale;
+                            new_bars_p->push_back(bar_main);
+                            // slither bar
+                            glm::vec2 position_offset_for_slither = position_offset + glm::vec2(0,0);
+                            HUD_bar_attribs_t bar_slither(col_white, position_offset_for_slither, bar_length);
+                            bar_slither.scale_y = bar_slither_y_scale;
+                            new_bars_p->push_back(bar_slither);
+                         } else {
+                            HUD_bar_attribs_t bar(col, position_offset, bar_length);
+                            new_bars_p->push_back(bar);
+                         }
+                         sum_l += bar_length + 0.005; // with a gap between bars
+                      }
+                   };
 
    auto rota_sorter = [] (const rotamer_markup_container_t &rmc_1,
                           const rotamer_markup_container_t &rmc_2) {
@@ -2033,13 +2640,15 @@ graphics_info_t::draw_hud_geometry_bars() {
 
    auto add_rotamer_bars = [rota_sorter] (std::vector<HUD_bar_attribs_t> *new_bars_p,
                                           unsigned int bar_index,
+                                          float x_base_for_hud_geometry_bars,
                                           rotamer_markup_container_t *rotamer_markups,
                                           int n_rotamer_markups) {
 
                               // this code has to be the same as the check_if_hud_bar_clicked code
 
+                              // needs to be consitent with above and check_bars()
+                              glm::vec2 to_top_left(x_base_for_hud_geometry_bars, 0.943 - 0.05 * static_cast<float>(bar_index));
                               glm::vec4 col_white(0.8,0.8, 0.8, 0.7);
-                              glm::vec2 to_top_left(-0.90, 0.943 - 0.05 * static_cast<float>(bar_index));
                               std::vector<rotamer_markup_container_t> v;
                               // filter out the goodies
                               for (int i=0; i<n_rotamer_markups; i++)
@@ -2102,16 +2711,17 @@ graphics_info_t::draw_hud_geometry_bars() {
 
    std::vector<HUD_bar_attribs_t> new_bars;
 
+   float x_base_for_hud_geometry_bars = get_x_base_for_hud_geometry_bars();
    // add to new_bars
-   add_bars(rr.sorted_atom_pulls, 0, &new_bars,
+   add_bars(rr.sorted_atom_pulls, 0, &new_bars, x_base_for_hud_geometry_bars,
             distortion_to_rotation_amount_nbc, hud_geometry_distortion_to_bar_size_atom_pull);
 
    if (rr.refinement_results_contain_overall_nbc_score)
-      add_bars(rr.sorted_nbc_baddies, 1, &new_bars,
+      add_bars(rr.sorted_nbc_baddies, 1, &new_bars, x_base_for_hud_geometry_bars,
                distortion_to_rotation_amount_nbc, hud_geometry_distortion_to_bar_size_nbc);
 
    if (rr.refinement_results_contain_overall_rama_plot_score)
-      add_bars(rr.sorted_rama_baddies, 2, &new_bars,
+      add_bars(rr.sorted_rama_baddies, 2, &new_bars, x_base_for_hud_geometry_bars,
                hud_geometry_distortion_to_rotation_amount_rama, hud_geometry_distortion_to_bar_size_rama);
 
    // add rotas to new_bars
@@ -2119,7 +2729,7 @@ graphics_info_t::draw_hud_geometry_bars() {
       if (moving_atoms_asc->mol) {
          int nrms = moving_atoms_molecule.bonds_box.n_rotamer_markups;
          if (nrms > 0) {
-            add_rotamer_bars(&new_bars, 3, moving_atoms_molecule.bonds_box.rotamer_markups, nrms);
+            add_rotamer_bars(&new_bars, 3, x_base_for_hud_geometry_bars, moving_atoms_molecule.bonds_box.rotamer_markups, nrms);
          }
       }
    }
@@ -2171,12 +2781,13 @@ graphics_info_t::check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(double m
    //
    auto check_blocks = [mouse_in_opengl_coords] (const std::vector<std::pair<coot::atom_spec_t, float> > &baddies,
                                                  unsigned int bar_index,
+                                                 float x_base_for_hud_geometry_bars,
                                                  float (*distortion_to_bar_size)(float),
                                                  bool act_on_hit) {
 
                           bool status = false;
                           mmdb::Atom *at_out = 0;
-                          glm::vec2 to_top_left(-0.90, 0.943 - 0.05 * static_cast<float>(bar_index));
+                          glm::vec2 to_top_left(x_base_for_hud_geometry_bars, 0.943 - 0.05 * static_cast<float>(bar_index));
                           float sum_l = 0;
                           int n = baddies.size();
                           for (int i=(n-1); i>=0; i--) {
@@ -2233,6 +2844,7 @@ graphics_info_t::check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(double m
 
    auto check_rota_blocks = [mouse_in_opengl_coords,
                              rota_sorter] (unsigned int bar_index,
+                                           float x_base_for_hud_geometry_bars,
                                            rotamer_markup_container_t *rotamer_markups,
                                            int n_rotamer_markups,
                                            bool act_on_hit) {
@@ -2240,7 +2852,7 @@ graphics_info_t::check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(double m
                                bool status = false;
                                mmdb::Atom *at_out = 0;
                                coot::residue_spec_t spec_for_at_out;
-                               glm::vec2 to_top_left(-0.90, 0.943 - 0.05 * static_cast<float>(bar_index));
+                               glm::vec2 to_top_left(x_base_for_hud_geometry_bars, 0.943 - 0.05 * static_cast<float>(bar_index));
                                std::vector<rotamer_markup_container_t> v;
                                // filter out the goodies
                                for (int i=0; i<n_rotamer_markups; i++)
@@ -2310,22 +2922,28 @@ graphics_info_t::check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(double m
                                return std::pair<bool, mmdb::Atom *>(status, at_out);
                             };
 
-   status_pair = check_blocks(rr.sorted_atom_pulls, 0, hud_geometry_distortion_to_bar_size_atom_pull, act_on_hit);
+   float x_base_for_hud_geometry_bars = get_x_base_for_hud_geometry_bars();
+
+   status_pair = check_blocks(rr.sorted_atom_pulls, 0, x_base_for_hud_geometry_bars,
+                              hud_geometry_distortion_to_bar_size_atom_pull, act_on_hit);
 
    if (!status_pair.first)
       if (rr.refinement_results_contain_overall_nbc_score)
-         status_pair = check_blocks(rr.sorted_nbc_baddies, 1, hud_geometry_distortion_to_bar_size_nbc, act_on_hit);
+         status_pair = check_blocks(rr.sorted_nbc_baddies, 1, x_base_for_hud_geometry_bars,
+                                    hud_geometry_distortion_to_bar_size_nbc, act_on_hit);
 
    if (!status_pair.first)
       if (rr.refinement_results_contain_overall_rama_plot_score)
-         status_pair = check_blocks(rr.sorted_rama_baddies, 2, hud_geometry_distortion_to_bar_size_rama, act_on_hit);
+         status_pair = check_blocks(rr.sorted_rama_baddies, 2, x_base_for_hud_geometry_bars,
+                                    hud_geometry_distortion_to_bar_size_rama, act_on_hit);
 
    if (!status_pair.first) {
       if (moving_atoms_asc) {
          if (moving_atoms_asc->mol) {
             int nrms = moving_atoms_molecule.bonds_box.n_rotamer_markups;
             if (nrms > 0) {
-               status_pair = check_rota_blocks(3, moving_atoms_molecule.bonds_box.rotamer_markups, nrms, act_on_hit);
+               status_pair = check_rota_blocks(3, x_base_for_hud_geometry_bars,
+                                               moving_atoms_molecule.bonds_box.rotamer_markups, nrms, act_on_hit);
             }
          }
       }
@@ -2354,7 +2972,11 @@ graphics_info_t::check_if_moused_over_hud_bar(double mouse_x, double mouse_y) {
    // called check_if_hud_bar_mouse_over_or_act_on_hurd_bar_click()
 
    bool act_on_hit = false;
-   return check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(mouse_x, mouse_y, act_on_hit);
+   auto r = check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(mouse_x, mouse_y, act_on_hit);
+   if (false)
+      std::cout << ":::::::::: debug:: check_if_moused_over_hud_bar() returns "
+                << r.first << " " << r.second << std::endl;
+   return r;
 }
 
 bool
@@ -2367,19 +2989,105 @@ graphics_info_t::check_if_hud_bar_clicked(double mouse_x, double mouse_y) {
    return  r.first;
 }
 
+bool
+graphics_info_t::check_if_hud_button_moused_over(double mouse_x, double mouse_y, bool button_1_is_down) {
+
+   // std::cout << "Here in check_if_hud_button_moused_over() with button_1_is_down " << button_1_is_down << std::endl;
+
+   bool act_on_hit = false;
+   check_if_hud_button_moused_over_or_act_on_hit(mouse_x, mouse_y, act_on_hit, button_1_is_down);
+   return false;
+}
+
+bool
+graphics_info_t::check_if_hud_button_clicked(double mouse_x, double mouse_y) {
+
+   bool act_on_hit = true;
+   bool status = check_if_hud_button_moused_over_or_act_on_hit(mouse_x, mouse_y, act_on_hit, false);
+   return status;
+}
+
+// this function needs to be passed mouse press or mouse release button info
+// so that it can do the button highlighting correctly.
+//
+// button_1_is_down is used for the highlighting.
+//
+bool
+graphics_info_t::check_if_hud_button_moused_over_or_act_on_hit(double x, double y, bool act_on_hit, bool button_1_is_down) {
+
+   auto highlight_just_button_with_index = [button_1_is_down] (unsigned int idx_active) {
+                                              for (unsigned int i=0; i<hud_button_info.size(); i++) {
+                                                 auto &button = hud_button_info[i];
+                                                 if (i == idx_active) {
+                                                    if (button_1_is_down) {
+                                                       button.set_button_colour_for_mode(HUD_button_info_t::PRESSED);
+                                                    } else {
+                                                       button.set_button_colour_for_mode(HUD_button_info_t::HIGHLIGHTED);
+                                                    }
+                                                 } else {
+                                                    button.set_button_colour_for_mode(HUD_button_info_t::BASIC);
+                                                 }
+                                              }
+                                              mesh_for_hud_buttons.update_instancing_buffer_data(hud_button_info);
+                                              graphics_draw(); // let's see the changes then
+                                           };
+   auto unhighlight_all_buttons = [] () {
+                                              for (unsigned int i=0; i<hud_button_info.size(); i++) {
+                                                 auto &button = hud_button_info[i];
+                                                 button.set_button_colour_for_mode(HUD_button_info_t::BASIC);
+                                              }
+                                              mesh_for_hud_buttons.update_instancing_buffer_data(hud_button_info);
+                                  };
+
+   bool status = false;
+   if (! hud_button_info.empty()) {
+      GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+      GtkAllocation allocation;
+      gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
+      int w = allocation.width;
+      int h = allocation.height;
+
+      double x_gl_coords =  2.0 * x/static_cast<double>(w) - 1.0;
+      double y_gl_coords = -2.0 * y/static_cast<double>(h) + 1.0;
+
+      for (unsigned int i=0; i<hud_button_info.size(); i++) {
+         const auto &button = hud_button_info[i];
+         // are we on that button?
+         HUD_button_limits_t lims = button.get_button_limits(w, h);
+         if (lims.is_hit(x_gl_coords,y_gl_coords)) {
+            if (act_on_hit) {
+               std::cout << "Act on button " << i << " callback" << std::endl;
+               if (button.callback_function) {
+                  button.callback_function();
+               }
+            }
+            status = true;
+            highlight_just_button_with_index(i);
+         }
+      }
+      if (!status) {
+         unhighlight_all_buttons();
+      }
+   }
+
+   return status;
+}
+
+
 void
 graphics_info_t::draw_hud_geometry_tooltip() {
 
    // this flag is set when the user mouses over a HUD bar
-   // and removed when they move from a hud bar.
-
-   glEnable(GL_DEPTH_TEST);
-   glEnable(GL_BLEND);
-   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   // and removed when they move from a hud geometry bar.
 
    if (draw_hud_tooltip_flag) {
 
+      glEnable(GL_DEPTH_TEST);
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
       texture_for_hud_tooltip_background.Bind(0);
+      mesh_for_hud_tooltip_background.set_scales(glm::vec2(0.163, 0.05)); // hud-tooltip.png is 103x50
       mesh_for_hud_tooltip_background.draw(&shader_for_hud_geometry_labels);
 
       // now the text that goes into (on top of) the background
@@ -2418,7 +3126,7 @@ graphics_info_t::draw_hud_geometry_tooltip() {
 
 
 gboolean
-graphics_info_t::render(bool to_screendump_framebuffer, const std::string &output_file_name) {
+graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &output_file_name) {
 
    // auto tp_0 = std::chrono::high_resolution_clock::now();
 
@@ -2431,25 +3139,65 @@ graphics_info_t::render(bool to_screendump_framebuffer, const std::string &outpu
                           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                           err = glGetError(); if (err) std::cout << "render_scene lambda C err " << err << std::endl;
 
-                          draw_central_cube(gl_area);
                           draw_origin_cube(gl_area);
                           err = glGetError(); if (err) std::cout << "render scene lambda post cubes err " << err << std::endl;
 
+
+                          bool draw_test_image = false;
+                          if (draw_test_image) {
+                             glEnable(GL_BLEND);
+                             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                             texture_for_camera_facing_quad.Bind(0);
+
+                             // 20210831-PE testing... this gives us an image at the origin that's in the world and facing the camera.
+                             // interesting but not useful
+                             // tmesh_for_camera_facing_quad.draw(&camera_facing_quad_shader, mvp, quat_mat, lights, eye_position,
+                             //                         bg_col, shader_do_depth_fog_flag);
+
+                             tmesh_for_hud_image_testing.set_position(glm::vec2(-0.3, 0.5));
+                             tmesh_for_hud_image_testing.set_scales(glm::vec2(0.6, 0.2));
+                             tmesh_for_hud_image_testing.draw(&shader_for_hud_geometry_labels);
+                          }
+
+                          // draw_central_cube(gl_area);
+                          draw_rotation_centre_crosshairs(gl_area);
+
                           draw_molecules(); // includes particles, happy-faces and boids (should they be there (maybe not))
 
-                          draw_hud_geometry_bars();
-
-                          draw_hud_geometry_tooltip(); // background and text
+                          draw_invalid_residue_pulse();
 
                           draw_identification_pulse();
 
                           draw_delete_item_pulse();
 
-                          draw_invalid_residue_pulse();
-
                           draw_ligand_view();
 
+                          draw_hud_geometry_bars();
+
+                          draw_hud_geometry_tooltip(); // background and text
+
+                          draw_ramachandran_plot();
+
+                          draw_hud_buttons();
+
+                          draw_hud_fps();
+
                           glBindVertexArray(0); // here is not the place to call this.
+                       };
+
+   auto do_fps_stuff = [] () {
+                          if (GetFPSFlag()) {
+                             frame_counter++;
+                             std::chrono::time_point<std::chrono::high_resolution_clock> tp_now = std::chrono::high_resolution_clock::now();
+                             auto delta_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp_now - previous_frame_time_for_per_second_counter);
+                             auto elapsed_seconds = 0.001 * delta_time_ms;
+                             if (elapsed_seconds.count() >= 1.0) {
+                                float num_frames_delta = frame_counter - frame_counter_at_last_display;
+                                previous_frame_time_for_per_second_counter = tp_now;
+                                frame_counter_at_last_display = frame_counter;
+                                fps = num_frames_delta/elapsed_seconds.count();
+                             }
+                          }
                        };
 
    GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
@@ -2457,6 +3205,14 @@ graphics_info_t::render(bool to_screendump_framebuffer, const std::string &outpu
    gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
    int w = allocation.width;
    int h = allocation.height;
+
+   GtkWidget *glarea = glareas[0];
+   if (glarea) {
+      auto tp_now = std::chrono::high_resolution_clock::now();
+      frame_time_history_list.push_back(tp_now);
+      if (frame_time_history_list.size() > 501)
+         frame_time_history_list.pop_front();
+   }
 
    if (use_framebuffers) { // static class variable
 
@@ -2479,7 +3235,9 @@ graphics_info_t::render(bool to_screendump_framebuffer, const std::string &outpu
 
       render_scene(gl_area);
 
-      if (to_screendump_framebuffer) {
+      do_fps_stuff();
+
+      if (to_screendump_framebuffer_flag) {
 
          glDisable(GL_DEPTH_TEST);
          unsigned int sf = framebuffer_scale;
@@ -2534,6 +3292,9 @@ graphics_info_t::render_scene_to_base_framebuffer() {
    GLenum err = glGetError(); if (err) std::cout << "render() D err " << err << std::endl;
    shader_for_screen.set_bool_for_uniform("do_ambient_occlusion", shader_do_ambient_occlusion_flag);
    shader_for_screen.set_bool_for_uniform("do_outline", shader_do_outline_flag);
+   glm::vec4 background_col(background_colour, 1.0);
+   bool background_is_black = background_is_black_p();
+   shader_for_screen.set_bool_for_uniform("background_is_dark", background_is_black);
 
    glDrawArrays(GL_TRIANGLES, 0, 6);
    err = glGetError(); if (err) std::cout << "render() E err " << err << std::endl;
@@ -2591,9 +3352,22 @@ graphics_info_t::get_screen_y_uv() {
    return d_uv;
 }
 
+// static
+glm::vec3
+graphics_info_t::get_screen_x_uv() {
+
+   glm::vec3 minus_x = graphics_info_t::unproject_to_world_coordinates(glm::vec3(-1.0f, 0.0f, 0.0f));
+   glm::vec3  plus_x = graphics_info_t::unproject_to_world_coordinates(glm::vec3( 1.0f, 0.0f, 0.0f));
+   glm::vec3 delta = plus_x - minus_x;
+   glm::vec3 d_uv = glm::normalize(delta);
+   return d_uv;
+}
+
 
 void
 graphics_info_t::translate_in_screen_z(float step_size) {
+
+   // The step size is good when were zoomed in but too big when we are zoomed out.
 
    // this looks a bit weird without perspective view
 
@@ -2612,6 +3386,18 @@ graphics_info_t::translate_in_screen_z(float step_size) {
    add_to_rotation_centre(step);
 
 }
+
+void
+graphics_info_t::translate_in_screen_x(float step_size) {
+
+   // The step size is good when were zoomed in but too big when we are zoomed out.
+
+   glm::vec3 screen_x_uv = get_screen_x_uv();
+   glm::vec3 step = 0.005 * step_size * zoom * screen_x_uv;
+   add_to_rotation_centre(step);
+}
+
+
 
 // static
 std::vector<glm::vec3>
@@ -2679,9 +3465,11 @@ graphics_info_t::setup_draw_for_particles() {
    }
    // passing user_data and Notify function at the end
    if (! do_tick_particles) {
+      if (! tick_function_is_active()) {
+         int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+         idle_function_spin_rock_token = new_tick_id;
+      }
       do_tick_particles = true;
-      int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
-      graphics_info_t::idle_function_spin_rock_token = new_tick_id;
    }
 
    // std::cout << "setup_draw_for_particles(): -- done -- " << std::endl;
@@ -2708,7 +3496,6 @@ graphics_info_t::setup_draw_for_happy_face_residue_markers_init() {
    tmesh_for_happy_face_residues_markers.setup_instancing_buffers(max_happy_faces);
    tmesh_for_happy_face_residues_markers.draw_this_mesh = false;
 
-
 }
 
 void
@@ -2729,9 +3516,11 @@ graphics_info_t::setup_draw_for_happy_face_residue_markers() {
    unsigned int n_max = draw_count_max_for_happy_face_residue_markers;
    tmesh_for_happy_face_residues_markers.update_instancing_buffer_data_for_happy_faces(positions, 0, n_max, up_uv);
    tmesh_for_happy_face_residues_markers.draw_this_mesh = true;
-   do_tick_happy_face_residue_markers = true;
    draw_count_for_happy_face_residue_markers = 0;
-   gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+   if (! tick_function_is_active()) {
+      gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+   }
+   do_tick_happy_face_residue_markers = true;
 
 }
 
@@ -2866,8 +3655,10 @@ graphics_info_t::setup_draw_for_boids() {
       mesh_for_boids.setup_rtsc_instancing(&shader_for_instanced_objects,
                                            mats, colours, n_boids, material);
 
+      if (! tick_function_is_active()) {
+         int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+      }
       do_tick_boids = true;
-      int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
 
       // boids box
 
@@ -2912,7 +3703,7 @@ graphics_info_t::setup_draw_for_boids() {
       indices.push_back(3); indices.push_back(7);
 
       lines_mesh_for_boids_box = LinesMesh(vertices, indices);
-      lines_mesh_for_boids_box.setup(&shader_for_lines);
+      lines_mesh_for_boids_box.setup();
    }
 }
 
@@ -2948,6 +3739,9 @@ graphics_info_t::draw_boids() {
 
 void
 graphics_info_t::draw_hydrogen_bonds_mesh() {
+
+   // 20210827-PE  each molecule should have its own hydrogen bond mesh. Not just one of them.
+   // Fix that later.
 
    if (mesh_for_hydrogen_bonds.draw_this_mesh) {
       glm::mat4 mvp = get_molecule_mvp();
@@ -3013,7 +3807,7 @@ graphics_info_t::setup_delete_item_pulse(mmdb::Residue *residue_p) {
    delete_item_pulse_centres = positions;
    gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
    bool broken_line_mode = true;
-   lines_mesh_for_delete_item_pulse.setup_pulse(&shader_for_lines_pulse, broken_line_mode);
+   lines_mesh_for_delete_item_pulse.setup_pulse(broken_line_mode);
    gtk_widget_add_tick_callback(glareas[0], delete_item_pulse_func, user_data, NULL);
 
 };
@@ -3056,11 +3850,15 @@ graphics_info_t::setup_delete_residues_pulse(const std::vector<mmdb::Residue *> 
    delete_item_pulse_centres = all_positions;
    gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
    bool broken_line_mode = true;
-   lines_mesh_for_delete_item_pulse.setup_pulse(&shader_for_lines_pulse, broken_line_mode);
+   lines_mesh_for_delete_item_pulse.setup_pulse(broken_line_mode);
    gtk_widget_add_tick_callback(glareas[0], delete_item_pulse_func, user_data, NULL);
 
 };
 
+
+// I think that this function should be part of glarea_tick_func().
+// (bring glarea_tick_func() into graphics_info_t.)
+//
 // static
 gboolean
 graphics_info_t::invalid_residue_pulse_function(GtkWidget *widget,
@@ -3091,7 +3889,7 @@ graphics_info_t::setup_invalid_residue_pulse(mmdb::Residue *residue_p) {
    delete_item_pulse_centres = residue_positions; // sneakily use a wrongly named function
    gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
    bool broken_line_mode = false;
-   lines_mesh_for_identification_pulse.setup_pulse(&shader_for_lines_pulse, broken_line_mode);
+   lines_mesh_for_identification_pulse.setup_pulse(broken_line_mode);
    gtk_widget_add_tick_callback(glareas[0], invalid_residue_pulse_function, user_data, NULL);
 
 }
@@ -3103,7 +3901,7 @@ graphics_info_t::draw_invalid_residue_pulse() {
    if (! lines_mesh_for_identification_pulse.empty()) {
       glm::mat4 mvp = get_molecule_mvp();
       glm::mat4 view_rotation_matrix = get_view_rotation();
-      glLineWidth(3.0);
+      myglLineWidth(3.0);
       GLenum err = glGetError();
       if (err) std::cout << "draw_invalid_residue_pulse() glLineWidth " << err << std::endl;
       for (auto pulse_centre : delete_item_pulse_centres)
@@ -3120,7 +3918,7 @@ graphics_info_t::draw_identification_pulse() {
    if (! lines_mesh_for_identification_pulse.empty()) {
       glm::mat4 mvp = get_molecule_mvp();
       glm::mat4 view_rotation_matrix = get_view_rotation();
-      glLineWidth(2.0);
+      myglLineWidth(2.0);
       GLenum err = glGetError();
       if (err) std::cout << "draw_identification_pulse() glLineWidth " << err << std::endl;
       lines_mesh_for_identification_pulse.draw(&shader_for_lines_pulse,
@@ -3135,7 +3933,7 @@ graphics_info_t::draw_delete_item_pulse() {
    if (! lines_mesh_for_delete_item_pulse.empty()) {
       glm::mat4 mvp = get_molecule_mvp();
       glm::mat4 view_rotation_matrix = get_view_rotation();
-      glLineWidth(2.0);
+      myglLineWidth(2.0);
       GLenum err = glGetError();
       if (err) std::cout << "draw_delete_item_pulse() glLineWidth " << err << std::endl;
       for (unsigned int i=0; i<delete_item_pulse_centres.size(); i++) {
@@ -3158,6 +3956,16 @@ graphics_info_t::move_backwards() {
    translate_in_screen_z(-3.0);
 }
 
+void
+graphics_info_t::step_screen_left() {
+   translate_in_screen_x(-1.0);  // function uses zoom
+}
+
+void
+graphics_info_t::step_screen_right() {
+   translate_in_screen_x(1.0);
+}
+
 #include <glm/gtx/rotate_vector.hpp>
 #include "matrix-utils.hh"
 
@@ -3174,17 +3982,17 @@ graphics_info_t::setup_key_bindings() {
    auto l5 = []() { graphics_info_t g; g.blob_under_pointer_to_screen_centre(); return gboolean(TRUE); };
 
    auto l6 = []() {
-                if (idle_function_spin_rock_token != -1) {
-                   std::cout << "Removing the idle function\n";
-                   gtk_widget_remove_tick_callback(glareas[0], idle_function_spin_rock_token);
-                   idle_function_spin_rock_token = -1;
+
+                if (do_tick_spin) {
+                   do_tick_spin = false;
                 } else {
-
+                   if (! tick_function_is_active()) {
+                      int spin_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+                      // this is not a good name if we are storing a generic tick function id.
+                      idle_function_spin_rock_token = spin_tick_id;
+                   }
                    do_tick_spin = true;
-                   int spin_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
 
-                   // this is not a good name if we are storing a generic tick function id.
-                   idle_function_spin_rock_token = spin_tick_id;
                 }
                 return gboolean(TRUE);
              };
@@ -3223,6 +4031,9 @@ graphics_info_t::setup_key_bindings() {
 
    auto l13 = []() { graphics_info_t g; g.move_backwards(); return gboolean(TRUE); };
 
+   auto l13l = []() { graphics_info_t g; g.step_screen_left();   return gboolean(TRUE); };
+   auto l13r = []() { graphics_info_t g; g.step_screen_right(); return gboolean(TRUE); };
+
    auto l14 = []() { safe_python_command("import ncs; ncs.skip_to_next_ncs_chain('forward')"); return gboolean(TRUE); };
 
    auto l15 = []() { safe_python_command("import ncs; ncs.skip_to_next_ncs_chain('backward')"); return gboolean(TRUE); };
@@ -3231,7 +4042,7 @@ graphics_info_t::setup_key_bindings() {
 
    auto l18 = []() { graphics_info_t g; g.accept_moving_atoms(); return gboolean(TRUE); };
 
-   auto l19 = []() { graphics_info_t g; g.clear_up_moving_atoms_wrapper(); return gboolean(TRUE); };
+   auto l19 = []() { graphics_info_t g; g.clear_up_moving_atoms_wrapper(); g.clear_gl_rama_plot(); return gboolean(TRUE); };
 
    auto l20 = []() { graphics_info_t g; g.eigen_flip_active_residue(); return gboolean(TRUE); };
 
@@ -3385,7 +4196,9 @@ graphics_info_t::setup_key_bindings() {
    // Note to self, Space and Shift Space are key *Release* functions
 
    std::vector<std::pair<keyboard_key_t, key_bindings_t> > kb_vec;
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_d,      key_bindings_t(l1, "increase clipping")));
+   // kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_d,      key_bindings_t(l1, "increase clipping")));
+   kb_vec.push_back(std::make_pair(GDK_KEY_d, key_bindings_t(l13r, "step right")));
+   kb_vec.push_back(std::make_pair(GDK_KEY_a, key_bindings_t(l13l, "step left")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_f,      key_bindings_t(l2, "decrease clipping")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_g,      key_bindings_t(l5, "go to blob")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_i,      key_bindings_t(l6, "spin")));

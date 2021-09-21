@@ -8,7 +8,7 @@ layout(location = 1) in vec3 normal;
 layout(location = 2) in vec4 colour;
 
 uniform mat4 mvp;
-uniform mat4 view_rotation; // the quaternion attached to what the mouse has done
+uniform mat4 view_rotation; // the quaternion attached to what the mouse has done. Needed for the lights, I think (not here)
 
 out vec3 frag_pos;
 out vec3 normal_transfer;
@@ -74,19 +74,30 @@ uniform vec4  fresnel_colour;
 
 float get_fog_amount(float depth_in) {
 
-   if (! is_perspective_projection) {
-      return depth_in * depth_in;
+   if (do_depth_fog) {
+      if (! is_perspective_projection) {
+         return depth_in * depth_in;
+      } else {
+         // needs tweaking
+         float d = depth_in;
+         float d4 = d * d * d * d;
+         return d4;
+      }
    } else {
-      // needs tweaking
-      float d = depth_in;
-      float d4 = d * d * d * d;
-      return d4;
+      return 0.0;
    }
-
 }
 
 
 void main() {
+
+   // make these a uniform, so that the use can set them
+   //
+   float ambient_strength = 0.94; // was 0.2 for apoferritin screenies
+   float diffuse_strength = 0.072;
+
+   ambient_strength = 0.4;
+   diffuse_strength = 0.96;
 
    // get specular_strength from the material
    float specular_strength = material.specular_strength; // 1.5 is very shiny, shiny is good for transparent maps
@@ -126,15 +137,18 @@ void main() {
          float shininess = material.shininess;
          // shininess = 55;
          float spec = pow(dp_view_reflect, shininess);
+
          vec4 col_specular = specular_strength * spec * specular_light_colour;
-         float shine_opacity = 1.0 - clamp(specular_strength * spec, 0.0, 1.0);
+         // consider this:
+         // vec4 col_specular = specular_strength * spec * specular_light_colour * light_sources[i].specular;
+
+         // float shine_opacity = 1.0 - clamp(specular_strength * spec, 0.0, 1.0);
 
          vec4 colour_local = colour_transfer;
 
-         vec4 col_1 = colour_local;  // ambient
-         float ambient_strength = 0.7; // was 0.2 for apoferritin
-         vec4 col_2 = colour_local * dp;
-         vec4 col_3 = col_1 * ambient_strength + 0.8 * col_2 + col_specular;
+         vec4 col_1 = colour_local; // ambient
+         vec4 col_2 = diffuse_strength * colour_local * dp;
+         vec4 col_3 = col_1 * ambient_strength + col_2 + col_specular;
 
          if (! do_diffuse_lighting)
             col_3 = col_1;
@@ -146,7 +160,7 @@ void main() {
 
          col_4 = col_3;
 
-         col_4.a = map_opacity * shine_opacity;
+         col_4.a = map_opacity; // * shine_opacity; used in making Rob figures
 
          if (false) {
             // float a = 1.0 + 2.0 * dp_view_reflect;
@@ -158,7 +172,10 @@ void main() {
             col_4.a += a * a * a;
          }
 
-         out_col += 0.6 * col_4;
+         // out_col += 0.6 * col_4;
+         out_col += 0.6 * col_4; // I hacked this to see the map after using
+                                 // instanced model representation.
+                                 // why is it needed!? 20210823-PE
       }
    }
 

@@ -37,6 +37,26 @@ get_camera_up_direction(const glm::mat4 &mouse_quat_mat) {
    return r3;
 }
 
+// static
+gboolean
+graphics_info_t::tick_function_is_active() {
+
+   if (false)
+      std::cout << "tick_function_is_active() " << do_tick_particles << " " << do_tick_spin << " " << do_tick_boids << " "
+                << do_tick_hydrogen_bonds_mesh << " " << do_tick_happy_face_residue_markers << " "
+                << do_tick_constant_draw << std::endl;
+
+   if (do_tick_particles ||
+       do_tick_spin      ||
+       do_tick_boids     ||
+       do_tick_constant_draw       ||
+       do_tick_hydrogen_bonds_mesh ||
+       do_tick_happy_face_residue_markers)
+      return gboolean(TRUE);
+   else
+      return gboolean(FALSE);
+}
+
 
 gboolean
 glarea_tick_func(GtkWidget *widget,
@@ -55,20 +75,24 @@ glarea_tick_func(GtkWidget *widget,
    }
 
    if (graphics_info_t::do_tick_spin) {
-      float delta = 0.002;
-      glm::vec3 EulerAngles(0, delta, 0);
-      glm::quat quat_delta(EulerAngles);
-      glm::quat normalized_quat_delta(glm::normalize(quat_delta));
-      glm::quat product = normalized_quat_delta * graphics_info_t::glm_quat;
-      graphics_info_t::glm_quat = glm::normalize(product);
+         float delta = 0.002;
+         glm::vec3 EulerAngles(0, delta, 0);
+         glm::quat quat_delta(EulerAngles);
+         glm::quat normalized_quat_delta(glm::normalize(quat_delta));
+         glm::quat product = normalized_quat_delta * graphics_info_t::glm_quat;
+         graphics_info_t::glm_quat = glm::normalize(product);
    }
-   
+
+   if (graphics_info_t::do_tick_constant_draw) {
+      // don't change anything - I just want to remind you (well myself, I suppose) that it's here
+   }
+
    if (graphics_info_t::do_tick_boids) {
       graphics_info_t::boids.update();
       std::vector<glm::mat4> mats(graphics_info_t::boids.size());
       for (unsigned int ii=0; ii<graphics_info_t::boids.size(); ii++)
          mats[ii] = graphics_info_t::boids[ii].make_mat();
-      graphics_info_t::mesh_for_boids.update_instancing_buffer_data(mats);
+      graphics_info_t::mesh_for_boids.update_instancing_buffer_data_standard(mats);
    }
 
    if (graphics_info_t::do_tick_hydrogen_bonds_mesh) {
@@ -85,8 +109,8 @@ glarea_tick_func(GtkWidget *widget,
             const std::pair<glm::vec3, glm::vec3> &p = graphics_info_t::hydrogen_bonds_atom_position_pairs[i];
             mats.push_back(Mesh::make_hydrogen_bond_cylinder_orientation(p.first, p.second, theta));
          }
-         // std::cout << "mesh_for_hydrogen_bonds.update_instancing_buffer_data(mats) " << mats.size() << std::endl;
-         graphics_info_t::mesh_for_hydrogen_bonds.update_instancing_buffer_data(mats);
+         gtk_gl_area_attach_buffers(GTK_GL_AREA(graphics_info_t::glareas[0])); // Needed? Yes! Vital
+         graphics_info_t::mesh_for_hydrogen_bonds.update_instancing_buffer_data_standard(mats);
       }
    }
 
@@ -115,16 +139,9 @@ glarea_tick_func(GtkWidget *widget,
       }
    }
 
-   gtk_widget_queue_draw(widget); // needed?
+   gtk_widget_queue_draw(widget); // needed? 20210904-PE yeah... I  think so
 
-   if (graphics_info_t::do_tick_particles ||
-       graphics_info_t::do_tick_spin      ||
-       graphics_info_t::do_tick_boids     ||
-       graphics_info_t::do_tick_hydrogen_bonds_mesh ||
-       graphics_info_t::do_tick_happy_face_residue_markers)
-      return gboolean(TRUE);
-   else
-      return gboolean(FALSE);
+   return graphics_info_t::tick_function_is_active();
 }
 
 
@@ -133,6 +150,18 @@ glarea_tick_func(GtkWidget *widget,
 
 void
 on_glarea_realize(GtkGLArea *glarea) {
+
+   auto setup_test_texture = [] () {
+                                graphics_info_t g;
+                                // g.texture_for_camera_facing_quad.init("some-test-label.png");
+                                g.texture_for_camera_facing_quad.init("hud-label-rama.png");
+                                // camera facing quad test
+                                float image_apect_ratio = static_cast<float>(395)/static_cast<float>(93); // testt-label.png pixels
+                                g.tmesh_for_camera_facing_quad.setup_camera_facing_quad(&g.camera_facing_quad_shader, image_apect_ratio, 1.0);
+                                GLenum err = glGetError(); if (err) std::cout << "realize() D err " << err << std::endl;
+                                g.tmesh_for_hud_image_testing.setup_quad();
+                                err = glGetError(); if (err) std::cout << "realize() D err " << err << std::endl;
+                             };
 
    GtkAllocation allocation;
    gtk_widget_get_allocation(GTK_WIDGET(glarea), &allocation);
@@ -145,6 +174,10 @@ on_glarea_realize(GtkGLArea *glarea) {
    err = glGetError(); if (err) std::cout << "on_glarea_realize() A err " << err << std::endl;
    if (gtk_gl_area_get_error(glarea) != NULL) {
       std::cout << "OOPS:: on_glarea_realize() error on gtk_gl_area_make_current()" << std::endl;
+      return;
+   }
+   if (gtk_gl_area_get_error(GTK_GL_AREA(glarea)) != NULL) {
+      std::cout << "ERROR:: GLArea in an error state - goodbye " << std::endl;
       return;
    }
 
@@ -214,7 +247,9 @@ on_glarea_realize(GtkGLArea *glarea) {
          err = glGetError(); if (err) std::cout << "on_glarea_realize() blur D shader-framebuffer err " << err << std::endl;
       }
 
+      std::cout << "DEBUG:: calling setup_hud_text for shader " << g.shader_for_hud_text.name << std::endl;
       setup_hud_text(w, h, graphics_info_t::shader_for_hud_text, false);
+      std::cout << "DEBUG:: calling setup_hud_text for shader " << g.shader_for_atom_labels.name << std::endl;
       setup_hud_text(w, h, graphics_info_t::shader_for_atom_labels, true);
 
       gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(glarea), TRUE);
@@ -231,8 +266,8 @@ on_glarea_realize(GtkGLArea *glarea) {
 
       // Make antialised lines - not in this
       if (false) {
-         glEnable (GL_BLEND);
-         glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+         glEnable(GL_BLEND);
+         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
          glEnable(GL_LINE_SMOOTH);
       }
 
@@ -244,20 +279,31 @@ on_glarea_realize(GtkGLArea *glarea) {
 
       g.setup_hud_geometry_bars();
 
+      g.setup_hud_buttons();
+
       g.setup_rama_balls();
 
       g.setup_key_bindings();
 
+      g.gl_rama_plot.setup_buffers(0.5); // rama relative size, put it into graphics_info_t and allow it to be set in the API
+
       g.setup_draw_for_happy_face_residue_markers_init();
 
-      err = glGetError();
-      if (err) std::cout << "################ GL ERROR on_glarea_realize() --end-- with err "
-                         << err << std::endl;
+      g.lines_mesh_for_hud_lines.set_name("lines mesh for fps graph");
 
-      GdkGLContext *context = gtk_gl_area_get_context(GTK_GL_AREA(glarea));
-      gboolean legacy_flag = gdk_gl_context_is_legacy(context);
-      std::cout << "INFO:: gdk_gl_context_is_legacy() returns " << legacy_flag << std::endl;
-      std::cout << "------------------------ realize() done " << std::endl;
+      if (false) { // testing how textures work
+         setup_test_texture();
+      }
+
+      err = glGetError();
+      if (err) std::cout << "#### GL ERROR on_glarea_realize() --end-- with err " << err << std::endl;
+
+      std::chrono::time_point<std::chrono::high_resolution_clock> tp_now = std::chrono::high_resolution_clock::now();
+      graphics_info_t::previous_frame_time_for_per_second_counter = tp_now;
+
+      // GdkGLContext *context = gtk_gl_area_get_context(GTK_GL_AREA(glarea));
+      // gboolean legacy_flag = gdk_gl_context_is_legacy(context);
+      // std::cout << "INFO:: gdk_gl_context_is_legacy() returns " << legacy_flag << std::endl;
 
    } else {
       std::cout << "ERROR:: Shader compilation failed " << std::endl;
@@ -281,15 +327,19 @@ on_glarea_resize(GtkGLArea *glarea, gint width, gint height) {
    g.graphics_x_size = width;
    g.graphics_y_size = height;
 
-   // why do I need to do this?
-   setup_hud_text(width, height, g.shader_for_hud_text, false);
-   setup_hud_text(width, height, g.shader_for_atom_labels, true); // change the function name
+   std::cout << "INFO:: GtkGLArea widget dimensions " << width << " " << height << std::endl;
 
-   g.setup_hud_geometry_bars(); // because they depend on the aspect ratio - but can't that be
-                                // passed as a uniform?
+   // why do I need to do this?
+   // setup_hud_text(width, height, g.shader_for_hud_text, false);
+   // setup_hud_text(width, height, g.shader_for_atom_labels, true); // change the function name
+
+   // g.setup_hud_geometry_bars(); // because they depend on the aspect ratio - but can't that be
+                                   // passed as a uniform?
 
    // std::cout << "INFO:: Reset frame buffers " << width << "x" << height << std::endl;
    g.reset_frame_buffers(width, height);
+
+   g.reset_hud_buttons_size_and_position();
 }
 
 
@@ -340,7 +390,6 @@ on_glarea_scroll(GtkWidget *widget, GdkEventScroll *event) {
 gboolean
 on_glarea_button_press(GtkWidget *widget, GdkEventButton *event) {
 
-   // std::cout << "button press!" << std::endl;
    graphics_info_t g;
    g.SetMouseBegin(event->x,event->y);
    g.SetMouseClicked(event->x, event->y);
@@ -371,6 +420,61 @@ on_glarea_button_press(GtkWidget *widget, GdkEventButton *event) {
       handled = g.check_if_hud_bar_clicked(event->x, event->y);
 
       if (! handled) {
+
+         // OK...
+         { // rama plot click
+            GtkAllocation allocation;
+            gtk_widget_get_allocation(widget, &allocation);
+            int w = allocation.width;
+            int h = allocation.height;
+            auto rama_plot_hit = g.gl_rama_plot.get_mouse_over_hit(event->x, event->y, w, h);
+            if (rama_plot_hit.first) {
+               std::cout << "::::::::::::::::: click " << rama_plot_hit.second << std::endl;
+               std::string message = "Rama plot clicked residue: ";
+               message += rama_plot_hit.second.chain_id;
+               message += " ";
+               message += std::to_string(rama_plot_hit.second.res_no);
+               if (! rama_plot_hit.second.ins_code.empty()) {
+                  message += " ";
+                  message += rama_plot_hit.second.ins_code;
+               }
+               add_status_bar_text(message.c_str());
+
+               g.set_go_to_residue_intelligent(rama_plot_hit.second.chain_id,
+                                               rama_plot_hit.second.res_no,
+                                               rama_plot_hit.second.ins_code);
+               int success = g.try_centre_from_new_go_to_atom();
+               if (success) {
+                  g.update_things_on_move_and_redraw();
+               }
+               handled = true;
+            }
+         }
+
+         // 20210829-PE This should be in *button-release* I think.
+         // Here we could check for button-down (to give a "button pressed but not activatetd" look)
+         // Also I need to check that right-mouse is not being used before calling this.
+         //
+         // 20210830-PE OK, let's comment out the button_clicked then, and merely act as if
+         // the mouse had been moved when the button is down
+         // handled = g.check_if_hud_button_clicked(event->x, event->y);
+         //
+
+         // std::cout << "::::::::::::::::::: Here A event type " << event->type << std::endl;
+         // std::cout << "::::::::::::::::::: Here A event button " << event->button << std::endl;
+         // std::cout << "::::::::::::::::::: Here A debug " << event->state << " " << GDK_BUTTON1_MASK  << std::endl;
+         // std::cout << "::::::::::::::::::: Here A debug " << event->state << " " << GDK_BUTTON2_MASK  << std::endl;
+         // std::cout << "::::::::::::::::::: Here A debug " << event->state << " " << GDK_BUTTON3_MASK  << std::endl;
+
+         if (! handled) {
+
+            if (event->button == 1) // event->state & GDK_BUTTON1_MASK didn't work because event->state
+                                    // was 16 GDK_MOD2_MASK (I don't know why)
+               handled = g.check_if_hud_button_moused_over(event->x, event->y, true);
+         }
+      }
+
+      if (! handled) {
          // implicit type cast
          handled = g.check_if_moving_atom_pull(was_a_double_click);
 
@@ -388,6 +492,7 @@ on_glarea_button_press(GtkWidget *widget, GdkEventButton *event) {
             }
          }
       }
+
    }
 
 
@@ -398,12 +503,15 @@ on_glarea_button_press(GtkWidget *widget, GdkEventButton *event) {
 gboolean
 on_glarea_button_release(GtkWidget *widget, GdkEventButton *event) {
 
+   graphics_info_t g;
    if (graphics_info_t::in_moving_atoms_drag_atom_mode_flag) {
-      graphics_info_t g;
       g.unset_moving_atoms_currently_dragged_atom_index();
       g.do_post_drag_refinement_maybe();
       graphics_info_t::in_moving_atoms_drag_atom_mode_flag = 0;
    }
+
+   if (event->state & GDK_BUTTON1_MASK)
+      g.check_if_hud_button_clicked(event->x, event->y);
 
    if (event->state & GDK_BUTTON2_MASK) {
       graphics_info_t g;
@@ -474,7 +582,47 @@ do_drag_pan_gtk3(GtkWidget *widget) {
 gboolean
 on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
 
-   int r = 0;
+
+   auto check_for_hud_bar_tooltip = [widget] (double event_x, double event_y) {
+                               graphics_info_t g;
+                               std::pair<bool, mmdb::Atom *> handled_pair = g.check_if_moused_over_hud_bar(event_x, event_y);
+
+                               if (handled_pair.first) {
+                                  g.draw_hud_tooltip_flag = true;
+
+                                  // gtk mouse position to OpenGL (clip?) coordinates
+                                  GtkAllocation allocation;
+                                  gtk_widget_get_allocation(widget, &allocation);
+                                  int w = allocation.width;
+                                  int h = allocation.height;
+                                  float xx =    2.0 * g.mouse_current_x/static_cast<float>(w) - 1.0f;
+                                  float yy = - (2.0 * g.mouse_current_y/static_cast<float>(h) - 1.0f);
+                                  glm::vec2 pos(xx, yy);
+                                  // this makes the top-left of the tooltip bubble point at the hud geometry bar box (mouse position)
+                                  // without it, the tooltip middle is at the cursor position
+                                  // 0.1  too much to the left
+                                  // 0.07 too much to the left
+                                  // 0.05 too much to the left (not much)
+                                  // 0.0  too much to the right
+                                  float ww = 0.04f * (static_cast<float>(w)/900.0 - 1.0); //  hard-coded inital width - hmmm.
+                                  glm::vec2 background_texture_offset(0.08f - ww, -0.058f);
+                                  glm::vec2 label_texture_offset(0.0f, -0.086f);
+                                  glm::vec2 background_texture_pos = pos + background_texture_offset;
+                                  glm::vec2 atom_label_position = pos + label_texture_offset;
+                                  g.mesh_for_hud_tooltip_background.set_position(background_texture_pos); // used in uniforms
+                                  g.tmesh_for_hud_geometry_tooltip_label.set_position(atom_label_position);
+
+                                  mmdb::Atom *at = handled_pair.second;
+                                  coot::atom_spec_t at_spec(at);
+                                  g.label_for_hud_geometry_tooltip = at_spec.simple_label(at->residue->GetResName()); // e.g. A 65 CA
+                                  g.active_atom_for_hud_geometry_bar = at;
+                                  graphics_draw();
+                                  // return TRUE;
+                               } else {
+                                  g.draw_hud_tooltip_flag = false;
+                               }
+                            };
+
    graphics_info_t g;
 
    // split this function up before it gets too big.
@@ -493,43 +641,15 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
    g.mouse_current_x = event->x;
    g.mouse_current_y = event->y;
 
-   std::pair<bool, mmdb::Atom *> handled_pair = g.check_if_moused_over_hud_bar(event->x, event->y);
+   check_for_hud_bar_tooltip(event->x, event->y);
 
-   if (handled_pair.first) {
-      g.draw_hud_tooltip_flag = true;
-
-      // gtk mouse position to OpenGL (clip?) coordinates
-      GtkAllocation allocation;
-      gtk_widget_get_allocation(widget, &allocation);
-      int w = allocation.width;
-      int h = allocation.height;
-      float xx =    2.0 * g.mouse_current_x/static_cast<float>(w) - 1.0f;
-      float yy = - (2.0 * g.mouse_current_y/static_cast<float>(h) - 1.0f);
-      glm::vec2 pos(xx, yy);
-      // this makes the top-left of the tooltip bubble point at the hud geometry bar box (mouse position)
-      // without it, the tooltip middle is at the cursor position
-      // 0.1  too much to the left
-      // 0.07 too much to the left
-      // 0.05 too much to the left (not much)
-      // 0.0  too much to the right
-      float ww = 0.04f * (static_cast<float>(w)/900.0 - 1.0); //  hard-coded inital width - hmmm.
-      glm::vec2 background_texture_offset(0.08f - ww, -0.058f);
-      glm::vec2 label_texture_offset(0.0f, -0.086f);
-      glm::vec2 background_texture_pos = pos + background_texture_offset;
-      glm::vec2 atom_label_position = pos + label_texture_offset;
-      g.mesh_for_hud_tooltip_background.set_position(background_texture_pos); // used in uniforms
-      g.tmesh_for_hud_geometry_tooltip_label.set_position(atom_label_position);
-
-      mmdb::Atom *at = handled_pair.second;
-      coot::atom_spec_t at_spec(at);
-      g.label_for_hud_geometry_tooltip = at_spec.simple_label(at->residue->GetResName()); // e.g. A 65 CA
-      g.active_atom_for_hud_geometry_bar = at;
-      graphics_draw();
-      return TRUE;
+   // if not right mouse pressed:
+   if (event->state & GDK_BUTTON3_MASK) {
    } else {
-      g.draw_hud_tooltip_flag = false;
+      bool button_1_is_down = false;
+      if (event->state & GDK_BUTTON1_MASK) button_1_is_down = true;
+      g.check_if_hud_button_moused_over(event->x, event->y, button_1_is_down);
    }
-
 
    auto mouse_view_rotate = [control_is_pressed] (GtkWidget *widget) {
                                if (control_is_pressed) {
@@ -558,6 +678,26 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
                g.move_moving_atoms_by_simple_translation(x_as_int, y_as_int);
             }
          }
+      }
+   }
+
+   { // rama plot mouse-over
+      GtkAllocation allocation;
+      gtk_widget_get_allocation(widget, &allocation);
+      int w = allocation.width;
+      int h = allocation.height;
+      auto rama_plot_hit = g.gl_rama_plot.get_mouse_over_hit(event->x, event->y, w, h);
+      if (rama_plot_hit.first) {
+         // std::cout << "::::::::::::::::: hit " << rama_plot_hit.second << std::endl;
+         std::string message = "Rama plot residue: ";
+         message += rama_plot_hit.second.chain_id;
+         message += " ";
+         message += std::to_string(rama_plot_hit.second.res_no);
+         if (! rama_plot_hit.second.ins_code.empty()) {
+            message += " ";
+            message += rama_plot_hit.second.ins_code;
+         }
+         add_status_bar_text(message.c_str());
       }
    }
 
@@ -593,41 +733,6 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
    g.graphics_draw(); // queue
    return TRUE;
 }
-
-gint
-view_spin_func(gpointer data) {
-
-   float delta = 0.002;
-   glm::vec3 EulerAngles(0, delta, 0);
-   glm::quat quat_delta(EulerAngles);
-   glm::quat normalized_quat_delta(glm::normalize(quat_delta));
-   glm::quat product = normalized_quat_delta * graphics_info_t::glm_quat;
-   graphics_info_t::glm_quat = glm::normalize(product);
-   graphics_info_t::graphics_draw(); // queue
-
-   std::chrono::time_point<std::chrono::high_resolution_clock> tp_now = std::chrono::high_resolution_clock::now();
-   std::chrono::duration<double> elapsed_seconds = tp_now - graphics_info_t::previous_frame_time_for_per_second_counter;
-   if (elapsed_seconds.count() > 1.0) {
-      float nf = graphics_info_t::frame_counter - graphics_info_t::frame_counter_at_last_display;
-      std::cout << "INFO:: Time/frame: " << 1000 * elapsed_seconds.count()/nf << " milliseconds "
-                << nf/elapsed_seconds.count() << " frames/second\n";
-      graphics_info_t::previous_frame_time_for_per_second_counter = tp_now;
-      graphics_info_t::frame_counter_at_last_display = graphics_info_t::frame_counter;
-   }
-
-   // now the stutter checker:
-   std::chrono::duration<double> elapsed_seconds_fast = tp_now - graphics_info_t::previous_frame_time;
-   if (elapsed_seconds_fast.count() > 0.03)
-      std::cout << "INFO:: " << 1000 * elapsed_seconds_fast.count() << " milliseconds for that frame\n";
-   graphics_info_t::previous_frame_time = tp_now;
-
-   // kludge/race condition?
-   if (graphics_info_t::idle_function_spin_rock_token == -1)
-      return FALSE;
-   else
-      return TRUE;
-}
-
 
 
 gboolean

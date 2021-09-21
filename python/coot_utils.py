@@ -114,56 +114,68 @@ def with_auto_accept(*funcs):
 
 def using_active_atom(*funcs):
 
-    from types import ListType
     active_atom = closest_atom_simple()
-    if (not active_atom):
+    if not active_atom:
         coot.add_status_bar_text("No residue found")
     else:
+        def convert_arg(arg):
+            try:
+                c_arg = aa_dict[arg]
+                return c_arg
+            except KeyError as e:
+                return arg
 
-        def arg_to_append(item):
-            aa_dict = {"aa_imol":      active_atom[0],
-                       "aa_chain_id":  active_atom[1],
-                       "aa_res_no":    active_atom[2],
-                       "aa_ins_code":  active_atom[3],
-                       "aa_atom_name": active_atom[4],
-                       "aa_alt_conf":  active_atom[5],
-                       "aa_res_spec":  [active_atom[1],  # chain_id
-                                        active_atom[2],  # res_no
-                                        active_atom[3]]} # ins_code
+        aa_dict = {"aa_imol":      active_atom[0],
+                   "aa_chain_id":  active_atom[1],
+                   "aa_res_no":    active_atom[2],
+                   "aa_ins_code":  active_atom[3],
+                   "aa_atom_name": active_atom[4],
+                   "aa_alt_conf":  active_atom[5],
+                   "aa_res_spec":  [active_atom[1],  # chain_id
+                                    active_atom[2],  # res_no
+                                    active_atom[3]]} # ins_code
 
-            if isinstance(item, list):
-                arg_ls = []
-                for ele in item:
-                    arg_ls.append(arg_to_append(ele))
-                return arg_ls
-            else:
-                if item in aa_dict:
-                    return aa_dict[item]
-                else:
-                    return item
+        if True:
+            func = funcs[0]
+            args = funcs[1:]
+            c_args = [convert_arg(item) for item in args]
+            func(*c_args)
 
-        if (len(funcs) == 1):
-            # we have a list of functions
-            # so use
-            ls_funcs = funcs[0]
-        elif (type(funcs[0]) is ListType):
-            # we have a range of lists
-            # use as is
-            ls_funcs = funcs
-        else:
-            # we have a single function with args
-            # make into list
-            ls_funcs = [funcs]
 
-        for ele in ls_funcs:
-            func = ele[0]
-            func_args = ele[1:]
-            args = []
-            for arg in func_args:
-                ins = arg_to_append(arg)
-                args.append(ins)
-            ret = func(*args)
-        return ret
+# #  This is what using_active_atom() used to be - I don't like it
+            # if isinstance(item, list):
+            #     arg_ls = []
+            #     for ele in item:
+            #         arg_ls.append(arg_to_append(ele))
+            #     return arg_ls
+            # else:
+            #     if item in aa_dict:
+            #         return aa_dict[item]
+            #     else:
+            #         return item
+
+#         if (len(funcs) == 1):
+#             # we have a list of functions
+#             # so use
+#             ls_funcs = funcs[0]
+#         elif (type(funcs[0]) is ListType):
+#             # we have a range of lists
+#             # use as is
+#             ls_funcs = funcs
+#         else:
+#             # we have a single function with args
+#             # make into list
+#             ls_funcs = [funcs]
+
+#         for ele in ls_funcs:
+#             func = ele[0]
+#             func_args = ele[1:]
+#             args = []
+#             for arg in func_args:
+#                 ins = arg_to_append(arg)
+#                 args.append(ins)
+#             ret = func(*args)
+#         return ret
 
 # here some truely pythonic version of the macros. Should replace
 # them in usage too:
@@ -963,6 +975,7 @@ gtk_thread_return_value = None
 #       data_list is ["HEAD","END"]
 #       log_file_name is "refmac.log"
 #       screen_flag True/False to display or not in shell window
+#       stderr_capture True/False pipe stderr to stdout too
 #       local_env can be set to change the environment variables the
 #                 command is run in.
 #
@@ -973,7 +986,7 @@ gtk_thread_return_value = None
 
 
 def popen_command(cmd, args, data_list, log_file, screen_flag=False,
-                  local_env=None):
+                  stderr_capture=False, local_env=None):
 
     import sys
     import string
@@ -996,17 +1009,41 @@ def popen_command(cmd, args, data_list, log_file, screen_flag=False,
             import subprocess
             log = open(log_file, 'w')
             cmd_args = [cmd_execfile] + args
+
+            # set stdin
+            pipe_data=False
+            if (isinstance(data_list, str) and
+                os.path.isfile(data_list)):
+                stdin_inp = open(data_list)
+            else:
+                pipe_data=True
+                stdin_inp = subprocess.PIPE
+
+            # set stderr
+            if stderr_capture:
+                stderr_arg = subprocess.STDOUT
+            else:
+                stderr_arg = None
+
             if (screen_flag):
-                process = subprocess.Popen(cmd_args, stdin=subprocess.PIPE,
+                process = subprocess.Popen(cmd_args, stdin=stdin_inp,
                                            stdout=subprocess.PIPE,
+                                           stderr=stderr_arg,
                                            env=local_env)
             else:
-                process = subprocess.Popen(cmd_args, stdin=subprocess.PIPE,
-                                           stdout=log, env=local_env)
+                process = subprocess.Popen(cmd_args, stdin=stdin_inp,
+                                           stdout=log, stderr=stderr_arg,
+                                           env=local_env)
 
-            for data in data_list:
-                process.stdin.write(data + "\n")
-            process.stdin.close()
+            if pipe_data:
+                for data in data_list:
+                    process.stdin.write(data + "\n")
+                process.stdin.close()
+            else:
+                # file?
+                if isinstance(stdin_inp, file):
+                    stdin_inp.close()
+
             if (screen_flag):
                 for line in process.stdout:
                     # remove trailing whitespace
@@ -1601,7 +1638,7 @@ def transform_map(*args):
 
     def tf(imol, mat, trans, about_pt, radius, space_group, cell):
 
-        print("here in tf with ", imol, mat, trans, about_pt, radius, space_group, cell)
+        print("DEBUG:: here in tf with ", imol, mat, trans, about_pt, radius, space_group, cell)
 
         return transform_map_raw(imol,
                                  mat[0], mat[1], mat[2],
@@ -1628,8 +1665,8 @@ def transform_map(*args):
     elif len(args) == 4:
         imol = args[0]
         print("calling tf with ", imol, identity_matrix(), args[1], args[2], args[3], space_group(imol), cell(imol))
-        r = 0.5 * cell(imol)[0]
-        ret = tf(imol, identity_matrix(), [args[1], args[2], args[3]], rotation_centre(), r,
+        ret = tf(imol, identity_matrix(), [args[1], args[2], args[3]],
+                 rotation_centre(), cell(imol)[0],
                  space_group(imol), cell(imol))
     # no matrix or about point specified:
     elif (len(args) == 3):
@@ -1885,6 +1922,10 @@ def atom_spec_to_residue_spec(atom_spec):
         if l == 6:  # active_residue give an atom-spec prepended by the imol
             return atom_spec[1:][:3]
         else:
+            if l == 7:  # active_residue give an atom-spec prepended a bool and by the imol. These should die
+                spec = atom_spec[2:][:3]
+                print("atom_spec to residue_spec returns", spec)
+                return spec
             return None
 
 # return a guess at the map to be refined (usually called after
@@ -1976,14 +2017,18 @@ def auto_weight_for_refinement():
         if not rr:   # check for list?
             return False
         else:
-            nnb_list = no_non_bonded(rr[2])
-            chi_squares = [x[2] for x in nnb_list]
-            n = len(chi_squares)
-            summ = sum(chi_squares)
-            if n == 0:
+            results_inner = rr[2]
+            if not results_inner:
                 return False
             else:
-                return summ/n
+                nnb_list = no_non_bonded(results_inner)
+                chi_squares = [x[2] for x in nnb_list]
+                n = len(chi_squares)
+                summ = sum(chi_squares)
+                if n == 0:
+                    return False
+                else:
+                    return summ/n
 
     # main body
     #
@@ -2679,8 +2724,9 @@ def mutate_by_overlap(imol, chain_id_in, resno, tlc):
                 coot.match_ligand_torsions(imol_ligand, imol, chain_id_in, resno)
             coot.delete_residue(imol, chain_id_in, resno, "")
             new_chain_id_info = merge_molecules([imol_ligand], imol)
-            print("BL DEBUG:: new_chain_id_info: ", new_chain_id_info)
             merge_status = new_chain_id_info[0]
+            # merge_status is sometimes a spec, sometimes a chain-id pair
+            # BL says:: the rest of it is, merge_status should be 1
             if merge_status == 1:
                 new_res_spec = new_chain_id_info[1]
                 new_chain_id = residue_spec_to_chain_id(new_res_spec)
@@ -3796,6 +3842,12 @@ def file_to_preferences(filename):
             home = os.getenv("HOME")
             if is_windows():
                 home = os.getenv("COOT_HOME")
+                if not home:
+                    # try HOME
+                    home = os.getenv("HOME")
+                else:
+                    # fallback
+                    home = os.getenv("USERPROFILE")
             if isinstance(home, str):
                 pref_dir = os.path.join(home, ".coot-preferences")
                 if not os.path.isdir(pref_dir):

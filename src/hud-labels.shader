@@ -1,4 +1,8 @@
 
+// rename this "hud-image-texture.shader"
+// because it is a shader for HUD images,
+// not text.
+
 #shader vertex
 
 #version 330 core
@@ -19,7 +23,7 @@ void main() {
    // background of the tooltip
 
    vec2 scaled_vertices = vertex * scales; // vec2(0.1, 0.05);
-   gl_Position = vec4(scaled_vertices + position , -0.999, 1.0);
+   gl_Position = vec4(scaled_vertices + position , -1.0, 1.0);
    texCoord_transfer = texCoord;
 }
 
@@ -28,7 +32,7 @@ void main() {
 
 #version 330 core
 
-uniform sampler2D text;
+uniform sampler2D text; // change this confusing name - "image_texture"
 
 in vec2 texCoord_transfer;
 
@@ -39,15 +43,12 @@ void main() {
    bool this_is_the_hud_bar_labels = false; // pass this as a uniform
 
    vec4 sampled = texture(text, texCoord_transfer);
-
-   if (this_is_the_hud_bar_labels) {
-      sampled = vec4(0.4, 0.7, 0.2, sampled.a);
-   } else {
-      if ((sampled.r + sampled.g + sampled.b) < 0.01) {
-         sampled.a = 0.0;
-      } else {
-         sampled.a = 1.0;
-      }
-   }
+   // sampled = vec4(text_colour.r, text_colour.r, text_colour.r, sampled.r);
    outputColor = sampled;
+
+   if (outputColor.a < 0.5) discard;
+
+   // outputColor.a = 0.9; // why did I have this? For the rama underlying distribution? Hmm.
+                           // OK I guess I need a uniform for that if I'm going to use this shader
+                           // for that.
 }
