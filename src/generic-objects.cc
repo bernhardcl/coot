@@ -84,7 +84,7 @@ void to_generic_object_add_line(int object_number,
                           meshed_generic_display_object::FLAT_CAP);
 
          Material material;
-         obj.mesh.setup(&g.shader_for_moleculestotriangles, material);
+         obj.mesh.setup(material);
       } else {
          std::cout << "BAD object_number in to_generic_object_add_line"
                    << " out of range high" << object_number << std::endl;
@@ -197,7 +197,8 @@ void to_generic_object_add_point_internal(int object_number,
          meshed_generic_display_object &obj = g.generic_display_objects[object_number];
          Material material;
          g.generic_display_objects[object_number].add_point(colour, colour_name, point_width, pt);
-         obj.mesh.setup(&g.shader_for_moleculestotriangles, material); // fast return if already done
+         // obj.mesh.setup(&g.shader_for_moleculestotriangles, material); // fast return if already done
+         obj.mesh.setup(material); // fast return if already done
       }
    } else {
       std::cout << "BAD object_number in to_generic_object_add_point: "
@@ -268,7 +269,8 @@ void to_generic_object_add_torus_internal(int object_number,
       g.generic_display_objects[object_number].add_torus(torus);
       meshed_generic_display_object &obj = g.generic_display_objects[object_number];
       Material material;
-      obj.mesh.setup(&g.shader_for_moleculestotriangles, material);
+      // obj.mesh.setup(&g.shader_for_moleculestotriangles, material); //20210910-PE 
+      obj.mesh.setup(material);
    }
 }
 
@@ -395,7 +397,8 @@ to_generic_object_add_arrow(int object_number,
                       meshed_generic_display_object::FLAT_CAP);
 
          Material material;
-         obj.mesh.setup(&g.shader_for_moleculestotriangles, material);
+         // obj.mesh.setup(&g.shader_for_moleculestotriangles, material);
+         obj.mesh.setup(material);
       } else {
          std::cout << "BAD object_number in to_generic_object_add_line"
                    << " out of range high" << object_number << std::endl;
@@ -426,7 +429,7 @@ void set_display_generic_object_simple(int object_number, short int istate) {
 
    graphics_info_t g;
    if (object_number >=0  && object_number < int(g.generic_display_objects.size())) {
-      g.generic_display_objects[object_number].mesh.draw_this_mesh = istate;
+      g.generic_display_objects[object_number].mesh.set_draw_this_mesh(istate);
    } else {
       std::cout << "BAD object_number in to_generic_object_add_point: "
                 << object_number << std::endl;
@@ -474,7 +477,7 @@ int generic_object_is_displayed_p(int object_number) {
    int is_displayed = 0;
    graphics_info_t g;
    if (object_number >=0  && object_number < int(g.generic_display_objects.size())) {
-      is_displayed = g.generic_display_objects[object_number].mesh.draw_this_mesh;
+      is_displayed = g.generic_display_objects[object_number].mesh.get_draw_this_mesh();
    }
    return is_displayed;
 }
@@ -688,7 +691,7 @@ void generic_object_info() {
    if (n_obs > 0) {
       for (unsigned int i=0; i<n_obs; i++) {
 	 std::string display_str(":Displayed:");
-	 if (! g.generic_display_objects[i].mesh.draw_this_mesh)
+	 if (! g.generic_display_objects[i].mesh.get_draw_this_mesh())
 	    display_str = ":Not Displayed:";
 	 std::string closed_str(":Closed:");
 	 if (! g.generic_display_objects[i].mesh.this_mesh_is_closed) // Hmm.
@@ -787,7 +790,7 @@ void handle_read_draw_probe_dots(const char *dots_file) {
 			obj_no = new_generic_object_number(p.second.c_str());
 		     }
 		     // non-member function usage, so that we don't do the redraw.
-		     graphics_info_t::generic_display_objects[obj_no].mesh.draw_this_mesh = true;
+		     graphics_info_t::generic_display_objects[obj_no].mesh.set_draw_this_mesh(true);
 		     graphics_info_t::generic_display_objects[obj_no].mesh.this_mesh_is_closed = false;
 		     current_name = p.second;
 		  }
@@ -963,7 +966,7 @@ void handle_read_draw_probe_dots_unformatted(const char *dots_file, int imol,
 			      // std::cout << "changing type to " << contact_type << std::endl;
 			   }
 			   // non-member function usage, so that we don't do the redraw.
-			   graphics_info_t::generic_display_objects[obj_no].mesh.draw_this_mesh = true;
+			   graphics_info_t::generic_display_objects[obj_no].mesh.set_draw_this_mesh(true);
 			   graphics_info_t::generic_display_objects[obj_no].mesh.this_mesh_is_closed = false;
 			}
 

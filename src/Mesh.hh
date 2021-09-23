@@ -2,6 +2,8 @@
 #ifndef MESH_HH
 #define MESH_HH
 
+#include <chrono>
+
 #include "generic-vertex.hh"
 #include "g_triangle.hh"
 
@@ -43,6 +45,7 @@ class Mesh {
    float hydrogen_bond_cylinders_angle;
    unsigned int particle_draw_count;
    void init();
+   bool draw_this_mesh;
 #if USE_ASSIMP
    aiScene generate_scene() const;
 #endif
@@ -57,7 +60,6 @@ public:
    GLuint inst_scales_buffer_id;
    unsigned int n_symmetry_atom_lines_vertices;
    bool this_mesh_is_closed;
-   bool draw_this_mesh;
    bool is_instanced;
    bool is_instanced_colours;
    bool is_instanced_with_rts_matrix;
@@ -67,12 +69,15 @@ public:
    Shader shader_for_draw_normals;
    std::string name;
    unsigned int type; // from molecular triangles object type
+   std::chrono::time_point<std::chrono::system_clock>  time_constructed;
 
    Mesh() { init(); }
    // import from somewhere else
    explicit Mesh(const std::pair<std::vector<s_generic_vertex>, std::vector<g_triangle> > &indexed_vertices);
    explicit Mesh(const std::string &name_in) : name(name_in) { init(); }
    explicit Mesh(const molecular_triangles_mesh_t &mtm);
+   // If this mesh will become part of another mesh, then we don't wan to setup buffers for this one
+   void load_from_glTF(const std::string &file_name, bool include_call_to_setup_buffers=true);
 
    void debug() const;
    void debug_to_file() const;
@@ -89,12 +94,13 @@ public:
    void close();
    void set_draw_mesh_state(bool state) { draw_this_mesh = state; }
    void set_name(const std::string &n) { name = n; }
-   void import(const std::pair<std::vector<s_generic_vertex>, std::vector<g_triangle> > &indexed_vertices);
-   void import(const std::vector<s_generic_vertex> &gv, const std::vector<g_triangle> &indexed_vertices);
+   void import(const std::pair<std::vector<s_generic_vertex>, std::vector<g_triangle> > &indexed_vertices); // adds to the messh
+   void import(const std::vector<s_generic_vertex> &gv, const std::vector<g_triangle> &indexed_vertices);   // adds to the mesh
    void import(const std::vector<position_normal_vertex> &verts,
                const std::vector<g_triangle> &indexed_vertices,
                const glm::vec4 &colour);
-   void setup(Shader *shader_p, const Material &material_in);
+   // void setup(Shader *shader_p, const Material &material_in);  I don't need the shader, do I?
+   void setup(const Material &material_in);
    // can be considered as "draw_self()"
    void draw(Shader *shader,
              const glm::mat4 &mvp,
@@ -209,6 +215,8 @@ public:
    void setup_vertex_and_instancing_buffers_for_particles(unsigned int n_particles); // setup the buffer, don't add data
    void update_instancing_buffer_data_for_particles(const particle_container_t &particles);
 
+   void set_draw_this_mesh(bool state); // only set true if there are vertices and triangles
+   bool get_draw_this_mesh() const { return draw_this_mesh; };
 
    // make space
    void setup_instancing_buffer_data(Shader *shader_p,
@@ -236,6 +244,9 @@ public:
 
    // make the matrix (called several times). After which, the calling function calls update_instancing_buffer_data()
    static glm::mat4 make_hydrogen_bond_cylinder_orientation(const glm::vec3 &p1, const glm::vec3 &p2, float theta);
+
+   void apply_scale(float scale_factor);  // scale the positions in the vertices
+   void apply_transformation(const glm::mat4 &m);  // transform the positions in the vertices
 
 };
 

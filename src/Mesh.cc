@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <chrono>
 
 // Having this up here...
 #include <mmdb2/mmdb_manager.h>
@@ -48,6 +49,9 @@ Mesh::init() {
    n_instances_allocated = 0;
    particle_draw_count = 0;
    vao = VAO_NOT_SET;
+
+   std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+   time_constructed = now;
 }
 
 Mesh::Mesh(const std::pair<std::vector<s_generic_vertex>, std::vector<g_triangle> > &indexed_vertices) {
@@ -64,6 +68,18 @@ Mesh::Mesh(const molecular_triangles_mesh_t &mtm) {
    vertices  = mtm.vertices;
    triangles = mtm.triangles;
    name = mtm.name;
+}
+
+void
+Mesh::set_draw_this_mesh(bool state) {
+
+   if (state)
+      if (! vertices.empty())
+         if (! triangles.empty())
+            draw_this_mesh = true;
+
+   if (! state)
+      draw_this_mesh = false;
 }
 
 void
@@ -139,6 +155,27 @@ Mesh::import(const std::vector<position_normal_vertex> &verts, const std::vector
 }
 
 void
+Mesh::apply_scale(float s) {
+
+   glm::vec3 sf(s, s, s);
+   for (unsigned int ii=0; ii<vertices.size(); ii++)
+      vertices[ii].pos *= s;
+   setup_buffers(); // transfer the coordinates
+}
+
+void
+Mesh::apply_transformation(const glm::mat4 &m) {
+
+   for (unsigned int ii=0; ii<vertices.size(); ii++) {
+      glm::vec4 p_1(vertices[ii].pos, 1.0);
+      glm::vec4 p_2 = p_1 * m;
+      glm::vec3 p_3(p_2);
+      vertices[ii].pos = p_3;
+   }
+   setup_buffers(); // transfer the coordinates
+}
+
+void
 Mesh::translate_by(const glm::vec3 &t) {
 
    for (unsigned int ii=0; ii<vertices.size(); ii++)
@@ -157,8 +194,9 @@ Mesh::debug() const {
 }
 
 
+// 20210910-PE remove the Shader argument, surely not needed.
 void
-Mesh::setup(Shader *shader_p, const Material &material_in) {
+Mesh::setup(const Material &material_in) {
 
    // Generic objects need a lot of reworking
    // because I want to "setup" only after all objects have been added - not
@@ -171,7 +209,7 @@ Mesh::setup(Shader *shader_p, const Material &material_in) {
    // return;
 
    material = material_in;
-   shader_p->Use();
+   // shader_p->Use();
    setup_buffers();
 }
 
@@ -289,7 +327,6 @@ Mesh::add_one_origin_ball() { // i.e. a smooth-shaded pentakis dodec
    std::vector<clipper::Coord_orth> v = penta_dodec.pkdd.d.coords();
 
    unsigned int vertex_index_start_base   = vertices.size();
-   unsigned int triangle_index_start_base = triangles.size(); // needed?
 
    const std::vector<clipper::Coord_orth> &pv = penta_dodec.pkdd.pyrimid_vertices;
    for (unsigned int i=0; i<12; i++) {
@@ -395,8 +432,8 @@ Mesh::add_one_origin_cylinder(unsigned int n_slices, unsigned int n_stacks) {
    unsigned int idx_tri_base = triangles.size();
    vertices.insert(vertices.end(), c.vertices.begin(), c.vertices.end());
    triangles.insert(triangles.end(),
-                    c.triangle_indices_vec.begin(),
-                    c.triangle_indices_vec.end());
+                    c.triangles.begin(),
+                    c.triangles.end());
    for (unsigned int i=idx_tri_base; i<triangles.size(); i++)
       triangles[i].rebase(idx_base);
 
@@ -530,8 +567,8 @@ Mesh::setup_buffers() {
    // std::cout << "Mesh::setup_buffers() using vao " << vao << std::endl;
    glBindVertexArray(vao);
    GLenum err = glGetError();
-   if (err) std::cout << "error setup_buffers() on binding vao " << vao << " error "
-                      << err << std::endl;
+   if (err)
+      std::cout << "error setup_buffers() on binding vao " << vao << " error " << err << std::endl;
 
    unsigned int n_vertices = vertices.size();
 
@@ -555,14 +592,18 @@ Mesh::setup_buffers() {
    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, sizeof(s_generic_vertex),
                           reinterpret_cast<void *>(sizeof(glm::vec3)));
 
-   // colour
-   if (! is_instanced_colours) {
-      // when the colour attribute is instanced (like the model_translation), so set up the colours
-      // when we do the model_translation in setup_instancing_buffers(), not here.
-      glEnableVertexAttribArray(2);
-      glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(s_generic_vertex),
-                            reinterpret_cast<void *>(2 * sizeof(glm::vec3)));
-   }
+   // they are s_generic_vertex:
+   // layout(location = 0) in vec3 position;
+   // layout(location = 1) in vec3 normal;
+   // layout(location = 2) in vec4 colour;
+
+
+   std::cout << "debug:: in setup_buffers() is_instanced_colours for mesh with name \"" << name << "\""
+             << " is_instanced_colours: " << is_instanced_colours << " (not that that should matter any more)" << std::endl;
+
+   glEnableVertexAttribArray(2);
+   glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(s_generic_vertex),
+                         reinterpret_cast<void *>(2 * sizeof(glm::vec3)));
 
    unsigned int n_triangles = triangles.size();
    unsigned int n_bytes = n_triangles * 3 * sizeof(unsigned int);
@@ -590,7 +631,8 @@ Mesh::setup_buffers() {
 
    glDisableVertexAttribArray(0);
    glDisableVertexAttribArray(1);
-   if (! is_instanced_colours) glDisableVertexAttribArray(2);
+   glDisableVertexAttribArray(2);
+
    glBindBuffer(GL_ARRAY_BUFFER, 0);
    glUseProgram(0);
    glBindVertexArray(0);
@@ -652,8 +694,8 @@ Mesh::import_and_setup_instanced_cylinders(Shader *shader_p,
 
    n_instances = mats.size();
    n_instances_allocated = n_instances;
-   std::cout << "::::::::::::: debug:: import_and_setup_instanced_cylinders() calls setup_matrix_and_colour_instancing_buffers_standard"
-             << std::endl;
+   std::cout << "::::::::::::: debug:: import_and_setup_instanced_cylinders() calls "
+             << "setup_matrix_and_colour_instancing_buffers_standard" << std::endl;
    setup_matrix_and_colour_instancing_buffers_standard(mats, colours);
    err = glGetError(); if (err) std::cout << "error import_and_setup_instanced_cylinders() -- end -- "
                                           << err << std::endl;
@@ -671,7 +713,8 @@ Mesh::setup_rtsc_instancing(Shader *shader_p,
    is_instanced_colours = true;
    is_instanced_with_rts_matrix = true;
 
-   shader_p->Use();
+   if (shader_p)
+      shader_p->Use();
    material = material_in;
 
    setup_buffers();
@@ -708,8 +751,8 @@ Mesh::setup_instanced_octahemispheres(Shader *shader_p,
    n_instances = mats.size();
    n_instances_allocated = n_instances;
 
-   std::cout << "::::::::::::: debug:: setup_instanced_octahemispheres() calls setup_matrix_and_colour_instancing_buffers_standard()"
-             << std::endl;
+   std::cout << "::::::::::::: debug:: setup_instanced_octahemispheres() calls"
+             << " setup_matrix_and_colour_instancing_buffers_standard()" << std::endl;
 
    setup_matrix_and_colour_instancing_buffers_standard(mats, colours); // maybe pass a flag MATS_AND_COLOURS
                                             // because we might have
@@ -810,7 +853,8 @@ Mesh::setup_matrix_and_colour_instancing_buffers(const std::vector<glm::mat4> &m
    // Do you want this function or setup_matrix_and_colour_instancing_buffers_old()?
    // (maybe _old is the wrong suffix, should be _standard)
 
-   std::cout << "----- setup_matrix_and_colour_instancing_buffers(): mats size " << mats.size()
+   std::cout << "--------------------------------------------------------------------------- "
+             << "setup_matrix_and_colour_instancing_buffers(): mats size " << mats.size()
              << " colours size " << colours.size() << std::endl;
 
    GLenum err = glGetError();
@@ -830,26 +874,6 @@ Mesh::setup_matrix_and_colour_instancing_buffers(const std::vector<glm::mat4> &m
                       << vao << " err: " << err << std::endl;
 
 
-   // ------------- colours ----------------------------
-   glGenBuffers(1, &inst_colour_buffer_id);
-   glBindBuffer(GL_ARRAY_BUFFER, inst_colour_buffer_id);
-   err = glGetError();
-   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() B0 "
-                      << err << std::endl;
-   glBufferData(GL_ARRAY_BUFFER, n_instances * sizeof(glm::vec4), &(colours[0]), GL_DYNAMIC_DRAW);
-   glEnableVertexAttribArray(3);
-   err = glGetError();
-   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() B1 "
-                      << err << std::endl;
-   glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), 0);
-   err = glGetError();
-   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() B2 "
-                      << err << std::endl;
-   glVertexAttribDivisor(3, 1);
-   err = glGetError();
-   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() B3 "
-                      << err << std::endl;
-
    // ------------- orientation/position/scale matrices ----------------------------
 
    glGenBuffers(1, &inst_rts_buffer_id);
@@ -860,26 +884,48 @@ Mesh::setup_matrix_and_colour_instancing_buffers(const std::vector<glm::mat4> &m
    glBufferData(GL_ARRAY_BUFFER, n_instances * sizeof(glm::mat4), &(mats[0]), GL_DYNAMIC_DRAW);
    if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() C1 " << err << std::endl;
 
-   glEnableVertexAttribArray(4);
-   glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), 0);
-   glVertexAttribDivisor(4, 1);
+   glEnableVertexAttribArray(3);
+   glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), 0);
+   glVertexAttribDivisor(3, 1);
    err = glGetError();
    if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() C3 " << err << std::endl;
-   glEnableVertexAttribArray(5);
-   glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4)));
-   glVertexAttribDivisor(5, 1);
+   glEnableVertexAttribArray(4);
+   glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4)));
+   glVertexAttribDivisor(4, 1);
    err = glGetError();
    if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() C4 " << err << std::endl;
-   glEnableVertexAttribArray(6);
-   glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(2 * sizeof(glm::vec4)));
-   glVertexAttribDivisor(6, 1);
+   glEnableVertexAttribArray(5);
+   glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(2 * sizeof(glm::vec4)));
+   glVertexAttribDivisor(5, 1);
    err = glGetError();
    if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() C5 " << err << std::endl;
-   glEnableVertexAttribArray(7);
-   glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(3 * sizeof(glm::vec4)));
-   glVertexAttribDivisor(7, 1);
+   glEnableVertexAttribArray(6);
+   glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(3 * sizeof(glm::vec4)));
+   glVertexAttribDivisor(6, 1);
    err = glGetError();
    if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() C6 " << err << std::endl;
+
+   // ------------- colours ----------------------------
+
+   glGenBuffers(1, &inst_colour_buffer_id);
+   glBindBuffer(GL_ARRAY_BUFFER, inst_colour_buffer_id);
+   err = glGetError();
+   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() B0 "
+                      << err << std::endl;
+   glBufferData(GL_ARRAY_BUFFER, n_instances * sizeof(glm::vec4), &(colours[0]), GL_DYNAMIC_DRAW);
+   glEnableVertexAttribArray(7);
+   err = glGetError();
+   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() B1 "
+                      << err << std::endl;
+   glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), 0);
+   err = glGetError();
+   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() B2 "
+                      << err << std::endl;
+   glVertexAttribDivisor(7, 1);
+   err = glGetError();
+   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers() B3 "
+                      << err << std::endl;
+
 }
 
 
@@ -893,6 +939,8 @@ Mesh::setup_matrix_and_colour_instancing_buffers_standard(const std::vector<glm:
    // I don't need matrices with values here - because they will be updated/replaced by
    // the tick function. So this function should be changed to pass the size of
    // matrix and colour vectors, not the actual values.
+   //
+   // send only the size (they should both be the same size) (they can be updated differently)
 
    std::cout << "----- setup_matrix_and_colour_instancing_buffers_standard(): mats size " << mats.size()
              << " colours size " << colours.size() << " and is_instanced_colours " << is_instanced_colours
@@ -905,8 +953,10 @@ Mesh::setup_matrix_and_colour_instancing_buffers_standard(const std::vector<glm:
    n_instances = mats.size();
    n_instances_allocated = n_instances;
 
-   std::vector<glm::mat4> inst_rts_matrices = mats;
-   std::vector<glm::vec4> inst_col_matrices = colours;
+   const std::vector<glm::mat4> &inst_rts_matrices = mats;
+   const std::vector<glm::vec4> &inst_col_matrices = colours;
+
+   // these vectors should be the same size. Add a check.
 
    err = glGetError();
    if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() A "
@@ -922,33 +972,6 @@ Mesh::setup_matrix_and_colour_instancing_buffers_standard(const std::vector<glm:
    if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B binding-vao "
                       << err << " with vao " << vao << std::endl;
 
-   // rama balls we want to have instanced colours but hydrogen bond rotating cylinders we do not.
-
-   // -------- colours -----------
-
-   if (is_instanced_colours) {
-      glGenBuffers(1, &inst_colour_buffer_id);
-      glBindBuffer(GL_ARRAY_BUFFER, inst_colour_buffer_id);
-      err = glGetError();
-      if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B0 "
-                         << err << std::endl;
-      std::cout << "setup_matrix_and_colour_instancing_buffers_old() allocating colour buffer data "
-                << n_instances * sizeof(glm::vec4) << std::endl;
-      glBufferData(GL_ARRAY_BUFFER, n_instances * sizeof(glm::vec4), &(inst_col_matrices[0]), GL_DYNAMIC_DRAW); // dynamic
-      glEnableVertexAttribArray(2);
-      err = glGetError();
-      if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B1 "
-                         << err << std::endl;
-      glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), 0);
-      err = glGetError();
-      if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B2 "
-                         << err << std::endl;
-      glVertexAttribDivisor(2, 1);
-      err = glGetError();
-      if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B3 "
-                         << err << std::endl;
-   }
-
    // -------- rotation/translation/scale matrices -----------
 
    // 20210827-PE Here I should clean out the old buffer data before overriding it.
@@ -960,8 +983,7 @@ Mesh::setup_matrix_and_colour_instancing_buffers_standard(const std::vector<glm:
              << n_instances * 4 * sizeof(glm::mat4) << std::endl;
    glBufferData(GL_ARRAY_BUFFER, n_instances * 4 * sizeof (glm::vec4), &(inst_rts_matrices[0]), GL_DYNAMIC_DRAW); // dynamic
 
-   err = glGetError(); if (err) std::cout << "   error setup_instancing_buffers() C1 "
-                                          << err << std::endl;
+   err = glGetError(); if (err) std::cout << "GL ERROR:: setup_instancing_buffers() C1 " << err << std::endl;
    glEnableVertexAttribArray(3);
    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), 0);
    glVertexAttribDivisor(3, 1);
@@ -979,6 +1001,32 @@ Mesh::setup_matrix_and_colour_instancing_buffers_standard(const std::vector<glm:
    glVertexAttribDivisor(6, 1);
 
    err = glGetError(); if (err) std::cout << "   error setup_instancing_buffers() E " << err << std::endl;
+
+   // rama balls we want to have instanced colours but hydrogen bond rotating cylinders we do not.
+
+   // -------- colours -----------
+
+   glGenBuffers(1, &inst_colour_buffer_id);
+   glBindBuffer(GL_ARRAY_BUFFER, inst_colour_buffer_id);
+   err = glGetError();
+   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B0 "
+                      << err << std::endl;
+   std::cout << "setup_matrix_and_colour_instancing_buffers_old() allocating colour buffer data "
+             << n_instances * sizeof(glm::vec4) << std::endl;
+   glBufferData(GL_ARRAY_BUFFER, n_instances * sizeof(glm::vec4), &(inst_col_matrices[0]), GL_DYNAMIC_DRAW); // dynamic
+   glEnableVertexAttribArray(7);
+   err = glGetError();
+   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B1 "
+                      << err << std::endl;
+   glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), 0);
+   err = glGetError();
+   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B2 "
+                      << err << std::endl;
+   glVertexAttribDivisor(7, 1);
+   err = glGetError();
+   if (err) std::cout << "error setup_matrix_and_colour_instancing_buffers_standard() B3 "
+                      << err << std::endl;
+
    
 }
 
@@ -1220,7 +1268,7 @@ Mesh::draw_instanced(Shader *shader_p,
                       << " -- start -- " << err << std::endl;
    shader_p->Use();
    const std::string &shader_name = shader_p->name;
-   
+
    glUniformMatrix4fv(shader_p->mvp_uniform_location, 1, GL_FALSE, &mvp[0][0]);
    err = glGetError();
    if (err) std::cout << "error:: " << shader_p->name << " draw_instanced() post mvp uniform "
@@ -1230,6 +1278,11 @@ Mesh::draw_instanced(Shader *shader_p,
    err = glGetError();
    if (err) std::cout << "error:: Mesh::draw_instanced() " << name << " " << shader_p->name
                       << " draw_instanced() post view rotation uniform " << err << std::endl;
+
+   std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+   float time = std::chrono::duration_cast<std::chrono::milliseconds>(now - time_constructed).count();
+   // std::cout << "sending time " << time << std::endl;
+   shader_p->set_float_for_uniform("time", time);
 
    std::map<unsigned int, lights_info_t>::const_iterator it;
    unsigned int light_idx = 0;
@@ -1252,7 +1305,8 @@ Mesh::draw_instanced(Shader *shader_p,
    shader_p->set_float_for_uniform("material.shininess", material.shininess);
    shader_p->set_float_for_uniform("material.specular_strength", material.specular_strength);
    err = glGetError();
-   if (err) std::cout << "error draw_instanced(): " << shader_name << " pre-set eye position " << " with GL err " << err << std::endl;
+   if (err) std::cout << "error draw_instanced(): " << shader_name << " post-material "
+                      << " with GL err " << err << std::endl;
    shader_p->set_vec3_for_uniform("eye_position", eye_position);
    err = glGetError();
    if (err) std::cout << "error:: Mesh::draw_instanced() " << name << " " << shader_name << " post-set eye position "
@@ -1275,18 +1329,17 @@ Mesh::draw_instanced(Shader *shader_p,
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_id);
    err = glGetError(); if (err) std::cout << "error draw_instanced() glBindBuffer() i " << err << std::endl;
 
-   glEnableVertexAttribArray(0);
-   glEnableVertexAttribArray(1);
-   glEnableVertexAttribArray(2);
-   glEnableVertexAttribArray(3);
-   glEnableVertexAttribArray(4);
-   glEnableVertexAttribArray(5);
-   glEnableVertexAttribArray(6);
-   glEnableVertexAttribArray(7);
+   glEnableVertexAttribArray(0);  // vec3 position
+   glEnableVertexAttribArray(1);  // vec3 normal
+   glEnableVertexAttribArray(2);  // vec4 colour
+   glEnableVertexAttribArray(3);  // instanced mat-row-0 from setup_matrix_and_colour_instancing_buffers_standard()
+   glEnableVertexAttribArray(4);  // instanced mat-row-1
+   glEnableVertexAttribArray(5);  // instanced mat-row-2
+   glEnableVertexAttribArray(6);  // instanced mat-row-3
+   glEnableVertexAttribArray(7);  // instanced colour
 
    glBindBuffer(GL_ARRAY_BUFFER, inst_rts_buffer_id); // needed?
    err = glGetError(); if (err) std::cout << "error draw_instanced() glBindBuffer() inst_rts_buffer_id" << std::endl;
-
 
    if (false)
       std::cout << "Mesh::draw_instanced() Mesh " << name << " drawing n_verts " << n_verts << " n_instances " << n_instances
@@ -1384,7 +1437,7 @@ Mesh::draw(Shader *shader_p,
            bool do_depth_fog) {
 
    if (false)
-      std::cout << "start:: Mesh::draw() \"" << name << "\" shader: " << shader_p->name
+      std::cout << "debug:: Mesh::draw() \"" << name << "\" shader: " << shader_p->name
                 << " draw_this_mesh: " << draw_this_mesh << " n-tris:" << triangles.size() << std::endl;
 
    if (! draw_this_mesh) return;
@@ -1472,8 +1525,10 @@ Mesh::draw(Shader *shader_p,
                       << " with GL err " << err << std::endl;
 
    if (vao == VAO_NOT_SET)
-      std::cout << "ERROR:: You forgot to setup this Mesh " << name << " "
-                << shader_p->name << std::endl;
+      std::cout << "ERROR:: You forgot to setup this Mesh \"" << name << "\" "
+                << shader_p->name << std::endl; // Or was not set because no vertices or no triangles.. so crash then
+
+   // if (vao == VAO_NOT_SET) return; // maybe?
 
    // std::cout << "Mesh::draw() using vao " << vao << std::endl;
    glBindVertexArray(vao);
@@ -1657,6 +1712,8 @@ Mesh::update_instancing_buffer_data(const std::vector<glm::mat4> &mats,
    unsigned int n_mats =    mats.size();
    unsigned int n_cols = colours.size();
 
+   //is_instanced = true; 20210910-PE don't do this here. Do it when these buffers are allocated.
+
    if (vao == VAO_NOT_SET)
       std::cout << "You forgot to setup this Mesh " << name << std::endl;
    glBindVertexArray(vao); // needed?
@@ -1682,7 +1739,7 @@ Mesh::update_instancing_buffer_data(const std::vector<glm::mat4> &mats) {
 
    if (vao == VAO_NOT_SET)
       std::cout << "You forgot to setup this Mesh " << name << std::endl;
-   glBindVertexArray(vao); // needed?
+   glBindVertexArray(vao); // needed? 20210910-PE I imagine so!
    GLenum err = glGetError();
    if (err)
       std::cout << "GL error Mesh::update_instancing_buffer_data() --start-- " << "binding vao " << vao
@@ -1699,6 +1756,10 @@ Mesh::update_instancing_buffer_data(const std::vector<glm::mat4> &mats) {
    }
 
    if (n_mats > 0) {
+      for (unsigned int i=0; i<mats.size(); i++) {
+         std::cout << "debug:: update_instancing_buffer_data()" << inst_rts_buffer_id << " "
+                   << glm::to_string(mats[i]) << std::endl;
+      }
       glBindBuffer(GL_ARRAY_BUFFER, inst_rts_buffer_id);
       glBufferSubData(GL_ARRAY_BUFFER, 0, n_mats * 4 * sizeof(glm::vec4), &(mats[0]));
    }

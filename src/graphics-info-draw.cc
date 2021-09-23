@@ -1680,7 +1680,6 @@ graphics_info_t::draw_meshed_generic_display_object_meshes() {
 
    glm::mat3 vrm(glm::toMat4(graphics_info_t::glm_quat));
    glm::mat3 vrmt = glm::transpose(vrm);
-   glm::mat3 p = vrmt * vrm;
 
    // Yes, identity matrix
    // std::cout << "p: " << glm::to_string(p) << std::endl;
@@ -1699,8 +1698,18 @@ graphics_info_t::draw_meshed_generic_display_object_meshes() {
          for (int ii=n_molecules()-1; ii>=0; ii--) {
             molecule_class_info_t &m = molecules[ii]; // not const because the shader changes
             for (unsigned int jj=0; jj<m.meshes.size(); jj++) {
-               m.meshes[jj].draw(&shader_for_moleculestotriangles, mvp,
-                                 view_rotation, lights, eye_position, bg_col, do_depth_fog);
+               // std::cout << "mesh jj " << jj << " of " << m.meshes.size()
+               // << " instanced" << m.meshes[jj].is_instanced << std::endl;
+               if (m.meshes[jj].is_instanced) {
+                  // std::cout << "drawing instanced " << jj << std::endl;
+                  // what a mess
+                  m.meshes[jj].draw_instanced(&shader_for_moleculestotriangles, mvp,
+                                              view_rotation, lights, eye_position,
+                                              bg_col, do_depth_fog);
+               } else {
+                  m.meshes[jj].draw(&shader_for_moleculestotriangles, mvp,
+                                    view_rotation, lights, eye_position, bg_col, do_depth_fog);
+               }
             }
             glUseProgram(0);
          }
@@ -1755,6 +1764,7 @@ graphics_info_t::draw_instanced_meshes() {
 
       if (! instanced_meshes.empty()) {
          for (unsigned int jj=0; jj<instanced_meshes.size(); jj++) {
+            std::cout << "draw own mesh " << jj << std::endl;
             instanced_meshes[jj].draw(&shader_for_rama_balls, mvp,
                                       view_rotation, lights, eye_position, bg_col, do_depth_fog);
          }
@@ -1765,7 +1775,7 @@ graphics_info_t::draw_instanced_meshes() {
 void
 graphics_info_t::draw_meshes() {
 
-   // presumes opaque-only
+   // presumes only opaques
 
    draw_meshed_generic_display_object_meshes();
    draw_instanced_meshes();
@@ -2257,6 +2267,12 @@ graphics_info_t::draw_hud_fps() {
       if (fps > 0) {
          float ms_per_frame = 1000.0 / fps;
          s += "  " + coot::util::float_to_string_using_dec_pl(ms_per_frame, 2) + " ms/frame";
+      }
+
+      if (fps_std_dev >= 0.0) {
+         s += "  std.dev.: ";
+         s += coot::util::float_to_string_using_dec_pl(fps_std_dev, 2);
+         s += " ms/frame";
       }
       HUDTextureMesh htm("mesh for FPS");
       htm.setup_quad();
@@ -3124,6 +3140,7 @@ graphics_info_t::draw_hud_geometry_tooltip() {
    }
 }
 
+#include "analysis/stats.hh"
 
 gboolean
 graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &output_file_name) {
@@ -3185,7 +3202,35 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
                           glBindVertexArray(0); // here is not the place to call this.
                        };
 
-   auto do_fps_stuff = [] () {
+   auto do_fps_std_dev_stuff = [] {
+                              if (GetFPSFlag()) {
+                                 unsigned int n_fps_history = frame_time_history_list.size();
+                                 unsigned int n_history_max = 60;
+                                 if (n_fps_history > 5) {
+                                    coot::stats::single data;
+                                    int n_history_count = n_fps_history - n_history_max;
+                                    int count = 0;
+                                    std::list<std::chrono::time_point<std::chrono::high_resolution_clock> >::const_iterator it;
+                                    for (it = frame_time_history_list.begin(); it != frame_time_history_list.end(); it++) {
+                                       if (it != frame_time_history_list.begin()) {
+                                          if (count > n_history_count) {
+                                             const std::chrono::time_point<std::chrono::high_resolution_clock> &tp_this = *it;
+                                             const std::chrono::time_point<std::chrono::high_resolution_clock> &tp_prev = *std::prev(it);
+                                             auto delta_t = std::chrono::duration_cast<std::chrono::milliseconds>(tp_this - tp_prev).count();
+                                             data.add(delta_t);
+                                          }
+                                          count++;
+                                       }
+                                    }
+                                    if (data.size() > 5) {
+                                       auto v = data.variance();
+                                       fps_std_dev = sqrt(v);
+                                    }
+                                 }
+                              }
+                           };
+
+   auto do_fps_stuff = [do_fps_std_dev_stuff] () {
                           if (GetFPSFlag()) {
                              frame_counter++;
                              std::chrono::time_point<std::chrono::high_resolution_clock> tp_now = std::chrono::high_resolution_clock::now();
@@ -3196,6 +3241,7 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
                                 previous_frame_time_for_per_second_counter = tp_now;
                                 frame_counter_at_last_display = frame_counter;
                                 fps = num_frames_delta/elapsed_seconds.count();
+                                do_fps_std_dev_stuff();
                              }
                           }
                        };
@@ -3217,19 +3263,19 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
    if (use_framebuffers) { // static class variable
 
       GLenum err = glGetError();
-      if (err) std::cout << "render() start " << err << std::endl;
+      if (err) std::cout << "GL ERROR:: render() --- start --- " << err << std::endl;
 
       // is this needed? - does the context ever change?
       gtk_gl_area_make_current(gl_area);
       err = glGetError();
-      if (err) std::cout << "render() post gtk_gl_area_make_current() err " << err << std::endl;
+      if (err) std::cout << "GL ERROR:: render() post gtk_gl_area_make_current() err " << err << std::endl;
 
       glViewport(0, 0, framebuffer_scale * w, framebuffer_scale * h);
       err = glGetError();
-      if (err) std::cout << "render() post glViewport() err " << err << std::endl;
+      if (err) std::cout << "GL ERROR:: render() post glViewport() err " << err << std::endl;
       screen_framebuffer.bind();
       err = glGetError();
-      if (err) std::cout << "render() post screen_framebuffer bind() err " << err << std::endl;
+      if (err) std::cout << "GL ERROR:: render() post screen_framebuffer bind() err " << err << std::endl;
 
       glEnable(GL_DEPTH_TEST);
 
@@ -3743,7 +3789,7 @@ graphics_info_t::draw_hydrogen_bonds_mesh() {
    // 20210827-PE  each molecule should have its own hydrogen bond mesh. Not just one of them.
    // Fix that later.
 
-   if (mesh_for_hydrogen_bonds.draw_this_mesh) {
+   if (mesh_for_hydrogen_bonds.get_draw_this_mesh()) {
       glm::mat4 mvp = get_molecule_mvp();
       glm::vec3 eye_position = get_world_space_eye_position();
       glm::mat4 view_rotation_matrix = get_view_rotation();

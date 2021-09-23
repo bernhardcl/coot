@@ -96,7 +96,9 @@ coot::old_generic_display_object_t::add_pentakis_dodecahedron(const colour_holde
 // static
 void
 graphics_info_t::draw_generic_objects() {
-   graphics_info_t g;
+
+   // This is the function that draws clash spike capped cylinders
+
    if (! generic_display_objects.empty()) {
 
       bool draw_meshes = true;
@@ -113,7 +115,7 @@ graphics_info_t::draw_generic_objects() {
       bool do_depth_fog = true;
       for (unsigned int i=0; i<generic_display_objects.size(); i++) {
          meshed_generic_display_object &obj = generic_display_objects.at(i);
-	 if (obj.mesh.draw_this_mesh) {
+	 if (obj.mesh.get_draw_this_mesh()) {
             bool draw_it = true;
             if (! obj.is_intermediate_atoms_object()) {
                int imol_for_mesh = obj.get_imol();
@@ -124,9 +126,17 @@ graphics_info_t::draw_generic_objects() {
                   if (! molecules[imol_for_mesh].draw_it_for_map)
                      draw_it = false;
             }
-            if (draw_it)
-               obj.mesh.draw(&shader, mvp, view_rotation, lights, eye_position,
-                             bg_col, do_depth_fog);
+            if (draw_it) {
+               if (obj.mesh.is_instanced) {
+                  // std::cout << "draw_generic_objects() draw_instanced()" << std::endl;
+                  obj.mesh.draw_instanced(&shader_for_instanced_objects, mvp, view_rotation,
+                                          lights, eye_position, bg_col, do_depth_fog);
+               } else {
+                  // std::cout << "draw_generic_objects() draw()" << std::endl;
+                  obj.mesh.draw(&shader, mvp, view_rotation, lights, eye_position,
+                                bg_col, do_depth_fog);
+               }
+            }
          }
       }
    }
@@ -144,7 +154,7 @@ graphics_info_t::draw_generic_objects_simple() {
    unsigned int n_points = 0;
    for (unsigned int i=0; i<generic_display_objects.size(); i++) {
 
-      if (generic_display_objects[i].mesh.draw_this_mesh) {
+      if (generic_display_objects[i].mesh.get_draw_this_mesh()) {
 
 	 // if this is attached to a molecule that is not displayed, skip it.
 	 if (generic_display_objects.at(i).is_valid_imol()) { // i.e. is not UNDEFINED
@@ -218,7 +228,7 @@ graphics_info_t::draw_generic_objects_solid() {
    if (! generic_display_objects.empty()) {
       for (unsigned int i=0; i<generic_display_objects.size(); i++) {
          const meshed_generic_display_object &obj = generic_display_objects.at(i);
-	 if (obj.mesh.draw_this_mesh) {
+	 if (obj.mesh.get_draw_this_mesh()) {
             // std::cout << "draw_generic_objects_solid() " << i << std::endl;
          }
       }
