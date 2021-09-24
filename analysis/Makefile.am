@@ -20,9 +20,10 @@ libcoot_analysis_la_SOURCES = bfkurt.cc mogul.cc kolmogorov.hh kolmogorov.cc sta
 # one of these libraries?
 libcoot_analysis_la_LIBADD = \
    $(top_builddir)/coot-utils/libcoot-coord-utils.la    \
-   $(top_builddir)/geometry/libcoot-geometry.la	\
-   $(top_builddir)/mini-mol/libcoot-mini-mol.la	\
-   $(top_builddir)/utils/libcoot-utils.la		\
+   $(top_builddir)/lidia-core/libcoot-lidia-core.la \
+   $(top_builddir)/geometry/libcoot-geometry.la    	\
+   $(top_builddir)/mini-mol/libcoot-mini-mol.la    	\
+   $(top_builddir)/utils/libcoot-utils.la 		\
    $(CLIPPER_LIBS) $(MMDB_LIBS)  \
    $(GSL_LIBS) $(RDKIT_LIBS)
 
