@@ -152,7 +152,7 @@
 			(if (= status 0)
 			    new-dir
 			    #f))))))))))
-      
+
 
 ;; schemify function
 ;; 
@@ -223,6 +223,9 @@
 
 ;; do something based on the active residue (presumably)
 (define post-set-rotation-centre-hook #f)
+
+;; a function that takes one argument (the model molecule number)
+(define post-read-model-hook #f)
 
 ;; Return a boolean
 ;; 
