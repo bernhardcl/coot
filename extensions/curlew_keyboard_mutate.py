@@ -54,7 +54,7 @@ def mutate_and_auto_fit_window():
     close_button.connect("clicked", delete_event)
     window.show_all()
 
-add_key_binding("Fast auto-mutate", "q",
+add_key_binding("Fast auto-mutate", "C",
                 lambda: mutate_and_auto_fit_window())
 
 register_extension("curlew_keyboard_mutate.py", "1.0")
