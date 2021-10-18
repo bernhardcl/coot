@@ -491,7 +491,7 @@ SectionEnd
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC01} "This is 'default' WinCoot (${WinCootVersion}) $\n$\nPython scripting only"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC02} "Tick if you want a $\nWindowsy feeling to WinCoot"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC03} "Select if you want $\nprobe and reduce installed.$\nNote: Not required if you have CCP4."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC03} "Select if you want $\nprobe and reduce installed.$\nNote: Usually not required if you have CCP4 installed."
 ; disable guile for now
 !ifdef WITH_GUILE
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC04} "Tick if you want additionally $\nGuile/Scheme scripting"
