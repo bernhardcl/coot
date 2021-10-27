@@ -713,12 +713,17 @@ public:        //                      public
 			  int brief_atom_labels_flag,
 			  short int seg_ids_in_atom_labels_flag) const;
 
-   void draw_atom_label(int atom_index, int brief_atom_labels_flag,
+   void draw_atom_label(int atom_index,
+                        int brief_atom_labels_flag,
                         short int seg_ids_in_atom_labels_flag,
                         const glm::vec4 &atom_label_colour,
                         const glm::mat4 &mvp,
-                        const glm::mat4 &view_rotation,
-                        const glm::vec3 &eye_position);
+                        const glm::mat4 &view_rotation);
+
+   void draw_symm_atom_label(int atom_index, const std::pair <symm_trans_t, Cell_Translation> &st,
+                             const glm::vec4 &atom_label_colour,
+                             const glm::mat4 &mvp,
+                             const glm::mat4 &view_rotation);
 
    // don't count the mainchain of the peptide-linked residues
    //
@@ -1035,12 +1040,13 @@ public:        //                      public
    float atom_radius_scale_factor; // 3 is quite nice, 1 by default.
    void set_atom_radius_scale_factor(float sf); // regenerate
 
+   // atom labels and symmetry atom labels, that is.
+   //
    void draw_atom_labels(int brief_atom_labels_flag,
                          short int seg_ids_in_atom_labels_flag,
                          const glm::vec4 &atom_label_colour,
                          const glm::mat4 &mvp,
-                         const glm::mat4 &view_rotation,
-                         const glm::vec3 &eye_position);
+                         const glm::mat4 &view_rotation);
 
    //
    void update_molecule_after_additions(); // cleanup, new
@@ -1062,7 +1068,15 @@ public:        //                      public
    void setup_unit_cell(Shader *shader_p);
    void draw_unit_cell(Shader *shader_p, const glm::mat4 &mvp);
 
-   void draw_dots();
+   void draw_dots(); // 20211022-PE delete this old OpenGL function
+   void draw_dots(Shader *shader_p,
+                  const glm::mat4 &mvp,
+                  const glm::mat4 &view_rotation_matrix,
+                  const std::map<unsigned int, lights_info_t> &lights,
+                  const glm::vec3 &eye_position, // eye position in view space (not molecule space)
+                  const glm::vec4 &background_colour,
+                  bool do_depth_fog);
+
    // return the status of whether or not the dots were cleared.
    bool clear_dots(int dots_handle);
    // clear the first open dots object with the given name.
@@ -1236,6 +1250,8 @@ public:        //                      public
    int remove_atom_label(char *chain_id, int iresno, char *atom_id);
    void remove_atom_labels(); // and symm labels
    int add_atom_labels_for_residue(mmdb::Residue *residue_p);
+
+   void add_labels_for_all_CAs();
 
    // xmap information
    //

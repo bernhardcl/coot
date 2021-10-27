@@ -8874,6 +8874,8 @@ molecule_class_info_t::fill_partial_residue(const coot::residue_spec_t &residue_
 void
 molecule_class_info_t::draw_dots() {
 
+   // delete this now there is a new function draw_dots()
+
    if (draw_it) {
       for (unsigned int iset=0; iset<dots.size(); iset++) {
          if (dots[iset].is_open_p() == 1) {
@@ -8896,6 +8898,26 @@ molecule_class_info_t::draw_dots() {
    }
 }
 
+
+
+void
+molecule_class_info_t::draw_dots(Shader *shader_p,
+                                 const glm::mat4 &mvp,
+                                 const glm::mat4 &view_rotation_matrix,
+                                 const std::map<unsigned int, lights_info_t> &lights,
+                                 const glm::vec3 &eye_position, // eye position in view space (not molecule space)
+                                 const glm::vec4 &background_colour,
+                                 bool do_depth_fog) {
+
+   if (! dots.empty())
+      for (unsigned int i=0; i<dots.size(); i++)
+         if (dots[i].is_open_p() == 1)
+            dots[i].imm.draw(shader_p, mvp, view_rotation_matrix, lights, eye_position,
+                             background_colour, do_depth_fog);
+
+}
+
+
 // return the status of whether or not the dots were cleared.
 bool
 molecule_class_info_t::clear_dots(int dots_handle) {
@@ -8903,6 +8925,7 @@ molecule_class_info_t::clear_dots(int dots_handle) {
    bool r = 0;
    if ((dots_handle >= 0) && (dots_handle < int(dots.size()))) {
       if (dots[dots_handle].is_open_p()) {
+         std::cout << "closing dots " << dots_handle << std::endl;
          dots[dots_handle].close_yourself();
          r = 1;
       }
@@ -8935,6 +8958,7 @@ molecule_class_info_t::make_dots(const std::string &atom_selection_str,
                                  const std::string &dots_object_name,
                                  float dot_density, float atom_radius_scale) {
 
+
    int dots_handle = -1;
 
    if (has_model()) {
@@ -8946,9 +8970,11 @@ molecule_class_info_t::make_dots(const std::string &atom_selection_str,
       mmdb::PPAtom atom_selection = NULL;
       atom_sel.mol->GetSelIndex(SelHnd, atom_selection, n_selected_atoms);
 
+      gtk_gl_area_attach_buffers(GTK_GL_AREA(graphics_info_t::glareas[0]));
+
+      // dots is declared:    std::vector<coot::dots_representation_info_t> dots;
       coot::dots_representation_info_t dots_info(dots_object_name);
-      dots_info.add_dots(SelHnd, atom_sel.mol, NULL, dot_density,
-                         dots_colour, dots_colour_set);
+      dots_info.add_dots(SelHnd, atom_sel.mol, NULL, dot_density, dots_colour, dots_colour_set);
 
       dots.push_back(dots_info);
       dots_handle = dots.size() -1;

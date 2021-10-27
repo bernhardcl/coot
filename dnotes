@@ -10099,7 +10099,7 @@ Sat 17 Jul 15:40:16 BST 2021
 
    called by molecule_class_info_t::make_map_from_mtz_by_calc_phases
 
-  called by API function map_from_mtz_by_calc_phases()
+   called by API function map_from_mtz_by_calc_phases()
 
 
 ----
@@ -10182,3 +10182,101 @@ Mon  6 Sep 23:54:21 BST 2021
     Model building, refinement, validation, and analysis
     EMD-10553 EMD-10554
     Uses PDB ID 4wrn as starting model
+
+---
+Wed 29 Sep 18:09:40 BST 2021
+
+   to add a dialog that uses response_id:
+   When you add the buttons, don't give them callback in Signals, *do* give them a Response ID in General.
+
+   See add_reps_dialog, but note that "Close" button is a Response, not connected to
+   on_add_reps_dialog_response_gtkbuilder_callback() (I am not sure how to activeate that callback).
+
+---
+Thu  7 Oct 07:37:59 BST 2021
+
+   freetype font atlas implementation
+
+   https://gist.github.com/baines/b0f9e4be04ba4e6f56cab82eef5008ff
+
+---
+
+ https://github.com/SuperflyJon/VulkanPlayground
+ including font atlas
+
+https://en.m.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_Text_Rendering_02
+
+----
+Tue 19 Oct 08:18:30 BST 2021
+
+   Lots of blender materials - good stuff!
+   https://blenderartists.org/t/yet-another-thread-about-cycles-materials/562346/276
+
+---
+Tue 19 Oct 14:09:13 BST 2021
+
+   Here's how to do a modern python Gtk molecule combobox
+
+    combobox = Gtk.ComboBox()
+    combobox_mol_items = make_store_for_model_molecule_combobox()
+    combobox.set_model(combobox_mol_items)
+    renderer_text = Gtk.CellRendererText()
+    combobox.pack_start(renderer_text, True)
+    combobox.add_attribute(renderer_text, "text", 1)
+    combobox.set_active(0) # or whatever
+
+    When the gui/dialog is read, use this:
+
+    def get_molecule():
+        tree_iter = combobox_molecule.get_active_iter()
+        imol = -1
+        if tree_iter is not None:
+            model = combobox_molecule.get_model()
+            it = model[tree_iter]
+            imol = it[0]
+        return imol
+
+---
+Wed 20 Oct 14:02:54 BST 2021
+
+   Here's how to do a modern dialog with molecule combobox
+
+   graphics_info_t g;
+   GtkWidget *dialog = widget_from_builder("copy_fragment_dialog");
+   GtkWidget *vbox   = widget_from_builder("copy_fragment_vbox");
+   int imol = g.get_active_atom().first;
+
+   auto my_delete_box_items = [] (GtkWidget *widget, void *data) {
+                                 if (GTK_IS_COMBO_BOX(widget))
+                                    gtk_container_remove(GTK_CONTAINER(data), widget); };
+   gtk_container_foreach(GTK_CONTAINER(vbox), my_delete_box_items, vbox);
+   GtkWidget *combobox = gtk_combo_box_new();
+   gtk_box_pack_start(GTK_BOX(vbox), combobox, FALSE, FALSE, 4);
+   gtk_box_reorder_child(GTK_BOX(vbox), combobox, 1);
+   GCallback callback_func = G_CALLBACK(NULL); // combobox is only used when it's read on OK response
+   g.new_fill_combobox_with_coordinates_options(combobox, callback_func, imol);
+   g_object_set_data(G_OBJECT(dialog), "combobox", combobox); // for reading
+   gtk_widget_show(combobox);
+   gtk_widget_show(dialog);
+
+   // Here's the callback
+
+   if (response_id == GTK_RESPONSE_OK) {
+      graphics_info_t g;
+      GtkWidget *entry = widget_from_builder("copy_fragment_entry");
+      std::string text = gtk_entry_get_text(GTK_ENTRY(entry));
+      GtkWidget *combobox = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "combobox"));
+      int imol = g.combobox_get_imol(GTK_COMBO_BOX(combobox));
+      int imol_new = copy_fragment(imol, text);
+   }
+   if (response_id == GTK_RESPONSE_CANCEL) {
+      gtk_widget_hide(GTK_WIDGET(dialog));
+   }
+
+
+---
+Fri 22 Oct 06:52:45 BST 2021
+
+   o Does your HOLE look like this? https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4078027/
+
+

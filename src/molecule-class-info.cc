@@ -297,6 +297,7 @@ molecule_class_info_t::setup_internal() {
    //
    dots_colour = coot::colour_t(0.3,0.4,0.5);
    dots_colour_set = false; // so use atom-element colouring
+   dots_colour_set = true; // don't use atom-element colouring
 
    // solid surface density representation
    //
@@ -834,8 +835,7 @@ molecule_class_info_t::draw_atom_labels(int brief_atom_labels_flag,
                                         short int seg_ids_in_atom_labels_flag,
                                         const glm::vec4 &atom_label_colour,
                                         const glm::mat4 &mvp,
-                                        const glm::mat4 &view_rotation,
-                                        const glm::vec3 &eye_position) {
+                                        const glm::mat4 &view_rotation) {
 
    if (draw_it) {
       if (has_model()) {
@@ -853,12 +853,16 @@ molecule_class_info_t::draw_atom_labels(int brief_atom_labels_flag,
          for (int ii=0; ii<n_atoms_to_label ; ii++)
             draw_atom_label(labelled_atom_index_list[ii], brief_atom_labels_flag,
                             seg_ids_in_atom_labels_flag, atom_label_colour,
-                            mvp, view_rotation, eye_position);
+                            mvp, view_rotation);
 
-         n_atoms_to_label = labelled_symm_atom_index_list.size();
+         unsigned int n_symm_atoms_to_label = labelled_symm_atom_index_list.size();
 
-         for (int ii=0; ii<n_atoms_to_label ; ii++) {
-            label_symmetry_atom(ii);
+         glm::vec4 blueish(0.7, 0.7, 1.0, 1.0); // this could/should be user-settable.
+         for (unsigned int ii=0; ii<n_symm_atoms_to_label ; ii++) {
+            const auto &st = labelled_symm_atom_symm_trans_[ii];
+            draw_symm_atom_label(labelled_symm_atom_index_list[ii], st,
+                            blueish, mvp, view_rotation);
+
          }
       }
    }
@@ -2203,6 +2207,39 @@ molecule_class_info_t::add_atom_labels_for_residue(mmdb::Residue *residue_p) {
    return n_atoms;
 }
 
+void
+molecule_class_info_t::add_labels_for_all_CAs() {
+
+   int imod = 1;
+   if (! atom_sel.mol) return;
+   mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
+   if (model_p) {
+      int n_chains = model_p->GetNumberOfChains();
+      for (int ichain=0; ichain<n_chains; ichain++) {
+         mmdb::Chain *chain_p = model_p->GetChain(ichain);
+         int n_res = chain_p->GetNumberOfResidues();
+         for (int ires=0; ires<n_res; ires++) {
+            mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+            if (residue_p) {
+               int n_atoms = residue_p->GetNumberOfAtoms();
+               for (int iat=0; iat<n_atoms; iat++) {
+                  mmdb::Atom *at = residue_p->GetAtom(iat);
+                  if (! at->isTer()) {
+                     std::string atom_name(at->name);
+                     if (atom_name == " CA ") { // PDBv3 FIXME
+                        int i = get_atom_index(at);
+                        add_to_labelled_atom_list(i);
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+}
+
+
+
 
 
 int molecule_class_info_t::remove_atom_label(char *chain_id, int iresno, char *atom_id) {
@@ -3197,6 +3234,8 @@ molecule_class_info_t::make_atom_label_string(unsigned int ith_labelled_atom,
    return std::pair<std::string, clipper::Coord_orth>(label, p);
 }
 
+
+
 // Put a label at the ith atom of mol_class_info::atom_selection.
 //
 void
@@ -3205,34 +3244,71 @@ molecule_class_info_t::draw_atom_label(int atom_index,
                                        short int seg_ids_in_atom_labels_flag,
                                        const glm::vec4 &atom_label_colour,
                                        const glm::mat4 &mvp,
-                                       const glm::mat4 &view_rotation,
-                                       const glm::vec3 &eye_position) {
+                                       const glm::mat4 &view_rotation) { // not used - removed this argument      
 
    if (has_model()) {
       if (atom_index < atom_sel.n_selected_atoms) {
          mmdb::Atom *atom = atom_sel.atom_selection[atom_index];
          if (atom) {
-            std::string label = make_atom_label_string(atom, brief_atom_labels_flag,
-                                                       seg_ids_in_atom_labels_flag);
-            graphics_info_t g;
+            std::string label;
+            glm::vec3 position;
 
-            glm::vec3 position(atom->x, atom->y, atom->z);
+            position = glm::vec3(atom->x, atom->y, atom->z);
+            label = make_atom_label_string(atom, brief_atom_labels_flag, seg_ids_in_atom_labels_flag);
+
+            graphics_info_t g;
             g.tmesh_for_labels.draw_atom_label(label, position, atom_label_colour,
                                                &g.shader_for_atom_labels, mvp, view_rotation,
-                                               g.lights, eye_position,
                                                glm::vec4(g.background_colour, 1.0),
                                                g.shader_do_depth_blur_flag,
                                                g.perspective_projection_flag);
 
          }
       } else {
-         std::cout << "INFO:: draw_atom_label() trying to label atom out of range: "
+         std::cout << "ERROR:: draw_atom_label() trying to label atom out of range: "
                    << atom_index << " " << atom_sel.n_selected_atoms
                    << " Removing label\n";
          unlabel_atom(atom_index);
       }
    }
 }
+
+// Put a label at the ith atom of mol_class_info::atom_selection.
+//
+void
+molecule_class_info_t::draw_symm_atom_label(int atom_index,
+                                            const std::pair <symm_trans_t, Cell_Translation> &st,
+                                            const glm::vec4 &atom_label_colour,
+                                            const glm::mat4 &mvp,
+                                            const glm::mat4 &view_rotation) {
+
+   if (has_model()) {
+      if (atom_index < atom_sel.n_selected_atoms) {
+         mmdb::Atom *atom = atom_sel.atom_selection[atom_index];
+         if (atom) {
+
+            std::pair <symm_trans_t, Cell_Translation> st_inv(st.first, st.second.inv());
+            std::string label = make_symm_atom_label_string(atom_sel.atom_selection[atom_index], st_inv);
+            coot::Cartesian symm_point = translate_atom_with_pre_shift(atom_sel, atom_index, st);
+            glm::vec3 position = glm::vec3(symm_point.x(), symm_point.y(), symm_point.z());
+
+            graphics_info_t g;
+            g.tmesh_for_labels.draw_atom_label(label, position, atom_label_colour,
+                                               &g.shader_for_atom_labels, mvp, view_rotation,
+                                               glm::vec4(g.background_colour, 1.0),
+                                               g.shader_do_depth_blur_flag,
+                                               g.perspective_projection_flag);
+
+         }
+      } else {
+         std::cout << "ERROR:: draw_atom_label() trying to label atom out of range: "
+                   << atom_index << " " << atom_sel.n_selected_atoms
+                   << " Removing label\n";
+         unlabel_atom(atom_index);
+      }
+   }
+}
+
 
 
 void

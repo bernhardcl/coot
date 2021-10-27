@@ -115,6 +115,7 @@ def with_auto_accept(*funcs):
 def using_active_atom(*funcs):
 
     active_atom = closest_atom_simple()
+    print("debug:: active_atom", active_atom)
     if not active_atom:
         coot.add_status_bar_text("No residue found")
     else:
@@ -139,6 +140,8 @@ def using_active_atom(*funcs):
             func = funcs[0]
             args = funcs[1:]
             c_args = [convert_arg(item) for item in args]
+            # print("debug:: func", func)
+            # print("debug:: c_args", c_args)
             func(*c_args)
 
 
@@ -3285,8 +3288,8 @@ def pukka_puckers_qm(imol):
                 imol, residue_spec, pucker_atom)
             ls = [residue_spec[0] + " " + str(residue_spec[1]) + residue_spec[2] +
                   ": " + residue[2],
-                  ["set_go_to_atom_molecule(" + str(imol) + ")",
-                   "set_go_to_atom_chain_residue_atom_name(" +
+                  ["coot.set_go_to_atom_molecule(" + str(imol) + ")",
+                   "coot.set_go_to_atom_chain_residue_atom_name(" +
                    "\"" + str(residue_spec[0]) + "\", " +
                    str(residue_spec[1]) + ", " +
                    "\"" + str(at_name) + "\")"]

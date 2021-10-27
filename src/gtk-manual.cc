@@ -203,51 +203,16 @@ create_initial_map_color_submenu(GtkWidget *window1) {
 void
 create_initial_ramachandran_mol_submenu(GtkWidget *widget) {
 
-   GtkWidget *rama_draw_menu;
-   GtkWidget *window1;
-   GtkWidget *rama_draw;
+   GtkWidget *window1 = widget;
 
- /* We need to get to window1 */
+   GtkWidget *rama_menu = widget_from_builder("ramachandran_plot1");
+   GtkWidget *rama_draw_submenu = gtk_menu_new();
+   g_object_set_data_full (G_OBJECT (window1), "rama_plot_submenu", rama_draw_submenu, NULL); // 20211002-PE what does this do now?
 
-   window1 = widget;
-
-   rama_draw = GTK_WIDGET(lookup_widget(window1, "ramachandran_plot1"));
-
-   rama_draw_menu = gtk_menu_new ();
-   // gtk_widget_ref (rama_draw_menu);
-   g_object_set_data_full (G_OBJECT (window1), "rama_plot_menu",
-			   rama_draw_menu, NULL);
-
-   gtk_menu_item_set_submenu (GTK_MENU_ITEM (rama_draw),
-			      rama_draw_menu);
+   gtk_menu_item_set_submenu (GTK_MENU_ITEM (rama_menu), rama_draw_submenu);
+   g_object_set_data(G_OBJECT(rama_menu), "rama_plot_submenu", rama_draw_submenu);
 }
 
-
-void
-update_ramachandran_plot_menu_manual(int imol, const char *name) {
-
-   GtkWidget *menu_item;
-   GtkWidget *window1;
-   GtkWidget *rama_plot_menu;
-   char *text;
-
-   window1 = GTK_WIDGET(lookup_widget(main_window(), "window1"));
-
-   menu_item = gtk_menu_item_new_with_label (name);
-
-   rama_plot_menu = GTK_WIDGET(lookup_widget(window1, "rama_plot_menu"));
-
-   // gtk_widget_ref (menu_item);
-   g_object_set_data_full (G_OBJECT (window1), "rama_plot_menu_item",
-			   menu_item, NULL);
-
-  gtk_widget_show (menu_item);
-  gtk_container_add (GTK_CONTAINER (rama_plot_menu), menu_item);
-
-  g_signal_connect (G_OBJECT (menu_item), "activate",
-		    G_CALLBACK (rama_plot_mol_selector_activate),
-		    GINT_TO_POINTER(imol));
-}
 
 
 void
@@ -281,17 +246,17 @@ rama_plot_mol_selector_activate (GtkMenuItem     *menuitem,
 /* And similar for sequence view: */
 void create_initial_sequence_view_mol_submenu(GtkWidget *widget) {
 
-   GtkWidget *seq_view_draw = lookup_widget(widget, "sequence_view1");
+   GtkWidget *seq_view_draw = widget_from_builder("sequence_view1");
    GtkWidget *seq_view_menu = gtk_menu_new();
-   // gtk_widget_ref (seq_view_menu);
-   g_object_set_data_full(G_OBJECT(widget), "seq_view_menu",
-			  seq_view_menu,
-			  NULL);
-   gtk_menu_item_set_submenu (GTK_MENU_ITEM(seq_view_draw),
-			      seq_view_menu);
+
+   g_object_set_data_full(G_OBJECT(widget), "sequence_view_menu", seq_view_menu, NULL); // 20211002-PE what does this do (likewsie to rama)
+   gtk_menu_item_set_submenu (GTK_MENU_ITEM(seq_view_draw), seq_view_menu);
+   g_object_set_data(G_OBJECT(seq_view_draw), "sequence_view_submenu", seq_view_menu);
 }
 
 void update_sequence_view_menu_manual(int imol, const char *name) {
+
+   std::cout << "error:: update_sequence_view_menu_manual(): Don't use this " << std::endl;
 
    char *text;
    GtkWidget *window1 = lookup_widget(main_window(), "window1");
@@ -314,7 +279,7 @@ void sequence_view_mol_selector_activate (GtkMenuItem     *menuitem,
 					  gpointer         user_data) {
 
   int imol = GPOINTER_TO_INT(user_data);
-  std::cout << "calling do_sequence_view() " << imol  << std::endl;
+  std::cout << "debug:: sequence_view_mol_selector_activate() calling do_sequence_view() " << imol  << std::endl;
    do_sequence_view(imol);
 
 }
@@ -391,6 +356,7 @@ on_display_manager_selections_and_colours_combobox_changed(GtkComboBox     *comb
       if (at == _("Bonds (Colour by Chain)")) {
          render_as_bonds_colored_by_chain_button_select(imol);
       }
+      // 20211019-PE currently this can't happen
       if (at == _("Bonds (Goodsell Colour by Chain)")) {
          render_as_bonds_goodsell_colored_by_chain_button_select(imol);
       }
@@ -431,7 +397,7 @@ GtkWidget *selections_and_colours_combobox(int imol) {
    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combobox), _("Bonds (Colour by Atom)"));
    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combobox), _("Bonds (Colour by Molecule)"));
    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combobox), _("Bonds (Colour by Chain)"));
-   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combobox), _("Bonds (Goodsell Colour by Chain)"));
+   // gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combobox), _("Bonds (Goodsell Colour by Chain)"));
    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combobox), _("Bonds (Colour by Sec. Str.)"));
    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combobox), _("C-alphas/Backbone"));
    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combobox), _("CAs + Ligands"));
@@ -943,8 +909,7 @@ GtkWidget *display_control_map_combo_box(GtkWidget *display_control_window_glade
     gtk_entry_set_text(GTK_ENTRY(entry2), name);
   }
 
-  std::cout << "set entry not editable" << std::endl;
-  // gtk_entry_set_editable(GTK_ENTRY (entry2), FALSE);
+  gtk_editable_set_editable(GTK_EDITABLE(entry2), FALSE);
 
   gtk_widget_show (entry2);
   gtk_box_pack_start (GTK_BOX (hbox31), entry2, TRUE, TRUE, 0);

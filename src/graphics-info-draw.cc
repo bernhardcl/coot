@@ -1,3 +1,4 @@
+
 #ifdef USE_PYTHON
 #include <Python.h>
 #endif // USE_PYTHON
@@ -47,11 +48,10 @@ float quadVertices[] = { // vertex attributes for a quad that fills the entire s
 void
 graphics_info_t::init_screen_quads() {
 
-   graphics_info_t::shader_for_screen.Use();
    // screen quad VAO
    unsigned int quadVBO;
-   glGenVertexArrays(1, &graphics_info_t::screen_quad_vertex_array_id);
-   glBindVertexArray(graphics_info_t::screen_quad_vertex_array_id);
+   glGenVertexArrays(1, &screen_quad_vertex_array_id);
+   glBindVertexArray(screen_quad_vertex_array_id);
    glGenBuffers(1, &quadVBO);
    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
@@ -60,11 +60,49 @@ graphics_info_t::init_screen_quads() {
    glEnableVertexAttribArray(1);
    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void *>(2 * sizeof(float)));
    GLenum err = glGetError();
-   if (err) std::cout << "init_screen_quads() err is " << err << std::endl;
+   if (err) std::cout << "init_screen_quads() A err is " << err << std::endl;
+
+   glGenVertexArrays(1, &blur_y_quad_vertex_array_id);
+   glBindVertexArray(blur_y_quad_vertex_array_id);
+   glGenBuffers(1, &quadVBO);
+   glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+   glEnableVertexAttribArray(0);
+   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void *>(0));
+   glEnableVertexAttribArray(1);
+   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void *>(2 * sizeof(float)));
+   err = glGetError();
+   if (err) std::cout << "init_screen_quads() B err is " << err << std::endl;
+
+   glGenVertexArrays(1, &blur_x_quad_vertex_array_id);
+   glBindVertexArray(blur_x_quad_vertex_array_id);
+   glGenBuffers(1, &quadVBO);
+   glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+   glEnableVertexAttribArray(0);
+   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void *>(0));
+   glEnableVertexAttribArray(1);
+   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void *>(2 * sizeof(float)));
+   err = glGetError();
+   if (err) std::cout << "init_screen_quads() C err is " << err << std::endl;
+
+   glGenVertexArrays(1, &combine_textures_using_depth_quad_vertex_array_id);
+   glBindVertexArray(combine_textures_using_depth_quad_vertex_array_id);
+   glGenBuffers(1, &quadVBO);
+   glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+   glEnableVertexAttribArray(0);
+   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void *>(0));
+   glEnableVertexAttribArray(1);
+   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void *>(2 * sizeof(float)));
+   err = glGetError();
+   if (err) std::cout << "init_screen_quads() D err is " << err << std::endl;
 
 }
 void
 graphics_info_t::init_blur_quads() {
+
+   // This is the 2020 version - this function can be deleted when the new version works.
 
    graphics_info_t::shader_for_blur.Use();
    // screen quad VAO
@@ -90,7 +128,6 @@ graphics_info_t::init_buffers() {
    init_central_cube();
    init_screen_quads();
    init_blur_quads();
-
 }
 
 void
@@ -595,6 +632,9 @@ graphics_info_t::myglLineWidth(int n_pixels) {
 void
 graphics_info_t::draw_map_molecules(bool draw_transparent_maps) {
 
+   GLenum err = glGetError();
+   if (err) std::cout << "GL ERROR:: gtk3_draw_map_molecules() -- start -- " << err << std::endl;
+
    // run through this molecule loop twice - for opaque then transparent maps
    // first, a block that decides if we need to do anything.
 
@@ -637,7 +677,7 @@ graphics_info_t::draw_map_molecules(bool draw_transparent_maps) {
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    }
 
-   GLenum err = glGetError();
+   err = glGetError();
    if (err) std::cout << "gtk3_draw_map_molecules() A " << err << std::endl;
 
    if (!draw_transparent_maps || n_transparent_maps > 0) {
@@ -865,6 +905,7 @@ graphics_info_t::draw_model_molecules() {
                    << m.n_vertices_for_model_VertexArray << std::endl;
       if (m.n_vertices_for_model_VertexArray > 0) {
 
+         // glEnable(GL_BLEND); // 20211014-PE meh
          glDisable(GL_BLEND); // stop semi-transparent bonds - but why do we have them?
          gtk_gl_area_make_current(GTK_GL_AREA(graphics_info_t::glareas[0]));
 
@@ -949,7 +990,7 @@ graphics_info_t::draw_model_molecules() {
                             << shader.name << " with err " << err << std::endl;
 
          // draw with the vertex count, not the index count.
-         GLuint n_verts = graphics_info_t::molecules[ii].n_indices_for_model_triangles;
+         GLuint n_verts = molecules[ii].n_indices_for_model_triangles;
 
          // std::cout << "   Drawing " << n_verts << " model vertices" << std::endl;
          err = glGetError();
@@ -961,6 +1002,9 @@ graphics_info_t::draw_model_molecules() {
                             << " n_vertices " << n_verts << " with GL err " << err << std::endl;
 
          draw_molecule_atom_labels(m, mvp, view_rotation);
+
+         m.draw_dots(&shader_for_rama_balls, mvp, view_rotation, lights, eye_position,
+                     bgc, shader_do_depth_fog_flag);
 
       }
    }
@@ -1000,20 +1044,11 @@ graphics_info_t::draw_molecule_atom_labels(molecule_class_info_t &m,
    }
 
    int n_atoms_to_label = m.labelled_atom_index_list.size();
-   if (n_atoms_to_label == 0) return;
+   int n_symm_atoms_to_label = m.labelled_symm_atom_index_list.size();
+   if (n_atoms_to_label == 0 && n_symm_atoms_to_label == 0) return;
 
-   // maybe pass these?
-   GtkAllocation allocation;
-   GtkWidget *widget = graphics_info_t::glareas[0];
-   if (! widget) return;
-   gtk_widget_get_allocation(widget, &allocation);
-
-   // this doesn't seem sensibly arranged.
-   glm::vec3 unused(0,0,0);
-   m.draw_atom_labels(brief_atom_labels_flag,
-                      seg_ids_in_atom_labels_flag,
-                      label_colour,
-                      mvp, view_rotation, unused);
+   m.draw_atom_labels(brief_atom_labels_flag, seg_ids_in_atom_labels_flag,
+                      label_colour, mvp, view_rotation);
 
    glDisable(GL_BLEND);
 
@@ -1543,11 +1578,60 @@ graphics_info_t::draw_happy_face_residue_markers() {
    }
 }
 
+void
+graphics_info_t::draw_texture_meshes() {
+
+   // std::cout << "draw_texture_meshes() --- start --- " << std::endl;
+
+   if (! texture_meshes.empty()) {
+      glm::mat4 mvp = get_molecule_mvp();
+      glm::vec3 eye_position = get_world_space_eye_position();
+      glm::mat4 view_rotation = get_view_rotation();
+      glm::vec4 bg_col(background_colour, 1.0);
+      bool do_depth_fog = shader_do_depth_fog_flag;
+      Shader &shader = shader_for_texture_meshes;
+      for (unsigned int i=0; i<texture_meshes.size(); i++) {
+         TextureMesh &tm = texture_meshes[i];
+         // std::cout << "debug:: in draw_textures_meshes textures size " << tm.textures.size() << std::endl;
+         if (! tm.textures.empty()) {
+            // std::cout << "Binding and drawing the texture mesh" << std::endl;
+
+            //
+            // 20211018-PE it matters that these get called in the right order!
+            //
+            // BASE_TEXTURE before NORMAL_MAP
+            // I've reversed the indexing of idx_texture for now - there's probably a better
+            // way of sorting this out.
+            // texture.unit for BASE_TEXTURE is 0
+            // texture.unit for NORMAL_MAP is 1
+            // as it should be (AFAICS)
+            //
+            // for (unsigned int idx_texture=0; idx_texture<tm.textures.size(); idx_texture++) {
+            int idx_start = tm.textures.size() - 1;
+            for (int idx_texture=idx_start; idx_texture>=0; idx_texture--) {
+               const auto &texture = tm.textures[idx_texture];
+               if (texture.texture_type == TextureInfoType::BASE_TEXTURE) {
+                  // std::cout << "   binding BASE_TEXTURE texture_unit " << texture.unit << std::endl;
+                  tm.textures[idx_texture].texture.Bind(texture.unit);
+               }
+               if (texture.texture_type == TextureInfoType::NORMAL_MAP) {
+                  // std::cout << "   binding NORMAL_MAP texture_unit " << texture.unit << std::endl;
+                  tm.textures[idx_texture].texture.Bind(texture.unit);
+               }
+               tm.draw(&shader, mvp, view_rotation, lights, eye_position, bg_col, do_depth_fog);
+            }
+         }
+      }
+   }
+}
+
 
 void
 graphics_info_t::draw_molecules() {
 
    // opaque things
+
+   draw_outlined_active_residue();
 
    draw_intermediate_atoms();
 
@@ -1634,8 +1718,7 @@ graphics_info_t::draw_environment_graphics_object() {
                   // caches these textures in a map std::map<std::string, thing> where
                   // the key is the label.
                   tmesh_for_labels.draw_atom_label(label, position, colour, shader_p,
-                                                   mvp, view_rotation, lights, eye_position,
-                                                   bg_col, do_depth_fog,
+                                                   mvp, view_rotation, bg_col, do_depth_fog,
                                                    perspective_projection_flag);
                }
             }
@@ -1649,6 +1732,46 @@ graphics_info_t::draw_environment_graphics_object() {
       }
    }
 }
+
+#include "molecular-mesh-generator.hh"
+
+void
+graphics_info_t::update_mesh_for_outline_of_active_residue(int imol, const coot::atom_spec_t &spec) {
+
+   gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
+   if (is_valid_model_molecule(imol)) {
+      mmdb::Manager *mol = molecules[imol].atom_sel.mol;
+      if (mol) {
+         coot::residue_spec_t res_spec(spec);
+         mmdb::Residue *residue_p = molecules[imol].get_residue(res_spec);
+         if (residue_p) {
+            // what about Mesh's make_graphical_bonds_bonds_bonds adn make_graphical_bonds_hemispherical_atoms
+            molecular_mesh_generator_t mmg;
+            std::pair<std::vector<s_generic_vertex>, std::vector<g_triangle> > p =
+               mmg.get_molecular_triangles_mesh_for_active_residue(imol, mol, residue_p, Geom_p());
+            mesh_for_outline_of_active_residue.clear();
+            mesh_for_outline_of_active_residue.import(p);
+            Material mat;
+            mesh_for_outline_of_active_residue.setup(mat);
+         }
+      }
+   }
+}
+
+
+void
+graphics_info_t::draw_outlined_active_residue() {
+
+   if (outline_for_active_residue_frame_count > 0) {
+      glm::mat4 mvp = get_molecule_mvp();
+      std::map<unsigned int, lights_info_t> dummy_lights;
+      glm::vec3 eye_position = get_world_space_eye_position();
+      glm::mat4 view_rotation = get_view_rotation();
+      glm::vec4 bg_col(background_colour, 1.0);
+      Shader &shader = shader_for_outline_of_active_residue;
+      mesh_for_outline_of_active_residue.draw(&shader, mvp, view_rotation, dummy_lights, eye_position, bg_col, false);
+   }
+};
 
 
 void
@@ -1983,6 +2106,34 @@ GtkWidget *create_and_pack_gtkglarea(GtkWidget *vbox, bool use_gtk_builder) {
 }
 
 void
+graphics_info_t::draw_measure_distance_and_angles() {
+
+   if (mesh_for_measure_distance_object_vec.get_draw_this_mesh()) {
+      Shader &shader = shader_for_moleculestotriangles;
+      glm::mat4 mvp = get_molecule_mvp();
+      glm::mat4 view_rotation_matrix = get_view_rotation();
+      glm::vec4 bg_col(background_colour, 1.0);
+      mesh_for_measure_distance_object_vec.draw(&shader, mvp, view_rotation_matrix, lights, eye_position,
+                                                bg_col, shader_do_depth_fog_flag);
+
+      mesh_for_measure_angle_object_vec.draw(&shader, mvp, view_rotation_matrix, lights, eye_position,
+                                             bg_col, shader_do_depth_fog_flag);
+
+      if (! labels_for_measure_distances_and_angles.empty()) {
+         Shader &shader = shader_for_atom_labels;
+         for (unsigned int i=0; i<labels_for_measure_distances_and_angles.size(); i++) {
+            const auto &label = labels_for_measure_distances_and_angles[i];
+            tmesh_for_labels.draw_atom_label(label.label, label.position, label.colour, &shader,
+                                             mvp, view_rotation_matrix, bg_col,
+                                             shader_do_depth_fog_flag, perspective_projection_flag);
+         }
+      }
+   }
+
+}
+
+
+void
 graphics_info_t::setup_lights() {
 
    lights_info_t light;
@@ -2275,7 +2426,7 @@ graphics_info_t::draw_hud_fps() {
          s += " ms/frame";
       }
       HUDTextureMesh htm("mesh for FPS");
-      htm.setup_quad();
+      htm.setup_quad(); // oops! Does this use the right framebuffer?
       Shader &shader = shader_for_hud_geometry_tooltip_text;  // change the name of this - it's for general (real) HUD text
       glm::vec4 col(0.7, 0.7, 0.4, 1.0);
       glm::vec4 grey(0.5, 0.5, 0.5, 0.4);
@@ -2288,11 +2439,14 @@ graphics_info_t::draw_hud_fps() {
       htm.draw_label(s, col, &shader, ft_characters);
 
 
-      // ----------------- HUD graph for ms/frame ---------------------------------
+      // ----------------- HUD graph (in ms/frame) ---------------------------------
 
       if (frame_time_history_list.size() > 2) {
+
+         myglLineWidth(1.0); // even Apple should have no problem with this.
+
          std::vector<glm::vec2> data;
-         data.reserve(frame_time_history_list.size()+2);
+         data.reserve(frame_time_history_list.size()+2); // it would be better if this was outside the hot path
 
          // base line
          float x_o = munged_position_offset.x;
@@ -2309,6 +2463,7 @@ graphics_info_t::draw_hud_fps() {
 
          // make glm::vec2 data and then convert that to OpenGL screen coordinates
          //
+         float ms_to_opengl_y = 0.0025;
          unsigned int time_count = 0;
          std::list<std::chrono::time_point<std::chrono::high_resolution_clock> >::const_iterator it;
          for (it = frame_time_history_list.begin(); it != frame_time_history_list.end(); it++) {
@@ -2317,14 +2472,14 @@ graphics_info_t::draw_hud_fps() {
                const std::chrono::time_point<std::chrono::high_resolution_clock> &tp_this = *it;
                const std::chrono::time_point<std::chrono::high_resolution_clock> &tp_prev = *std::prev(it);
                auto delta_t = std::chrono::duration_cast<std::chrono::milliseconds>(tp_this - tp_prev).count();
-               data.push_back(glm::vec2(x_o + 0.001 * x, y_o + 0.003 * delta_t));
+               data.push_back(glm::vec2(x_o + 0.001 * x, y_o + ms_to_opengl_y * delta_t));
                time_count++;
             }
          }
 
          // base line and grid lines into vertices first
          //
-         float y_tick_mark = 20.0 * 0.003; // 20ms converted to OpenGL y coord
+         float y_tick_mark = 20.0 * ms_to_opengl_y; // 20ms converted to OpenGL y coord
          vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o,                   -1), norm, full_grey));
          vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o,                   -1), norm, full_grey));
          vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o + y_tick_mark,     -1), norm, grey));
@@ -2333,12 +2488,16 @@ graphics_info_t::draw_hud_fps() {
          vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o + 2 * y_tick_mark, -1), norm, grey));
          vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o + 3 * y_tick_mark, -1), norm, grey));
          vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o + 3 * y_tick_mark, -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o + 4 * y_tick_mark, -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o + 4 * y_tick_mark, -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o,       y_o + 5 * y_tick_mark, -1), norm, grey));
+         vertices.push_back(s_generic_vertex(glm::vec3(x_o + 0.5, y_o + 5 * y_tick_mark, -1), norm, grey));
 
          for (unsigned int i=0; i<data.size(); i++)
             vertices.push_back(s_generic_vertex(glm::vec3(data[i], -1), norm, col));
 
-         for (unsigned int i=0; i<(data.size()-2+6); i++) {
-            if (i == 1 || i == 3 || i == 5 || i == 7) {
+         for (unsigned int i=0; i<(data.size()-2+10); i++) {
+            if (i == 1 || i == 3 || i == 5 || i == 7 || i == 9 || i == 11) {
                // no line betwween base line and grid lines and start of real data
             } else {
                indices.push_back(i);
@@ -3147,47 +3306,9 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
 
    // auto tp_0 = std::chrono::high_resolution_clock::now();
 
-   auto render_scene = [] (GtkGLArea *gl_area) {
-                          
-                          //  ------------------- render scene ----------------------------
-                          const glm::vec3 &bg = graphics_info_t::background_colour;
-                          glClearColor (bg[0], bg[1], bg[2], 1.0); // what difference does this make?
-                          GLenum err = glGetError(); if (err) std::cout << "render_scene lambda B err " << err << std::endl;
-                          glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                          err = glGetError(); if (err) std::cout << "render_scene lambda C err " << err << std::endl;
+   auto draw_hud_elements = [] () {
 
-                          draw_origin_cube(gl_area);
-                          err = glGetError(); if (err) std::cout << "render scene lambda post cubes err " << err << std::endl;
-
-
-                          bool draw_test_image = false;
-                          if (draw_test_image) {
-                             glEnable(GL_BLEND);
-                             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                             texture_for_camera_facing_quad.Bind(0);
-
-                             // 20210831-PE testing... this gives us an image at the origin that's in the world and facing the camera.
-                             // interesting but not useful
-                             // tmesh_for_camera_facing_quad.draw(&camera_facing_quad_shader, mvp, quat_mat, lights, eye_position,
-                             //                         bg_col, shader_do_depth_fog_flag);
-
-                             tmesh_for_hud_image_testing.set_position(glm::vec2(-0.3, 0.5));
-                             tmesh_for_hud_image_testing.set_scales(glm::vec2(0.6, 0.2));
-                             tmesh_for_hud_image_testing.draw(&shader_for_hud_geometry_labels);
-                          }
-
-                          // draw_central_cube(gl_area);
-                          draw_rotation_centre_crosshairs(gl_area);
-
-                          draw_molecules(); // includes particles, happy-faces and boids (should they be there (maybe not))
-
-                          draw_invalid_residue_pulse();
-
-                          draw_identification_pulse();
-
-                          draw_delete_item_pulse();
-
-                          draw_ligand_view();
+                          draw_hud_ligand_view();
 
                           draw_hud_geometry_bars();
 
@@ -3198,8 +3319,40 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
                           draw_hud_buttons();
 
                           draw_hud_fps();
+                   };
 
-                          glBindVertexArray(0); // here is not the place to call this.
+   auto render_3d_scene = [] (GtkGLArea *gl_area) {
+                          
+                          //  ------------------- render scene ----------------------------
+
+                          glEnable(GL_DEPTH_TEST);
+                          const glm::vec3 &bg = graphics_info_t::background_colour;
+                          glClearColor (bg[0], bg[1], bg[2], 1.0); // what difference does this make?
+                          GLenum err = glGetError(); if (err) std::cout << "render_3d_scene lambda B err " << err << std::endl;
+                          glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                          err = glGetError(); if (err) std::cout << "render_3d_scene lambda C err " << err << std::endl;
+
+                          draw_origin_cube(gl_area);
+                          err = glGetError(); if (err) std::cout << "render scene lambda post cubes err " << err << std::endl;
+
+                          draw_rotation_centre_crosshairs(gl_area);
+
+                          draw_molecules(); // includes particles, happy-faces and boids (should they be there (maybe not))
+                                            // so rename this function? Or just bring everything here?  Put this render() function
+                                            // into new file graphics-info-opengl-render.cc
+
+                          draw_invalid_residue_pulse();
+
+                          draw_identification_pulse();
+
+                          draw_delete_item_pulse();
+
+                          draw_measure_distance_and_angles(); // maybe in draw_molecules()?
+
+                          draw_pointer_distances_objects();
+
+                          draw_texture_meshes();
+
                        };
 
    auto do_fps_std_dev_stuff = [] {
@@ -3230,7 +3383,7 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
                               }
                            };
 
-   auto do_fps_stuff = [do_fps_std_dev_stuff] () {
+   auto update_fps_statistics = [do_fps_std_dev_stuff] () {
                           if (GetFPSFlag()) {
                              frame_counter++;
                              std::chrono::time_point<std::chrono::high_resolution_clock> tp_now = std::chrono::high_resolution_clock::now();
@@ -3251,40 +3404,66 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
    gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
    int w = allocation.width;
    int h = allocation.height;
+   unsigned int frame_time_history_list_max_n_elements = 500;
 
    GtkWidget *glarea = glareas[0];
    if (glarea) {
       auto tp_now = std::chrono::high_resolution_clock::now();
       frame_time_history_list.push_back(tp_now);
-      if (frame_time_history_list.size() > 501)
+      if (frame_time_history_list.size() >= (frame_time_history_list_max_n_elements+1))
          frame_time_history_list.pop_front();
    }
 
+   bool make_image_for_screen = ! to_screendump_framebuffer_flag;
+
    if (use_framebuffers) { // static class variable
 
-      GLenum err = glGetError();
-      if (err) std::cout << "GL ERROR:: render() --- start --- " << err << std::endl;
-
-      // is this needed? - does the context ever change?
-      gtk_gl_area_make_current(gl_area);
-      err = glGetError();
-      if (err) std::cout << "GL ERROR:: render() post gtk_gl_area_make_current() err " << err << std::endl;
-
       glViewport(0, 0, framebuffer_scale * w, framebuffer_scale * h);
-      err = glGetError();
+      GLenum err = glGetError();
       if (err) std::cout << "GL ERROR:: render() post glViewport() err " << err << std::endl;
-      screen_framebuffer.bind();
+      screen_framebuffer.bind(); // screen_ao, that is
       err = glGetError();
       if (err) std::cout << "GL ERROR:: render() post screen_framebuffer bind() err " << err << std::endl;
 
-      glEnable(GL_DEPTH_TEST);
+      render_3d_scene(gl_area);
 
-      render_scene(gl_area);
+      if (make_image_for_screen) {
 
-      do_fps_stuff();
+         glViewport(0, 0, w, h);
 
-      if (to_screendump_framebuffer_flag) {
+         // use this, rather than glBindFramebuffer(GL_FRAMEBUFFER, 0); ... just Gtk things.
+         // gtk_gl_area_attach_buffers(gl_area);
 
+         if (shader_do_depth_of_field_blur_flag) {
+
+            blur_y_framebuffer.bind();
+            render_scene_with_screen_ao_shader();
+            blur_x_framebuffer.bind();
+            render_scene_with_y_blur();
+
+            combine_textures_using_depth_framebuffer.bind();
+
+            render_scene_with_x_blur();
+
+            gtk_gl_area_attach_buffers(gl_area);
+
+            render_scene_with_texture_combination_for_depth_blur();
+
+            // And finally draw the HUD elements to the GTK framebuffer
+            draw_hud_elements();
+
+         } else {
+
+            gtk_gl_area_attach_buffers(gl_area);
+            render_scene_with_screen_ao_shader();
+            // And finally draw the HUD elements to the GTK framebuffer
+            draw_hud_elements();
+
+         }
+
+      } else {
+
+         // screendump
          glDisable(GL_DEPTH_TEST);
          unsigned int sf = framebuffer_scale;
          glViewport(0, 0, sf * w, sf * h);
@@ -3292,34 +3471,28 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
          unsigned int index_offset = 0;
          screendump_framebuffer.init(sf * w, sf * h, index_offset, "screendump");
          screendump_framebuffer.bind();
-         render_scene_to_base_framebuffer();
+         render_scene_with_screen_ao_shader();
          gtk_gl_area_attach_buffers(gl_area);
          screendump_tga_internal(output_file_name, w, h, sf, screendump_framebuffer.get_fbo());
 
-      } else {
-         glViewport(0, 0, w, h);
-         // use this, rather than glBindFramebuffer(GL_FRAMEBUFFER, 0); ... just Gtk things.
-         gtk_gl_area_attach_buffers(gl_area);
-         render_scene_to_base_framebuffer(); // render current framebuffer to base framebuffer
       }
    } else {
       //  simple/direct - for debugging framebuffers
       gtk_gl_area_attach_buffers(gl_area);
-      glEnable(GL_DEPTH_TEST); // needed?
-      render_scene(gl_area);
+      render_3d_scene(gl_area);
    }
-
-   glEnable(GL_DEPTH_TEST); // what's this for?
 
    // auto tp_1 = std::chrono::high_resolution_clock::now();
    // auto d10 = std::chrono::duration_cast<std::chrono::microseconds>(tp_1 - tp_0).count();
    // std::cout << "INFO:: render() " << d10 << " microseconds" << std::endl;
 
+   update_fps_statistics();
+
    return FALSE;
 }
 
 void
-graphics_info_t::render_scene_to_base_framebuffer() {
+graphics_info_t::render_scene_with_screen_ao_shader() {
 
    glEnable(GL_DEPTH_TEST);
    shader_for_screen.Use();
@@ -3347,6 +3520,86 @@ graphics_info_t::render_scene_to_base_framebuffer() {
 
 }
 
+void
+graphics_info_t::render_scene_with_x_blur() {
+
+   shader_for_x_blur.Use();
+   glBindVertexArray(blur_x_quad_vertex_array_id);
+
+   const glm::vec3 &bg = background_colour;
+   glClearColor(bg[0], bg[1], bg[2], 1.0); // needed?
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+   glActiveTexture(GL_TEXTURE0 + 0);
+   glBindTexture(GL_TEXTURE_2D, blur_x_framebuffer.get_texture_colour());
+   glActiveTexture(GL_TEXTURE0 + 1);
+   glBindTexture(GL_TEXTURE_2D, blur_x_framebuffer.get_texture_depth());
+   shader_for_x_blur.set_int_for_uniform("screenTexture", 0);
+   GLenum err = glGetError(); if (err) std::cout << "GL ERROR:: render_scene_with_x_blur() D err " << err << std::endl;
+
+   glDrawArrays(GL_TRIANGLES, 0, 6);
+   err = glGetError(); if (err) std::cout << "GL ERROR:: render_scene_with_x_blur() E err " << err << std::endl;
+
+}
+
+void
+graphics_info_t::render_scene_with_y_blur() {
+
+   shader_for_y_blur.Use();
+   glBindVertexArray(blur_y_quad_vertex_array_id);
+
+   const glm::vec3 &bg = background_colour;
+   glClearColor(bg[0], bg[1], bg[2], 1.0); // needed?
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+   glActiveTexture(GL_TEXTURE0 + 0);
+   glBindTexture(GL_TEXTURE_2D, blur_y_framebuffer.get_texture_colour());
+   glActiveTexture(GL_TEXTURE0 + 1);
+   glBindTexture(GL_TEXTURE_2D, blur_y_framebuffer.get_texture_depth());
+   shader_for_x_blur.set_int_for_uniform("screenTexture", 0);
+   GLenum err = glGetError(); if (err) std::cout << "GL ERROR:: render_scene_with_x_blur() D err " << err << std::endl;
+
+   glDrawArrays(GL_TRIANGLES, 0, 6);
+   err = glGetError(); if (err) std::cout << "GL ERROR:: render_scene_with_x_blur() E err " << err << std::endl;
+}
+
+void
+graphics_info_t::render_scene_with_texture_combination_for_depth_blur() {
+
+   shader_for_dof_blur_by_texture_combination.Use();
+   glBindVertexArray(combine_textures_using_depth_quad_vertex_array_id);
+
+   const glm::vec3 &bg = background_colour;
+   glClearColor(bg[0], bg[1], bg[2], 1.0); // needed?
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+   // shader:
+   // uniform sampler2D screenTexture1;
+   // uniform sampler2D screenTexture2;
+   // uniform sampler2D screenDepth;
+
+   shader_for_dof_blur_by_texture_combination.set_float_for_uniform("focus_blur_z_depth",  focus_blur_z_depth);
+   shader_for_dof_blur_by_texture_combination.set_float_for_uniform("focus_blur_strength", focus_blur_strength);
+
+   glActiveTexture(GL_TEXTURE0 + 0);
+   glBindTexture(GL_TEXTURE_2D, combine_textures_using_depth_framebuffer.get_texture_colour());
+   glActiveTexture(GL_TEXTURE0 + 1);
+   glBindTexture(GL_TEXTURE_2D, blur_y_framebuffer.get_texture_colour());
+   glActiveTexture(GL_TEXTURE0 + 2);
+   glBindTexture(GL_TEXTURE_2D, screen_framebuffer.get_texture_depth());
+
+   shader_for_dof_blur_by_texture_combination.set_int_for_uniform("screenTexture1", 0);
+   shader_for_dof_blur_by_texture_combination.set_int_for_uniform("screenTexture2", 1);
+   shader_for_dof_blur_by_texture_combination.set_int_for_uniform("screenDepth",    2);
+   GLenum err = glGetError();
+   if (err) std::cout << "GL ERROR:: render_scene_with_texture_combination_for_depth_blur() D err " << err << std::endl;
+
+   glDrawArrays(GL_TRIANGLES, 0, 6);
+   err = glGetError();
+   if (err) std::cout << "GL ERROR:: render_scene_with_texture_combination_for_depth_blur() E err " << err << std::endl;
+}
+
+
 
 void
 graphics_info_t::reset_frame_buffers(int width, int height) {
@@ -3358,6 +3611,15 @@ graphics_info_t::reset_frame_buffers(int width, int height) {
       // << width << " x " << height << std::endl;
       screen_framebuffer.init(sf * width, sf * height, index_offset, "screen");
       GLenum err = glGetError(); if (err) std::cout << "reset_frame_buffers() err " << err << std::endl;
+
+      blur_x_framebuffer.init(sf * width, sf * height, index_offset, "blur-x");
+      err = glGetError(); if (err) std::cout << "reset_frame_buffers() err " << err << std::endl;
+
+      blur_y_framebuffer.init(sf * width, sf * height, index_offset, "blur-y");
+      err = glGetError(); if (err) std::cout << "reset_frame_buffers() err " << err << std::endl;
+
+      combine_textures_using_depth_framebuffer.init(sf * width, sf * height, index_offset, "combine");
+      err = glGetError(); if (err) std::cout << "reset_frame_buffers() err " << err << std::endl;
 
       // index_offset = 0;
       // g.blur_framebuffer.init(width, height, index_offset, "blur");
@@ -3423,7 +3685,7 @@ graphics_info_t::translate_in_screen_z(float step_size) {
    glm::vec3 delta_uv = normalize(delta);
 
    // more zoomed in has smaller zoom than zoomed out. Zoomed out is ~100. Zoomed in is ~25
-   glm::vec3 step = 0.005 * step_size * zoom * delta_uv;
+   glm::vec3 step = 0.005f * step_size * zoom * delta_uv;
 
    if (false) // debug
       std::cout << "ep " << glm::to_string(ep) << " rc " << glm::to_string(rc)
@@ -3754,15 +4016,23 @@ graphics_info_t::setup_draw_for_boids() {
 }
 
 void
-graphics_info_t::draw_ligand_view() {
+graphics_info_t::draw_hud_ligand_view() {
 
    GtkAllocation allocation;
    gtk_widget_get_allocation(graphics_info_t::glareas[0], &allocation);
    float w = allocation.width;
    float h = allocation.height;
+   GLenum err = glGetError();
+   if (err)
+      std::cout << "draw_ligand_view() --- start --- " << err << std::endl;
+
+   myglLineWidth(2.0);
    graphics_ligand_mesh_molecule.draw(&shader_for_ligand_view,
                                       &shader_for_hud_geometry_tooltip_text,
                                       w, h, ft_characters);
+   err = glGetError();
+   if (err)
+      std::cout << "draw_ligand_view() --- end --- " << err << std::endl;
 }
 
 
@@ -3990,6 +4260,32 @@ graphics_info_t::draw_delete_item_pulse() {
    }
 }
 
+void
+graphics_info_t::draw_pointer_distances_objects() {
+
+   if (show_pointer_distances_flag) {
+      if (! pointer_distances_object_vec.empty()) {
+         Shader &shader = shader_for_moleculestotriangles;
+         glm::mat4 mvp = get_molecule_mvp();
+         glm::mat4 view_rotation_matrix = get_view_rotation();
+         glm::vec4 bg_col(background_colour, 1.0);
+         mesh_for_pointer_distances.mesh.draw(&shader, mvp, view_rotation_matrix, lights, eye_position,
+                                              bg_col, shader_do_depth_fog_flag);
+
+         if (! labels_for_pointer_distances.empty()) {
+            Shader &shader = shader_for_atom_labels;
+            for (unsigned int i=0; i<labels_for_pointer_distances.size(); i++) {
+               const auto &label = labels_for_pointer_distances[i];
+               tmesh_for_labels.draw_atom_label(label.label, label.position, label.colour, &shader,
+                                                mvp, view_rotation_matrix, bg_col,
+                                                shader_do_depth_fog_flag, perspective_projection_flag);
+            }
+         }
+      }
+   }
+
+}
+
 
 void
 graphics_info_t::move_forwards() {
@@ -4088,7 +4384,15 @@ graphics_info_t::setup_key_bindings() {
 
    auto l18 = []() { graphics_info_t g; g.accept_moving_atoms(); return gboolean(TRUE); };
 
-   auto l19 = []() { graphics_info_t g; g.clear_up_moving_atoms_wrapper(); g.clear_gl_rama_plot(); return gboolean(TRUE); };
+   auto l19 = []() {
+                 graphics_info_t g;
+                 if (g.moving_atoms_asc) {
+                    g.clear_up_moving_atoms_wrapper(); g.clear_gl_rama_plot();
+                 } else {
+                    unfullscreen();
+                 }
+                 return gboolean(TRUE);
+              };
 
    auto l20 = []() { graphics_info_t g; g.eigen_flip_active_residue(); return gboolean(TRUE); };
 
@@ -4239,6 +4543,21 @@ graphics_info_t::setup_key_bindings() {
                  return gboolean(TRUE);
               };
 
+   auto l29 = [] () {
+
+                 graphics_info_t g;
+                 std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+                 if (pp.first) {
+                    g.update_mesh_for_outline_of_active_residue(pp.second.first, pp.second.second);
+                    if (! tick_function_is_active()) {
+                       int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+                    }
+                    outline_for_active_residue_frame_count = 30;
+                    do_tick_outline_for_active_residue = true;
+                 }
+                 return gboolean(TRUE);
+              };
+
    // Note to self, Space and Shift Space are key *Release* functions
 
    std::vector<std::pair<keyboard_key_t, key_bindings_t> > kb_vec;
@@ -4268,6 +4587,9 @@ graphics_info_t::setup_key_bindings() {
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_k,      key_bindings_t(l25, "Fill Partial Residue")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_K,      key_bindings_t(l26, "Delete Sidechain")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_o,      key_bindings_t(l28, "NCS Other Chain")));
+
+   // control
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_Control_L, key_bindings_t(l29, "Highlight Active Residue")));
 
    // control keys
 
@@ -4429,5 +4751,27 @@ graphics_info_t::contour_level_scroll_scrollable_map(int direction) {
       display_density_level_this_image = 1;
 
       graphics_draw(); // queue
+   }
+}
+
+#include "widget-from-builder.hh"
+
+//static
+void
+graphics_info_t::fullscreen() {
+
+   GtkWidget *window = widget_from_builder("main_window");
+
+   if (GTK_IS_WINDOW(window)) {
+      gtk_window_fullscreen(GTK_WINDOW(window));
+   }
+}
+
+//static
+void
+graphics_info_t::unfullscreen() {
+   GtkWidget *window = widget_from_builder("main_window");
+   if (GTK_IS_WINDOW(window)) {
+      gtk_window_unfullscreen(GTK_WINDOW(window));
    }
 }

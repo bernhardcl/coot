@@ -120,8 +120,9 @@ dist_cootdata_DATA = atom-label.shader blur.shader central-cube.shader \
 		     hud-geometry-tooltip-text.shader happy-face-residue-markers.shader \
 		     model-as-mesh.shader ligand-view.shader symmetry-atoms-lines.shader \
 		     rama-plot-phi-psi-markers.shader rama-plot-axes-and-ticks.shader \
-		     hud-image-texture.shader hud-lines.shader
-
+		     hud-image-texture.shader hud-lines.shader \
+		     depth-of-field.shader blur-x.shader blur-y.shader texture-meshes.shader \
+		     camera-facing-quad-shader-for-testing.shader outline-of-active-residue.shader
 
 # use -DHAVE_MMDBSSM or use (expanded from) $(MMDBSSM) works.
 # SWIG_FLAGS is either blank or defines COOT_USE_GTK2_INTERFACE usage
@@ -171,7 +172,7 @@ coot_wrap_python_pre.cc: $(top_srcdir)/src/c-interface.h      \
                          $(top_srcdir)/src/curlew.hh \
                          $(top_srcdir)/src/validation.hh \
                          $(top_srcdir)/src/c-interface-mogul.hh
-	swig -o $@  $(CPPFLAGS) $(MOLTRIANGLES_CPPFLAGS) -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CPPFLAGS) $(PYTHON_CPPFLAGS)  -DUSE_PYTHON $(USE_LIBCURL) -I$(top_srcdir)/src  -I$(top_srcdir) -shadow -python -py3 -c++ $(top_srcdir)/src/coot.i
+	swig -o $@ $(CPPFLAGS) $(MOLTRIANGLES_CPPFLAGS) -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CPPFLAGS) $(PYTHON_CPPFLAGS)  -DUSE_PYTHON $(USE_LIBCURL) -I$(top_srcdir)/src  -I$(top_srcdir) -shadow -python -py3 -c++ $(top_srcdir)/src/coot.i
 
 coot_wrap_python.cc: coot_wrap_python_pre.cc
 	$(MAKE_COOT_WRAP_PYTHON_XXX) gtk2 $^ $@
@@ -468,6 +469,8 @@ libcootsumo_la_SOURCES = \
 	drag-and-drop.hh         \
 	drag-and-drop.cc         \
 	draw-generic-display-objects.cc \
+	dynamic-menus.hh         \
+	dynamic-menus.cc         \
 	eyes.cc eyes.hh		 \
 	fit-loop-gui.cc          \
 	fit-loop-gui.hh          \
@@ -648,7 +651,9 @@ libcootsumo_la_SOURCES = \
 	select-atom-info.hh      \
 	sound.hh                 \
 	startup-scripts.hh       \
-	stb_image.h   \
+	tiny_glhf.h              \
+	stb_image.h              \
+	stb_image_write.h        \
 	support-gtk2-extras.c    \
 	testing.cc testing-2.cc  \
 	testing-data.hh          \

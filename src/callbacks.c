@@ -1671,7 +1671,7 @@ gboolean on_accession_code_entry_key_press_event (GtkWidget       *widget,
  /* go somewhere if keypress was a carriage return  */
 
   if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
-    handle_get_accession_code(widget);
+    // handle_get_accession_code(widget);
   }
 
   return FALSE;
@@ -1682,7 +1682,7 @@ on_accession_code_ok_button_clicked    (GtkButton       *button,
                                         gpointer         user_data) {
 
   GtkWidget *entry = lookup_widget(GTK_WIDGET(button), "accession_code_entry");
-  handle_get_accession_code(entry);
+  // handle_get_accession_code(entry);
 }
 
 
@@ -4616,7 +4616,7 @@ on_clear_simple_distances2_activate    (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
 
-   clear_simple_distances();
+  //clear_simple_distances();
 }
 
 
@@ -4907,7 +4907,8 @@ on_geometry_clear_last_distance_button_clicked
                                         gpointer         user_data)
 {
 
-  clear_last_simple_distance();
+  // clear_last_simple_distance();
+  printf("on_geometry_clear_last_distance_button_clicked\n");
 
 }
 
@@ -4917,7 +4918,7 @@ on_geometry_clear_all_distances_button_clicked
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  clear_simple_distances();
+  // clear_simple_distances();
 }
 
 
@@ -5984,7 +5985,7 @@ on_experimental1_activate              (GtkMenuItem     *menuitem,
 
 }
 
-
+#if 0                           /*  20211002-PE moved to C++ yay */
 void
 on_geometry_analysis1_activate         (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
@@ -5998,8 +5999,9 @@ on_geometry_analysis1_activate         (GtkMenuItem     *menuitem,
   }
 
 }
+#endif
 
-
+#if 0
 void
 on_peptide_omega_analysis1_activate    (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
@@ -6011,9 +6013,10 @@ on_peptide_omega_analysis1_activate    (GtkMenuItem     *menuitem,
   } else {
     printf("failed to get menu in on_peptide_omega_analysis1_activate\n");
   }
-
 }
+#endif
 
+#if 0
 void
 on_ncs_differences1_activate           (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
@@ -6026,7 +6029,9 @@ on_ncs_differences1_activate           (GtkMenuItem     *menuitem,
     printf("failed to get menu in on_peptide_omega_analysis1_activate\n");
   }
 }
+#endif
 
+#if 0
 ////B B FACTOR
 void
 on_temp_fact_analysis1_activate
@@ -6042,8 +6047,10 @@ on_temp_fact_analysis1_activate
   }
 
 }
+#endif
 ////E B FACTOR
 
+#if 0
 void
 on_temp_fact_variance_analysis1_activate
                                         (GtkMenuItem     *menuitem,
@@ -6058,8 +6065,10 @@ on_temp_fact_variance_analysis1_activate
   }
 
 }
+#endif
 
 
+#if 0
 void
 on_rotamer_analysis1_activate          (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
@@ -6072,8 +6081,10 @@ on_rotamer_analysis1_activate          (GtkMenuItem     *menuitem,
     printf("failed to get menu in on_rotamer_analysis1_activate\n");
   }
 }
+#endif
 
 
+#if 0
 void
 on_density_fit_analysis1_activate      (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
@@ -6087,6 +6098,7 @@ on_density_fit_analysis1_activate      (GtkMenuItem     *menuitem,
   }
 
 }
+#endif
 
 
 void
@@ -9128,7 +9140,7 @@ on_refine_params_use_peptide_omegas_checkbutton_toggled
   }
 }
 
-
+#if 0
 void
 on_probe_clashes1_activate             (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
@@ -9142,6 +9154,7 @@ on_probe_clashes1_activate             (GtkMenuItem     *menuitem,
   }
 
 }
+#endif
 
 
 void
@@ -9581,6 +9594,7 @@ on_set_undo_molecule_button_clicked    (GtkButton       *button,
 }
 
 
+#if 0
 void
 on_gln_and_asn_b_factor_outliers1_activate
                                         (GtkMenuItem     *menuitem,
@@ -9595,6 +9609,7 @@ on_gln_and_asn_b_factor_outliers1_activate
   }
 
 }
+#endif
 
 
 

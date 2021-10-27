@@ -29,6 +29,9 @@ import time
 import numbers
 import coot_utils
 import coot_gui
+import gui_add_linked_cho
+import gui_prosmart
+import shelx_extensions
 
 
 def add_coot_menu_separator(menu):
@@ -73,7 +76,7 @@ if True:
          for c in menu_child.get_children():
            try:
              t = c.get_text()
-             print("########### get_existing_submenu get_text on c:", t)
+             # print("########### extensions get_existing_submenu get_text on c:", t)
              if t == submenu_label:
                return menu_child
            except KeyError as e:
@@ -82,45 +85,43 @@ if True:
        return False
        
      # --------------------------------------------------
-     #           coordinated water validation dialog
+     #           Validation
      # --------------------------------------------------
 
      menu = coot_gui.coot_menubar_menu("Validate")
      if menu:
-       coot_gui.add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
-                                     lambda func: coot_gui.water_coordination_gui())
-       coot_gui.add_simple_coot_menu_menuitem(menu, "Atom Overlaps (Coot)",
-                                     lambda func:
-                                              coot_utils.using_active_atom(coot_all_atom_contact_dots, "aa_imol"))
-       coot_gui.add_simple_coot_menu_menuitem(menu, "All-Atom Contact Dots (Molprobity)",
-                                     lambda func:
-                                              coot_utils.using_active_atom(probe, "aa_imol"))
+         import generic_objects
+         import dynamic_atom_overlaps_and_other_outliers as dao
+         coot_gui.add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
+                                                lambda func: coot_gui.water_coordination_gui())
+         coot_gui.add_simple_coot_menu_menuitem(menu, "Atom Overlaps (Coot)",
+                                                lambda func: coot_utils.using_active_atom(coot.coot_all_atom_contact_dots, "aa_imol"))
+         coot_gui.add_simple_coot_menu_menuitem(menu, "All-Atom Contact Dots (Molprobity)",
+                                                lambda func: coot_utils.using_active_atom(generic_objects.probe, "aa_imol"))
+         #coot_gui.add_simple_coot_menu_menuitem(menu,"Atom Overlaps Dialog",
+         #                                      lambda func: coot_utils.using_active_atom(dao.make_quick_test_validation_buttons, "aa_imol"))
+         coot_gui.add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
+                                                lambda func: coot_gui.water_coordination_gui())
 
-       coot_gui.add_simple_coot_menu_menuitem(menu,"Atom Overlaps Dialog",
-                                     lambda func:
-                                     using_active_atom(
-                                       coot_gui.molecule_atom_overlaps_gui, "aa_imol"))
-
-       coot_gui.add_simple_coot_menu_menuitem(menu, "Highly coordinated waters...",
-                                     lambda func: coot_gui.water_coordination_gui())
-
-       coot_gui.add_simple_coot_menu_menuitem(menu, "Pepflips from Difference Map...",
-                                     lambda func: coot_gui.pepflips_by_difference_map_gui())
+       # this does not exist. Let's do in in C++ with glade
+       #coot_gui.add_simple_coot_menu_menuitem(menu, "Pepflips from Difference Map...",
+       #                               lambda func: coot_gui.pepflips_by_difference_map_gui())
 
 
-       def validation_outliers_func():
-         with coot_utils.UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
+         def validation_outliers_func():
+             with coot_utils.UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                     aa_ins_code, aa_atom_name, aa_alt_conf]:
-           imol_map = coot.imol_refinement_map()
-           if not coot_utils.valid_map_molecule_qm(imol_map):
-             coot.info_dialog_and_text("Refinement Map is currently not set")
-           else:
-             find_baddies.validation_outliers_dialog(aa_imol, imol_map)
-       coot_gui.add_simple_coot_menu_menuitem(menu, "Validation Outliers",
-                                     lambda func: validation_outliers_func())
+                 imol_map = coot.imol_refinement_map()
+                 if not coot_utils.valid_map_molecule_qm(imol_map):
+                     coot.info_dialog_and_text("Refinement Map is currently not set")
+                 else:
+                     find_baddies.validation_outliers_dialog(aa_imol, imol_map)
 
-       coot_gui.add_simple_coot_menu_menuitem(menu, "List Ramachandran outliers...",
-                                     lambda func: rama_outlier_gui())
+         coot_gui.add_simple_coot_menu_menuitem(menu, "Validation Outliers",
+                                                lambda func: validation_outliers_func())
+
+         coot_gui.add_simple_coot_menu_menuitem(menu, "List Ramachandran outliers...",
+                                                lambda func: rama_outlier_gui())
 
 
      # --------------------------------------------------
@@ -128,9 +129,8 @@ if True:
      # --------------------------------------------------
 
      def add_module_user_defined_restraints():
-       menu = coot_gui.coot_menubar_menu("Restraints")
-       load_from_search_load_path("user_define_restraints.py")
-     
+         import user_define_restraints
+         menu = coot_gui.coot_menubar_menu("Restraints")
      
      # ---------------------------------------------
      #           extensions
@@ -147,6 +147,12 @@ if True:
      edit_menu      = coot_gui.coot_menubar_menu("Edit")
      edit_settings_menu = get_existing_submenu(edit_menu, "Settings...")
      calculate_all_molecule_menu = get_existing_submenu(calculate_menu, "All Molecule...")
+     calculate_map_tools_menu    = get_existing_submenu(calculate_menu, "Map Tools...")
+     calculate_ncs_tools_menu    = get_existing_submenu(calculate_menu, "NCS Model Tools...")
+     calculate_ncs_maps_menu     = get_existing_submenu(calculate_menu, "NCS Maps...")
+     calculate_modelling_menu    = get_existing_submenu(calculate_menu, "Modelling...")
+     calculate_modules_menu      = get_existing_submenu(calculate_menu, "Modules...")
+     draw_representation_menu    = get_existing_submenu(draw_menu, "Representation Tools...")
 
      # make submenus:
      submenu_all_molecule = Gtk.Menu()
@@ -155,11 +161,11 @@ if True:
      # print("DEBUG::::::::::::::::::::: calculate_all_molecule_menu:", calculate_menu)
      # print("DEBUG::::::::::::::::::::: submenu_all_molecule:", submenu_all_molecule)
 
-     menuitem_2 = Gtk.MenuItem("All Molecule...")
+     # menuitem_2 = Gtk.MenuItem("All Molecule...")
      submenu_maps = Gtk.Menu()
      menuitem_3 = Gtk.MenuItem("Maps...")
-     submenu_models = Gtk.Menu()
-     menuitem_4 = Gtk.MenuItem("Modelling...")
+     submenu_models = Gtk.Menu() # submenu_modelling really
+     # menuitem_4 = Gtk.MenuItem("Modelling...")
      submenu_refine = Gtk.Menu()
      menuitem_5 = Gtk.MenuItem("Refine...")
      submenu_representation = Gtk.Menu()
@@ -171,30 +177,39 @@ if True:
      submenu_pdbe = Gtk.Menu()
      menuitem_pdbe = Gtk.MenuItem("PDBe...")
      submenu_modules = Gtk.Menu()
-     menuitem_modules = Gtk.MenuItem("Modules...")
+     # menuitem_modules = Gtk.MenuItem("Modules...")
      submenu_ncs = Gtk.Menu()
-     menuitem_ncs = Gtk.MenuItem("NCS...")
+     # menuitem_ncs = Gtk.MenuItem("NCS Tools...") # find existing...
 
      # menuitem_2.set_submenu(submenu_all_molecule) replace by the following
      calculate_all_molecule_menu.set_submenu(submenu_all_molecule)
-     calculate_menu.append(menuitem_2)
-     menuitem_2.show()
+     # calculate_menu.append(menuitem_2)
+     # menuitem_2.show()
 
-     menuitem_3.set_submenu(submenu_maps)
-     calculate_menu.append(menuitem_3)
-     menuitem_3.show()
+     # menuitem_3.set_submenu(submenu_maps)
+     # calculate_menu.append(menuitem_3)
+     # menuitem_3.show()
 
-     menuitem_4.set_submenu(submenu_models)
-     calculate_menu.append(menuitem_4)
-     menuitem_4.show()
+     calculate_map_tools_menu.set_submenu(submenu_maps)
+     calculate_ncs_tools_menu.set_submenu(submenu_ncs)
 
-     menuitem_ncs.set_submenu(submenu_ncs)
-     calculate_menu.append(menuitem_ncs)
-     menuitem_ncs.show()
+     # menuitem_4.set_submenu(submenu_models)
+     #calculate_menu.append(menuitem_4)
+     # menuitem_4.show()
 
-     menuitem_6.set_submenu(submenu_representation)
-     draw_menu.append(menuitem_6)
-     menuitem_6.show()
+     calculate_modelling_menu.set_submenu(submenu_models)
+
+     # menuitem_ncs.set_submenu(submenu_ncs) 20210928-PE
+     # calculate_menu.append(menuitem_ncs)
+     # menuitem_ncs.show()
+
+     calculate_ncs_tools_menu.set_submenu(submenu_ncs)
+
+     # menuitem_6.set_submenu(submenu_representation)
+     # draw_menu.append(menuitem_6)
+     # menuitem_6.show()
+
+     draw_representation_menu.set_submenu(submenu_representation)
 
      menuitem_pisa.set_submenu(submenu_pisa)
      draw_menu.append(menuitem_pisa)
@@ -205,9 +220,11 @@ if True:
      menu.append(menuitem_7)
      menuitem_7.show()
 
-     menuitem_modules.set_submenu(submenu_modules)
-     calculate_menu.append(menuitem_modules)
-     menuitem_modules.show()
+     calculate_modules_menu.set_submenu(submenu_modules)
+
+     # menuitem_modules.set_submenu(submenu_modules)
+     # calculate_menu.append(menuitem_modules)
+     # menuitem_modules.show()
 
      # menuitem_7.set_submenu(submenu_settings) # already set
      # edit_menu.append(menuitem_7)
@@ -550,6 +567,13 @@ if True:
        "Assign HETATM to molecule...", 
        lambda func: coot_gui.molecule_chooser_gui("Assign HETATMs as per PDB definition", 
 		lambda imol: coot.assign_hetatms(imol)))
+
+     coot_gui.add_simple_coot_menu_menuitem(
+       submenu_models,
+       "Atoms with Zero Occupancies...",
+       lambda func: coot_gui.molecule_chooser_gui(
+         "Which molecule to check for Atoms with zero occupancies?",
+         lambda imol: coot_gui.zero_occ_atoms_gui(imol)))
 
      # in main menu now
      # coot_gui.add_simple_coot_menu_menuitem(
@@ -1013,14 +1037,6 @@ if True:
        lambda func: whats_this()
        )
      
-     
-     # an python extra, this is
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_models,
-       "Atoms with Zero Occupancies...",
-       lambda func: coot_gui.molecule_chooser_gui(
-         "Which molecule to check for Atoms with zero occupancies?",
-         lambda imol: coot_gui.zero_occ_atoms_gui(imol)))
 
      #---------------------------------------------------------------------
      #     NCS functions
@@ -1380,121 +1396,12 @@ if True:
      # ---------------------------------------------------------------------
      #
 
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Undo Symmetry View",
-       lambda func: coot.undo_symmetry_view())
-
-
-     def make_ball_n_stick_func(imol, text):
-       bns_handle = coot.make_ball_and_stick(imol, text, 0.18, 0.3, 1)
-       print("handle: ", bns_handle)
-
-
-     global default_ball_and_stick_selection    # maybe should be at the top of the file
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Ball & Stick...",
-       lambda func: coot_gui.generic_chooser_and_entry("Ball & Stick",
-                                              "Atom Selection:",
-                                              default_ball_and_stick_selection,
-                                              lambda imol, text: make_ball_n_stick_func(imol, text)))
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Add Balls to Simple Sticks",
-       lambda func: [set_draw_stick_mode_atoms(imol, 1) for imol in coot_utils.molecule_number_list()])
-
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Simple Sticks (No Balls)",
-       lambda func: [set_draw_stick_mode_atoms(imol, 0) for imol in coot_utils.molecule_number_list()])
-
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Clear Ball & Stick...",
-       lambda func: coot_gui.molecule_chooser_gui(
-         "Choose a molecule from which to clear Ball&Stick objects",
-         lambda imol: coot.clear_ball_and_stick(imol)))
-
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Electrostatic Surface...",
-       lambda func: coot_gui.molecule_chooser_gui(
-          "Choose a molecule to represent as a surface..." + \
-          "\n" + \
-          "Can be SLOW",
-          lambda imol: coot.do_surface(imol, 1)))  # shall we switch on the light too?!
-
-
-     def surface_func1(clipped = 0):
-       active_atom = active_residue()
-       aa_imol      = active_atom[0]
-       aa_chain_id  = active_atom[1]
-       aa_res_no    = active_atom[2]
-       aa_ins_code  = active_atom[3]
-       aa_atom_name = active_atom[4]
-       aa_alt_conf  = active_atom[5]
-       central_residue = active_residue()
-       residues = residues_near_residue(aa_imol, central_residue[1:4], 6.0)
-       # no waters in surface, thanks.
-       # but what if they have different names?! (only HOH so far)
-       filtered_residues = []
-       for res in residues:
-         if (coot.residue_name(aa_imol, *res) != "HOH"):
-           filtered_residues.append(res)
-       imol_copy = coot.copy_molecule(aa_imol)
-       # delete the interesting residue from the copy (so that
-       # it is not surfaced).
-       coot.delete_residue(imol_copy, aa_chain_id, aa_res_no, aa_ins_code)
-       if clipped:
-         do_clipped_surface(imol_copy, filtered_residues)
-       else:
-         coot.do_surface(imol_copy, 1)
-       
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Clipped Surface Here (This Residue)",
-       lambda func:
-         surface_func1(1))
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Full Surface Around Here (This Residue)",
-       lambda func:
-         surface_func1())
-     
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Un-Surface...",
-       lambda func: coot_gui.molecule_chooser_gui(
-          "Choose a molecule to represent conventionally...",
-          lambda imol: coot.do_surface(imol, 0)))
-
-     def hilight_site_func():
-       active_atom = active_residue()
-       if (active_atom):
-         imol = active_atom[0]
-         centre_residue_spec = [active_atom[1],
-                                active_atom[2],
-                                active_atom[3]]
-         coot_utils.hilight_binding_site(imol, centre_residue_spec, 230,4)
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Highlight Interesting Site (here)...",
-       lambda func: hilight_site_func())
-     
-
      def make_dot_surf_func(imol,text):
         # I think a single colour is better than colour by atom
         coot.set_dots_colour(imol, 0.5, 0.5, 0.5)
-        coot.dots_handle = dots(imol, text, text, 2, 1)
-        print("dots handle: ", dots_handle)
+        density = 1.0
+        dots_handle = coot.dots(imol, text, text, density, 1)
+        print("INFO::dots handle: ", dots_handle)
 
      coot_gui.add_simple_coot_menu_menuitem(
        submenu_representation,
@@ -1505,11 +1412,11 @@ if True:
 
 
      def clear_dot_surf_func(imol,text):
-        try:
-          n = int(text)
-          coot.clear_dots(imol,n)
-        except:
-          print("BL WARNING:: dots handle number shall be an integer!!")
+         try:
+             n = int(text)
+             coot.clear_dots(imol,n)
+         except:
+             print("WARNING:: dots handle number should be an integer")
 
      coot_gui.add_simple_coot_menu_menuitem(
        submenu_representation,
@@ -1518,39 +1425,12 @@ if True:
                 "Dots Handle Number:", "0", 
                 lambda imol, text: clear_dot_surf_func(imol, text)))
 
-
-     def limit_model_disp_func(text):
-       try:
-         f = float(text)
-         if f < 0.1:
-           coot.set_model_display_radius(0, 10)
-         else:
-           coot.set_model_display_radius(1, f)
-       except:
-           coot.set_model_display_radius(0, 10)
-         
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Limit Model Display Radius...",
-       lambda func: coot_gui.generic_single_entry("Display Radius Limit (0 for \'no limit\') ",
-                                         #  "15.0" ;; maybe this should be the map radius
-                                         # BL says:: I think it should be the current one
-                                         str(coot.get_map_radius()),
-                                         "Set: ",
-                                         lambda text: limit_model_disp_func(text)))
-
-     
+     import coot_hole
      coot_gui.add_simple_coot_menu_menuitem(
          submenu_representation,
          "HOLE...",
-         lambda func: test_hole.hole_ify())
+         lambda func: coot_hole.hole_ify())
 
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation,
-       "Label All CAs...",
-       lambda func: coot_gui.molecule_chooser_gui("Choose a molecule to label",
-                                         lambda imol: coot_utils.label_all_CAs(imol)))
- 
      # Views submenu
      submenu = Gtk.Menu()
      menuitem2 = Gtk.MenuItem("Views")
@@ -1599,90 +1479,6 @@ if True:
                                          "coot-views.py", " Save ",
                                          lambda txt: coot.save_views(txt)))
 
-
-     #---------------------------------------------------------------------
-     #     3D annotations
-     #---------------------------------------------------------------------
-
-     submenu = Gtk.Menu()
-     menuitem2 = Gtk.MenuItem("3D Annotations...")
- 
-     menuitem2.set_submenu(submenu)
-     submenu_representation.append(menuitem2)
-     menuitem2.show()
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu,
-       "Annotate position...",
-       lambda func: coot_gui.generic_single_entry("Annotation: ", "",
-                                         "Make Annotation",
-                                         lambda txt: coot_utils.add_annotation_here(txt)))
-
-
-     # BL says:: maybe this (and next) should have a file chooser/selector!?
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu,
-       "Save Annotations...",
-       lambda func: coot_gui.generic_single_entry("Save Annotations",
-                                         "coot_annotations.py",
-                                         " Save ",
-                                         lambda file_name: coot_utils.save_annotations(file_name)))
-       
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu,
-       "Load Annotations...",
-       lambda func: coot_gui.generic_single_entry("Load Annotations",
-                                         "coot_annotations.py",
-                                         " Load ",
-                                         lambda file_name: coot_utils.load_annotations(file_name)))
-
-     
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu,
-       "Remove annotation here",
-       lambda func: coot_utils.remove_annotation_here())
-
-     
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu,
-       "Remove annotation near click",
-       lambda func: coot_utils.remove_annotation_at_click())
-     
-
-     #---------------------------------------------------------------------
-     #     Other Representation Programs
-     #
-     #---------------------------------------------------------------------
-
-     # shall use subprocess at some point
-     def ccp4mg_func1():
-        import os
-        pd_file_name = "1.mgpic.py"
-        coot.write_ccp4mg_picture_description(pd_file_name)
-        if os.name == 'nt':
-            ccp4mg_exe = "winccp4mg.exe"
-        else:
-          ccp4mg_exe = "ccp4mg"
-        if coot_utils.command_in_path_qm(ccp4mg_exe):
-          ccp4mg_file_exe = coot_utils.find_exe(ccp4mg_exe, "PATH")
-          pd_file_name = os.path.abspath(pd_file_name)
-          args = [ccp4mg_file_exe, "-pict", pd_file_name]
-          try:
-            import subprocess
-            subprocess.Popen(args).pid
-            print("BL DEBUG:: new subprocess")
-          except:
-            # no subprocess, use old style
-            os.spawnv(os.P_NOWAIT, ccp4mg_file_exe, args)
-        else:
-          print("BL WARNING:: sorry cannot find %s in $PATH" %ccp4mg_exe)
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_representation, "CCP4MG...",
-       lambda func: ccp4mg_func1())
-
-
      # ---------------------------------------------------------------------
      #     PISA Interface and Assemblies
      # ---------------------------------------------------------------------
@@ -1707,24 +1503,8 @@ if True:
      # ---------------------------------------------------------------------
 
      coot_gui.add_simple_coot_menu_menuitem(
-         submenu_modules, "Carbohydrate",
-         lambda func: add_module_carbohydrate_gui())
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_modules, "CCP4...",
-       lambda func: coot_gui.add_module_ccp4())
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_modules, "SHELX...",
-       lambda func: shelx_extensions.add_module_shelx())
-
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_modules, "User-defined Restraints...",
-       lambda func: add_module_user_defined_restraints())
-
-     coot_gui.add_simple_coot_menu_menuitem(
-         submenu_modules, "ProSMART",
-         lambda func: gui_prosmart.add_module_prosmart())
+         submenu_modules, "CCP4...",
+         lambda func: coot_gui.add_module_ccp4())
 
      coot_gui.add_simple_coot_menu_menuitem(
          submenu_modules, "Carbohydrate",
@@ -1733,6 +1513,18 @@ if True:
      coot_gui.add_simple_coot_menu_menuitem(
          submenu_modules, "Cryo-EM",
          lambda func: coot_gui.add_module_cryo_em())
+
+     coot_gui.add_simple_coot_menu_menuitem(
+         submenu_modules, "ProSMART",
+         lambda func: gui_prosmart.add_module_prosmart())
+
+     coot_gui.add_simple_coot_menu_menuitem(
+         submenu_modules, "SHELX...",
+         lambda func: shelx_extensions.add_module_shelx())
+
+     coot_gui.add_simple_coot_menu_menuitem(
+         submenu_modules, "User-defined Restraints...",
+         lambda func: add_module_user_defined_restraints())
 
      # ---------------------------------------------------------------------
      #     Settings
@@ -1873,11 +1665,11 @@ if True:
        lambda imol: coot_utils.pukka_puckers_qm(imol)))
 
      coot_gui.add_simple_coot_menu_menuitem(
-       menu,
-       "Alignment vs PIR...",
-       lambda func: coot_gui.molecule_chooser_gui("Alignment vs PIR info for molecule:",
-                                         lambda imol: coot_gui.wrapper_alignment_mismatches_gui(imol)))
-          
+         menu,
+         "Alignment vs PIR...",
+         #lambda func: coot_gui.molecule_chooser_gui("Alignment vs PIR info for molecule:",
+         #   lambda imol: coot_gui.wrapper_alignment_mismatches_gui(imol)))
+         lambda func: coot_gui.associate_pir_wih_molecule_gui(True))
 
   else:
     print("BL WARNING:: could not find the main_menubar! Sorry, no extensions menu!")

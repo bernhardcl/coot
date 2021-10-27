@@ -15,6 +15,7 @@ graphics_info_t::init_shaders() {
    std::vector<std::reference_wrapper<Shader> > shaders = {shader_for_maps,
                                                            shader_for_map_caps,
                                                            shader_for_models,
+                                                           shader_for_outline_of_active_residue,
                                                            shader_for_model_as_meshes,
                                                            shader_for_symmetry_atoms_bond_lines,
                                                            shader_for_central_cube,
@@ -38,7 +39,11 @@ graphics_info_t::init_shaders() {
                                                            shader_for_rama_plot_axes_and_ticks,
                                                            shader_for_ligand_view,
                                                            shader_for_screen,
-                                                           shader_for_blur,
+                                                           shader_for_x_blur,
+                                                           shader_for_y_blur,
+                                                           shader_for_dof_blur_by_texture_combination,
+                                                           shader_for_blur, // old, 2020 version
+                                                           shader_for_texture_meshes,
                                                            camera_facing_quad_shader
    };
 
@@ -52,6 +57,7 @@ graphics_info_t::init_shaders() {
    for (it=shaders.begin(); it!=shaders.end(); ++it)
       it->get().set_default_directory(d);
 
+   shader_for_outline_of_active_residue.init("outline-of-active-residue.shader", Shader::Entity_t::MODEL);
    shader_for_maps.init("map.shader", Shader::Entity_t::MAP);
    shader_for_map_caps.init("draw-map-cap.shader", Shader::Entity_t::MAP);
    shader_for_models.init("model.shader", Shader::Entity_t::MODEL);
@@ -77,6 +83,7 @@ graphics_info_t::init_shaders() {
    shader_for_rama_plot_axes_and_ticks.init("rama-plot-axes-and-ticks.shader", Shader::Entity_t::HUD_TEXT);
    shader_for_rama_plot_phi_phis_markers.init("rama-plot-phi-psi-markers.shader", Shader::Entity_t::HUD_TEXT);
    shader_for_hud_lines.init("hud-lines.shader", Shader::Entity_t::MODEL);
+   shader_for_texture_meshes.init("texture-meshes.shader", Shader::Entity_t::MAP);
 
    // testing image textures
    camera_facing_quad_shader.init("camera-facing-quad-shader-for-testing.shader", Shader::Entity_t::MODEL);
@@ -84,10 +91,14 @@ graphics_info_t::init_shaders() {
    // we use the above to make an image/texture in the framebuffer and use then
    // shader_for_screen to convert that framebuffer to the screen buffer.
    shader_for_screen.init("screen.shader", Shader::Entity_t::SCREEN);
-   shader_for_blur.init("blur.shader", Shader::Entity_t::SCREEN);
+   shader_for_x_blur.init("blur-x.shader", Shader::Entity_t::SCREEN);
+   shader_for_y_blur.init("blur-y.shader", Shader::Entity_t::SCREEN);
+   shader_for_dof_blur_by_texture_combination.init("depth-of-field.shader", Shader::Entity_t::SCREEN);
+   shader_for_blur.init("blur.shader", Shader::Entity_t::SCREEN); // old
 
    for (it=shaders.begin(); it!=shaders.end(); ++it) {
       if (! it->get().get_success_status()) {
+         std::cout << "ERROR:: shader \"" <<it->get().name << "\" failed" << std::endl;
          status = false;
       }
    }
@@ -347,7 +358,6 @@ graphics_info_t::update_view_quaternion(int area_width, int area_height) {
 void
 graphics_info_t::coot_all_atom_contact_dots_instanced(mmdb::Manager *mol, int imol) {
 
-
    unsigned int octasphere_subdivisions = 1; // make a member of graphics_info_t with an API
 
    if (true) {
@@ -376,6 +386,10 @@ graphics_info_t::coot_all_atom_contact_dots_instanced(mmdb::Manager *mol, int im
                                             };
 
       coot::atom_overlaps_dots_container_t c;
+
+#if 0 // why did I want to add contact dots for a (static) molecule when moving atoms were being displayed?
+      // Weird.
+
       // get_moving_atoms_lock(__FUNCTION__);
       if (moving_atoms_asc) {
          if (moving_atoms_asc->mol) {
@@ -386,16 +400,22 @@ graphics_info_t::coot_all_atom_contact_dots_instanced(mmdb::Manager *mol, int im
          }
       }
       // release_moving_atoms_lock(__FUNCTION__);
+#endif
+
+      // more sensible
+      coot::atom_overlaps_container_t overlaps(mol, graphics_info_t::Geom_p(), ignore_waters, 0.5, 0.25);
+      c = overlaps.all_atom_contact_dots(contact_dots_density, true);
 
       gtk_gl_area_attach_buffers(GTK_GL_AREA(graphics_info_t::glareas[0]));
       std::string molecule_name_stub = "Contact Dots for Molecule ";
       molecule_name_stub += coot::util::int_to_string(imol);
       molecule_name_stub += ": ";
 
-      std::map<std::string, std::vector<coot::atom_overlaps_dots_container_t::dot_t> >::const_iterator it;
+      std::unordered_map<std::string, std::vector<coot::atom_overlaps_dots_container_t::dot_t> >::const_iterator it;
       for (it=c.dots.begin(); it!=c.dots.end(); ++it) {
 	 const std::string &type = it->first;
 	 const std::vector<coot::atom_overlaps_dots_container_t::dot_t> &v = it->second;
+         // std::cout << "dots type " << type << " count " << v.size() << std::endl;
          float point_size = 0.10;
          float specular_strength = 0.5; // default
          if (type == "vdw-surface") specular_strength= 0.1; // dull, reduces zoomed out speckles

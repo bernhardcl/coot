@@ -3115,17 +3115,41 @@ graphics_info_t::set_density_level_string(int imol, float dlevel) {
 // ------------------------------------------------------------------
 //
 float
-graphics_info_t::display_geometry_distance(int imol1, const coot::Cartesian &p1,
-      int imol2, const coot::Cartesian &p2) {
+graphics_info_t::add_measure_distance(const coot::Cartesian &p1,
+                                      const coot::Cartesian &p2) {
+
+   auto coord_orth_to_glm = [] (const clipper::Coord_orth &co) {
+                               return glm::vec3(co.x(), co.y(), co.z());
+                            };
+
+   auto add_measure_distance_label = [coord_orth_to_glm] (const coot::simple_distance_object_t &sdo,
+                                                          const double &dist,
+                                                          const glm::vec4 &col) {
+                                        clipper::Coord_orth mid_point(0.5 * (sdo.start_pos + sdo.end_pos));
+                                        glm::vec3 offset_mid_point = coord_orth_to_glm(mid_point) + glm::vec3(0.15, 0.05, 0.05);
+                                        std::string label_str = float_to_string_using_dec_pl(static_cast<float>(dist), 2);
+                                        // label_str += "ÅAÅ"; A-ring How to do this!?
+                                        // degree symbol: &#176; A-ring symbol: &#197
+                                        unsigned char c = 197;
+                                        label_str += c;
+                                        atom_label_info_t ali(label_str, offset_mid_point, col);
+                                        labels_for_measure_distances_and_angles.push_back(ali);
+                                     };
+
+   gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
 
    clipper::Coord_orth cp1(p1.x(), p1.y(), p1.z());
    clipper::Coord_orth cp2(p2.x(), p2.y(), p2.z());
-   coot::simple_distance_object_t p(geometry_atom_index_1_mol_no, cp1,
-       geometry_atom_index_2_mol_no, cp2);
-   distance_object_vec->push_back(p);
+   double dist = sqrt((cp2-cp1).lengthsq());
+   coot::simple_distance_object_t p(geometry_atom_index_1_mol_no, cp1, geometry_atom_index_2_mol_no, cp2);
+   measure_distance_object_vec.push_back(p);
+   Material mat;
+   glm::vec4 col(0.72, 0.79, 0.72, 1.0);
+   mesh_for_measure_distance_object_vec.add_dashed_line(p, mat, col);
+   add_measure_distance_label(p, dist, col);
+   
    graphics_draw();
 
-   double dist = sqrt((cp2-cp1).lengthsq());
    std::cout << "INFO:: distance: " << dist << " Angstroems" << std::endl;
    std::string s = "Distance: ";
    s += float_to_string(dist);
@@ -3148,29 +3172,16 @@ graphics_info_t::display_geometry_distance(int imol1, const coot::Cartesian &p1,
 // }
 
 void
-graphics_info_t::display_geometry_angle() const {
+graphics_info_t::add_measure_angle() const {
 
-   /// old way, where we dont do symmetry atoms
-//    mmdb::Atom *atom1 = molecules[geometry_atom_index_1_mol_no].atom_sel.atom_selection[geometry_atom_index_1];
-//    mmdb::Atom *atom2 = molecules[geometry_atom_index_2_mol_no].atom_sel.atom_selection[geometry_atom_index_2];
-//    mmdb::Atom *atom3 = molecules[geometry_atom_index_3_mol_no].atom_sel.atom_selection[geometry_atom_index_3];
+   gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
 
    clipper::Coord_orth p1(angle_tor_pos_1.x(), angle_tor_pos_1.y(), angle_tor_pos_1.z());
    clipper::Coord_orth p2(angle_tor_pos_2.x(), angle_tor_pos_2.y(), angle_tor_pos_2.z());
    clipper::Coord_orth p3(angle_tor_pos_3.x(), angle_tor_pos_3.y(), angle_tor_pos_3.z());
 
-
    clipper::Coord_orth v1 = p2 - p1;
    clipper::Coord_orth v2 = p2 - p3;
-
-//    std::cout << "positions for angles"
-// 	     << "   " << p1.format() << std::endl
-// 	     << "   " << p2.format() << std::endl
-// 	     << "   " << p3.format() << std::endl;
-
-//    std::cout << "display_geometry_angle: " << std::endl
-//  	     << "      " << v1.format() << std::endl
-//  	     << "      " << v2.format() << std::endl;
 
    double dp = clipper::Coord_orth::dot(v1,v2);
    double len_v1 = sqrt(v1.lengthsq());
@@ -3180,28 +3191,34 @@ graphics_info_t::display_geometry_angle() const {
    double cos_theta = dp/(len_v1 * len_v2);
    double theta = acos(cos_theta);
 
-   // no symmetry version, we only have pos now
-//    std::cout << "       angle atom 1: "
-// 	     << "(" << geometry_atom_index_2_mol_no << ") "
-// 	     << atom1->name << "/"
-// 	     << atom1->GetChainID()  << "/"
-// 	     << atom1->GetSeqNum()   << "/"
-// 	     << atom1->GetResName() << std::endl;
-//    std::cout << "       angle atom 2: "
-// 	     << "(" << geometry_atom_index_2_mol_no << ") "
-// 	     << atom2->name << "/"
-// 	     << atom2->GetChainID()  << "/"
-// 	     << atom2->GetSeqNum()   << "/"
-// 	     << atom2->GetResName() << std::endl;
-//    std::cout << "       angle atom 3: "
-// 	     << "(" << geometry_atom_index_2_mol_no << ") "
-// 	     << atom3->name << "/"
-// 	     << atom3->GetChainID()  << "/"
-// 	     << atom3->GetSeqNum()   << "/"
-// 	     << atom3->GetResName() << std::endl;
+   auto coord_orth_to_glm = [] (const clipper::Coord_orth &co) {
+                               return glm::vec3(co.x(), co.y(), co.z());
+                            };
 
-   std::cout << "       angle: " << theta*57.29578 << " degrees "
-        << std::endl;
+   auto add_measure_angle_label = [] (const glm::vec3 &p, double theta) {
+                                     double theta_deg = (180.0/M_PI) * theta;
+                                     std::string label_str = float_to_string_using_dec_pl(static_cast<float>(theta_deg), 2);
+                                     // degree symbol: &#176; A-ring symbol: &#197
+                                     unsigned char c = 176;
+                                     label_str += c;
+                                     glm::vec4 col(0.72, 0.72, 0.72, 1.0);
+                                     atom_label_info_t ali(label_str, p, col); // not an atom label of course
+                                     labels_for_measure_distances_and_angles.push_back(ali);
+                                  };
+
+   // p2 is the middle atom
+   Material mat;
+   glm::vec4 colour(0.6, 0.7, 0.5, 1.0); // 20211007-PE same as in add_dashed_line();
+   mesh_for_measure_angle_object_vec.add_dashed_angle_markup(coord_orth_to_glm(p1),
+                                                             coord_orth_to_glm(p2),
+                                                             coord_orth_to_glm(p3), colour, mat);
+
+   clipper::Coord_orth mid_point(0.3333 * (p1+p2+p3));
+   clipper::Coord_orth centre_atom_to_mid_point_uv((mid_point-p2).unit());
+   clipper::Coord_orth adjusted_mid_point(mid_point + 0.2 * centre_atom_to_mid_point_uv);
+   add_measure_angle_label(coord_orth_to_glm(adjusted_mid_point), theta);
+
+   std::cout << "INFO:: angle: " << theta << " radians " << theta*57.29578 << " degrees " << std::endl;
 
    display_density_level_this_image = 1;
    display_density_level_screen_string = "  Angle:  ";
@@ -4403,17 +4420,19 @@ graphics_info_t::Undo_molecule(coot::undo_type undo_type) const {
 void
 graphics_info_t::set_bond_thickness(int imol, float t) {
 
-   if (imol < n_molecules()) {
-      if (imol >= 0) {
-    if (graphics_info_t::molecules[imol].has_model()) {
-       molecules[imol].set_bond_thickness(t);
-       molecules[imol].make_bonds_type_checked(__FUNCTION__);
-       graphics_draw();
-    }
+   auto close_float_p = [] (float f1, float f2) {
+                           return (fabsf(f1-f2) < 0.001);
+                        };
+
+   std::cout << "debug:: graphics_info_t::set_bond_thickness() called with imol " << imol << " thickness " << t << std::endl;
+   if (is_valid_model_molecule(imol)) {
+      if (molecules[imol].has_model()) {
+         if (! close_float_p(molecules[imol].get_bond_thickness(), t)) {
+            molecules[imol].set_bond_thickness(t);
+            molecules[imol].make_bonds_type_checked(__FUNCTION__);
+            graphics_draw();
+         }
       }
-   } else {
-      std::cout << "Ignoring attempt to set bond with for molecule "
-   << imol << std::endl;
    }
 }
 
@@ -5302,64 +5321,43 @@ coot::intermediate_atom_distance_t::draw_dynamic_distance() const {
 #endif
 }
 
-void
-graphics_info_t::draw_pointer_distances_objects() {
-
-   // and pointer distances:
-
-   std::cout << "graphics_info_t:: draw_pointer_distances_objects() needs to be replaced " << std::endl;
-
-#if 0
-   if (pointer_distances_object_vec->size() > 0) {
-      double dist;
-      clipper::Coord_orth text_pos;
-      glEnable(GL_LINE_STIPPLE);
-      glLineStipple (1, 0x00FF);
-      glLineWidth(2.0);
-      glColor3f(0.5, 0.7, 0.8);
-      int ndist = pointer_distances_object_vec->size();
-      for (int i=0; i<ndist; i++) {
-    glBegin(GL_LINES);
-    glVertex3d( (*pointer_distances_object_vec)[i].first.x(),
-        (*pointer_distances_object_vec)[i].first.y(),
-        (*pointer_distances_object_vec)[i].first.z());
-    glVertex3d( (*pointer_distances_object_vec)[i].second.x(),
-        (*pointer_distances_object_vec)[i].second.y(),
-        (*pointer_distances_object_vec)[i].second.z());
-    glEnd();
-    text_pos = (*pointer_distances_object_vec)[i].first +
-       0.5 * ( (*pointer_distances_object_vec)[i].second - (*pointer_distances_object_vec)[i].first +
-      clipper::Coord_orth(0.0, 0.1, 0.1));
-    // glRasterPos3d(text_pos.x(), text_pos.y(), text_pos.z());
-    dist = clipper::Coord_orth::length( (*pointer_distances_object_vec)[i].first, (*pointer_distances_object_vec)[i].second);
-    printString(float_to_string(dist), text_pos.x(), text_pos.y(), text_pos.z());
-      }
-      glDisable(GL_LINE_STIPPLE);
-   }
-#endif
-}
-
 // update_pointer_distances() you might say
 void
 graphics_info_t::make_pointer_distance_objects() {
+
+   auto coord_orth_to_glm = [] (const clipper::Coord_orth &co) {
+                               return glm::vec3(co.x(), co.y(), co.z());
+                            };
+
+   auto add_pointer_distance_label = [coord_orth_to_glm] (const std::pair<clipper::Coord_orth, clipper::Coord_orth> &coord_pair,
+                                                          const double &dist,
+                                                          const glm::vec4 &col) {
+                                        clipper::Coord_orth mid_point(0.5 * (coord_pair.first + coord_pair.second));
+                                        glm::vec3 offset_mid_point =
+                                           coord_orth_to_glm(mid_point) + glm::vec3(0.15, 0.05, 0.05);
+                                        std::string label_str = float_to_string_using_dec_pl(static_cast<float>(dist), 2);
+                                        unsigned char c = 197;
+                                        label_str += c;
+                                        atom_label_info_t ali(label_str, offset_mid_point, col);
+                                        labels_for_pointer_distances.push_back(ali);
+                                     };
+   
 
    clipper::Coord_orth cen(rotation_centre_x,
                            rotation_centre_y,
                            rotation_centre_z);
 
    std::vector<clipper::Coord_orth> distances;
-   std::vector<clipper::Coord_orth> mol_distances;
 
    if (show_pointer_distances_flag) {
       for (int imol=0; imol<n_molecules(); imol++) {
          if (molecules[imol].has_model()) {
             if (molecules[imol].is_displayed_p()) {
                if (molecules[imol].atom_selection_is_pickable()) {
-                  mol_distances = molecules[imol].distances_to_point(cen,
-                                                                     pointer_min_dist,
-                                                                     pointer_max_dist);
+                  std::vector<clipper::Coord_orth> mol_distances =
+                     molecules[imol].distances_to_point(cen, pointer_min_dist, pointer_max_dist);
                   if (mol_distances.size() > 0) {
-                     // append
+                     // use insert
                      for (unsigned int id=0; id<mol_distances.size(); id++)
                         distances.push_back(mol_distances[id]);
                   }
@@ -5368,9 +5366,28 @@ graphics_info_t::make_pointer_distance_objects() {
          }
       }
 
-      pointer_distances_object_vec->clear();
+      pointer_distances_object_vec.clear();
       for (unsigned int id=0; id<distances.size(); id++) {
-         pointer_distances_object_vec->push_back(std::pair<clipper::Coord_orth, clipper::Coord_orth> (distances[id], cen));
+         pointer_distances_object_vec.push_back(std::pair<clipper::Coord_orth, clipper::Coord_orth> (distances[id], cen));
+      }
+
+      // Now add to the meshed-generic-display-object
+      gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
+      mesh_for_pointer_distances.clear();
+      labels_for_pointer_distances.clear();
+      unsigned int n_segments = 10;
+      coot::colour_holder colour_holder(0.5, 0.6, 0.75);
+      std::string colour_name = "LightBlue";
+      glm::vec4 glm_colour = colour_holder_to_glm(colour_holder);
+      float line_width_scale = 1.0;
+      Material material;
+      for (unsigned int id=0; id<distances.size(); id++) {
+         auto coord_pair = std::make_pair(cen, distances[id]);
+         mesh_for_pointer_distances.add_dashed_line(colour_holder, colour_name, coord_pair, material,
+                                                    line_width_scale, n_segments);
+
+         double bl = std::sqrt((cen - distances[id]).lengthsq());
+         add_pointer_distance_label(coord_pair, bl, glm_colour);
       }
    }
 }
@@ -5378,7 +5395,7 @@ graphics_info_t::make_pointer_distance_objects() {
 void
 graphics_info_t::clear_pointer_distances() {
 
-   pointer_distances_object_vec->resize(0);
+   pointer_distances_object_vec.clear();
    graphics_draw();
 
 }
@@ -5393,21 +5410,35 @@ coot::operator<<(std::ostream &s, simple_distance_object_t o) {
 
 
 void
-graphics_info_t::clear_simple_distances() {
+graphics_info_t::clear_measure_distances() {
 
-   distance_object_vec->clear();
+   measure_distance_object_vec.clear();
    graphics_draw();
 }
 
 void
-graphics_info_t::clear_last_simple_distance() {
+graphics_info_t::clear_last_measure_distance() {
 
-   int n = distance_object_vec->size();
+   unsigned int n = measure_distance_object_vec.size();
+   std::cout << "debug:: graphics_info_t::clear_last_measure_distance() " << n << std::endl;
+
    if (n > 0) {
+      measure_distance_object_vec.pop_back();
 
-      std::vector<coot::simple_distance_object_t>::reverse_iterator it;
-      it = distance_object_vec->rbegin();
-      distance_object_vec->pop_back();
+      // a hack that will often work.
+      if (labels_for_measure_distances_and_angles.size() > 0)
+         labels_for_measure_distances_and_angles.pop_back();
+
+      // rebuild the mesh for measure_distance_object_vec
+
+      mesh_for_measure_distance_object_vec.clear();
+      Material material;
+      glm::vec4 col(0.72, 0.79, 0.72, 1.0); // same as add_measure_distance()
+
+      for (unsigned int i=0; i<measure_distance_object_vec.size(); i++) {
+         const auto &sdo = measure_distance_object_vec[i];
+         mesh_for_measure_distance_object_vec.add_dashed_line(sdo, material, col);
+      }
       graphics_draw();
    }
 }
@@ -5745,13 +5776,13 @@ graphics_info_t::set_moving_atoms(atom_selection_container_t asc,
 // }
 
 // static
-void graphics_info_t::bond_parameters_molecule_combobox_changed(GtkWidget *combobox, gpointer data) {
+void graphics_info_t::bond_parameters_molecule_combobox_changed(GtkWidget *combobox_molecule, gpointer data) {
 
    graphics_info_t g;
-   int imol = g.combobox_get_imol(GTK_COMBO_BOX(combobox));
-   g.bond_parameters_molecule = imol;
-   GtkWidget *w = lookup_widget(GTK_WIDGET(combobox), "bond_parameters_dialog");
-   fill_bond_parameters_internals(w, imol);
+   int imol = g.combobox_get_imol(GTK_COMBO_BOX(combobox_molecule)); // not static
+   bond_parameters_molecule = imol;
+   GtkWidget *w = widget_from_builder("bond_parameters_dialog");
+   fill_bond_parameters_internals(combobox_molecule, imol);
 
 }
 
@@ -6250,7 +6281,7 @@ graphics_info_t::measure_lsq_plane_deviant_atom(int imol, int atom_index) {
     s += int_to_string(at->GetSeqNum());
     s += at->GetChainID();
     s += " is ";
-    s += float_to_string(d);
+    s += float_to_string_using_dec_pl(d, 3);
     s += "A from the least squares plane";
     add_status_bar_text(s);
       } else {

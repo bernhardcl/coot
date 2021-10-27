@@ -18,10 +18,26 @@ glm::vec3 coord_orth_to_glm(const clipper::Coord_orth &co) {
    return glm::vec3(co.x(), co.y(), co.z());
 }
 
+
+glm::vec4
+colour_holder_to_glm(const coot::colour_holder &ch) {
+   return glm::vec4(ch.red, ch.green, ch.blue, 1.0f);
+}
+
 void
 meshed_generic_display_object::add_line(const coot::colour_holder &colour,
                                         const std::string &colour_name, int line_width,
                                         const std::pair<clipper::Coord_orth, clipper::Coord_orth> &coords) {
+
+   glm::vec3 start = coord_orth_to_glm(coords.first);
+   glm::vec3 end   = coord_orth_to_glm(coords.second);
+   auto cart_pair = std::make_pair(start, end);
+   float bl = glm::distance(start, end);
+   auto col = colour_holder_to_glm(colour);
+   cylinder c(cart_pair, line_width, line_width, bl, col);
+   c.add_flat_start_cap();
+   c.add_flat_end_cap();
+   mesh.import(c.vertices, c.triangles);
 }
 
 
@@ -29,9 +45,10 @@ void
 meshed_generic_display_object::add_point(const coot::colour_holder &colour_in,
                                          const std::string &colour_name,
                                          const int &size_in,
-                                         const clipper::Coord_orth &coords_in) {
+                                         const clipper::Coord_orth &coords_in,
+                                         unsigned int num_subdivisions) {
 
-   unsigned int num_subdivisions = 1;
+   // unsigned int num_subdivisions = 1;
    float radius = 0.03 * size_in; // changing the scaling is fun
    glm::vec4 col(colour_in.red, colour_in.green, colour_in.blue, 1.0);
    glm::vec3 position = coord_orth_to_glm(coords_in);
@@ -124,9 +141,14 @@ meshed_generic_display_object::add_cylinder(const std::pair<glm::vec3, glm::vec3
                                             bool do_faces,
                                             float unstubby_cap_factor) {
 
+   std::cout << "add_cylinder(): cap_start: " << cap_start  << std::endl;
+   std::cout << "add_cylinder(): cap_end: "   << cap_end  << std::endl;
+   std::cout << "add_cylinder(): do_faces: "  << do_faces  << std::endl;
+   std::cout << "add_cylinder(): unstubby_cap_factor: " << unstubby_cap_factor  << std::endl;
 
    float h = glm::distance(start_end.first, start_end.second);
    glm::vec4 base_colour(col.red, col.green, col.blue, 1.0f);
+   if (do_faces) start_cap_type = meshed_generic_display_object::FLAT_CAP;
    cylinder c(start_end, line_radius, line_radius, h, base_colour, n_slices, 2); // not colour of base
    c.set_unstubby_rounded_cap_factor(unstubby_cap_factor);
    if (false)
@@ -157,6 +179,7 @@ meshed_generic_display_object::add_cylinder(const std::pair<glm::vec3, glm::vec3
    mesh.import(c.vertices, c.triangles);
 
    if (do_faces) {
+      std::cout << ":::::::::::::::::::::::::::::::::::::::::::::  do faces! " << std::endl;
       Mesh eyelash_r;
       std::string file_name("grey-eyelashes-many-lashes.glb");
       eyelash_r.load_from_glTF(file_name, false); // tries local directory first
@@ -244,12 +267,6 @@ glm::vec3 rotate_around_vector(const glm::vec3 &direction,
    return p3;
 }
 
-glm::vec4
-colour_holder_to_glm(const coot::colour_holder &ch) {
-   return glm::vec4(ch.red, ch.green, ch.blue, 1.0f);
-}
-
-
 void
 meshed_generic_display_object::add_arc(const arc_t &arc) {
 
@@ -272,7 +289,8 @@ meshed_generic_display_object::add_arc(const arc_t &arc) {
 
    const unsigned int n_phi_steps = 20;
    const unsigned int n_theta_steps = 12;
-   std::vector<s_generic_vertex> vertices((n_theta_steps + 1) * n_phi_steps);
+   std::vector<s_generic_vertex> vertices((n_theta_steps + 1) * n_phi_steps); // 20211007-PE this doesn't look right!
+                                                                              // c.f. add_dashed_angle_markup()
    std::vector<g_triangle> triangles;
    const float R = arc.radius;
    const float r = arc.radius_inner;
@@ -280,7 +298,7 @@ meshed_generic_display_object::add_arc(const arc_t &arc) {
 
    float angle_delta_deg = arc.delta_angle;
    float angle_delta = angle_delta_deg * pi / 180.0f;
-   glm::vec3 start_point = coord_orth_to_glm(arc.start_point);
+   glm::vec3 start_point = coord_orth_to_glm(arc.start_point); // this is the central atom position
    glm::vec4 col = colour_holder_to_glm(arc.col);
    glm::mat4 rot_mat = glm::orientation(coord_orth_to_glm(arc.normal), glm::vec3(0.0, 0.0, 1.0));
    std::cout << "rot_mat: " << glm::to_string(rot_mat)<< std::endl;
@@ -307,7 +325,7 @@ meshed_generic_display_object::add_arc(const arc_t &arc) {
          // v.normal = glm::vec3(rot_mat * glm::vec4(v.normal, 1.0f));;
          v.pos    = ori_mat * v.pos;
          v.normal = ori_mat * v.normal;
-         v.pos += start_point;
+         v.pos += start_point; // central atom position
          v.color = col;
          unsigned int vertex_idx = ip * n_theta_steps + it;
          vertices[vertex_idx] = v;
@@ -419,6 +437,18 @@ void meshed_generic_display_object::add_torus(const meshed_generic_display_objec
 
    mesh.import(vertices, triangles);
 
+}
+
+void
+meshed_generic_display_object::add_dashed_line(const coot::colour_holder &colour, const std::string &colour_name,
+                                               const std::pair<clipper::Coord_orth, clipper::Coord_orth> &coords,
+                                               const Material &material,
+                                               float line_width_scale, unsigned int n_segments) // default args 1.0, 5
+{
+
+   coot::simple_distance_object_t sdo(-1, coords.first, -1, coords.second);
+   glm::vec4 glm_colour(colour.red, colour.green, colour.blue, 1.0);
+   mesh.add_dashed_line(sdo, material, glm_colour);
 }
 
 

@@ -48,15 +48,18 @@ graphics_info_t::tick_function_is_active() {
 
    if (do_tick_particles ||
        do_tick_spin      ||
+       do_tick_rock      ||
        do_tick_boids     ||
        do_tick_constant_draw       ||
        do_tick_hydrogen_bonds_mesh ||
+       do_tick_outline_for_active_residue ||
        do_tick_happy_face_residue_markers)
       return gboolean(TRUE);
    else
       return gboolean(FALSE);
 }
 
+// Put this and the above into graphics_info_t. And in it's own file.
 
 gboolean
 glarea_tick_func(GtkWidget *widget,
@@ -81,6 +84,25 @@ glarea_tick_func(GtkWidget *widget,
          glm::quat normalized_quat_delta(glm::normalize(quat_delta));
          glm::quat product = normalized_quat_delta * graphics_info_t::glm_quat;
          graphics_info_t::glm_quat = glm::normalize(product);
+   }
+
+   if (graphics_info_t::do_tick_rock) {
+      std::chrono::time_point<std::chrono::high_resolution_clock> tp_now = std::chrono::high_resolution_clock::now();
+      auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(tp_now - graphics_info_t::time_holder_for_rocking);
+      double angle = delta.count() * 0.0007 * graphics_info_t::idle_function_rock_freq_scale_factor;
+      double theta = 0.008 * graphics_info_t::idle_function_rock_amplitude_scale_factor * sin(angle);
+      glm::vec3 EulerAngles(0, theta, 0);
+      glm::quat quat_delta(EulerAngles);
+      glm::quat normalized_quat_delta(glm::normalize(quat_delta));
+      glm::quat product = normalized_quat_delta * graphics_info_t::glm_quat;
+      graphics_info_t::glm_quat = glm::normalize(product);
+   }
+
+   if (graphics_info_t::do_tick_outline_for_active_residue > 0) {
+      graphics_info_t::outline_for_active_residue_frame_count--;
+      if (graphics_info_t::outline_for_active_residue_frame_count == 0) {
+         graphics_info_t::do_tick_outline_for_active_residue = false;
+      }
    }
 
    if (graphics_info_t::do_tick_constant_draw) {
@@ -118,12 +140,13 @@ glarea_tick_func(GtkWidget *widget,
       std::cout << "### in the glarea_tick_func() "
                 << graphics_info_t::do_tick_happy_face_residue_markers << "  "
                 << graphics_info_t::draw_count_for_happy_face_residue_markers << std::endl;
+
    if (graphics_info_t::do_tick_happy_face_residue_markers) {
       // this is a texture mesh, currently direct access to the draw flag.
       if (graphics_info_t::tmesh_for_happy_face_residues_markers.draw_this_mesh) {
          graphics_info_t::draw_count_for_happy_face_residue_markers += 1;
          graphics_info_t g;
-         if (graphics_info_t::draw_count_for_happy_face_residue_markers >= g.draw_count_max_for_happy_face_residue_markers) {
+         if (g.draw_count_for_happy_face_residue_markers >= g.draw_count_max_for_happy_face_residue_markers) {
             graphics_info_t::do_tick_happy_face_residue_markers = false;
             graphics_info_t::draw_count_for_happy_face_residue_markers = 0;
 
@@ -136,7 +159,10 @@ glarea_tick_func(GtkWidget *widget,
          glm::vec3 up_uv = g.get_screen_y_uv();
          unsigned int draw_count = g.draw_count_for_happy_face_residue_markers;
          unsigned int draw_count_max = g.draw_count_max_for_happy_face_residue_markers;
-         g.tmesh_for_happy_face_residues_markers.update_instancing_buffer_data_for_happy_faces(positions, draw_count, draw_count_max, up_uv);
+         g.tmesh_for_happy_face_residues_markers.update_instancing_buffer_data_for_happy_faces(positions,
+                                                                                               draw_count,
+                                                                                               draw_count_max,
+                                                                                               up_uv);
       }
    }
 
@@ -229,10 +255,24 @@ on_glarea_realize(GtkGLArea *glarea) {
          err = glGetError(); if (err) std::cout << "start on_glarea_realize() post screen_framebuffer init() err is "
                                                 << err << std::endl;
          index_offset = 1;
-         graphics_info_t::blur_framebuffer.init(w,h, index_offset, "blur");
+         graphics_info_t::blur_y_framebuffer.init(w, h, index_offset, "blur-y");
+         err = glGetError(); if (err) std::cout << "start on_glarea_realize() post blur_y_framebuffer init() err is "
+                                                << err << std::endl;
+         index_offset = 2;
+         graphics_info_t::blur_x_framebuffer.init(w, h, index_offset, "blur-x");
+         err = glGetError(); if (err) std::cout << "start on_glarea_realize() post blur_x_framebuffer init() err is "
+                                                << err << std::endl;
+         index_offset = 3;
+         graphics_info_t::combine_textures_using_depth_framebuffer.init(w, h, index_offset, "new-blur");
+         err = glGetError(); if (err) std::cout << "start on_glarea_realize() post blur_combine framebuffer init() err is "
+                                                << err << std::endl;
+         index_offset = 4;
+         graphics_info_t::blur_framebuffer.init(w, h, index_offset, "blur");
          err = glGetError(); if (err) std::cout << "start on_glarea_realize() post blur_framebuffer init() err is "
                                                 << err << std::endl;
 
+         // do these go here or in the draw() hot path?
+         //
          graphics_info_t::shader_for_screen.Use();
          err = glGetError(); if (err) std::cout << "on_glarea_realize() B screen framebuffer err " << err << std::endl;
          graphics_info_t::shader_for_screen.set_int_for_uniform("screenTexture", 0);
@@ -303,12 +343,23 @@ on_glarea_realize(GtkGLArea *glarea) {
       std::chrono::time_point<std::chrono::high_resolution_clock> tp_now = std::chrono::high_resolution_clock::now();
       graphics_info_t::previous_frame_time_for_per_second_counter = tp_now;
 
+      unsigned int frame_time_history_list_max_n_elements = 500;
+      std::vector<s_generic_vertex> empty_vertices(frame_time_history_list_max_n_elements + 40); // +40 for base and grid lines
+      std::vector<unsigned int> empty_indices(1500, 0); // or some number
+      g.lines_mesh_for_hud_lines.setup_vertices_and_indices(empty_vertices, empty_indices);
+
       // GdkGLContext *context = gtk_gl_area_get_context(GTK_GL_AREA(glarea));
       // gboolean legacy_flag = gdk_gl_context_is_legacy(context);
       // std::cout << "INFO:: gdk_gl_context_is_legacy() returns " << legacy_flag << std::endl;
 
+      Material dummy_material;
+      std::vector<s_generic_vertex> outline_empty_vertices(1000);
+      std::vector<g_triangle> outline_empty_triangles(1000);
+      g.mesh_for_outline_of_active_residue.import(outline_empty_vertices, outline_empty_triangles);
+      g.mesh_for_outline_of_active_residue.setup(dummy_material);
+
    } else {
-      std::cout << "ERROR:: Shader compilation failed " << std::endl;
+      std::cout << "ERROR:: Shader compilation (init_shaders()) failed " << std::endl;
       exit(1);
    }
 
@@ -490,6 +541,20 @@ on_glarea_button_press(GtkWidget *widget, GdkEventButton *event) {
                   g.molecules[im].add_to_labelled_atom_list(nearest_atom_index_info.atom_index);
                   g.add_picked_atom_info_to_status_bar(im, nearest_atom_index_info.atom_index);
                   g.graphics_draw();
+               } else {
+
+                  // try symmetry atom click (c.f. middle button release)
+                  //
+                  if (g.show_symmetry) {
+                     coot::Symm_Atom_Pick_Info_t sap = g.symmetry_atom_pick();
+                     if (sap.success) {
+                        g.add_picked_atom_info_to_status_bar(sap.imol, sap.atom_index);
+                        g.molecules[sap.imol].add_atom_to_labelled_symm_atom_list(sap.atom_index,
+                                                                                  sap.symm_trans,
+                                                                                  sap.pre_shift_to_origin);
+                        g.graphics_draw();
+                     }
+                  }
                }
             }
          }
@@ -531,7 +596,6 @@ on_glarea_button_release(GtkWidget *widget, GdkEventButton *event) {
                if (g.show_symmetry) {
                   coot::Symm_Atom_Pick_Info_t sap = g.symmetry_atom_pick();
                   if (sap.success) {
-                     std::cout << "sap success" << std::endl;
                      coot::Cartesian pos = sap.hybrid_atom.pos;
                      g.setRotationCentre(pos);
                      g.add_picked_atom_info_to_status_bar(sap.imol, sap.atom_index);
@@ -576,9 +640,12 @@ do_drag_pan_gtk3(GtkWidget *widget) {
    glm::vec3 delta_v3(delta);
 
    g.add_to_rotation_centre(delta_v3);
-   g.update_maps();
-   if (graphics_info_t::glareas.size() > 0)
-      int contour_idle_token = g_idle_add(idle_contour_function, g.glareas[0]);
+
+   // g.update_maps();
+   // if (graphics_info_t::glareas.size() > 0)
+   // int contour_idle_token = g_idle_add(idle_contour_function, g.glareas[0]);
+
+   g.update_things_on_move(); // 20211013-PE do I need the _and_redraw() version of this function?
 }
 
 gboolean
@@ -665,19 +732,24 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
                                }
                             };
 
+   // atom pulls with left mouse (but not with right mouse also (that's zoom)
+   //
    if (event->state & GDK_BUTTON1_MASK) {
 
-      if (g.in_moving_atoms_drag_atom_mode_flag) {
-         if (g.last_restraints_size() > 0) {
-            // move an already picked atom
-            g.move_atom_pull_target_position(x_as_int, y_as_int);
-         } else {
-            // don't allow translation drag of the
-            // intermediate atoms when they are a rotamer:
-            //
-            if (! g.rotamer_dialog) {
-               // e.g. translate an added peptide fragment.
-               g.move_moving_atoms_by_simple_translation(x_as_int, y_as_int);
+      if (! (event->state & GDK_BUTTON3_MASK)) {
+
+         if (g.in_moving_atoms_drag_atom_mode_flag) {
+            if (g.last_restraints_size() > 0) {
+               // move an already picked atom
+               g.move_atom_pull_target_position(x_as_int, y_as_int);
+            } else {
+               // don't allow translation drag of the
+               // intermediate atoms when they are a rotamer:
+               //
+               if (! g.rotamer_dialog) {
+                  // e.g. translate an added peptide fragment.
+                  g.move_moving_atoms_by_simple_translation(x_as_int, y_as_int);
+               }
             }
          }
       }

@@ -438,7 +438,8 @@ short int graphics_info_t::swap_difference_map_colours = 0; // default: not in J
 // No idle functions to start (but setting them to zero doesn't set that - the
 // idle functions are added by gtk_idle_add()).
 int   graphics_info_t::idle_function_spin_rock_token = -1; // magic "unset" value
-long  graphics_info_t::time_holder_for_rocking = 0;
+std::chrono::time_point<std::chrono::high_resolution_clock> graphics_info_t::time_holder_for_rocking = std::chrono::high_resolution_clock::now();
+
 double graphics_info_t::idle_function_rock_amplitude_scale_factor = 1.0;
 double graphics_info_t::idle_function_rock_freq_scale_factor = 1.0;
 double graphics_info_t::idle_function_rock_angle_previous = 0;
@@ -530,7 +531,7 @@ std::string graphics_info_t::phs_filename = "";
 // Pointer Distances
 float graphics_info_t::pointer_min_dist = 0.1;
 float graphics_info_t::pointer_max_dist = 3.6;
-int graphics_info_t::show_pointer_distances_flag = 0;
+bool graphics_info_t::show_pointer_distances_flag = false;
 
 
 // Go to Atom widget:
@@ -662,9 +663,16 @@ coot::db_main graphics_info_t::main_chain;
 coot::fixed_atom_pick_state_t graphics_info_t::in_fixed_atom_define = coot::FIXED_ATOM_NO_PICK;
 GtkWidget *graphics_info_t::fixed_atom_dialog = 0;
 
-std::vector<coot::simple_distance_object_t> *graphics_info_t::distance_object_vec = NULL;
-std::vector<std::pair<clipper::Coord_orth, clipper::Coord_orth> > *graphics_info_t::pointer_distances_object_vec = NULL;
-std::vector<coot::coord_orth_triple> *graphics_info_t::angle_object_vec = NULL;
+std::vector<coot::simple_distance_object_t> graphics_info_t::measure_distance_object_vec;
+std::vector<std::pair<clipper::Coord_orth, clipper::Coord_orth> > graphics_info_t::pointer_distances_object_vec;
+std::vector<coot::coord_orth_triple> graphics_info_t::measure_angle_object_vec;
+Mesh graphics_info_t::mesh_for_measure_distance_object_vec = Mesh("mesh-for-measure-distance-object-vec");
+Mesh graphics_info_t::mesh_for_measure_angle_object_vec    = Mesh("mesh-for-measure-angle-object-vec");
+std::vector<atom_label_info_t> graphics_info_t::labels_for_measure_distances_and_angles;
+
+// Mesh graphics_info_t::mesh_for_pointer_distances = Mesh("mesh-for-pointer-distances");
+meshed_generic_display_object graphics_info_t::mesh_for_pointer_distances("mesh-in-generic-display-object for pointer distances");
+std::vector<atom_label_info_t> graphics_info_t::labels_for_pointer_distances;
 
 int graphics_info_t::show_origin_marker_flag = 1;
 
@@ -1359,6 +1367,9 @@ GLuint graphics_info_t::central_cube_index_buffer_id = 0;
 GLuint graphics_info_t::hud_text_vertexarray_id = 0;
 GLuint graphics_info_t::hud_text_array_buffer_id = 0;
 GLuint graphics_info_t::screen_quad_vertex_array_id = 0;
+GLuint graphics_info_t::blur_x_quad_vertex_array_id = 0;
+GLuint graphics_info_t::blur_y_quad_vertex_array_id = 0;
+GLuint graphics_info_t::combine_textures_using_depth_quad_vertex_array_id = 0;
 GLuint graphics_info_t::blur_quad_vertex_array_id = 0;
 GLuint graphics_info_t::textureColorbuffer_screen = 0;
 GLuint graphics_info_t::textureColorbuffer_blur = 0;
@@ -1369,7 +1380,10 @@ GLuint graphics_info_t::rotation_centre_crosshairs_index_buffer_id = 0;
 
 bool graphics_info_t::use_framebuffers = true;
 framebuffer graphics_info_t::screen_framebuffer;
-framebuffer graphics_info_t::blur_framebuffer;
+framebuffer graphics_info_t::blur_x_framebuffer;
+framebuffer graphics_info_t::blur_y_framebuffer;
+framebuffer graphics_info_t::combine_textures_using_depth_framebuffer;
+framebuffer graphics_info_t::blur_framebuffer; // 2020
 unsigned int graphics_info_t::framebuffer_scale = 1; // on supersampling by default.
 
 bool graphics_info_t::perspective_projection_flag = false;
@@ -1395,7 +1409,10 @@ Shader graphics_info_t::shader_for_hud_image_texture;
 Shader graphics_info_t::shader_for_atom_labels;
 Shader graphics_info_t::shader_for_rama_balls;
 Shader graphics_info_t::shader_for_screen;
-Shader graphics_info_t::shader_for_blur;
+Shader graphics_info_t::shader_for_x_blur;
+Shader graphics_info_t::shader_for_y_blur;
+Shader graphics_info_t::shader_for_blur;  // old
+Shader graphics_info_t::shader_for_dof_blur_by_texture_combination;
 Shader graphics_info_t::shader_for_hud_lines;
 Shader graphics_info_t::shader_for_lines;
 Shader graphics_info_t::shader_for_lines_pulse;
@@ -1445,9 +1462,10 @@ coot::Cartesian graphics_info_t::smooth_scroll_target_point = coot::Cartesian(0,
 coot::Cartesian graphics_info_t::smooth_scroll_start_point = coot::Cartesian(0,0,0);
 
 bool graphics_info_t::shader_do_ambient_occlusion_flag = true;
-bool graphics_info_t::shader_do_depth_blur_flag = true;
+bool graphics_info_t::shader_do_depth_blur_flag = true; // 2020 version
 bool graphics_info_t::shader_do_depth_fog_flag = true;
 bool graphics_info_t::shader_do_outline_flag = false;
+bool graphics_info_t::shader_do_depth_of_field_blur_flag = false;
 bool graphics_info_t::draw_normals_flag = false;
 
 // static
@@ -1493,11 +1511,13 @@ bool graphics_info_t::sequence_view_is_docked_flag = true;
 
 bool graphics_info_t::do_tick_particles = false;
 bool graphics_info_t::do_tick_spin = false;
+bool graphics_info_t::do_tick_rock = false;
 bool graphics_info_t::do_tick_boids = false;
+bool graphics_info_t::do_tick_constant_draw = false;
 bool graphics_info_t::do_tick_hydrogen_bonds_mesh = false;
 bool graphics_info_t::do_tick_happy_face_residue_markers = false;
-bool graphics_info_t::do_tick_constant_draw = false;
-int graphics_info_t::n_particles = 120;
+bool graphics_info_t::do_tick_outline_for_active_residue = false;
+int graphics_info_t::n_particles = 220;
 Mesh graphics_info_t::mesh_for_particles = Mesh("mesh for particles");
 particle_container_t graphics_info_t::particles;
 bool graphics_info_t::setup_draw_for_particles_semaphore = false;
@@ -1510,12 +1530,15 @@ std::vector<std::pair<glm::vec3, glm::vec3> > graphics_info_t::hydrogen_bonds_at
 
 std::chrono::time_point<std::chrono::high_resolution_clock> graphics_info_t::tick_hydrogen_bond_mesh_t_previous = std::chrono::high_resolution_clock::now();
 
+Mesh graphics_info_t::mesh_for_outline_of_active_residue = Mesh("mesh for active residue");
+Shader graphics_info_t::shader_for_outline_of_active_residue;
+unsigned int graphics_info_t::outline_for_active_residue_frame_count = 0;
 
 fun::boids_container_t graphics_info_t::boids;
-Mesh graphics_info_t::mesh_for_boids;
+Mesh graphics_info_t::mesh_for_boids = Mesh("mesh for boids");
 LinesMesh graphics_info_t::lines_mesh_for_boids_box;
 
-Mesh graphics_info_t::mesh_for_hydrogen_bonds;
+Mesh graphics_info_t::mesh_for_hydrogen_bonds = Mesh("mesh for hydrogen bonds");
 
 LinesMesh graphics_info_t::lines_mesh_for_identification_pulse;
 LinesMesh graphics_info_t::lines_mesh_for_delete_item_pulse;
@@ -1547,6 +1570,9 @@ coot::command_history_t graphics_info_t::command_history;
 
 std::vector<Instanced_Markup_Mesh> graphics_info_t::instanced_meshes;
 
+std::vector<TextureMesh> graphics_info_t::texture_meshes;
+Shader graphics_info_t::shader_for_texture_meshes;
+
 std::map<std::string, Texture> graphics_info_t::texture_for_hud_geometry_labels_map;
 Texture graphics_info_t::texture_for_hud_tooltip_background;
 bool graphics_info_t::draw_hud_tooltip_flag = false;
@@ -1577,3 +1603,7 @@ bool graphics_info_t::all_atom_contact_dots_ignore_water_flag = false;
 bool graphics_info_t::refinement_has_finished_moving_atoms_representation_update_needed_flag = false;
 
 gl_rama_plot_t graphics_info_t::gl_rama_plot;
+
+float graphics_info_t::focus_blur_z_depth = 0.4;
+float graphics_info_t::focus_blur_strength = 2.0;
+

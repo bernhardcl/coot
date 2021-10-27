@@ -1141,6 +1141,7 @@ SCM test_function_scm(SCM i_scm, SCM j_scm) {
 
 
 #include "utils/dodec.hh"
+#include "widget-from-builder.hh"
 
 #ifdef USE_PYTHON
 PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
@@ -1165,18 +1166,43 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
       std::string file_name = PyBytes_AS_STRING(PyUnicode_AsUTF8String(i_py));
 
       gtk_gl_area_attach_buffers(GTK_GL_AREA(graphics_info_t::glareas[0]));
-      std::string object_name("Imported Object");
-      int obj_mesh = new_generic_object_number(object_name);
-      meshed_generic_display_object &obj = g.generic_display_objects[obj_mesh];
-      obj.mesh.name = object_name;
-      Material material;
-      // obj.mesh.load_from_glTF("augmented-box.glb");
-      obj.mesh.load_from_glTF(file_name);
-      obj.mesh.setup(material); // calls setup_buffers() (again)
-      set_display_generic_object(obj_mesh, 1);
 
-      std::cout << "---- mesh end ---" << std::endl;
+      if (false) {
+         std::string object_name("Imported Object");
+         int obj_mesh = new_generic_object_number(object_name);
+         meshed_generic_display_object &obj = g.generic_display_objects[obj_mesh];
+         obj.mesh.name = object_name;
+         Material material;
+         material.shininess = 30.0;
+         material.specular_strength = 0.3;
+
+         // obj.mesh.load_from_glTF("augmented-box.glb");
+         bool status = obj.mesh.load_from_glTF(file_name);
+         if (status) {
+
+            obj.mesh.setup(material); // calls setup_buffers() (again)
+            set_display_generic_object(obj_mesh, 1);
+            bool is_binary_format = true; // no need for this here. binary type is tested internally now.
+            obj.mesh.export_to_glTF(file_name, is_binary_format);
+         }
+      }
+
+      if (true) {
+         TextureMesh tm;
+         g.texture_meshes.push_back(tm);
+         g.texture_meshes.back().load_from_glTF(file_name);
+      }
+
+      GtkWidget *overlay = widget_from_builder("main_window_graphics_overlay");
+      GtkWidget *label = gtk_label_new("Ramachandran Restraints Enabled ");
+      gtk_widget_show(label);
+      gtk_overlay_add_overlay(GTK_OVERLAY(overlay), label);
+      gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(overlay), label, TRUE);
+      // top right
+      gtk_widget_set_halign(label, GTK_ALIGN_END);
+      gtk_widget_set_valign(label, GTK_ALIGN_START);
    }
+
 
    if (false) {
       GtkWidget *glarea = g.glareas[0];

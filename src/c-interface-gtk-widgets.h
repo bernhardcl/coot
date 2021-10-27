@@ -502,7 +502,7 @@ void python_window_enter_callback( GtkWidget *widget,
 /*  ----------------------------------------------------------------------- */
 
 /* Accession code */
-void handle_get_accession_code(GtkWidget *widget);
+void handle_get_accession_code(GtkWidget *dialog, GtkWidget *entry);
 
 /* in here we check if libcheck is available (if scripting is available) */
 GtkWidget *wrapped_create_libcheck_monomer_dialog();
@@ -579,7 +579,6 @@ void unset_geometry_graph(GtkWidget *dialog); /* set the graphics info
 						 to update the
 						 widget*/
 
-void add_on_validation_graph_mol_options(GtkWidget *menu, const char *type_in);
 void my_delete_validaton_graph_mol_option(GtkWidget *widget, void *);
 void validation_graph_b_factor_mol_selector_activate (GtkMenuItem     *menuitem,
 						      gpointer         user_data);
@@ -597,8 +596,8 @@ void validation_graph_density_fit_mol_selector_activate (GtkMenuItem     *menuit
 						   gpointer         user_data);
 void gln_and_asn_b_factor_outlier_mol_selector_activate (GtkMenuItem     *menuitem,
 							 gpointer         user_data);
-void validation_graph_ncs_diffs_mol_selector_activate (GtkMenuItem     *menuitem,
-						       gpointer         user_data);
+//void validation_graph_ncs_diffs_mol_selector_activate (GtkMenuItem     *menuitem,
+//						       gpointer         user_data);
 
 void probe_mol_selector_activate (GtkMenuItem     *menuitem,
 				  gpointer         user_data);
@@ -721,7 +720,8 @@ GtkWidget *wrapped_create_bond_parameters_dialog();
 void apply_bond_parameters(GtkWidget *w);
 
 GtkWidget *wrapped_create_add_additional_representation_gui();
-void add_additional_representation_by_widget(GtkWidget *w);
+void add_additional_representation_by_widget(GtkWidget *w); // old 20210929-PE
+void add_additional_representation_by_dialog(GtkDialog *d);
 void add_reps_molecule_option_menu_item_select(GtkWidget *item, GtkPositionType pos);
 void add_reps_molecule_combobox_changed(GtkWidget *combobox, gpointer data);
 

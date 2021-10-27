@@ -142,12 +142,16 @@ int use_ambient_occlusion_state() {
 
 //! \brief set use depth blur
 void set_use_depth_blur(short int state) {
-   graphics_info_t::shader_do_depth_blur_flag = state;
+   // graphics_info_t::shader_do_depth_blur_flag = state; // 2020
+   graphics_info_t::shader_do_depth_of_field_blur_flag = state;
    graphics_draw();
 }
 //! \brief query use depth blur
 int use_depth_blur_state() {
-   return graphics_info_t::shader_do_depth_blur_flag;
+
+   // return graphics_info_t::shader_do_depth_blur_flag; 2020
+   return graphics_info_t::shader_do_depth_of_field_blur_flag;
+
 }
 
 
@@ -283,6 +287,18 @@ void set_fresnel_colour(int imol, float red, float green, float blue, float opac
       graphics_info_t::molecules[imol].set_fresnel_colour(col);
       graphics_draw();
    }
+}
+
+//! \brief
+void set_focus_blur_z_depth(float z) {
+   graphics_info_t::focus_blur_z_depth = z;
+   graphics_draw();
+}
+
+//! \brief
+void set_focus_blur_strength(float st) {
+   graphics_info_t::focus_blur_strength = st;
+   graphics_draw();
 }
 
 

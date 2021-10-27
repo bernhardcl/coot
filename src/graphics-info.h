@@ -697,9 +697,13 @@ class graphics_info_t {
    static std::string directory_for_filechooser;
    static std::string directory_for_saving_for_filechooser;
 
-   // distance object vector, and angle
-   static std::vector<coot::simple_distance_object_t> *distance_object_vec;
-   static std::vector<coot::coord_orth_triple> *angle_object_vec;
+   // distance object vector, and angle,
+   // 20211006-PE both the vectors and the Meshes are needed because I will need to
+   // rebuild the mesh if a distance is deleted. (Angle same should that happen one day)
+   static std::vector<coot::simple_distance_object_t> measure_distance_object_vec;
+   static std::vector<coot::coord_orth_triple> measure_angle_object_vec;
+   static Mesh mesh_for_measure_distance_object_vec;
+   static Mesh mesh_for_measure_angle_object_vec;
 
    // 20180217 moving_atoms_dragged_atom_index -> moving_atoms_dragged_atom_indices
    //          Now we can have many dragged atoms
@@ -1485,7 +1489,8 @@ public:
    // idle function token (holder)
    //
    static int idle_function_spin_rock_token;
-   static long time_holder_for_rocking;
+   // static long time_holder_for_rocking;
+   static std::chrono::time_point<std::chrono::high_resolution_clock> time_holder_for_rocking;
    // drag refine idle function token:
    static int drag_refine_idle_function_token;
    static float idle_function_rotate_angle; // degrees
@@ -1581,9 +1586,12 @@ public:
 					      const char *atom_name, const char *altLoc);
    void set_go_to_residue_intelligent(const std::string &chain_id, int resno,
 				      const std::string &ins_code);
+   // 20211015-PE why doesn't this function exist already?
+   void go_to_residue(int imol, const coot::residue_spec_t &rs);
    static std::pair<std::string, std::string> split_atom_name(const std::string &atom_name);
    static std::pair<std::string, std::string> split_resno_inscode(const std::string &atom_name);
 
+   mmdb::Residue *get_residue(int imol, const coot::residue_spec_t &spec) const;
 
    void set_go_to_atom_molecule(int pos);
 
@@ -1648,6 +1656,11 @@ public:
 								 int imol,
 								 bool fill_with_small_molecule_only_flag);
 
+   // use this.
+   void new_fill_combobox_with_coordinates_options(GtkWidget *combobox_molecule,
+                                                   GCallback callback_func,
+                                                   int imol_active);
+
    void fill_combobox_with_coordinates_options(GtkWidget *combobox,
 					       GCallback callback_func,
 					       int imol_active);
@@ -1659,6 +1672,10 @@ public:
    int combobox_get_imol(GtkComboBox *combobox) const;
 
    static void go_to_atom_mol_combobox_changed(GtkWidget *combobox, gpointer data);
+
+   GtkWidget *dialog_box_of_buttons_internal(const std::string &window_title,
+                                             const std::vector<std::tuple<std::string, GCallback, gpointer> > &buttons,
+                                             const std::string &close_button_label);
 
 #if 0
 
@@ -2349,9 +2366,10 @@ public:
 
    // not const because we add to distance_object_vec
    // return the distance
-   float display_geometry_distance(int imol1, const coot::Cartesian &p1,
-				   int imol2, const coot::Cartesian &p2);
-   void display_geometry_angle() const;
+   float add_measure_distance(const coot::Cartesian &p1,
+                              const coot::Cartesian &p2);
+   static std::vector<atom_label_info_t> labels_for_measure_distances_and_angles;
+   void add_measure_angle() const; // uses class variables
    double get_geometry_torsion() const;
    void display_geometry_torsion() const;
    // return the distance
@@ -2741,11 +2759,14 @@ public:
    // Pointer Distances
    static float pointer_min_dist;
    static float pointer_max_dist;
-   static int show_pointer_distances_flag;
+   static bool show_pointer_distances_flag;
    void clear_pointer_distances();
-   static std::vector<std::pair<clipper::Coord_orth, clipper::Coord_orth> > *pointer_distances_object_vec;
+   static std::vector<std::pair<clipper::Coord_orth, clipper::Coord_orth> > pointer_distances_object_vec;
+   // static Mesh mesh_for_pointer_distances; // here for future-Paul
    static void draw_pointer_distances_objects(); // draw them
    void make_pointer_distance_objects(); // (re)generate them
+   static std::vector<atom_label_info_t> labels_for_pointer_distances;
+
 
    // Dynamic distances to intermediate atoms:
    static short int in_dynamic_distance_define;
@@ -3122,8 +3143,8 @@ public:
    static void draw_happy_face_residue_markers();
    static void draw_hydrogen_bonds_mesh(); // like boids
    void setup_draw_for_particles();
-   void clear_simple_distances();
-   void clear_last_simple_distance();
+   void clear_measure_distances();
+   void clear_last_measure_distance();
    static GtkWidget *geometry_dialog;
    void unset_geometry_dialog_distance_togglebutton();
    void unset_geometry_dialog_angle_togglebutton();
@@ -3533,7 +3554,7 @@ public:
    void omega_graphs(int imol);
    coot::rotamer_graphs_info_t rotamer_graphs(int imol); // give results back to scripting layer
    void density_fit_graphs(int imol);
-   static GtkWidget *wrapped_create_diff_map_peaks_dialog(const std::vector<std::pair<clipper::Coord_orth, float> > &centres, float map_sigma, const std::string &dialog_title);
+   static GtkWidget *wrapped_create_diff_map_peaks_dialog(int imol_coords, const std::vector<std::pair<clipper::Coord_orth, float> > &centres, float map_sigma, const std::string &dialog_title);
    // the buttons callback for above:
    static void on_diff_map_peak_button_selection_toggled (GtkButton       *button,
 							  gpointer         user_data);
@@ -3691,10 +3712,15 @@ public:
    // -------- Base Pairing (Watson Crick) -------------
    static int in_base_paring_define;
 
+   // -------- Texture Meshes (for importing glTF models) -------------
+   static std::vector<TextureMesh> texture_meshes;
+   static void draw_texture_meshes();
+
    // these are for non-molecule based generic display objects using instancing
    static std::vector<Instanced_Markup_Mesh> instanced_meshes;
 
    static meshed_generic_display_object mesh_for_environment_distances;
+   static meshed_generic_display_object mesh_for_pointer_distances;
    static GtkWidget *generic_objects_dialog;
    static std::vector<meshed_generic_display_object> generic_display_objects;
    int new_generic_object_number(const std::string &name) {
@@ -4180,11 +4206,15 @@ string   static std::string sessionid;
    static GLuint rotation_centre_crosshairs_vertex_buffer_id;
    static GLuint rotation_centre_crosshairs_index_buffer_id;
    // STATIC GLuint framebuffer_id;  // now we get access from the framebuffer class
+   static GLuint blur_x_quad_vertex_array_id;
+   static GLuint blur_y_quad_vertex_array_id;
+   static GLuint combine_textures_using_depth_quad_vertex_array_id;
    static GLuint screen_quad_vertex_array_id;
-   static GLuint blur_quad_vertex_array_id;
+   static GLuint blur_quad_vertex_array_id; // old
    static GLuint textureColorbuffer_screen;
    static GLuint textureColorbuffer_blur;
    static GLuint hud_text_array_buffer_id;
+   static Shader shader_for_outline_of_active_residue;
    static Shader shader_for_maps;
    static Shader shader_for_map_caps;
    static Shader shader_for_models;
@@ -4197,7 +4227,10 @@ string   static std::string sessionid;
    static Shader shader_for_hud_image_texture;
    static Shader shader_for_atom_labels;
    static Shader shader_for_screen;
-   static Shader shader_for_blur;
+   static Shader shader_for_x_blur;
+   static Shader shader_for_y_blur;
+   static Shader shader_for_dof_blur_by_texture_combination;
+   static Shader shader_for_blur; // old, not used now
    static Shader shader_for_symmetry_atoms_bond_lines;
    static Shader shader_for_lines;
    static Shader shader_for_rama_balls;
@@ -4211,6 +4244,7 @@ string   static std::string sessionid;
    static Shader shader_for_rama_plot_axes_and_ticks;
    static Shader shader_for_rama_plot_phi_phis_markers;
    static Shader shader_for_hud_lines; // actally in 3D because it uses LinesMesh class
+   static Shader shader_for_texture_meshes;
    static long frame_counter;
    static float fps; // for on-screen FPS (fps is not calculated every frame)
    static float fps_std_dev; // for on-screen FPS IQR (fps is not calculated every frame)
@@ -4222,10 +4256,14 @@ string   static std::string sessionid;
    static bool shader_do_depth_blur_flag;
    static bool shader_do_depth_fog_flag;
    static bool shader_do_outline_flag;
+   static bool shader_do_depth_of_field_blur_flag;
    static bool draw_normals_flag;
    static bool use_framebuffers;
    static framebuffer screen_framebuffer;
-   static framebuffer blur_framebuffer;
+   static framebuffer blur_x_framebuffer;
+   static framebuffer blur_y_framebuffer;
+   static framebuffer blur_framebuffer; // from 2020
+   static framebuffer combine_textures_using_depth_framebuffer;
    static unsigned int framebuffer_scale;
 
    // ---------------------------------------------
@@ -4255,7 +4293,10 @@ string   static std::string sessionid;
                                   const glm::mat4 &view_rotation,
                                   float density_surface_opacity);
    static gboolean render(bool render_to_screendump_framebuffer_flag=false, const std::string &output_file_name="coot-screendump.tga");
-   static void render_scene_to_base_framebuffer();
+   static void render_scene_with_x_blur();
+   static void render_scene_with_y_blur();
+   static void render_scene_with_screen_ao_shader();
+   static void render_scene_with_texture_combination_for_depth_blur();
    static void draw_map_molecules(bool draw_transparent_maps);
    static void draw_model_molecules();
    static void draw_intermediate_atoms();
@@ -4273,9 +4314,11 @@ string   static std::string sessionid;
    static void draw_central_cube(GtkGLArea *glarea);
    static void draw_origin_cube(GtkGLArea *glarea);
    static void draw_rotation_centre_crosshairs(GtkGLArea *glarea);
-   static void draw_ligand_view();
+   static void draw_outlined_active_residue();
+   static void draw_hud_ligand_view();
    static void draw_hud_buttons();
    static void draw_hud_fps();
+   static void draw_measure_distance_and_angles();
    static std::list<std::chrono::time_point<std::chrono::high_resolution_clock> > frame_time_history_list;
    void set_do_ambient_occlusion(bool s) { shader_do_ambient_occlusion_flag = s; } // caller redraws
 
@@ -4436,6 +4479,10 @@ string   static std::string sessionid;
    void reset_hud_buttons_size_and_position();
    void clear_hud_buttons(); // called by clear_up_moving_atoms_wrapper();
 
+   static Mesh mesh_for_outline_of_active_residue;
+   void update_mesh_for_outline_of_active_residue(int imol, const coot::atom_spec_t &spec);
+   static unsigned int outline_for_active_residue_frame_count;
+
    // Mesh mesh_for_particles("mesh-for-particles");
    // int n_particles = 100;
    static Mesh mesh_for_particles;
@@ -4479,15 +4526,25 @@ string   static std::string sessionid;
    void setup_draw_for_hydrogen_bonds();
    // this can be made more sophisticated later
    static std::vector<std::pair<glm::vec3, glm::vec3> > hydrogen_bonds_atom_position_pairs;
+
+   static float focus_blur_z_depth;
+   static float focus_blur_strength;
+
    static std::chrono::time_point<std::chrono::high_resolution_clock> tick_hydrogen_bond_mesh_t_previous;
 
    static bool do_tick_particles;
    static bool do_tick_spin;
+   static bool do_tick_rock;
    static bool do_tick_boids;
    static bool do_tick_hydrogen_bonds_mesh;
+   static bool do_tick_outline_for_active_residue;
    static bool do_tick_constant_draw;
 
    static gboolean tick_function_is_active();
+
+   static void fullscreen();
+   static void unfullscreen();
+
 };
 
 
