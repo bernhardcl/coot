@@ -79,6 +79,8 @@ href="https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/docs/coot-faq.html">p
       <li><a href="#mozTocId296675"> Using WinCoot </a>
         <ul>
           <li><a href="#mozTocId515894">What about WinCoot and CCP4?</a></li>
+          <li><a href="#mozTocId664135">Where is the startup file? How
+              do I manually customise WinCoot?</a></li>
           <li><a href="#mozTocId249512">How do I change the font size of
               the labels?</a></li>
           <li><a href="#mozTocId56914">What are these 'Generic objects'?</a></li>
@@ -116,6 +118,7 @@ reference,
 
 
 
+
       citation and furtherinformation<br>
     </h2>
     <p>The official reference for WinCoot is published now:</p>
@@ -135,6 +138,7 @@ reference,
     <pre>@Article{emsley10:coot,<br> author = {Emsley P, Lohkamp B, Scott W, Cowtan K},<br> title = {Features and Development of Coot},<br> journal = {Acta Crystallographica Section D - Biological Crystallography},<br> year = 2010,<br> volume = 66,<br> pages = 486-501<br>}<br></pre>
     <p>The Coot paper is published in the <a
         href="http://journals.iucr.org/d/issues/2010/04/00/issconts.html">proceedings
+
 
 
 
@@ -407,6 +411,7 @@ href="http://msdn.microsoft.com/en-us/library/dd318693%28v=vs.85%29.aspx">this</
 
 
 
+
       Panel-&gt;Display-&gt;Settings-&gt;Advanced-&gt;Troubleshoot</span>.
     Then move the slider to towards <span style="font-style: italic;">None</span>
     (usually one bar above <span style="font-style: italic;">None</span>
@@ -473,13 +478,20 @@ want/need the text use Python...-->
     </h2>
     <h3><a class="mozTocH3" name="mozTocId515894"></a>What about WinCoot
       and CCP4?</h3>
-    Coot is part of the CCP4 Windows package (6.0.x) now. Previously it
-    was CCP4's own version and didn't seem to be fully functional (it
-    wasnt done by me). Now CCP4 is distributing my WinCoot, so all is
-    fine.<br>
+    Coot is part of the CCP4 Windows package (since 6.0.x) now.
+    Previously it was CCP4's own version and didn't seem to be fully
+    functional (it wasnt done by me). Now CCP4 is distributing my
+    WinCoot, so all is fine ;-)<br>
     However, I don't know when updates for the CCP4 packages will be
-    made available and how it interplays with CCP4i2!<br>
-    <br>
+    made available!<br>
+    <h3><a name="mozTocId664135" class="mozTocH3"></a>Where is the
+      startup file? How do I manually customise WinCoot?<br>
+    </h3>
+    WinCoot's "HOME" directory is C:\<i>YourWinCootDirectory</i>. So you
+    can have a <i>.coot.py</i> file with python instructions in there
+    to be executed on startup. Alternative, any other python file (.py
+    extension) in C:\<i>YourWinCootDirectory</i><i>\.coot-preferences</i>
+    will be executed on startup as well.<br>
     <h3><a name="mozTocId249512" class="mozTocH3"></a>How do I change
       the font size of the labels?</h3>
     You can edit your <i>cootrc</i> file (found in C:\<i>YourWinCootDirectory</i>\share\coot).<br>
@@ -564,6 +576,7 @@ your
 
 
 
+
           <span style="font-style: italic;">PATH&nbsp;</span>; for an
           alternative see 5) </li>
       </ul>
@@ -578,6 +591,7 @@ somewhere
 else
 in
 your
+
 
 
 
@@ -616,6 +630,7 @@ that
 probe_command
 and
 reduce_command
+
 
 
 
@@ -703,6 +718,7 @@ reduce_command
 
 
 
+
         describe the location of your files (e.g. probe_command =
         "C:\Mydirectory\probe.exe") </li>
     </ol>
@@ -715,6 +731,7 @@ your
 correct
 name
 or
+
 
 
 
@@ -758,6 +775,7 @@ like
 
 
 
+
       reduce_command_name = "my_reduce_filename". OBS: no .exe in the
       end for the filenames!!!!] </div>
     <span style="font-weight: bold;"><br>
@@ -765,6 +783,8 @@ like
     <br>
     <h3><a class="mozTocH3" name="mozTocId721941"></a>How do I get
       raster3d and/or povray working with WinCoot?</h3>
+    Raster3d is provided with WinCoot now (from 0.9.6), so no separate
+    installation is required for this.<br>
     Just download and install the appropriate program (<a
       href="http://skuld.bmsc.washington.edu/raster3d/raster3d.html">raster3d</a>,
     <a href="http://www.povray.org">povray</a>) and WinCoot should find
@@ -818,6 +838,7 @@ like
 
 
 
+
       WIKI page</a>.<br>
     <h3><a class="mozTocH3" name="mozTocId107913"></a>How do I use extra
       parameters in the Refmac interface?<br>
@@ -829,6 +850,7 @@ like
     which give refmac extra parameters is called <span
       style="font-style: italic;">refmac-extra-params.txt</span> for
     easy text editing (see an example <a href="refmac-extra-params.txt">here</a>).
+
 
 
 
@@ -896,7 +918,7 @@ like
     <br>
     <hr style="width: 100%; height: 2px;">
     <div style="text-align: left;">
-      <address>Last modified 28/7/2017<br>
+      <address>Last modified 05/01/2022<br>
         <script language="javascript">
 <!--
 var ppclink = "bernhard.lohkamp at ki.se";
