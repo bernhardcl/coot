@@ -602,14 +602,11 @@ if True:
 
      # --- D ---
 
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_models, "Delete Hydrogen Atoms",
-       lambda func: using_active_atom(delete_hydrogens, "aa_imol"))
+     coot_gui.add_simple_coot_menu_menuitem(submenu_models, "Delete Hydrogen Atoms",
+       lambda func: coot_utils.using_active_atom(coot.delete_hydrogens, "aa_imol"))
 
-     coot_gui.add_simple_coot_menu_menuitem(
-       submenu_models, "Delete Side-chains for Active Chain",
-       lambda func: using_active_atom(
-         delete_sidechains_for_chain, "aa_imol", "aa_chain_id"))
+     coot_gui.add_simple_coot_menu_menuitem(submenu_models, "Delete Side-chains for Active Chain",
+                                            lambda func: coot_utils.using_active_atom(delete_sidechains_for_chain, "aa_imol", "aa_chain_id"))
 
      # now in main menu
 ##     coot_gui.add_simple_coot_menu_menuitem(
@@ -1449,10 +1446,10 @@ if True:
        submenu,
        "Add a Spin View...",
        lambda func: coot_gui.generic_double_entry("Number of Steps", 
-                         "Number of Degrees (total)", "3600", "360", 
-                         False, False,                 #check button text and callback
-                         "  Add Spin  ",
-                         lambda text_1, text_2: coot.add_spin_view("Spin", int(text_1), float(text_2))))
+                                                  "Number of Degrees (total)", "3600", "360", 
+                                                  False, False,                 #check button text and callback
+                                                  "  Add Spin-xxx  ",
+                                                  lambda text_1, text_2, active_state: coot.add_spin_view("Spin", int(text_1), float(text_2))))
 
      coot_gui.add_simple_coot_menu_menuitem(
        submenu,
@@ -1503,7 +1500,7 @@ if True:
      # ---------------------------------------------------------------------
 
      coot_gui.add_simple_coot_menu_menuitem(
-         submenu_modules, "CCP4...",
+         submenu_modules, "CCP4",
          lambda func: coot_gui.add_module_ccp4())
 
      coot_gui.add_simple_coot_menu_menuitem(
@@ -1519,8 +1516,14 @@ if True:
          lambda func: gui_prosmart.add_module_prosmart())
 
      coot_gui.add_simple_coot_menu_menuitem(
-         submenu_modules, "SHELX...",
+         submenu_modules, "SHELX",
          lambda func: shelx_extensions.add_module_shelx())
+
+     import refine
+
+     coot_gui.add_simple_coot_menu_menuitem(
+         submenu_modules, "Refine",
+         lambda func: refine.add_module_refine())
 
      coot_gui.add_simple_coot_menu_menuitem(
          submenu_modules, "User-defined Restraints...",

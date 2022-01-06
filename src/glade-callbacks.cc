@@ -2179,6 +2179,7 @@ on_model_refine_dialog_refine_params_button_clicked_gtkbuilder_callback
    // gtk_widget_show(widget);
 }
 
+#include "graphics-info.h"
 
 extern "C" G_MODULE_EXPORT
 void
@@ -2204,6 +2205,14 @@ on_refinement_and_regularization_vbox_close_button_clicked_gtkbuilder_callback(G
    gtk_container_add(GTK_CONTAINER(vbox_container), vbox_outer); // so it's there for next time.
                                                                  // see graphics_info_t::show_refinement_and_regularization_parameters_dialog()
    gtk_widget_hide(vbox_outer);
+
+   // pressing the button means that the focus goes elsewhere (not sure where). So bring it back to the graphics
+   // widget;
+
+   graphics_info_t g;
+   GtkWidget *glarea = g.glareas[0];
+   gtk_widget_grab_focus(glarea);
+
 
 }
 
@@ -5731,8 +5740,6 @@ on_single_map_properties_absolute_radiobutton_toggled_gtkbuilder_callback (GtkTo
 
 }
 
-#include "graphics-info.h"
-
 void handle_map_properties_fresnel_change(int imol, GtkWidget *togglebutton) {
 
    molecule_class_info_t &m = graphics_info_t::molecules[imol];
@@ -6592,17 +6599,32 @@ on_geometry_analysis1_activate_gtkbuilder_callback         (GtkMenuItem     *men
 extern "C" G_MODULE_EXPORT
 void
 on_peptide_omega_analysis1_activate_gtkbuilder_callback    (GtkMenuItem     *menuitem,
-                                                            gpointer         user_data)
-{
+                                                            gpointer         user_data) {
+
    GtkWidget *menu = widget_from_builder("peptide_omega_analysis1");
    if (menu) {
       const char *type = "omega";
       add_on_validation_graph_mol_options(menu, type);
    } else {
-      printf("failed to get menu in on_peptide_omega_analysis1_activate\n");
+      std::cout << "ERROR:: failed to get menu in on_peptide_omega_analysis1_activate" << std::endl;
    }
 
 }
+
+extern "C" G_MODULE_EXPORT
+void
+on_pukka_puckers_1_activate_gtkbuilder_callback(GtkMenuItem     *menuitem,
+                                                gpointer         user_data) {
+
+   GtkWidget *menu = widget_from_builder("pukka_puckers_1");
+   if (menu) {
+      const char *type = "puckers";
+      add_on_validation_graph_mol_options(menu, type);
+   } else {
+      std::cout << "ERROR:: failed to get menu in on_pukka_puckers_activate_gtkbuilder_callback" << std::endl;
+   }
+}
+
 
 extern "C" G_MODULE_EXPORT
 void
@@ -10129,13 +10151,14 @@ on_clear_fixed_atoms_button_clicked_gtkbuilder_callback    (GtkButton       *but
 extern "C" G_MODULE_EXPORT
 void
 on_fixed_atom_close_button_clicked_gtkbuilder_callback     (GtkButton       *button,
-                                        gpointer         user_data)
-{
+                                                            gpointer         user_data) {
   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "fixed_atom_dialog");
   gtk_widget_destroy(dialog);
 }
 
 
+#if 0 // 20211202-PE there is no destroy on this now. It has been remade (indeed,
+      // it was not even in the glade file!)
 extern "C" G_MODULE_EXPORT
 void
 on_fixed_atom_dialog_destroy_gtkbuilder_callback           (GtkWidget       *object,
@@ -10143,6 +10166,49 @@ on_fixed_atom_dialog_destroy_gtkbuilder_callback           (GtkWidget       *obj
 {
   store_fixed_atom_dialog(0);
 }
+#endif
+
+extern "C" G_MODULE_EXPORT
+void
+on_fixed_atom_dialog_close_gtkbuilder_callback(GtkDialog       *dialog,
+                                               gpointer         user_data) {
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_fixed_atom_dialog_response_gtkbuilder_callback(GtkDialog       *dialog,
+                                                  gint             response_id,
+                                                  gpointer         user_data) {
+   if (response_id == GTK_RESPONSE_CLOSE) {
+      GtkWidget *dialog = widget_from_builder("fixed_atom_dialog");
+      gtk_widget_hide(dialog);
+   }
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_fixed_atom_dialog_clear_all_fixed_atoms_button_clicked_gtkbuilder_callback(GtkButton *togglebutton,
+                                                                       gpointer         user_data) {
+
+   clear_fixed_atoms_all(); // or maybe clear_all_fixed_atom(imol);
+}
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_fixed_atom_dialog_fix_atom_togglebutton_toggled_gtkbuilder_callback(GtkButton *togglebutton,
+                                                                       gpointer         user_data) {
+
+   setup_fixed_atom_pick(1, 0); // set a pending pick (not an unpick)
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_fixed_atom_dialog_unfix_atom_togglebutton_toggled_gtkbuilder_callback(GtkButton *togglebutton,
+                                                                       gpointer         user_data) {
+   setup_fixed_atom_pick(1, 1);
+}
+
 
 // is this better done with a dialog response now?
 extern "C" G_MODULE_EXPORT

@@ -197,6 +197,13 @@ AM_CFLAGS = \
 # But DEFAULT_INCLUDES is *before* INCLUDES
 # DEFAULT_INCLUDES = ... snip.  Rethink...
 
+# get this from configure
+# /Users/pemsley/python-3.8/lib/python3.8/site-packages/PyGObject-3.36.1-py3.8-macosx-11.5-x86_64.egg/include/pygobject-3.0/pygobject.h
+# /Users/pemsley/test/ccp4-20210929/include/pygobject-3.0/pygobject.h
+PYGOBJECT_CFLAGS=-I$(HOME)/python-3.8/lib/python3.8/site-packages/PyGObject-3.36.1-py3.8-macosx-11.5-x86_64.egg/include
+
+
+
 AM_CXXFLAGS = \
 	-DPKGDATADIR='"$(pkgdatadir)"' \
 	-DPACKAGE_LOCALE_DIR='"$(pkgdatadir)/locale"' \
@@ -209,6 +216,7 @@ AM_CXXFLAGS = \
 	$(WITH_GUILE_CFLAGS)	\
 	$(USE_GUILE_GTK) 	\
 	$(GUILE_CFLAGS)		\
+        $(PYGOBJECT_CFLAGS)     \
 	$(PYTHON_CPPFLAGS)	\
 	$(PYTHON_CFLAGS)	\
 	$(COOT_WINDOWS_CFLAGS) 	\
@@ -636,24 +644,24 @@ libcootsumo_la_SOURCES = \
 	screen-utils.cc		 \
 	screendump-tga.hh        \
 	screendump-tga.cc        \
-        sound.cc                 \
 	sdf-interface.hh         \
 	sdf-internal.hh          \
 	sdf-interface.cc         \
+	select-atom-info.hh      \
 	sequence-view.hh         \
 	sequence-view.cc         \
 	seq-view-interface.c     \
 	seq-view-interface.h     \
 	Shader.cc Shader.hh      \
         simple-distance-object.hh \
-	startup-scripts.hh       \
-	support.c support.h      \
-	select-atom-info.hh      \
+        sound.cc                 \
 	sound.hh                 \
 	startup-scripts.hh       \
-	tiny_glhf.h              \
+	support.c support.h      \
 	stb_image.h              \
 	stb_image_write.h        \
+	startup-scripts.hh       \
+	tiny_glhf.h              \
 	support-gtk2-extras.c    \
 	testing.cc testing-2.cc  \
 	testing-data.hh          \
