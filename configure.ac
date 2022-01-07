@@ -136,7 +136,7 @@ dnl =========================== crystallographic libraries =====================
 dnl Check for gpp4
 
 AC_ARG_WITH([backward], AS_HELP_STRING([--with-backward], [Build with the backward header (better debugging info on GNU/Linux)]))
-if test "xwith_backward" ; then
+if test "x$with_backward" = "xyes" ; then
    # tested in utils/Makefile.am
    USE_BACKWARD=use_backward
 else
