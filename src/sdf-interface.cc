@@ -25,7 +25,11 @@
 
 // We need this high so that dcgettext() so we don't get expected unqualified-id before 'const'
 // errors when we read libintl from rdkit-interface.hh
+#ifndef WINDOWS_MINGW
+// BL says:: somehow on windows it is the other way around ...
+// hence making this conditional for now.
 #include "graphics-info.h"
+#endif
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS
 #include <libintl.h>
 #endif // MAKE_ENHANCED_LIGAND_TOOLS
@@ -40,6 +44,10 @@
 
 #include <iostream> // for istream?
 #include <istream> // for istream?
+
+#ifdef WINDOWS_MINGW
+#include "graphics-info.h"
+#endif
 
 #include "c-interface-generic-objects.h"
 #include "sdf-interface.hh"
