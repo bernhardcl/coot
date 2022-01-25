@@ -345,7 +345,7 @@ def add_hydrogens_to_chain_using_refmac(imol, chain_id):
     make_directory_maybe('coot-refmac')
     write_chain_to_pdb_file(imol, chain_id, out_file_name)
     return add_hydrogens_using_refmac_inner(imol, in_file_name, out_file_name)
-    
+
 
 def add_hydrogens_using_refmac_inner(imol, in_file_name, out_file_name):
 
@@ -354,13 +354,14 @@ def add_hydrogens_using_refmac_inner(imol, in_file_name, out_file_name):
 			   ['MAKE HOUT YES', 'NCYCLE 0', 'END'],
 			   'refmac-H-addition.log', 0)
     try:
-	if (status == 0):
-	    # all good
-	    return add_hydrogens_from_file(imol, in_file_name)
+        if status == 0:
+            # all good
+            return add_hydrogens_from_file(imol, in_file_name)
+        else:
+            return False
     except:
-	return False
-	
-	      
+        return False
+
 
 # set this to a function accepting two argument (the molecule number
 # and the manipulation mode) and it will be run after a model
@@ -1649,7 +1650,18 @@ def valid_model_molecule_qm(imol):
 # return True or False
 #
 def valid_map_molecule_qm(imol):
-    if (is_valid_map_molecule(imol)==1): return True
+    if is_valid_map_molecule(imol) == 1:
+        return True
+    else: return False
+
+# python (schemeyish) interface to eponymous scripting interface function.
+# return True or False
+#
+def valid_map_with_associated_data_molecule_qm(imol):
+    if is_valid_map_molecule(imol) == 1:
+        p = refmac_parameters_py(imol)
+        if p:
+            return True
     else: return False
 
 # convenience function (slightly less typing).  
@@ -1672,7 +1684,7 @@ def shelx_molecule_qm(imol):
 # Return True or False.
 #
 def is_difference_map_qm(imol_map):
-    if (not valid_map_molecule_qm(imol_map)):
+    if not valid_map_molecule_qm(imol_map):
         return False
     else:
         return map_is_difference_map(imol_map) == 1
@@ -4636,31 +4648,31 @@ def setup_ccp4():
             CCP4_MASTER = os.path.abspath(os.path.join(ccp4_dir, os.pardir))
             # not all required I guess!? They should be set anyway
             ccp4_env_vars = {
-                "CCP4_SCR": ["C:\\ccp4temp"],
-                "CCP4I_TCLTK": [CCP4_MASTER, "TclTk84", "bin"],
-                "CBIN": [CCP4, "bin"],
-                "CLIB": [CCP4, "lib"],
-                "CLIBD": [CCP4, "lib", "data"],
-                "CEXAM": [CCP4, "examples"],
-                "CHTML": [CCP4, "html"],
-                "CINCL": [CCP4, "include"],
-                "CCP4I_TOP": [CCP4, "share", "ccp4i"],
-                "CLIBD_MON": [CCP4, "lib", "data", "monomers"],
-                "MMCIFDIC": [CCP4, "lib", "ccp4", "cif_mmdic.lib"],
-                "CRANK": [CCP4, "share", "ccp4i", "crank"],
+                "CCP4_SCR": ["C:\ccp4temp"],
+                "CCP4I_TCLTK": [CCP4_MASTER, "TclTk84\bin"],
+                "CBIN": [CCP4, "\bin"],
+                "CLIB": [CCP4, "\lib"],
+                "CLIBD": [CCP4, "\lib\data"],
+                "CEXAM": [CCP4, "\examples"],
+                "CHTML": [CCP4, "\html"],
+                "CINCL": [CCP4, "\include"],
+                "CCP4I_TOP": [CCP4, "\share\ccp4i"],
+                "CLIBD_MON": [CCP4, "\lib\data\monomers\\"],
+                "MMCIFDIC": [CCP4, "\lib\ccp4\cif_mmdic.lib"],
+                "CRANK": [CCP4, "\share\ccp4i\crank"],
                 "CCP4_OPEN": ["unknown"],
                 "GFORTRAN_UNBUFFERED_PRECONNECTED": ["Y"]
                 }
             for env_var in ccp4_env_vars:
                 env_dir = os.getenv(env_var)
                 if not env_dir:
-                    # variable not set or empty, so let do so if exists
-                    key = ccp4_env_vars[env_var]
+                    # variable not set, so let do so if exists
                     if len(key) > 1:
-                        # dir should be:
-                        value = os.path.join(*key)
+                        if os.path.isdir(env_dir):
+                            # have dir so set variable
+                            key = ccp4_env_vars[env_var]
+                            value = os.path.join(key)
                             #print "BL DEBUG:: set env variable to", env_var, value
-                        if os.path.isdir(value):
                             os.environ[env_var] = value
                     else:
                         value = key[0]
@@ -4771,136 +4783,27 @@ def rename_alt_confs_active_residue():
 def write_current_sequence_as_pir(imol, ch_id, file_name):
     print_sequence_chain_general(imol, ch_id, 1, 1, file_name)
 
-# Use clustalw to do the alignment. Then mutate using that alignement.
-# BL says:: to be in line with scheme core should be in coot_gui.py
-# or vice versa or not. Exists twice in scheme code....
-#
-
 def run_clustalw_alignment(imol, ch_id, target_sequence_pir_file):
-
-    def get_clustalw2_command():
-      clustalw2_command = "clustalw2"
-      if command_in_path_qm(clustalw2_command):
-         return clustalw2_command
-      else:
-         s = os.getenv("CCP4")
-         if not s:
-            return False
-         else:
-            file_path = os.path.join(s, "libexec", clustalw2_command)
-            if command_in_path_qm(file_path):
-               return file_path
-            else:
-               return False
 
     current_sequence_pir_file = "current-sequence.pir"
     aligned_sequence_pir_file = "aligned-sequence.pir"
     clustalw2_output_file_name = "clustalw2-output-file.log"
 
-    clustalw2_command = get_clustalw2_command()
-    if not clustalw2_command:
-      print "No clustalw2 command!"
-      return False
-    else:
-        # if these files are not deleted/renamed then the input to clustalw2
-        # goes wonky.
-        if os.path.exists(aligned_sequence_pir_file):
-            new_file_name = aligned_sequence_pir_file + ".old"
-            rename_file(aligned_sequence_pir_file, new_file_name)
+    if os.path.exists("aligned-sequence.pir"):
+        os.remove("aligned-sequence.pir")
+    if os.path.exists("aligned-sequence.dnd"):
+        os.remove("aligned-sequence.dnd")
+    if os.path.exists("current-sequence.dnd"):
+        os.remove("current-sequence.dnd")
 
-        if os.path.exists("current-sequence.dnd"):
-            new_file_name = "current-sequence.dnd" + ".old"
-            rename_file("current-sequence.dnd", new_file_name)
+    write_current_sequence_as_pir(imol, ch_id, current_sequence_pir_file)
 
-        if os.path.exists("current-sequence.aln"):
-            new_file_name = "current-sequence.aln" + ".old"
-            rename_file("current-sequence.aln", new_file_name)
-
-        write_current_sequence_as_pir(imol, ch_id, current_sequence_pir_file)
-
-        data_lines = ["3", "1", target_sequence_pir_file, "2", current_sequence_pir_file,
-                      "9", "2", "", "4", "", aligned_sequence_pir_file, "", "x", "", "x"]
-        popen_command(clustalw2_command, [], data_lines, clustalw2_output_file_name, 0)
-        associate_pir_alignment_from_file(imol, ch_id, aligned_sequence_pir_file)
-        apply_pir_alignment(imol, ch_id)
-        simple_fill_partial_residues(imol)
-        resolve_clashing_sidechains_by_deletion(imol)
-
-
-# Util function to pipe Coot C stdout to a file (Note: python stdout doesnt
-# touch C stdout, therefore this is needed. Of course could just tee out
-# all output, but that may not always be required).
-#
-# based on https://stackoverflow.com/questions/4675728/redirect-stdout-to-a-file-in-python
-#
-# use either e.g. with open file fn (fn= open(...)):
-#
-# with stdout_redirected(fn):
-#   do some coot things
-#
-# or:
-# with open('output.txt', 'w') as f, stdout_redirected(f):
-#  some coot commands
-#
-
-import os
-import sys
-from contextlib import contextmanager
-
-def fileno(file_or_fd):
-    fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
-    if not isinstance(fd, int):
-        raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
-    return fd
-
-@contextmanager
-def stdout_redirected(to=os.devnull, stdout=None):
-    if stdout is None:
-       stdout = sys.stdout
-
-    stdout_fd = fileno(stdout)
-    # copy stdout_fd before it is overwritten
-    #NOTE: `copied` is inheritable on Windows when duplicating a standard stream
-    with os.fdopen(os.dup(stdout_fd), 'wb') as copied: 
-        stdout.flush()  # flush library buffers that dup2 knows nothing about
-        try:
-            os.dup2(fileno(to), stdout_fd)  # $ exec >&to
-        except ValueError:  # filename
-            with open(to, 'wb') as to_file:
-                os.dup2(to_file.fileno(), stdout_fd)  # $ exec > to
-        try:
-            yield stdout # allow code to be run with the redirected stdout
-        finally:
-            # restore stdout to its previous value
-            #NOTE: dup2 makes stdout_fd inheritable unconditionally
-            stdout.flush()
-            os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
-
-# rename file src to dst
-# On Windows there is an error if dst exists, so need to remove first.
-# return -1 on fail 0 on success
-#
-def rename_file(src, dest):
-    import os
-
-    if os.name != 'nt':
-        try:
-            os.rename(sr, dst)
-            return 0
-        except:
-            return -1
-    else:
-        # WINDOWS
-        if os.path.exists(dest):
-            try:
-                os.path.remove(dest)
-            except:
-                return -1
-        try:
-            os.rename(src, dest)
-            return 0
-        except:
-            return -1
+    data_lines = ["3", "1", target_sequence_pir_file, "2", current_sequence_pir_file,
+                  "9", "2", "", "4", "", aligned_sequence_pir_file, "", "x", "", "x"]
+    popen_command("clustalw2", [], data_lines, clustalw2_output_file_name, 0)
+    associate_pir_alignment_from_file(imol, ch_id, aligned_sequence_pir_file)
+    apply_pir_alignment(imol, ch_id)
+    simple_fill_partial_residues(imol)
 
 
 ####### Back to Paul's scripting.

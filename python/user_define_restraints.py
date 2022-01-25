@@ -517,8 +517,19 @@ if (have_coot_python):
 
     add_simple_coot_menu_menuitem(
       menu,
+      "Save as REFMAC restraints...",
+      lambda func:
+      generic_chooser_and_file_selector("Save REFMAC restraints for molecule",
+                                        valid_model_molecule_qm,
+                                        " Restraints file name:  ",
+                                        "refmac-restraints.txt",
+                                        lambda imol, file_name:
+                                          extra_restraints2refmac_restraints_file(imol, file_name)))
+
+
+    add_simple_coot_menu_menuitem(
+      menu,
       "Add Parallel Planes Restraint...",
       lambda func:
       user_defined_add_planes_restraint()
       )
-

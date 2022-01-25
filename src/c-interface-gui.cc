@@ -6372,7 +6372,7 @@ curlew_install_extension_file(const std::string &file_name, const std::string &c
                   std::string preferences_dir = coot::util::append_dir_dir(home_directory, ".coot-preferences");
                   std::string preferences_file_name = coot::util::append_dir_file(preferences_dir, file_name);
                   std::cout << "debug:: attempting to rename " << dl_fn << " as " << preferences_file_name << std::endl;
-                  // BL says:: on windows (non POSIX) rename wont overwrite, so
+                  // BL: on windows (non POSIX) rename wont overwrite, so
                   // need to remove first.
 #ifndef WINDOWS_MINGW
                   int status = rename(dl_fn.c_str(), preferences_file_name.c_str());
@@ -6504,8 +6504,8 @@ void curlew_dialog_install_extensions(GtkWidget *curlew_dialog, int n_extensions
                            std::pair<bool, std::string> checksum_result = checksums_match(dl_fn, checksum);
                            if (checksum_result.first) {
 			      // I want a function that returns preferences_dir
-                  std::string home_directory = coot::get_home_dir();
-               if (!home_directory.empty()) {
+                              std::string home_directory = coot::get_home_dir();
+                              if (!home_directory.empty()) {
 				 std::string preferences_dir = coot::util::append_dir_dir(home_directory, ".coot-preferences");
 				 std::string preferences_file_name = coot::util::append_dir_file(preferences_dir, file_name);
                                  std::cout << "debug:: attempting to rename " << dl_fn << " as " << preferences_file_name << std::endl;
@@ -6525,7 +6525,6 @@ void curlew_dialog_install_extensions(GtkWidget *curlew_dialog, int n_extensions
                                     gtk_widget_hide(check_button);
                                     std::cout << "show uninstall_button  " << uninstall_button << std::endl;
                                     gtk_widget_show(uninstall_button);
-                                    
 				    // make the hbox insensitive
 				    if (hbox) {
 				       gtk_widget_set_sensitive(hbox, FALSE);

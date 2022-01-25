@@ -87,6 +87,12 @@ if (have_coot_python):
 
        add_simple_coot_menu_menuitem(menu, "List Ramachandran outliers...",
                                      lambda func: rama_outlier_gui())
+       add_simple_coot_menu_menuitem(
+         menu,
+         "Read REFMAC logfile...",
+         lambda func: generic_chooser_and_file_selector("Read Refmac log file",
+                                     valid_model_molecule_qm, "Logfile name: ", "",
+                                     lambda imol, text: read_refmac_log(imol, text)))
 
 
      # --------------------------------------------------
@@ -101,6 +107,8 @@ if (have_coot_python):
      
      # ---------------------------------------------
      #           extensions
+     #
+     # NOT ANY MORE, they are within everything else now...
      # ---------------------------------------------
 
      # menu = coot_menubar_menu("E_xtensions")
@@ -273,13 +281,12 @@ if (have_coot_python):
          global continue_multi_refine
          continue_multi_refine = True
          interruptible_fit_protein(imol, fit_protein_rama_fit_function)
-         
-     add_simple_coot_menu_menuitem(
+
+         add_simple_coot_menu_menuitem(
        submenu_all_molecule,
        "Refine/Improve Ramachandran Plot...",
        lambda func: molecule_chooser_gui("Refine Protein with Ramachanran Plot Optimization: ",
                 lambda imol: fit_protein_func3(imol)))
-                                         
 
      #---------------------------------------------------------------------
      #     Map functions
@@ -287,22 +294,22 @@ if (have_coot_python):
      #---------------------------------------------------------------------
 
      def mask_map_func():
-	f = ""
-	molecule_list = molecule_number_list()
-	if not molecule_list == []:
+       f = ""
+       molecule_list = molecule_number_list()
+       if not molecule_list == []:
           for i in molecule_list:
             if is_valid_map_molecule(molecule_list[i]):
-              print "%s is a valid map molecule" %molecule_list[i]
+              print( "%s is a valid map molecule" %molecule_list[i])
               f = str(molecule_list[i])
               break
-	else:
-		print "BL WARNING:: dunno what to do!? No map found"
-                f = False
-	return f
-      
+       else:
+         print( "BL WARNING:: dunno what to do!? No map found")
+         f = False
+       return f
+
      def mask_map_func1(active_state):
-	print "changed active_state to ", active_state
-        
+       print("changed active_state to ", active_state)
+
      def mask_map_func2(imol, texts_list, invert_mask_qm):
        # map imol
        text_1 = texts_list[0]
@@ -354,24 +361,24 @@ if (have_coot_python):
      add_simple_coot_menu_menuitem(
        submenu_maps,
        "Copy Map...",
-       lambda func: map_molecule_chooser_gui("Map to Copy...", 
+       lambda func: map_molecule_chooser_gui("Map to Copy...",
 		lambda imol: copy_molecule(imol)))
 
-     
+
      add_simple_coot_menu_menuitem(
        submenu_maps,
-       "Make a Smoother Copy...", 
-       lambda func: map_molecule_chooser_gui("Map Molecule to Smoothenize...", 
+       "Make a Smoother Copy...",
+       lambda func: map_molecule_chooser_gui("Map Molecule to Smoothenize...",
 		lambda imol: smooth_map(imol, 1.25)))
 
-     
+
      add_simple_coot_menu_menuitem(
        submenu_maps,
-       "Make a Very Smooth Copy...", 
-       lambda func: map_molecule_chooser_gui("Map Molecule to Smoothenize...", 
+       "Make a Very Smooth Copy...",
+       lambda func: map_molecule_chooser_gui("Map Molecule to Smoothenize...",
 		lambda imol: smooth_map(imol, 2.0)))
 
-     
+
      add_simple_coot_menu_menuitem(
        submenu_maps,
        "Make a Difference Map...",
@@ -473,10 +480,10 @@ if (have_coot_python):
        with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                   aa_ins_code, aa_atom_name, aa_alt_conf]:
          add_hydrogens_using_refmac(aa_imol)
-     
+
      add_simple_coot_menu_menuitem(
        submenu_models,
-       "Add Hydrogens",
+       "Add Hydrogen Atoms",
        lambda func: add_hydrogens_with_coot_reduce())
 
 

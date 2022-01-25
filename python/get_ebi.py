@@ -42,7 +42,7 @@ pdbe_file_name_tail = "ent"
 # 'coordinates rather than 'pdb in the future.
 # 
 # The optional argument imol-coords-arg-list is necessary for
-# ouptutting sfs, because we need coordinates from which we can
+# outputting sfs, because we need coordinates from which we can
 # calculate phases.
 #
 
@@ -300,7 +300,7 @@ def get_eds_pdb_and_mtz(id):
                             return r_imol
                     else:
                         return False
-            if (s2 and os.path.isfile(s2)):
+            if s2 and os.path.isfile(s2):
                 map_1 = make_and_draw_map(dir_target_mtz_file, "FWT", "PHWT","",0,0)
                 map_2 = make_and_draw_map(dir_target_mtz_file, "DELFWT", "PHDELWT",
                               "", 0, 1)

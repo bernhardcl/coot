@@ -141,6 +141,19 @@ if (use_gui_qm != 2):
     add_simple_coot_menu_menuitem(
         menu, "Rename Atom to Reference", rename_atoms_to_reference)
 
+    def go_solid_func(state):
+        set_display_generic_objects_as_solid(state)
+        graphics_draw()
+
+    add_simple_coot_menu_menuitem(
+         menu, "Solid Generic Objects",
+         lambda func: go_solid_func(1))
+
+    add_simple_coot_menu_menuitem(
+         menu, "Unsolid Generic Objects",
+         lambda func: go_solid_func(0))
+
+
     def tab_ligand_distortions_func():
         with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no,
                                    aa_ins_code, aa_atom_name, aa_alt_conf]:

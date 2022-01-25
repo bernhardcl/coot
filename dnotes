@@ -3988,7 +3988,7 @@ INFO::
    o Change the pixmaps/Makefile.am for the current splash screen image
    o are coot_wrap*cc generated correctly (no enhanced-ligand code)?
      rm src/coot_wrap*.cc
-     configure iwth configure-it-for-release
+     configure with configure-it-for-release
    o make dist to make a tar-ball
         Use this to untar and make a build - this will test that the tarball has
         all the files before commit: cd ../build-test-dist and untar it there, copy into
@@ -9877,3 +9877,23 @@ Mon 20 Sep 2021 17:16:29 BST
 
 ---
 Mon 20 Sep 2021 17:43:55 BST
+
+
+Sat 23 Oct 08:02:34 BST 2021
+
+    implement this: (density contouring)
+    http://www.sci.utah.edu/~csilva/papers/noskinny.pdf
+
+
+----
+Wed  5 Jan 18:57:11 GMT 2022
+
+5rdh rupp presentation
+
+
+---
+Tue 18 Jan 17:29:37 GMT 2022
+
+   the function to generate a dictionary from a residue (the Roberto function) is
+   dictionary_residue_restraints_t(mmdb::Residue *residue_p);
+   search protein-geometry.hh for "fake up some bond"
