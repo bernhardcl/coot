@@ -111,97 +111,74 @@ if (have_coot_python):
      # NOT ANY MORE, they are within everything else now...
      # ---------------------------------------------
 
-     # menu = coot_menubar_menu("E_xtensions")
-     menu = False
+     # show_extensions = False
+     # extensions_menu = coot_menubar_menu("E_xtensions")
 
-     # make submenus:
-     # submenu_all_molecule = gtk.Menu()
-     # menuitem_2 = gtk.MenuItem("All Molecule...")
-     # submenu_maps = gtk.Menu()
-     # menuitem_3 = gtk.MenuItem("Maps...")
-     # submenu_models = gtk.Menu()
-     # menuitem_4 = gtk.MenuItem("Modelling...")
-     # submenu_refine = gtk.Menu()
-     # menuitem_5 = gtk.MenuItem("Refine...")
-     # submenu_representation = gtk.Menu()
-     # menuitem_6 = gtk.MenuItem("Representations")
-     # submenu_settings = gtk.Menu()
-     # menuitem_7 = gtk.MenuItem("Settings...")
-     # submenu_pisa = gtk.Menu()
-     # menuitem_pisa = gtk.MenuItem("PISA...")
-     # submenu_pdbe = gtk.Menu()
-     # menuitem_pdbe = gtk.MenuItem("PDBe...")
-     # submenu_modules = gtk.Menu()
-     # menuitem_modules = gtk.MenuItem("Modules...")
-     # submenu_ncs = gtk.Menu()
-     # menuitem_ncs = gtk.MenuItem("NCS...")
-
-     def get_coot_menu_from_item(top_label, sub_menu_label):
-
-       coot_main_menubar = coot_python.main_menubar()
-       for menu_child in coot_main_menubar.get_children():
-         if menu_child.get_children()[0].get_text() == top_label:
-           # we have a matching top menu
-           for sub_child in menu_child.get_submenu().get_children():
-             sub_child_ls = sub_child.get_children()
-             if sub_child_ls:
-               if sub_child_ls[0].get_text() == sub_menu_label:
-                 return sub_child
+     # return the menuitem with menuitem_label in menubar_menu_label
+     # if not there return False
+     #
+     def get_coot_menu_from_item(menubar_menu_label, menuitem_label):
+       menu = coot_menubar_menu(menubar_menu_label)
+       for menu_child in menu.get_children():
+         if not isinstance(menu_child, gtk.SeparatorMenuItem):
+           label = menu_child.get_property('label') # changed
+           if label == menuitem_label:
+             # found it, return it
+             return menu_child
        return False
 
-     coot_build_in_menu = get_coot_menu_from_item("Calculate", "Modelling...")
-     if coot_build_in_menu:
-       menu = gtk.Menu()
-       coot_build_in_menu.set_submenu(menu)
-       submenu_models = menu
+     # Add submenu to the existing menuitem, if not found make a new one
+     # under extensions
+     # return True on success or the newly created menuitem
+     #
+     def coot_menu_add_submenu(menubar_menu_label, menuitem_label, submenu):
+       # Now AttributeError: 'gtk.MenuItem' object has no attribute 'get_label'
+       # now we use get_property('label')
+       menuitem = get_coot_menu_from_item(menubar_menu_label, menuitem_label)
+       if menuitem:
+         menuitem.set_submenu(submenu)
+         return True
+       else:
+         return False
+         # add to extensions - not really working since I somehow cant
+         # remove/hide the Extensions Menu once it's created
+         # menuitem = gtk.MenuItem(menuitem_label)
+         # menuitem.set_submenu(submenu)
+         # extensions_menu.append(menuitem)
+         # menuitem.show()
+         # return menuitem
 
-     coot_build_in_menu = get_coot_menu_from_item("Calculate", "Map Tools...")
-     if coot_build_in_menu:
-       menu = gtk.Menu()
-       coot_build_in_menu.set_submenu(menu)
-       submenu_maps = menu
+     # make submenus:
+     submenu_all_molecule = gtk.Menu()
+     menuitem_2 = coot_menu_add_submenu("Calculate", "All Molecule...", submenu_all_molecule)
+     print("debug menuitem_2", menuitem_2)
 
-     coot_build_in_menu = get_coot_menu_from_item("Calculate", "All Molecule...")
-     if coot_build_in_menu:
-       menu = gtk.Menu()
-       coot_build_in_menu.set_submenu(menu)
-       submenu_all_molecule = menu
+     submenu_maps = gtk.Menu()
+     menuitem_3 = coot_menu_add_submenu("Calculate", "Map Tools...", submenu_maps)
 
-     coot_build_in_menu = get_coot_menu_from_item("Calculate", "PISA...")
-     if coot_build_in_menu:
-       menu = gtk.Menu()
-       coot_build_in_menu.set_submenu(menu)
-       submenu_pisa = menu
+     submenu_models = gtk.Menu()
+     menuitem_4 = coot_menu_add_submenu("Calculate", "Modelling...", submenu_models)
 
-     coot_build_in_menu = get_coot_menu_from_item("Calculate", "Modules...")
-     if coot_build_in_menu:
-       menu = gtk.Menu()
-       coot_build_in_menu.set_submenu(menu)
-       submenu_modules = menu
+     submenu_pisa = gtk.Menu()
+     menuitem_pisa = coot_menu_add_submenu("Calculate", "PISA...", submenu_pisa)
 
-     coot_build_in_menu = get_coot_menu_from_item("Calculate", "NCS Tools...")
-     if coot_build_in_menu:
-       menu = gtk.Menu()
-       coot_build_in_menu.set_submenu(menu)
-       submenu_ncs = menu
+     submenu_modules = gtk.Menu()
+     menuitem_modules = coot_menu_add_submenu("Calculate", "Modules...", submenu_modules)
 
-     coot_build_in_menu = get_coot_menu_from_item("Draw", "Representation Tools...")
-     if coot_build_in_menu:
-       menu = gtk.Menu()
-       coot_build_in_menu.set_submenu(menu)
-       submenu_representation = menu
+     submenu_ncs = gtk.Menu()
+     menuitem_ncs = coot_menu_add_submenu("Calculate", "NCS Tools...", submenu_ncs)
 
-     coot_build_in_menu = get_coot_menu_from_item("Edit", "Settings...")
-     if coot_build_in_menu:
-       menu = gtk.Menu()
-       coot_build_in_menu.set_submenu(menu)
-       submenu_settings = menu
+     submenu_representation = gtk.Menu()
+     menuitem_6 = coot_menu_add_submenu("Draw", "Representation Tools...", submenu_representation)
 
-     # menuitem_pdbe.set_submenu(submenu_pdbe)
-     # menu.append(menuitem_pdbe)
-     # menuitem_pdbe.show()
+     submenu_settings = gtk.Menu()
+     menuitem_7 = coot_menu_add_submenu("Edit", "Settings...", submenu_settings)
 
-
+     #menuitem_pdbe.set_submenu(submenu_pdbe)
+     #menu.append(menuitem_pdbe)
+     #menuitem_pdbe.show()
+     
+     
 
      #---------------------------------------------------------------------
      #     Post MR
@@ -1737,19 +1714,23 @@ if (have_coot_python):
          lambda func: add_module_carbohydrate_gui())
 
      add_simple_coot_menu_menuitem(
-       submenu_modules, "CCP4...",
+       submenu_modules, "CCP4",
        lambda func: add_module_ccp4())
 
      add_simple_coot_menu_menuitem(
          submenu_modules, "Cryo-EM",
-         lambda func: add_module_cryo_em())
+         lambda func: add_module_cryo_em()) # where are the jiggle-fit functions?
 
      add_simple_coot_menu_menuitem(
-       submenu_modules, "Restraints...",
+       submenu_modules, "Restraints",
        lambda func: add_module_restraints())
 
      add_simple_coot_menu_menuitem(
-       submenu_modules, "PDBe...",
+       submenu_modules, "Refine",
+       lambda func: add_module_refine()) # where is this now? Is it in curlew?
+
+     add_simple_coot_menu_menuitem(
+       submenu_modules, "PDBe",
        lambda func: add_module_pdbe())
 
      add_simple_coot_menu_menuitem(
@@ -1757,7 +1738,7 @@ if (have_coot_python):
          lambda func: add_module_prosmart())
 
      add_simple_coot_menu_menuitem(
-       submenu_modules, "SHELX...",
+       submenu_modules, "SHELX",
        lambda func: add_module_shelx())
 
 

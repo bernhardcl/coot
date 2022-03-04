@@ -13295,7 +13295,7 @@ create_splash_screen_window (void)
   gtk_window_set_position (GTK_WINDOW (splash_screen_window), GTK_WIN_POS_CENTER);
   gtk_window_set_type_hint (GTK_WINDOW (splash_screen_window), GDK_WINDOW_TYPE_HINT_SPLASHSCREEN);
 
-  image10854 = create_pixmap (splash_screen_window, "coot-0.9.7.png");
+  image10854 = create_pixmap (splash_screen_window, "coot-0.9.8.png");
   gtk_widget_show (image10854);
   gtk_container_add (GTK_CONTAINER (splash_screen_window), image10854);
 
@@ -29537,20 +29537,14 @@ create_generic_objects_dialog (void)
   gtk_dialog_add_action_widget (GTK_DIALOG (generic_objects_dialog), generic_objects_dialog_closebutton, GTK_RESPONSE_CLOSE);
   GTK_WIDGET_SET_FLAGS (generic_objects_dialog_closebutton, GTK_CAN_DEFAULT);
 
-  g_signal_connect ((gpointer) generic_objects_dialog, "close",
-                    G_CALLBACK (on_generic_objects_dialog_close),
-                    NULL);
-  g_signal_connect ((gpointer) generic_objects_dialog, "destroy",
-                    G_CALLBACK (on_generic_objects_dialog_destroy),
+  g_signal_connect ((gpointer) generic_objects_dialog, "response",
+                    G_CALLBACK (on_generic_objects_dialog_response),
                     NULL);
   g_signal_connect ((gpointer) generic_objects_display_all_togglebutton, "toggled",
                     G_CALLBACK (on_generic_objects_display_all_togglebutton_toggled),
                     NULL);
   g_signal_connect ((gpointer) generic_objects_close_all_button, "clicked",
                     G_CALLBACK (on_generic_objects_close_all_button_clicked),
-                    NULL);
-  g_signal_connect ((gpointer) generic_objects_dialog_closebutton, "clicked",
-                    G_CALLBACK (on_generic_objects_dialog_closebutton_clicked),
                     NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */

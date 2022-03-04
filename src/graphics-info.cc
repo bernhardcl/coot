@@ -6097,6 +6097,9 @@ graphics_info_t::set_moving_atoms(atom_selection_container_t asc,
 // static
 void graphics_info_t::bond_parameters_molecule_combobox_changed(GtkWidget *combobox, gpointer data) {
 
+   std::cout << "-------------------- bond_parameters_molecule_combobox_changed() "
+             << combobox << std::endl;
+
    graphics_info_t g;
    int imol = g.combobox_get_imol(GTK_COMBO_BOX(combobox));
    g.bond_parameters_molecule = imol;
@@ -6700,7 +6703,7 @@ graphics_info_t::sfcalc_genmap(int imol_model,
                            molecules[imol_map_with_data_attached].get_original_rfree_flags();
                         if (fobs_data && free_flag) {
                            molecules[imol_model].sfcalc_genmap(*fobs_data, *free_flag, xmap_p);
-                           molecules[imol_updating_difference_map].set_mean_and_sigma();
+                           molecules[imol_updating_difference_map].set_mean_and_sigma(false, ignore_pseudo_zeros_for_map_stats);
                            molecules[imol_updating_difference_map].set_contour_level_by_sigma(cls); // does an update
                         }
                         on_going_updating_map_lock = false;

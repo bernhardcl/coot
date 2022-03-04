@@ -209,8 +209,8 @@ PyObject *calculate_maps_and_stats_py(int imol_model,
             clipper::Xmap<float> &xmap_fofc  = g.molecules[imol_map_fofc].xmap;
             coot::util::sfcalc_genmap_stats_t stats =
                g.sfcalc_genmaps_using_bulk_solvent(imol_model, imol_map_2fofc, &xmap_2fofc, &xmap_fofc);
-            g.molecules[imol_map_2fofc].set_mean_and_sigma(false, true);
-            g.molecules[imol_map_fofc ].set_mean_and_sigma(false, true);
+            g.molecules[imol_map_2fofc].set_mean_and_sigma(false, g.ignore_pseudo_zeros_for_map_stats);
+            g.molecules[imol_map_fofc ].set_mean_and_sigma(false, g.ignore_pseudo_zeros_for_map_stats);
             float cls_2fofc = g.molecules[imol_map_2fofc].get_contour_level_by_sigma();
             float cls_fofc  = g.molecules[imol_map_fofc].get_contour_level_by_sigma();
             g.molecules[imol_map_2fofc].set_contour_level_by_sigma(cls_2fofc); // does an update
@@ -1555,6 +1555,13 @@ int export_map_fragment_with_origin_shift(int imol, float x, float y, float z, f
    return rv;
 }
 
+void set_ignore_pseudo_zeros_for_map_stats(short int state) {
+
+   graphics_info_t::ignore_pseudo_zeros_for_map_stats = state;
+
+}
+
+
 void map_histogram(int imol_map) {
 
 #if HAVE_GOOCANVAS
@@ -1729,7 +1736,8 @@ int transform_map_raw(int imol,
       const coot::ghost_molecule_display_t ghost_info;
       // int is_diff_map_flag = graphics_info_t::molecules[imol].is_difference_map_p();
       // int swap_colours_flag = graphics_info_t::swap_difference_map_colours;
-      mean_and_variance<float> mv = map_density_distribution(new_map, 40, 0);
+      bool ipz = graphics_info_t::ignore_pseudo_zeros_for_map_stats;
+      mean_and_variance<float> mv = map_density_distribution(new_map, 40, false, ipz);
       std::string name = "Transformed map";
       imol_new = graphics_info_t::create_molecule();
       bool is_em_flag = graphics_info_t::molecules[imol].is_EM_map();
@@ -2777,7 +2785,7 @@ int flip_hand(int imol) {
 
 
 //! \brief test function for analysis of multiple map
-int analyse_map_point_density_change(const std::vector<int> &map_number_list) {
+int analyse_map_point_density_change(const std::vector<int> &map_number_list, int imol_map_mask) {
 
    std::vector<std::pair<clipper::Xmap<float> *, float> > xmaps;
    for (const auto &i : map_number_list) {
@@ -2787,10 +2795,17 @@ int analyse_map_point_density_change(const std::vector<int> &map_number_list) {
       }
    }
 
+   clipper::Xmap<float> xmap_for_mask;
+   if (is_valid_map_molecule(imol_map_mask)) {
+      xmap_for_mask = graphics_info_t::molecules[imol_map_mask].xmap;
+   }
+
    std::cout << "DEBUG:: in analyse_map_point_density_change() with xmaps size " << xmaps.size() << std::endl;
    if (! xmaps.empty()) {
+
       // clipper::Xmap<float> linear_fit_map = coot::util::analyse_map_point_density_change(xmaps);
-      clipper::Xmap<float> zde = coot::util::zero_dose_extrapolation(xmaps);
+      clipper::Xmap<float> zde = coot::util::zero_dose_extrapolation(xmaps, xmap_for_mask);
+
       int new_molecule_number = graphics_info_t::create_molecule();
       bool is_EM_flag = true;
       std::string label = "negative linear_fit_of_decay";
@@ -2804,7 +2819,7 @@ int analyse_map_point_density_change(const std::vector<int> &map_number_list) {
 }
 
 #ifdef USE_PYTHON
-int analyse_map_point_density_change_py(PyObject *map_number_list_py) {
+int analyse_map_point_density_change_py(PyObject *map_number_list_py, int imol_map_mask) {
 
    std::vector<int> mnl;
    if (PyList_Check(map_number_list_py)) {
@@ -2818,7 +2833,7 @@ int analyse_map_point_density_change_py(PyObject *map_number_list_py) {
       }
    }
    if (!mnl.empty()) {
-      return analyse_map_point_density_change(mnl);
+      return analyse_map_point_density_change(mnl, imol_map_mask);
    } else {
       return -1;
    }
