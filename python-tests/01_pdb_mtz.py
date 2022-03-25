@@ -1504,6 +1504,8 @@ class PdbMtzTestFunctions(unittest.TestCase):
         #
         diff_map = difference_map(imol_map_1, new_map, 1.0)
 
+        set_ignore_pseudo_zeros_for_map_stats(0)
+
         rms_1 = map_sigma(new_map)
         rms_2 = map_sigma(diff_map)
 
@@ -2439,7 +2441,7 @@ class PdbMtzTestFunctions(unittest.TestCase):
 
         self.failUnless(len(chids_2) == 4)
 
-        self.failUnless(chids_2[3] == "AAA_2")
+        self.failUnless(chids_2[3] == "AAA2")
         
 
     def test53_0(self):

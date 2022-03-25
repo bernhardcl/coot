@@ -3552,6 +3552,8 @@ on_pointer_atom_type_ok_button_clicked (GtkButton       *button,
     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("SO4");
     tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_po4"));
     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("PO4");
+    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_zn"));
+    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("ZN");
   }
   /* Recall that the molecule is set by the callback from menu item "activate" */
 
@@ -3578,11 +3580,11 @@ void
 on_run_refmac_run_button_clicked       (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				    "run_refmac_dialog");
-/*   printf("debugging bad window ------------- starting on button click callback.... \n"); */
+  GtkWidget *window = lookup_widget(GTK_WIDGET(button), "run_refmac_dialog");
 
-  execute_refmac(window);
+  /*   printf("debugging bad window ------------- starting on button click callback.... \n"); */
+
+  /* execute_refmac(window); */
 /*   free_memory_run_refmac(window); */
 /*   printf("debugging bad window about to refmac window destroy\n"); */
   /* This lookup is for testing/fixing? double running wierdness from
@@ -3603,7 +3605,7 @@ on_run_refmac_cancel_button_clicked    (GtkButton       *button,
 
   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
 				    "run_refmac_dialog");
-  free_memory_run_refmac(window);
+  /* free_memory_run_refmac(window); */
   gtk_widget_destroy(window);
 
 }
@@ -3614,7 +3616,7 @@ on_model_refine_dialog_refmac_button_clicked (GtkButton       *button,
 					      gpointer         user_data)
 {
 
-  wrapped_create_run_refmac_dialog();
+  /* wrapped_create_run_refmac_dialog(); */
 
 }
 
@@ -3786,9 +3788,9 @@ on_run_refmac_tls_checkbutton_toggled  (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton)) {
-    set_refmac_use_tls(1);
+    /* set_refmac_use_tls(1); */
   } else {
-    set_refmac_use_tls(0);
+    /* set_refmac_use_tls(0); */
   }
 }
 
@@ -3808,7 +3810,7 @@ on_run_refmac_twin_checkbutton_toggled (GtkToggleButton *togglebutton,
   GtkWidget *fobs_hbox       = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_fobs_hbox");
   GtkWidget *fiobs_hbox      = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_fiobs_hbox");
   if (gtk_toggle_button_get_active(togglebutton)) {
-    set_refmac_use_twin(1);
+    /* set_refmac_use_twin(1); */
     /* update the column labels */
     fill_option_menu_with_refmac_labels_options(map_optionmenu);
     /* hide SAD extras, no need to switch off use_sad as done in use_twin */
@@ -3845,18 +3847,18 @@ on_run_refmac_sad_checkbutton_toggled  (GtkToggleButton *togglebutton,
   GtkWidget *fobs_hbox  = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_fobs_hbox");
   GtkWidget *fpm_hbox = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_fpm_hbox");
   if (gtk_toggle_button_get_active(togglebutton)) {
-    set_refmac_use_sad(1);
+    /* set_refmac_use_sad(1); */
     /* de-sensitise the TWIN button, no need to switch off use_twin as done in use_sad */
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(twin_checkbutton), FALSE);
     gtk_widget_set_sensitive(twin_checkbutton, FALSE);
     gtk_widget_show(sad_extras);
     /* fill the entry with 1st existing atom */
-    fill_refmac_sad_atom_entry(GTK_WIDGET(togglebutton));
+    /* fill_refmac_sad_atom_entry(GTK_WIDGET(togglebutton)); */
     /* change label box from fobs to f+/- as SAD needs this */
     gtk_widget_hide(fobs_hbox);
     gtk_widget_show(fpm_hbox);
   } else {
-    set_refmac_use_sad(0);
+    /* set_refmac_use_sad(0); */
     gtk_widget_set_sensitive(twin_checkbutton, TRUE);
     gtk_widget_hide(sad_extras);
     /* change label box back from f+/- to fobs for 'normal' refinement */
@@ -3877,7 +3879,7 @@ on_run_refmac_map_mtz_radiobutton_toggled
 
   GtkWidget *map_combobox = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_map_combobox");
   if (gtk_toggle_button_get_active(togglebutton)) {
-    fill_combobox_with_refmac_mtz_file_options(map_combobox);
+    /* fill_combobox_with_refmac_mtz_file_options(map_combobox); */
   }
 }
 
@@ -3889,10 +3891,10 @@ on_run_refmac_mtz_file_radiobutton_toggled
 {
   /* I am not sure that this - or the above does the right thing */
 
-  GtkWidget *map_combobox = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_map_combobox");
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    fill_combobox_with_refmac_file_labels_options(map_combobox);
-  }
+  /* GtkWidget *map_combobox = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_map_combobox"); */
+  /* if (gtk_toggle_button_get_active(togglebutton)) { */
+  /*   fill_combobox_with_refmac_file_labels_options(map_combobox); */
+  /* } */
 
 }
 
@@ -4039,9 +4041,9 @@ on_run_refmac_ncs_checkbutton_toggled  (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
   if (gtk_toggle_button_get_active(togglebutton)) {
-    set_refmac_use_ncs(1);
+    /* set_refmac_use_ncs(1); */
   } else {
-    set_refmac_use_ncs(0);
+    /* set_refmac_use_ncs(0); */
   }
 
 }
@@ -6460,8 +6462,7 @@ on_preferences_map_radius_entry_changed
   GtkEntry *entry;
   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(editable), "preferences_map_radius_entry"));
   const gchar *text = gtk_entry_get_text(entry);
-  float fval = 0;
-  fval = atof(text);
+  float fval = atof(text);
   if ((fval > 0) && (fval <200)) {
     preferences_internal_change_value_float(PREFERENCES_MAP_RADIUS, fval);
     set_map_radius(fval);
@@ -9257,8 +9258,8 @@ on_move_molecule_here1_activate        (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = wrapped_create_move_molecule_here_dialog();
-  gtk_widget_show(w);
+  // GtkWidget *w = wrapped_create_move_molecule_here_dialog();
+  // gtk_widget_show(w);
 
 }
 
@@ -11981,20 +11982,51 @@ on_generic_objects_dialog_closebutton_clicked
                                         (GtkButton       *button,
 					 gpointer         user_data) {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "generic_objects_dialog");
-  gtk_widget_destroy(w);
+  GtkWidget *wb = GTK_WIDGET(button);
+  printf("DEBUG:: in on_generic_objects_dialog_closebutton_clicked() button %p\n", button);
+  printf("DEBUG:: in on_generic_objects_dialog_closebutton_clicked() button-as-widget %p\n", wb);
+  GtkWidget *w = lookup_widget(wb, "generic_objects_dialog");
+  printf("DEBUG:: in on_generic_objects_dialog_closebutton_clicked() dialog %p\n", w);
+
+  if (w) {
+    gtk_widget_destroy(w);
+  } else {
+    printf("ERROR:: in on_generic_objects_dialog_closebutton_clicked() generic_objects_dialog lookup failed\n");
+  }
   clear_generic_objects_dialog_pointer();
   graphics_draw();
+  printf("DEBUG:: in on_generic_objects_dialog_closebutton_clicked() done\n");
 
 }
+
+
+void
+on_generic_objects_dialog_response     (GtkDialog       *dialog,
+                                        gint             response_id,
+                                        gpointer         user_data) {
+
+  printf("DEBUG:: in on_generic_objects_dialog_response() dialog %p\n", dialog);
+  if (response_id == GTK_RESPONSE_CLOSE) {
+    gtk_widget_hide(GTK_WIDGET(dialog));
+    clear_generic_objects_dialog_pointer(); /* needed here? */
+  }
+  printf("DEBUG:: done on_generic_objects_dialog_response() dialog %p\n", dialog);
+
+}
+
+
 
 /* I don't know how this function gets activated, it's not the close button of the dialog */
 void
 on_generic_objects_dialog_close        (GtkDialog       *dialog,
                                         gpointer         user_data) {
-
+#if 0
+  printf("DEBUG:: in on_generic_objects_dialog_close() dialog %p\n", dialog);
+  gtk_widget_destroy(GTK_WIDGET(dialog));
   clear_generic_objects_dialog_pointer(); /* needed here? */
   graphics_draw();
+  printf("DEBUG:: done on_generic_objects_dialog_close() dialog %p\n", dialog);
+#endif
 
 }
 
@@ -12002,9 +12034,12 @@ void
 on_generic_objects_dialog_destroy      (GtkWidget       *object,
                                         gpointer         user_data) {
 
+  printf("DEBUG:: in on_generic_objects_dialog_destroy() object %p\n", object);
   clear_generic_objects_dialog_pointer();
+  printf("DEBUG:: done on_generic_objects_dialog_destroy() object %p\n", object);
 
 }
+
 
 
 void
@@ -12467,6 +12502,15 @@ on_calculate_views_activate            (GtkMenuItem     *menuitem,
 
 
 void
+on_calculate_updating_maps1_activate   (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
+{
+  show_calculate_updating_maps_gui();
+}
+
+
+
+void
 on_calculate_load_tutorial_model_and_data1_activate
                                         (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
@@ -12758,6 +12802,11 @@ on_simple_refmac_mtz_file_button_clicked
    GtkWidget *simple_refmac_dialog = lookup_widget(GTK_WIDGET(button), "simple_refmac_dialog");
    /* automtically file filter only mtz files */
    GtkFileFilter *filterselect = gtk_file_filter_new();
+
+
+
+   printf("####################################### on_simple_refmac_mtz_file_button_clicked() was called!\n");
+
    gtk_file_filter_add_pattern(filterselect, "*.mtz");
    gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(w), filterselect);
    /* we need to find the file combo box in the simple refmac dialog */
@@ -12791,13 +12840,8 @@ on_simple_refmac_filechooserdialog_response
       if (simple_refmac_dialog) {
          file_combobox = lookup_widget(GTK_WIDGET(simple_refmac_dialog), "simple_refmac_mtz_file_combobox");
          if (file_combobox) {
-#if (GTK_MAJOR_VERSION > 2)
+
             gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(file_combobox));
-#else
-            model_from_combobox = gtk_combo_box_get_model(GTK_COMBO_BOX(file_combobox));
-            store_from_model = GTK_LIST_STORE(model_from_combobox);
-            gtk_list_store_clear(store_from_model);
-#endif
             gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(file_combobox), file_name);
             gtk_combo_box_set_active(GTK_COMBO_BOX(file_combobox), 0);
          }

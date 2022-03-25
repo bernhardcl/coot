@@ -43,6 +43,8 @@
 
 #include "coot-fileselections.h"
 
+#include "widget-from-builder.hh"
+
 void
 graphics_info_t::clear_pending_picks() {
    a_is_pressed = 0;
@@ -147,11 +149,7 @@ graphics_info_t::model_fit_refine_button_name_list() {
    std::vector<std::string> names;
    names.push_back("model_refine_dialog_refine_params_button");
    names.push_back("model_refine_dialog_map_select_button");
-#if (GTK_MAJOR_VERSION >1)
    names.push_back("model_refine_dialog_fixed_atoms_button");
-#else
-   names.push_back("model_refine_dialog_fix_atoms_button");
-#endif
 //   names.push_back("model_refine_dialog_find_waters_button");
    names.push_back("model_refine_dialog_add_alt_conf_button");
    names.push_back("model_refine_dialog_pointer_atom_button");
@@ -195,9 +193,11 @@ graphics_info_t::set_model_fit_refine_button_names(GtkWidget *widget) {
       button_names.push_back(normal_button_names[i]);
 
    for (unsigned int i=0; i<button_names.size(); i++) {
-      GtkWidget *w = lookup_widget(widget, button_names[i].c_str());
+      GtkWidget *w = widget_from_builder(button_names[i].c_str());
       if (w) {
-	 gtk_widget_set_name(w, button_names[i].c_str());
+	 gtk_widget_set_name(w, button_names[i].c_str());     // 20220311-PE old way
+         char *s = g_strdup(button_names[i].c_str()); // leaked?
+         g_object_set_data(G_OBJECT(w), "name", s);           // new way
       }
    }
 }
@@ -206,8 +206,7 @@ graphics_info_t::set_model_fit_refine_button_names(GtkWidget *widget) {
 void
 graphics_info_t::set_other_modelling_tools_button_names(GtkWidget *widget) { 
 
-   std::vector<std::string> other_button_names =
-     other_modelling_tools_button_name_list();
+   std::vector<std::string> other_button_names = other_modelling_tools_button_name_list();
 
    std::vector<std::string> button_names = other_button_names;
    // dont need extra ones here yet
@@ -215,14 +214,15 @@ graphics_info_t::set_other_modelling_tools_button_names(GtkWidget *widget) {
    //   button_names.push_back(other_button_names[i]);
 
    for (unsigned int i=0; i<button_names.size(); i++) {
-      GtkWidget *w = lookup_widget(widget, button_names[i].c_str());
+      // GtkWidget *w = lookup_widget(widget, button_names[i].c_str());
+      GtkWidget *w = widget_from_builder(button_names[i].c_str());
       if (w) {
-        gtk_widget_set_name(w, button_names[i].c_str());
+         gtk_widget_set_name(w, button_names[i].c_str()); // old way.
+         char *s = g_strdup(button_names[i].c_str()); // leaked?
+         g_object_set_data(G_OBJECT(w), "name", s); // new way
       }
    }
 }
-
-   
 
 
 // static
@@ -953,7 +953,8 @@ graphics_info_t::check_if_in_delete_item_define(GdkEventButton *event,
                   molecules[naii.imol].delete_residue_hydrogens(chain_id, resno, inscode, altloc);
                   delete_atom(naii.imol, chain_id.c_str(), resno, inscode.c_str(),
                               atom_name.c_str(), altloc.c_str());
-                  delete_object_handle_delete_dialog(destroy_delete_dialog_flag_by_ctrl_press);
+                  // this dialog no longer exists
+                  // delete_object_handle_delete_dialog(destroy_delete_dialog_flag_by_ctrl_press);
                   pick_pending_flag = 0;
                   run_post_manipulation_hook(naii.imol, DELETED);
                   item_deleted = true;
@@ -1078,8 +1079,7 @@ graphics_info_t::check_if_in_delete_item_define(GdkEventButton *event,
 	    if (resname != "WAT" && resname != "HOH") {
                setup_delete_residue_pulse(res);
 	       normal_cursor();
-	       delete_residue_by_atom_index(naii.imol, naii.atom_index,
-					    destroy_delete_dialog_flag_by_ctrl_press);
+	       delete_residue_by_atom_index(naii.imol, naii.atom_index, destroy_delete_dialog_flag_by_ctrl_press);
 	       g.update_environment_distances_maybe(naii.atom_index, naii.imol);
 	       run_post_manipulation_hook(naii.imol, DELETED);
 	       pick_pending_flag = 0;
@@ -1316,12 +1316,27 @@ graphics_info_t::check_if_in_terminal_residue_define(GdkEventButton *event) {
 } 
 
 int
-graphics_info_t::check_if_in_rot_trans_define(GdkEventButton *event) { 
+graphics_info_t::check_if_in_rot_trans_define(GdkEventButton *event) {
+
+   graphics_info_t g;
    
    int state = 0;
-   graphics_info_t g;
    if (g.in_rot_trans_object_define) {
-      if (g.rot_trans_object_type == ROT_TRANS_TYPE_ZONE) { 
+
+      if (g.rot_trans_object_type == ROT_TRANS_TYPE_RESIDUE) {
+         pick_info naii = atom_pick(event);
+         if (naii.success == GL_TRUE) {
+            g.rot_trans_atom_index_1 = naii.atom_index;
+            g.rot_trans_atom_index_2 = naii.atom_index;
+            g.imol_rot_trans_object = naii.imol;
+            g.execute_rotate_translate_ready();
+            fleur_cursor();
+            g.in_rot_trans_object_define = 0;
+            pick_pending_flag = 0;
+         }
+      }
+
+      if (g.rot_trans_object_type == ROT_TRANS_TYPE_ZONE) {
          pick_info naii = atom_pick(event);
          if (naii.success == GL_TRUE) {
             molecules[naii.imol].add_to_labelled_atom_list(naii.atom_index);
@@ -1334,7 +1349,7 @@ graphics_info_t::check_if_in_rot_trans_define(GdkEventButton *event) {
 	       if (g.in_rot_trans_object_define == 2) { 
 		  if (naii.imol == g.imol_rot_trans_object) { 
 		     g.rot_trans_atom_index_2 = naii.atom_index;
-		     
+
 		     // now we are setup to move:
 		     g.execute_rotate_translate_ready();
 		     fleur_cursor();
@@ -1498,7 +1513,7 @@ GtkWidget *
 graphics_info_t::wrapped_create_residue_type_chooser_window(bool show_stub_option_flag) const {
 
    GtkWidget *w = create_residue_type_chooser_window();
-   GtkWidget *b = lookup_widget(w, "residue_type_chooser_stub_checkbutton");
+   GtkWidget *b = widget_from_builder("residue_type_chooser_stub_checkbutton");
 
    if (show_stub_option_flag == 0) 
       gtk_widget_hide(b);
@@ -2019,8 +2034,7 @@ graphics_info_t::check_if_in_base_pairing_define(GdkEventButton *event) {
 	 std::string chain_id = at->GetChainID();
 	 watson_crick_pair(naii.imol, chain_id.c_str(), res_no);
 	 if (other_modelling_tools_dialog) {
-	    GtkWidget *w = lookup_widget(other_modelling_tools_dialog,
-					 "other_tools_base_pair_toggle_button");
+	    GtkWidget *w = widget_from_builder("other_tools_base_pair_toggle_button");
 	    if (w) {
 	       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), FALSE);
 	    } 

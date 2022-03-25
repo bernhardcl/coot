@@ -2,6 +2,7 @@
 #shader vertex
 
 #version 330 core
+// model.shader
 
 layout(location = 0) in vec3 model_rotation_matrix_0;
 layout(location = 1) in vec3 model_rotation_matrix_1;
@@ -36,6 +37,7 @@ void main() {
 #shader fragment
 
 #version 330 core
+// model.shader
 
 in vec3 frag_pos_transfer;
 in vec3 normal_transfer;
@@ -103,19 +105,24 @@ void main() {
 
    for (int i=0; i<2; i++) {
       if (light_sources[i].is_on) {
+
+         // sum_col += vec4(0.14, 0, 0.14,1);
+
          vec3 light_dir = light_sources[i].direction_in_molecule_coordinates_space;
          float dp_raw = dot(normal_transfer, light_dir);
          // we can't have specular lights where there is no diffuse light
          float dp = dp_raw;
-         if (dp <= 0.0)
+         if (dp_raw <= 0.0)
             specular_strength = 0.0;
 
          // dp = clamp(dp, 0.0, 1.0); // no negative dot products for diffuse
          dp = abs(dp); // no black model interiors
 
-         vec4 lsa = vec4(0.4, 0.4, 0.4, 1.0); // fix these
-         vec4 lsd = vec4(0.6, 0.6, 0.6, 1.0);
-         vec4 ambient  = colour_transfer * lsa * 0.15;
+         specular_strength = specular_strength * 1110.0;
+
+         vec4 lsa = light_sources[i].ambient;
+         vec4 lsd = light_sources[i].diffuse;
+         vec4 ambient  = colour_transfer * lsa *  0.15;
          vec4 diffuse  = colour_transfer * lsd * dp * 0.9;
 
          // specular
@@ -129,7 +136,8 @@ void main() {
          float spec = pow(dp_view_reflect, shininess);
          vec4 specular = specular_strength * spec * light_sources[i].specular;
 
-         sum_col += ambient + diffuse + specular;
+         sum_col += ambient; // + diffuse + specular;
+         sum_col += diffuse;
 
          // vec3 light_to_eye = normalize(eye_pos - 100.0 * light_dir);
          // sum_col = vec4(0.5 * view_dir + vec3(0.5,0.5,0.5), 1.0);
@@ -140,7 +148,12 @@ void main() {
    float fog_amount = 0.0;
    if (do_depth_fog)
       fog_amount = get_fog_amount(gl_FragCoord.z);
+
    outputColor += mix(sum_col, bg_col, fog_amount);
+   outputColor = colour_transfer;
+   outputColor = sum_col;
+
+   // outputColor = vec4(0,0.8,0,1)
 
    // If we are doing depth blur, we need to make the forground objects look more
    // like the background colour (*not* using alpha channel), something like this:

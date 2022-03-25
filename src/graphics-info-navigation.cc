@@ -62,6 +62,8 @@
 
 #include "cc-interface.hh"  // for statusbar_text
 
+#include "widget-from-builder.hh"
+
 // After this function, we call try_centre_from_new_go_to_atom();
 void graphics_info_t::set_go_to_atom_chain_residue_atom_name(const gchar *t1,
 							     int it2,
@@ -386,13 +388,13 @@ graphics_info_t::intelligent_near_atom_centring(GtkWidget *go_to_atom_window,
 
          // Update the graphics (glarea widget):
          //
-         update_things_on_move_and_redraw(); // (symmetry, environment, map) and draw it
+         // update_things_on_move_and_redraw(); // (symmetry, environment, map) and draw it
          // and show something in the statusbar
          std::string ai;
          ai = atom_info_as_text_for_statusbar(atom_index, imol);
          add_status_bar_text(ai);
 
-#if GTK3_CAN_DO_SEQUENCE_VIEW
+         // #if GTK3_CAN_DO_SEQUENCE_VIEW
          auto sequence_view_highlight_residue_maybe = [] (mmdb::Atom *next_atom,
                                                           GtkWidget *svc) {
                                                          if (svc) {
@@ -406,7 +408,7 @@ graphics_info_t::intelligent_near_atom_centring(GtkWidget *go_to_atom_window,
                                                       };
 
          sequence_view_highlight_residue_maybe(next_atom, get_sequence_view_is_displayed(imol));
-#endif
+         // #endif
       }
    }
    return 1;
@@ -471,13 +473,16 @@ graphics_info_t::update_widget_go_to_atom_values(GtkWidget *window, mmdb::Atom *
    GtkEntry *entry;
 
    if (window) {
-       entry = GTK_ENTRY(lookup_widget(window, "go_to_atom_chain_entry"));
-       gtk_entry_set_text(entry, go_to_atom_chain_.c_str());
+      // entry = GTK_ENTRY(lookup_widget(window, "go_to_atom_chain_entry"));
+      entry = GTK_ENTRY(widget_from_builder("go_to_atom_chain_entry"));
+      gtk_entry_set_text(entry, go_to_atom_chain_.c_str());
 
-      entry = GTK_ENTRY(lookup_widget(window, "go_to_atom_residue_entry"));
+      // entry = GTK_ENTRY(lookup_widget(window, "go_to_atom_residue_entry"));
+      entry = GTK_ENTRY(widget_from_builder("go_to_atom_residue_entry"));
       gtk_entry_set_text(entry,res_str.c_str());
 
-      entry = GTK_ENTRY(lookup_widget(window, "go_to_atom_atom_name_entry"));
+      // entry = GTK_ENTRY(lookup_widget(window, "go_to_atom_atom_name_entry"));
+      entry = GTK_ENTRY(widget_from_builder("go_to_atom_atom_name_entry"));
       std::string atom_name_txt = go_to_atom_atom_name_;
       if (! (go_to_atom_atom_altLoc_ == "empty")) {
 	 if (go_to_atom_atom_altLoc_ != "") {
@@ -707,8 +712,14 @@ graphics_info_t::update_go_to_atom_window_on_changed_mol(int imol) {
 
       // The go to atom molecule matched this molecule, so we
       // need to regenerate the residue and atom lists.
-      GtkWidget *residue_tree = lookup_widget(go_to_atom_window, "go_to_atom_residue_tree");
-      GtkWidget *atom_list = lookup_widget(go_to_atom_window, "go_to_atom_atom_list");
+      // GtkWidget *residue_tree = lookup_widget(go_to_atom_window, "go_to_atom_residue_tree");
+      GtkWidget *residue_tree = widget_from_builder("go_to_atom_residue_tree");
+      GtkWidget *atom_list    = widget_from_builder("go_to_atom_atom_list");
+
+
+      if (false)
+         std::cout << ".......................... in update_go_to_atom_window_on_changed_mol() " << imol
+                   << " residue_tree " << residue_tree << " atom_list " << atom_list << std::endl;
       if (residue_tree == NULL) {
          std::cout << "ERROR:: residue_tree (go_to_atom_residue_tree) is null!\n";
       } else {
@@ -722,22 +733,18 @@ graphics_info_t::update_go_to_atom_window_on_changed_mol(int imol) {
 void
 graphics_info_t::apply_go_to_atom_from_widget(GtkWidget *widget) {
 
-  const gchar *chain_str;
-  const gchar *res_str;
-  const gchar *atom_name_str;
-
   GtkEntry *entry;
 
-  entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(widget),
-				  "go_to_atom_chain_entry"));
-  chain_str = gtk_entry_get_text(entry);
+  // entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(widget), "go_to_atom_chain_entry"));
+  entry = GTK_ENTRY(widget_from_builder("go_to_atom_chain_entry"));
+  const gchar *chain_str = gtk_entry_get_text(entry); 
 
-  entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(widget),
-				  "go_to_atom_residue_entry"));
-  res_str = gtk_entry_get_text(entry);
+  // entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(widget), "go_to_atom_residue_entry"));
+  entry = GTK_ENTRY(widget_from_builder("go_to_atom_residue_entry"));
+  const gchar *res_str = gtk_entry_get_text(entry);
 
-  entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(widget),
-				  "go_to_atom_atom_name_entry"));
+  // entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(widget), "go_to_atom_atom_name_entry"));
+  entry = GTK_ENTRY(widget_from_builder("go_to_atom_atom_name_entry"));
 
   const gchar *txt =  gtk_entry_get_text(entry);
   if (txt) {
@@ -749,10 +756,9 @@ graphics_info_t::apply_go_to_atom_from_widget(GtkWidget *widget) {
      // we have to use the version of set_go_to.. that has 4 params,
      // because the 3 parameter version sets the altconf to "empty:.
      //
-     atom_name_str = p.first.c_str();
+     const gchar *atom_name_str = p.first.c_str();
 
-     std::pair<std::string, std::string> resno_inscode =
-	split_resno_inscode(std::string(res_str));
+     std::pair<std::string, std::string> resno_inscode = split_resno_inscode(std::string(res_str));
      int resno = atoi(resno_inscode.first.c_str());
      std::string inscode = resno_inscode.second;
 
@@ -790,7 +796,7 @@ graphics_info_t::update_go_to_atom_window_on_new_mol() {
       // GtkWidget *option_menu = lookup_widget(GTK_WIDGET(go_to_atom_window),
       //                                        "go_to_atom_molecule_optionmenu");
 
-      GtkWidget *combobox = lookup_widget(go_to_atom_window, "go_to_atom_molecule_combobox");
+      GtkWidget *combobox = widget_from_builder("go_to_atom_molecule_combobox");
 
       std::cout << "debug:: in update_go_to_atom_window_on_new_mol() got molecule combobox "
                 << combobox << std::endl;
@@ -848,7 +854,7 @@ void
 graphics_info_t::update_go_to_atom_window_on_other_molecule_chosen(int imol) {
 
    if (go_to_atom_window) {
-      GtkWidget *combobox = lookup_widget(GTK_WIDGET(go_to_atom_window), "go_to_atom_molecule_combobox");
+      GtkWidget *combobox = widget_from_builder("go_to_atom_molecule_combobox");
 
       GCallback callback_func = G_CALLBACK(go_to_atom_mol_combobox_changed);
       gtk_cell_layout_clear(GTK_CELL_LAYOUT(combobox));
@@ -937,10 +943,10 @@ graphics_info_t::go_to_atom_mol_combobox_changed(GtkWidget *combobox, gpointer d
       int old_go_to_molecule = g.go_to_atom_molecule();
       g.set_go_to_atom_molecule(imol);
       if (imol != old_go_to_molecule) {
-	 GtkWidget *residue_tree = lookup_widget(GTK_WIDGET(combobox),
-						 "go_to_atom_residue_tree");
-	 GtkWidget *atom_list = lookup_widget(GTK_WIDGET(combobox),
-					      "go_to_atom_atom_list");
+	 // GtkWidget *residue_tree = lookup_widget(GTK_WIDGET(combobox), "go_to_atom_residue_tree");
+	 // GtkWidget *atom_list = lookup_widget(GTK_WIDGET(combobox), "go_to_atom_atom_list");
+	 GtkWidget *residue_tree = widget_from_builder("go_to_atom_residue_tree");
+	 GtkWidget *atom_list = widget_from_builder("go_to_atom_atom_list");
 	 std::cout << "Debug:: fill_go_to_atom_residue_tree_gtk2 " << imol << std::endl;
 	 fill_go_to_atom_residue_tree_and_atom_list_gtk2(imol, residue_tree, atom_list);
 
@@ -1279,4 +1285,21 @@ void graphics_info_t::register_user_defined_interesting_positions(const std::vec
 
    user_defined_interesting_positions = udip;
    user_defined_interesting_positions_idx = 0;
+}
+
+
+void
+graphics_info_t::sequence_view_highlight_residue_maybe(mmdb::Atom *atom, GtkWidget *svc) {
+
+   if (svc) {
+      if (atom) {
+         mmdb::Residue *residue_p = atom->residue;
+         if (residue_p) {
+            exptl::nsv *nsv = static_cast<exptl::nsv *>(g_object_get_data(G_OBJECT(svc), "nsv"));
+            if (nsv) {
+               nsv->highlight_residue(residue_p);
+            }
+         }
+      }
+   }
 }

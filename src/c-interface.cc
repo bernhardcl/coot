@@ -132,6 +132,8 @@
 #include "positioned-widgets.h"
 #include "widget-headers.hh"
 
+#include "widget-from-builder.hh"
+
 // moving column_label selection to c-interface from mtz bits.
 #include "cmtz-interface.hh"
 // #include "mtz-bits.h" stuff from here moved to cmtz-interface
@@ -486,6 +488,16 @@ int make_updating_model_molecule(const char *filename) {
    }
    return status;
 }
+
+void show_calculate_updating_maps_gui() {
+
+#ifdef USE_PYTHON
+   std::string cmd = "show_updating_maps_chooser()";
+   safe_python_command(cmd);
+#endif
+
+}
+
 
 // do we need to return the imol for the model and the map? If so, this
 // needs to be in cc-interface.hh
@@ -962,7 +974,8 @@ void hardware_stereo_mode() {
 	 int previous_mode = graphics_info_t::display_mode;
 	 graphics_info_t::display_mode = coot::HARDWARE_STEREO_MODE;
          GtkWidget *gl_area = graphics_info_t::glareas[0];
-	 GtkWidget *vbox = lookup_widget(gl_area, "main_window_vbox");
+	 // GtkWidget *vbox = lookup_widget(gl_area, "main_window_vbox");
+	 GtkWidget *vbox = widget_from_builder("main_window_vbox");
 	 if (!vbox) {
 	    std::cout << "ERROR:: failed to get vbox in hardware_stereo_mode!\n";
 	 } else {
@@ -990,7 +1003,8 @@ void zalman_stereo_mode() {
 	 int previous_mode = graphics_info_t::display_mode;
 	 graphics_info_t::display_mode = coot::ZALMAN_STEREO;
          GtkWidget *gl_area = graphics_info_t::glareas[0];
-	 GtkWidget *vbox = lookup_widget(gl_area, "main_window_vbox");
+	 // GtkWidget *vbox = lookup_widget(gl_area, "main_window_vbox");
+	 GtkWidget *vbox = widget_from_builder("main_window_vbox");
 	 if (!vbox) {
 	    std::cout << "ERROR:: failed to get vbox in zalman_stereo_mode!\n";
 	 } else {
@@ -1038,12 +1052,14 @@ void mono_mode() {
 
       if (graphics_info_t::display_mode != coot::MONO_MODE) {
 	 int previous_mode = graphics_info_t::display_mode;
-         GtkWidget *gl_widget = lookup_widget(graphics_info_t::get_main_window(), "window1");
+         // GtkWidget *gl_widget = lookup_widget(graphics_info_t::get_main_window(), "window1");
+         GtkWidget *gl_widget = graphics_info_t::glareas[0];
          int x_size = gtk_widget_get_allocated_width(gl_widget);
          int y_size = gtk_widget_get_allocated_height(gl_widget);
 	 graphics_info_t::display_mode = coot::MONO_MODE;
          GtkWidget *gl_area = graphics_info_t::glareas[0];
-	 GtkWidget *vbox = lookup_widget(gl_area, "main_window_vbox");
+	 // GtkWidget *vbox = lookup_widget(gl_area, "main_window_vbox");
+	 GtkWidget *vbox = widget_from_builder("main_window_vbox");
 	 if (!vbox) {
 	    std::cout << "ERROR:: failed to get vbox in mono mode!\n";
 	 } else {
@@ -1110,7 +1126,8 @@ void side_by_side_stereo_mode(short int use_wall_eye_flag) {
          short int stereo_mode = coot::SIDE_BY_SIDE_STEREO;
          if (use_wall_eye_flag)
             stereo_mode = coot::SIDE_BY_SIDE_STEREO_WALL_EYE;
-         GtkWidget *vbox = lookup_widget(graphics_info_t::get_main_window(), "vbox1");
+         // GtkWidget *vbox = lookup_widget(graphics_info_t::get_main_window(), "vbox1");
+         GtkWidget *vbox = widget_from_builder("vbox1"); // 20220309-PE is this what you really want? - needs testing
          GtkWidget *glarea = gl_extras(vbox, stereo_mode);
          if (glarea) {
             if (graphics_info_t::idle_function_spin_rock_token) {
@@ -1161,7 +1178,8 @@ void set_dti_stereo_mode(short int state) {
          } else {
             stereo_mode = coot::SIDE_BY_SIDE_STEREO;
          }
-         GtkWidget *vbox = lookup_widget(graphics_info_t::get_main_window(), "vbox1");
+         // GtkWidget *vbox = lookup_widget(graphics_info_t::get_main_window(), "vbox1");
+         GtkWidget *vbox = widget_from_builder("vbox1"); // 20220309-PE is this right?
          GtkWidget *glarea = gl_extras(vbox, stereo_mode);
          if (graphics_info_t::use_graphics_interface_flag) {
             if (graphics_info_t::idle_function_spin_rock_token) {
@@ -1186,6 +1204,24 @@ int stereo_mode_state() {
    add_to_history_simple("stereo-mode-state");
    return graphics_info_t::display_mode;
 }
+
+
+/*! \brief set the stereo mode (the relative view of the eyes)
+
+0 is 2010-mode
+1 is modern mode
+*/
+void set_stereo_style(int mode) {
+
+   if (mode == 0)
+      graphics_info_t::stereo_style_2010 = true;
+   else 
+      graphics_info_t::stereo_style_2010 = false;
+
+   graphics_draw();
+}
+   
+
 
 void set_hardware_stereo_angle_factor(float f) {
    graphics_info_t::hardware_stereo_angle_factor = f;
@@ -1940,21 +1976,24 @@ PyObject *map_statistics_py(int imol) {
 
 void set_density_size_from_widget(const char *text) {
 
-   graphics_info_t g;
-
-   float tmp = atof(text);
-
-   if ((tmp > 0.0) && (tmp < 9999.9)) {
-      g.box_radius_xray = tmp;
-   } else {
-      std::cout << "ERROR:: set_density_size_from_widget() Cannot interpret \""
-                << text << "\".  Assuming 10A" << std::endl;
-      g.box_radius_xray = 10.0;
-   }
-   //
-   for (int ii=0; ii<g.n_molecules(); ii++) {
-      if (is_valid_map_molecule(ii))
-	  g.molecules[ii].update_map(true);
+   if (text) {
+      try {
+         std::string ss(text);
+         float f = coot::util::string_to_float(ss);
+         if (f > 0.0) {
+            if (f < 1999.9) {
+               graphics_info_t g;
+               g.box_radius_xray = f;
+               for (int ii=0; ii<g.n_molecules(); ii++) {
+                  if (is_valid_map_molecule(ii))
+                     g.molecules[ii].update_map(true);
+               }
+            }
+         }
+      }
+      catch (const std::runtime_error &e) {
+         std::cout << "WARNING::" << e.what() << std::endl;
+      }
    }
    graphics_draw();
 }
@@ -1962,17 +2001,24 @@ void set_density_size_from_widget(const char *text) {
 void
 set_density_size_em_from_widget(const char *text) {
 
-   float tmp = atof(text);
-   graphics_info_t g;
-   if (tmp > 0.0) {
-      g.box_radius_em = tmp;
-      for (int ii=0; ii<g.n_molecules(); ii++)
-	 if (is_valid_map_molecule(ii))
-	    g.molecules[ii].update_map(true);
-   } else {
-      std::cout << "ERROR:: set_density_size_from_widget() Cannot interpret \""
-		<< text << "\".  Assuming 55A" << std::endl;
-      g.box_radius_em = 55.0;
+   if (text) {
+      try {
+         std::string ss(text);
+         float f = coot::util::string_to_float(ss);
+         if (f > 0.0) {
+            if (f < 1999.9) {
+               graphics_info_t g;
+               g.box_radius_em = f;
+               for (int ii=0; ii<g.n_molecules(); ii++) {
+                  if (is_valid_map_molecule(ii))
+                     g.molecules[ii].update_map(true);
+               }
+            }
+         }
+      }
+      catch (const std::runtime_error &e) {
+         std::cout << "WARNING::" << e.what() << std::endl;
+      }
    }
    graphics_draw();
 }
@@ -2605,6 +2651,16 @@ bool export_molecule_as_obj(int imol, const std::string &fn)  {
    return status;
 }
 
+bool export_molecule_as_gltf(int imol, const std::string &file_name) {
+
+   bool status = false;
+   if (is_valid_map_molecule(imol) || is_valid_model_molecule(imol)) {
+      status = graphics_info_t::molecules[imol].export_molecule_as_gltf(file_name);
+   }
+   return status;
+}
+
+
 
 
 // -------------------------------------------------------------------
@@ -2780,6 +2836,30 @@ float get_clipping_plane_back() {
 }
 
 
+/*! increase the *amount* of clipping, that is (independent of projection matrix)*/
+void increase_clipping_front() {
+   graphics_info_t g;
+   g.increase_clipping_front();
+}
+
+/*! increase the *amount* of clipping, that is (independent of projection matrix)*/
+void increase_clipping_back() {
+   graphics_info_t g;
+   g.increase_clipping_back();
+
+}
+
+/*! decrease the *amount* of clipping, that is (independent of projection matrix)*/
+void decrease_clipping_front() {
+   graphics_info_t g;
+   g.decrease_clipping_front();
+}
+
+/*! decrease the *amount* of clipping, that is (independent of projection matrix)*/
+void decrease_clipping_back() {
+   graphics_info_t g;
+   g.decrease_clipping_back();
+}
 
 
 /*  ----------------------------------------------------------------------- */
@@ -2864,7 +2944,8 @@ int get_colour_map_rotation_on_read_pdb_c_only_flag() {
 /* widget work */
 GtkWidget *wrapped_create_coords_colour_control_dialog() {
 
-   GtkWidget *w = create_coords_colour_control_dialog();
+   // GtkWidget *w = create_coords_colour_control_dialog();
+   GtkWidget *w = widget_from_builder("coords_colour_control_dialog");
 
    graphics_info_t g;
    g.fill_bond_colours_dialog_internal(w);
@@ -2942,7 +3023,8 @@ void set_colour_by_chain(int imol) {
       std::set<int> s; // dummy
       short int f = graphics_info_t::rotate_colour_map_on_read_pdb_c_only_flag;
       bool g = false; // goodsell_mode
-      graphics_info_t::molecules[imol].make_colour_by_chain_bonds(s,f,g);
+      bool force_rebonding = false;
+      graphics_info_t::molecules[imol].make_colour_by_chain_bonds(s,f,g, force_rebonding);
       graphics_draw();
    }
    std::string cmd = "set-colour-by-chain";
@@ -2957,7 +3039,8 @@ void set_colour_by_chain_goodsell_mode(int imol) {
       std::set<int> s; // dummy
       short int f = graphics_info_t::rotate_colour_map_on_read_pdb_c_only_flag;
       bool g = true; // goodsell_mode
-      graphics_info_t::molecules[imol].make_colour_by_chain_bonds(s,f,g);
+      bool force_rebonding = false;
+      graphics_info_t::molecules[imol].make_colour_by_chain_bonds(s,f,g, force_rebonding);
       graphics_draw();
    }
    std::string cmd = "set-colour-by-chain";
@@ -2969,7 +3052,8 @@ void set_colour_by_chain_goodsell_mode(int imol) {
 void set_colour_by_molecule(int imol) {
 
    if (is_valid_model_molecule(imol)) {
-      graphics_info_t::molecules[imol].make_colour_by_molecule_bonds();
+      bool force_rebonding = false;
+      graphics_info_t::molecules[imol].make_colour_by_molecule_bonds(force_rebonding);
       graphics_draw();
    }
    std::string cmd = "set-colour-by-molecule";
@@ -3160,8 +3244,8 @@ void set_default_representation_type(int type) {
 
 void set_bond_thickness(int imol, float t) {
    graphics_info_t g;
-   std::cout << "debug:: -----------------------------------set_bond_thickness() called with imol "
-             << imol << " thickness " << t << std::endl;
+   // std::cout << "debug:: -----------------------------------set_bond_thickness() called with imol "
+   // << imol << " thickness " << t << std::endl;
    g.set_bond_thickness(imol, t);
 }
 
@@ -3244,6 +3328,33 @@ clear_ball_and_stick(int imol) {
   }
     return 0;
 }
+
+/*! \brief set the model molecule representation stye 0 for ball-and-stick/licorice (default) and 1 for ball */
+void set_model_molecule_representation_style(int imol, unsigned int mode) {
+
+   // modes defined in Mesh.hh as an enum
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t::molecules[imol].set_model_molecule_representation_style(mode);
+   }
+   graphics_draw();
+}
+
+
+/*! set show a ribbon/mesh for a given molecule */
+void set_show_molecular_representation(int imol, int mesh_index, short int state) {
+
+   if (is_valid_model_molecule(imol)) {
+      if (mesh_index >= 0)
+         if (mesh_index < static_cast<int>(graphics_info_t::molecules[imol].meshes.size())) {
+            // graphics_info_t::molecules[imol].meshes[mesh_index].set_draw_mesh_state(state);
+            graphics_info_t g;
+            g.set_show_molecular_representation(imol, mesh_index, state);
+         }
+      graphics_draw();
+   }
+}
+
 
 /* clear the given additional representation  */
 void
@@ -3835,20 +3946,16 @@ float median_temperature_factor(int imol) {
 
    float low_cut = 2.0;
    float high_cut = 100.0;
-   short int low_cut_flag = 0;
-   short int high_cut_flag = 0;
+   bool low_cut_flag = false;
+   bool high_cut_flag = false;
 
    float median = -1.0;
-   if (imol < graphics_info_t::n_molecules()) {
-      if (graphics_info_t::molecules[imol].has_model()) {
-	 median = coot::util::median_temperature_factor(graphics_info_t::molecules[imol].atom_sel.atom_selection,
-							graphics_info_t::molecules[imol].atom_sel.n_selected_atoms,
-							low_cut, high_cut,
-							low_cut_flag,
-							high_cut_flag);
-      } else {
-	 std::cout << "WARNING:: molecule " << imol << " has no model\n";
-      }
+   if (is_valid_model_molecule(imol)) {
+      median = coot::util::median_temperature_factor(graphics_info_t::molecules[imol].atom_sel.atom_selection,
+                                                     graphics_info_t::molecules[imol].atom_sel.n_selected_atoms,
+                                                     low_cut, high_cut,
+                                                     low_cut_flag,
+                                                     high_cut_flag);
    } else {
       std::cout << "WARNING:: no such molecule as " << imol << "\n";
    }
@@ -4070,7 +4177,7 @@ int reset_view() {
 
       // Were we centred anywhere already?
       //
-      bool was_centred = 0;
+      bool was_centred = false;
       int centred_mol = -1;
       float best_fit_for_centred = 9001.1;
 
@@ -4116,14 +4223,12 @@ int reset_view() {
       }
 
 
-      if (! graphics_info_t::perspective_projection_flag) {
-         float size = g.molecules[new_centred_molecule].size_of_molecule();
-         if (size < 1.0) size = 1.0;
-         float new_zoom = 7.0*size;
-         g.setRotationCentreAndZoom(new_centre, new_zoom);
-      } else {
-         g.setRotationCentre(new_centre);
-      }
+      // float size = g.molecules[new_centred_molecule].size_of_molecule();
+      // if (size < 1.0) size = 1.0;
+      // float new_zoom = 7.0*size;
+      // g.setRotationCentreAndZoom(new_centre, new_zoom);
+      g.setRotationCentre(new_centre); // it's a Cartesian
+
       for(int ii=0; ii<graphics_info_t::n_molecules(); ii++) {
 	 graphics_info_t::molecules[ii].update_map(graphics_info_t::auto_recontour_map_flag);
 	 graphics_info_t::molecules[ii].update_symmetry();
@@ -4391,21 +4496,24 @@ autobuild_ca_off() {
 /*                         clipping */
 /*  ------------------------------------------------------------------------ */
 
-void do_clipping1_activate(){
+void do_clipping1_activate() {
 
-   GtkWidget *clipping_window;
+   std::cout << "############## do_clipping1_activate() " << std::endl;
+
    GtkScale *hscale;
    GtkAdjustment *adjustment;
 
    /* connect this to displaying the new clipping window */
 
-   clipping_window = create_clipping_window();
+   // GtkWidget *clipping_window = create_clipping_window();
+   GtkWidget *clipping_window = widget_from_builder("clipping_window");
 
-   hscale = GTK_SCALE(lookup_widget(clipping_window, "hscale1"));
-/*    gtk_scale_set_draw_value(hscale, TRUE);  already does */
+   GtkWidget *hscale1 = widget_from_builder("hscale1"); // really? needs testing
 
-   adjustment = GTK_ADJUSTMENT
-      (gtk_adjustment_new(0.0, -10.0, 20.0, 0.05, 4.0, 10.1));
+   hscale = GTK_SCALE(hscale1);
+   /*    gtk_scale_set_draw_value(hscale, TRUE);  already does */
+
+   adjustment = GTK_ADJUSTMENT(gtk_adjustment_new(0.0, -10.0, 20.0, 0.05, 4.0, 10.1));
 
    gtk_range_set_adjustment(GTK_RANGE(hscale), adjustment);
    g_signal_connect(G_OBJECT(adjustment), "value_changed",
@@ -5087,11 +5195,13 @@ void set_go_to_atom_molecule(int imol) {
 void graphics_to_ca_representation(int imol) {
 
    graphics_info_t g;
-   if (is_valid_model_molecule(imol))
-      g.molecules[imol].ca_representation();
-   else
+   if (is_valid_model_molecule(imol)) {
+      bool force_rebonding = false;
+      g.molecules[imol].ca_representation(force_rebonding);
+   } else {
       std::cout << "WARNING:: no such valid molecule " << imol
-		<< " in graphics_to_ca_representation" << std::endl;
+                << " in graphics_to_ca_representation" << std::endl;
+   }
    graphics_draw();
 
    std::vector<std::string> command_strings;
@@ -5104,16 +5214,18 @@ void graphics_to_ca_representation(int imol) {
 void graphics_to_colour_by_chain(int imol) {
 
    if (is_valid_model_molecule(imol)) {
-      graphics_info_t::molecules[imol].make_colour_by_chain_bonds();
+      bool force_rebonding = false;
+      graphics_info_t::molecules[imol].make_colour_by_chain_bonds(force_rebonding);
       graphics_draw();
    }
 }
 
 
-void graphics_to_ca_plus_ligands_representation   (int imol) {
+void graphics_to_ca_plus_ligands_representation(int imol) {
    if (is_valid_model_molecule(imol)) {
       graphics_info_t g;
-      g.molecules[imol].ca_plus_ligands_representation(g.Geom_p());
+      bool force_rebonding = false;
+      g.molecules[imol].ca_plus_ligands_representation(g.Geom_p(), force_rebonding);
       graphics_draw();
    }
    std::vector<std::string> command_strings;
@@ -5138,7 +5250,8 @@ void graphics_to_ca_plus_ligands_and_sidechains_representation   (int imol) {
 void graphics_to_bonds_representation(int imol) {
    graphics_info_t g;
    if (is_valid_model_molecule(imol)) {
-      g.molecules[imol].bond_representation(g.Geom_p());
+      bool force_rebonding = false;
+      g.molecules[imol].bond_representation(g.Geom_p(), force_rebonding);
       std::vector<std::string> command_strings;
       command_strings.push_back("graphics-to-bonds-representation");
       command_strings.push_back(graphics_info_t::int_to_string(imol));
@@ -5598,18 +5711,31 @@ void save_display_control_widget_in_graphics(GtkWidget *widget) {
 void
 post_display_control_window() {
 
-   GtkWidget *widget = wrapped_create_display_control_window();
+   GtkWidget *widget = wrapped_create_display_control_window(); // uses gtkbuilder
    gtk_widget_show(widget);
    std::vector<std::string> command_strings;
    command_strings.push_back("post-display-control-window");
    add_to_history(command_strings);
 }
 
+void
+clear_out_container(GtkWidget *vbox) {
+
+   auto my_delete_box_items = [] (GtkWidget *widget, void *data) {
+                                    gtk_container_remove(GTK_CONTAINER(data), widget); };
+
+   if (GTK_IS_CONTAINER(vbox))
+      gtk_container_foreach(GTK_CONTAINER(vbox), my_delete_box_items, vbox);
+
+}
 
 
 void add_map_display_control_widgets() {
 
    graphics_info_t g;
+
+   GtkWidget *map_vbox = widget_from_builder("display_map_vbox");
+   clear_out_container(map_vbox);
 
    for (int ii=0; ii<g.n_molecules(); ii++)
       if (g.molecules[ii].has_xmap() || g.molecules[ii].has_nxmap())
@@ -5621,6 +5747,9 @@ void add_map_display_control_widgets() {
 void add_mol_display_control_widgets() {
 
    graphics_info_t g;
+
+   GtkWidget *molecule_vbox = widget_from_builder("display_molecule_vbox");
+   clear_out_container(molecule_vbox);
 
    for (int ii=0; ii<g.n_molecules(); ii++) {
       if (g.molecules[ii].has_model()) {
@@ -5648,7 +5777,8 @@ void close_graphics_display_control_window() {
    graphics_info_t g;
    GtkWidget *w = g.display_control_window();
    if (w) {
-      gtk_widget_destroy(w);
+      // gtk_widget_destroy(w); // nope
+      gtk_widget_hide(w);
       reset_graphics_display_control_window();
    }
 }
@@ -5745,60 +5875,50 @@ void display_maps_py(PyObject *pyo) {
 void
 set_display_control_button_state(int imol, const std::string &button_type, int state) {
 
+   //   button type is "Active" or "Displayed"
    if (false)
-      std::cout << "start: set_display_control_button_state() " << imol << " " << button_type
+      std::cout << "start: set_display_control_button_state() imol " << imol << " type " << button_type
                 << " new_state: " << state << std::endl;
 
-   graphics_info_t g;
-   if (g.display_control_window()) {
+   GtkWidget *display_control_vbox = nullptr;
+   if (is_valid_model_molecule(imol))
+      display_control_vbox = widget_from_builder("display_molecule_vbox");
+   if (is_valid_map_molecule(imol))
+      display_control_vbox = widget_from_builder("display_map_vbox");
 
-      std::string button_name = "";
-      int nn = 3;
-      if (imol > 9) nn = 2;
-      if (imol > 99) nn = 1;
-      std::string four_char_imol(nn, '0');
-      four_char_imol += coot::util::int_to_string(imol);
+   if (GTK_IS_BOX(display_control_vbox)) {
+ 
+      GList *dlist = gtk_container_get_children(GTK_CONTAINER(display_control_vbox));
+      GList *free_list = dlist;
 
-      if (button_type == "Displayed") {
-	 button_name = "display_mol_button_";
-	 button_name += four_char_imol;
-      }
-
-      if (button_type == "Active") {
-	 button_name = "active_mol_button_";
-	 button_name += four_char_imol;
-      }
-
-      // std::cout << "lookup_widget() using button_name " << button_name << std::endl;
-      GtkWidget *button = lookup_widget(g.display_control_window(), button_name.c_str());
-      if (button) {
-
-	 // Don't make unnecessary changes (creates redraw events?)
-	 //
-	 bool is_active_now = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button));
-	 if (state != 0) {
-            if (is_active_now) {
-	    // nothing
-            } else {
-	       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), state);
+      while (dlist) {
+         GtkWidget *list_item = GTK_WIDGET(dlist->data);
+         if (true) {
+            int imol_widget = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(list_item), "imol"));
+            if (imol_widget == imol) {
+               if (is_valid_model_molecule(imol)) {
+                  if (button_type == "Active") {
+                     GtkWidget *w = GTK_WIDGET(g_object_get_data(G_OBJECT(list_item), "active_toggle_button"));
+                     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), state);
+                  }
+               }
+               if (button_type == "Displayed") { // molecule and map types
+                  GtkWidget *w = GTK_WIDGET(g_object_get_data(G_OBJECT(list_item), "display_toggle_button"));
+                  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), state);
+               }
             }
-         } else {
-	    if (is_active_now) {
-	       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), state);
-	    } else {
-	       // nothing again, it's already off.
-	    }
-	 }
-
-      } else {
-	 std::cout << "ERROR:: Opps failed to find button_type " << button_type << " button for mol "
-		   << imol << std::endl;
+         }
+         dlist = dlist->next;
       }
+      g_list_free(free_list);
    }
 }
 
 /*! \brief make the coordinates molecule displayed/undisplayed, 0 for off, 1 for on */
 void set_mol_displayed(int imol, int state) {
+
+   // std::cout << "debug:: set_mol_displayed called with imol " << imol << " state " << state << std::endl;
+
    graphics_info_t g;
    if (is_valid_model_molecule(imol)) {
       graphics_info_t::molecules[imol].set_mol_is_displayed(state);
@@ -5875,9 +5995,9 @@ void set_all_maps_displayed(int on_or_off) {
    int nm = graphics_info_t::n_molecules();
    for (int imol=0; imol<nm; imol++) {
       if (is_valid_map_molecule(imol)) {
-	 graphics_info_t::molecules[imol].set_mol_is_active(on_or_off);
-	 if (g.display_control_window())
+	 if (g.display_control_window()) {
 	    set_display_control_button_state(imol, "Displayed", on_or_off);
+         }
       }
    }
    g.mol_displayed_toggle_do_redraw = true;
@@ -5909,7 +6029,7 @@ void display_only_active() {
 
    std::pair<bool, std::pair<int, coot::atom_spec_t> > aa = active_atom_spec();
 
-   std::cout << "display_only_active()" << aa.first << " " << aa.second.first << " " << aa.second.second << std::endl;
+   std::cout << "INFO:: display_only_active()" << aa.first << " " << aa.second.first << " " << aa.second.second << std::endl;
 
    if (aa.first) {
       int imol_active = aa.second.first;
@@ -6218,7 +6338,8 @@ void set_refine_ramachandran_angles(int state) {
    // Adjust the GUI
    if (graphics_info_t::use_graphics_interface_flag) {
       std::string w_name = "main_toolbar_restraints_rama_label";
-      GtkWidget *w = lookup_widget(graphics_info_t::glareas[0], w_name.c_str());
+      // GtkWidget *w = lookup_widget(graphics_info_t::glareas[0], w_name.c_str());
+      GtkWidget *w = widget_from_builder(w_name);
       if (w) {
 	 if (state) {
 	    if (graphics_info_t::restraints_rama_type == coot::RAMA_TYPE_ZO) {
@@ -6852,7 +6973,10 @@ void post_scheme_scripting_window() {
         GtkWidget *scheme_entry;
         window = create_scheme_window();
 
-        scheme_entry = lookup_widget(window, "scheme_window_entry");
+        // scheme_entry = lookup_widget(window, "scheme_window_entry");
+
+        // 20220309-PE when will this get used?
+        scheme_entry = widget_from_builder("scheme_window_entry");
         setup_guile_window_entry(scheme_entry); // USE_PYTHON and USE_GUILE used here
         gtk_widget_show(window);
 
@@ -6884,12 +7008,15 @@ void post_python_scripting_window() {
 
    } else {
 
-     // let's load the simple window
+      // let's load the simple window
 
-      GtkWidget *window;
-      GtkWidget *python_entry;
-      window = create_python_window();
-      python_entry = lookup_widget(window, "python_window_entry");
+      GtkWidget *window = widget_from_builder("python_window");
+
+      // python_entry = lookup_widget(window, "python_window_entry");
+
+      // old but better python script? Hmm.
+      // Probably not. Anyway, for another time to resolve/delete
+      GtkWidget *python_entry = widget_from_builder("python_window_entry");
       setup_python_window_entry(python_entry); // USE_PYTHON and USE_GUILE used here
       gtk_widget_show(window);
 
@@ -6908,16 +7035,29 @@ void post_python_scripting_window() {
 void
 run_command_line_scripts() {
 
-   if (graphics_info_t::command_line_scripts->size()) {
-      std::cout << "INFO:: There are " << graphics_info_t::command_line_scripts->size()
+   if (graphics_info_t::command_line_scripts.size()) {
+      std::cout << "INFO:: There are " << graphics_info_t::command_line_scripts.size()
 		<< " command line scripts to run\n";
-      for (unsigned int i=0; i<graphics_info_t::command_line_scripts->size(); i++)
-	 std::cout << "    " << (*graphics_info_t::command_line_scripts)[i].c_str()
+      for (unsigned int i=0; i<graphics_info_t::command_line_scripts.size(); i++)
+	 std::cout << "    " << graphics_info_t::command_line_scripts[i].c_str()
 		   << std::endl;
    }
 
-    for (unsigned int i=0; i<graphics_info_t::command_line_scripts->size(); i++)
-       run_script((*graphics_info_t::command_line_scripts)[i].c_str());
+   // --------- scripts ------------
+
+   for (unsigned int i=0; i<graphics_info_t::command_line_scripts.size(); i++) {
+      std::string fn = graphics_info_t::command_line_scripts[i];
+      std::cout << "calling run_script() for file " << fn << std::endl;
+      run_script(fn.c_str());
+   }
+
+   // --------- commands ------------
+   
+   for (unsigned int i=0; i<graphics_info_t::command_line_commands.commands.size(); i++)
+      if (graphics_info_t::command_line_commands.is_python)
+         safe_python_command(graphics_info_t::command_line_commands.commands[i].c_str());
+      else
+         safe_scheme_command(graphics_info_t::command_line_commands.commands[i].c_str());
 
     for (unsigned int i=0; i<graphics_info_t::command_line_commands.commands.size(); i++)
        if (graphics_info_t::command_line_commands.is_python)
@@ -6925,24 +7065,24 @@ run_command_line_scripts() {
        else
 	  safe_scheme_command(graphics_info_t::command_line_commands.commands[i].c_str());
 
-    graphics_info_t g;
-    for (unsigned int i=0; i<graphics_info_t::command_line_accession_codes.size(); i++) {
-       std::cout << "get accession code " << graphics_info_t::command_line_accession_codes[i]
-		 << std::endl;
-       std::vector<std::string> c;
-       c.push_back("get-eds-pdb-and-mtz");
-       c.push_back(single_quote(graphics_info_t::command_line_accession_codes[i]));
+   graphics_info_t g;
+   for (unsigned int i=0; i<graphics_info_t::command_line_accession_codes.size(); i++) {
+      std::cout << "get accession code " << graphics_info_t::command_line_accession_codes[i]
+                << std::endl;
+      std::vector<std::string> c;
+      c.push_back("get-eds-pdb-and-mtz");
+      c.push_back(single_quote(graphics_info_t::command_line_accession_codes[i]));
 
 #ifdef USE_GUILE
        std::string sc = g.state_command(c, graphics_info_t::USE_SCM_STATE_COMMANDS);
        safe_scheme_command(sc.c_str());
 #else
 #ifdef USE_PYTHON
-       std::string pc = g.state_command(c, graphics_info_t::USE_PYTHON_STATE_COMMANDS);
-       safe_python_command(pc.c_str());
+      std::string pc = g.state_command(c, graphics_info_t::USE_PYTHON_STATE_COMMANDS);
+      safe_python_command(pc.c_str());
 #endif
 #endif
-    }
+   }
 }
 
 void run_update_self_maybe() { // called when --update-self given at command line
@@ -7167,10 +7307,12 @@ GtkWidget *wrapped_create_run_state_file_dialog() {
       }
    } else {
 
-      // Old style
+      // Old style - I wonder what this is now...
 
-      w = create_run_state_file_dialog();
-      vbox_mols = lookup_widget(w, "mols_vbox");
+      // w = create_run_state_file_dialog();
+      w = widget_from_builder("run_state_file_dialog");
+      // vbox_mols = lookup_widget(w, "mols_vbox");
+      vbox_mols = widget_from_builder("mols_vbox");
    }
 
    std::vector<std::string> v = g.save_state_data_and_models(filename, il);
@@ -7195,7 +7337,8 @@ GtkWidget *wrapped_create_run_state_file_dialog_py() {
    short int il = 1;
    GtkWidget *w = create_run_state_file_dialog();
 
-   GtkWidget *vbox_mols = lookup_widget(w, "mols_vbox");
+   // GtkWidget *vbox_mols = lookup_widget(w, "mols_vbox");
+   GtkWidget *vbox_mols = widget_from_builder("mols_vbox");
 
    graphics_info_t g;
    std::vector<std::string> v = g.save_state_data_and_models(filename, il);
@@ -7204,8 +7347,7 @@ GtkWidget *wrapped_create_run_state_file_dialog_py() {
       std::string s = "    ";
       s += v[i];
       GtkWidget *label = gtk_label_new(s.c_str());
-      std::cout << "fix the alignment wrapped_create_run_state_file_dialog_py()"
-                << std::endl;
+      std::cout << "fix the alignment wrapped_create_run_state_file_dialog_py()" << std::endl;
       // gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
       gtk_box_pack_start(GTK_BOX(vbox_mols), label, FALSE, FALSE, 2);
       gtk_widget_show(label);
@@ -7218,6 +7360,7 @@ GtkWidget *wrapped_create_run_state_file_dialog_py() {
 void
 run_guile_script(const char *filename) {
 
+   std::cout << "debug:: run_guile_script() A on " << filename << std::endl;
 #ifdef USE_GUILE
    std::string thunk("(lambda() ");
    thunk += "(load ";
@@ -7225,6 +7368,7 @@ run_guile_script(const char *filename) {
    thunk += filename;
    thunk += "\"))";
 
+   std::cout << "debug:: run_guile_script() B on " << filename << std::endl;
    SCM handler = scm_c_eval_string ("(lambda (key . args) "
      "(display (list \"Error in proc:\" key \" args: \" args)) (newline))");
 

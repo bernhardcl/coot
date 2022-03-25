@@ -103,6 +103,9 @@ void my_wrap_scm_boot_guile(int argc, char** argv) {
 /*                                                char **argv), */
 /*                             void *closure); */
 
+   // so that we don't run scheme commands before guile has been booted:
+   graphics_info_t::scm_boot_guile_booted = true;
+
    scm_boot_guile(argc, argv, inner_main, NULL);
 
    std::cout << "you should not see this, inner_main should never return\n";
@@ -114,19 +117,8 @@ void try_load_dot_coot_and_preferences() {
    // python versionn in coot-setup-python.cc
 
    bool run_startup_scripts_flag = run_startup_scripts_state();
-   
-   char *d1 = getenv("COOT_HOME");
-   char *d2 = getenv("HOME");
 
-   std::string directory;
-   
-   if (d1) {
-      directory = d1;
-   } else {
-      if (d2) {
-	 directory = d2;
-      }
-   }
+   std::string directory = coot::get_home_dir();
 
    if (! directory.empty()) {
 

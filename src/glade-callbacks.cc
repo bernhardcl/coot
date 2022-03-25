@@ -109,76 +109,6 @@ on_window1_delete_event_gtkbuilder_callback                (GtkWidget       *wid
 
 
 extern "C" G_MODULE_EXPORT
-void
-on_open_coordinates1_activate_gtkbuilder_callback          (GtkMenuItem     *menuitem,
-                                        gpointer         user_data)
-{
-  open_coords_dialog();
-}
-
-
-extern "C" G_MODULE_EXPORT
-void
-on_open_dataset1_activate_gtkbuilder_callback              (GtkMenuItem     *menuitem,
-                                        gpointer         user_data)
-{
-
-  int is_auto_read_fileselection = 0;
-  int is;
-  GtkWidget *file_filter_button;
-  GtkWidget *sort_button;
-  GtkWidget *dataset_fileselection1 = coot_dataset_chooser();
-
-  //   add_ccp4i_project_optionmenu(dataset_fileselection1, COOT_DATASET_FILE_SELECTION);
-  file_filter_button = add_filename_filter_button(dataset_fileselection1,
-						  COOT_DATASET_FILE_SELECTION);
-  sort_button = add_sort_button_fileselection(dataset_fileselection1);
-  /* add_filename_filter_button needs the sort button to be in place (for now) */
-  /*   set_directory_for_fileselection(dataset_fileselection1); */
-
-  /* stuff in user data saying if this is autoread or not... */
-  is = is_auto_read_fileselection;
-  g_object_set_data(G_OBJECT(dataset_fileselection1), "imol", GINT_TO_POINTER(is));
-
-  /* set_file_selection_dialog_size(dataset_fileselection1); */
-
-  set_transient_and_position(COOT_UNDEFINED_WINDOW, dataset_fileselection1);
-  gtk_widget_show (dataset_fileselection1);
-  /* in gtk2 we have to push the buttons after we show the selection */
-  push_the_buttons_on_fileselection(file_filter_button, sort_button,
-				    dataset_fileselection1);
-
-}
-
-extern "C" G_MODULE_EXPORT
-void
-on_auto_open_mtz_activate_gtkbuilder_callback              (GtkMenuItem     *menuitem,
-                                        gpointer         user_data)
-{
-  int is_auto_read_fileselection = 1;
-  int is;
-  GtkWidget *file_filter_button;
-  GtkWidget *sort_button;
-  GtkWidget *dataset_fileselection1 = coot_dataset_chooser ();
-  add_ccp4i_project_optionmenu(dataset_fileselection1, COOT_DATASET_FILE_SELECTION);
-  file_filter_button = add_filename_filter_button(dataset_fileselection1,
-						  COOT_DATASET_FILE_SELECTION);
-  sort_button = add_sort_button_fileselection(dataset_fileselection1);
-  /*   set_directory_for_fileselection(dataset_fileselection1); */
-
-  /* stuff in user data saying if this is autoread or not... */
-  is = is_auto_read_fileselection;
-  g_object_set_data(G_OBJECT(dataset_fileselection1), "imol", GINT_TO_POINTER(is));
-  set_file_selection_dialog_size(dataset_fileselection1);
-
-  set_transient_and_position(COOT_UNDEFINED_WINDOW, dataset_fileselection1);
-  gtk_widget_show (dataset_fileselection1);
-  push_the_buttons_on_fileselection(file_filter_button, sort_button,
-				    dataset_fileselection1);
-}
-
-
-extern "C" G_MODULE_EXPORT
 void on_file1_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
                                             gpointer         user_data)
 {
@@ -213,7 +143,7 @@ void
 on_cancel_coords_button1_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *coords_fileselection1 = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *coords_fileselection1 = widget_from_builder(
 						    "coords_fileselection1");
 
    gtk_widget_destroy(coords_fileselection1);
@@ -226,7 +156,7 @@ void
 on_cancel_dataset_button1_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *dataset_fileselection1 = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *dataset_fileselection1 = widget_from_builder(
 						   "dataset_fileselection1");
    gtk_widget_destroy(dataset_fileselection1);
 }
@@ -238,7 +168,7 @@ on_column_label_ok_button_clicked_gtkbuilder_callback      (GtkButton       *but
                                         gpointer         user_data)
 {
 
-  GtkWidget *column_label_window = lookup_widget(GTK_WIDGET(button), "column_label_window");
+  GtkWidget *column_label_window = widget_from_builder("column_label_window");
 
   handle_column_label_make_fourier_v2(column_label_window);
 
@@ -251,7 +181,7 @@ on_column_label_cancel_button_clicked_gtkbuilder_callback  (GtkButton       *but
                                         gpointer         user_data)
 {
    printf("column_label_window CANCEL button clicked\n");
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+   gtk_widget_destroy(widget_from_builder(
 				     "column_label_window"));
 }
 
@@ -272,8 +202,7 @@ void
 on_clipping_button_clicked_gtkbuilder_callback             (GtkButton       *button,
                                         gpointer         user_data)
 {
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
-				    "clipping_window"));
+   gtk_widget_hide(widget_from_builder( "clipping_window"));
 }
 
 
@@ -291,8 +220,8 @@ on_density_ok_button_clicked_gtkbuilder_callback           (GtkButton       *but
 /*    entry_char_type *text; */
    const char *text;
 
-   GtkEntry *entry_xray = GTK_ENTRY(lookup_widget(GTK_WIDGET(button), "map_radius_xray_entry"));
-   GtkEntry *entry_em   = GTK_ENTRY(lookup_widget(GTK_WIDGET(button), "map_radius_em_entry"));
+   GtkEntry *entry_xray = GTK_ENTRY(widget_from_builder("map_parameters_xray_radius_entry"));
+   GtkEntry *entry_em   = GTK_ENTRY(widget_from_builder("map_paameters_em_radius_entry"));
    const char *text_xray = gtk_entry_get_text(entry_xray);
    const char *text_em   = gtk_entry_get_text(entry_em);
    int imol = -1;
@@ -302,7 +231,7 @@ on_density_ok_button_clicked_gtkbuilder_callback           (GtkButton       *but
 
    /* Now the increment of the iso level entry */
 
-   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button), "iso_level_increment_entry"));
+   entry = GTK_ENTRY(widget_from_builder("iso_level_increment_entry"));
 
    text = gtk_entry_get_text(entry);
 
@@ -311,7 +240,7 @@ on_density_ok_button_clicked_gtkbuilder_callback           (GtkButton       *but
 
    /* As above, except a difference map */
 
-   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+   entry = GTK_ENTRY(widget_from_builder(
 				   "diff_map_iso_level_increment_entry"));
 
    text = gtk_entry_get_text(entry);
@@ -320,36 +249,36 @@ on_density_ok_button_clicked_gtkbuilder_callback           (GtkButton       *but
                                        /* we change the iso level for all maps */
 
 
-   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+   entry = GTK_ENTRY(widget_from_builder(
 				   "map_sampling_rate_entry"));
 
    text = gtk_entry_get_text(entry);
 
    set_map_sampling_rate_text(text);
 
+   // what a mish-mash of naming schemes. (it was one of the very first dialogs)
+   GtkWidget *dialog = widget_from_builder("global_map_properties_window");
+   gtk_widget_hide(dialog);
 
-
- /* Goodbye Mr Widget */
-
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
-				     "global_map_properties_window"));
 }
 /* In the menubar, Edit Density size has been selected. */
+// this is now map_parameters "Map Parameters"
 extern "C" G_MODULE_EXPORT
 void
 on_density_size1_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
-                                               gpointer         user_data)
-{
-   GtkWidget *density_window;
-   GtkWidget *checkbutton;
+                                               gpointer         user_data) {
+
    char *text;
    int imol = 0;		/* FIXME */
 
-   density_window = create_global_map_properties_window();
-   GtkWidget *entry = lookup_widget(density_window, "entry1");
+   // this widget is looked up in
+   // on_density_ok_button_clicked_gtkbuilder_callback()
 
-   GtkEntry *entry_xray = GTK_ENTRY(lookup_widget(GTK_WIDGET(density_window), "map_radius_xray_entry"));
-   GtkEntry *entry_em   = GTK_ENTRY(lookup_widget(GTK_WIDGET(density_window), "map_radius_em_entry"));
+   GtkWidget *density_window = widget_from_builder("global_map_properties_window");
+
+   // 20220315-PE archaic but OK for now
+   GtkEntry *entry_xray = GTK_ENTRY(widget_from_builder("map_parameters_x_ray_radius_entry"));
+   GtkEntry *entry_em   = GTK_ENTRY(widget_from_builder("map_parameters_em_radius_entry"));
    text = get_text_for_density_size_widget(); /* const gchar *text */
    gtk_entry_set_text(entry_xray, text);
    text = get_text_for_density_size_em_widget(); /* const gchar *text */
@@ -357,29 +286,30 @@ on_density_size1_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
    free (text);
    text = 0;
 
- /* Now the iso level increment entry  */
+   /* Now the iso level increment entry  */
 
-   entry = lookup_widget(density_window, "iso_level_increment_entry");
+   GtkWidget *entry;
+   entry = widget_from_builder("iso_level_increment_entry");
    text = get_text_for_iso_level_increment_entry(imol);
 
    gtk_entry_set_text(GTK_ENTRY(entry), text);
 
- /* Now the iso level for the differenece map increment entry  */
+   /* Now the iso level for the differenece map increment entry  */
 
-   entry = lookup_widget(density_window, "diff_map_iso_level_increment_entry");
+   entry = widget_from_builder("diff_map_iso_level_increment_entry");
    text = get_text_for_diff_map_iso_level_increment_entry(imol);
 
    gtk_entry_set_text(GTK_ENTRY(entry), text);
 
    /* Now the map rate multiplier: */
-   entry = lookup_widget(density_window, "map_sampling_rate_entry");
+   entry = widget_from_builder("map_sampling_rate_entry");
    text = get_text_for_map_sampling_rate_text();
 
    gtk_entry_set_text(GTK_ENTRY(entry), text);
 
-   checkbutton = lookup_widget(density_window, "map_dynamic_map_sampling_checkbutton");
+   GtkWidget *checkbutton = widget_from_builder("map_dynamic_map_sampling_checkbutton");
    set_map_dynamic_map_sampling_checkbutton(checkbutton);
-   checkbutton = lookup_widget(density_window, "map_dynamic_map_size_display_checkbutton");
+   checkbutton = widget_from_builder("map_dynamic_map_size_display_checkbutton");
    set_map_dynamic_map_display_size_checkbutton(checkbutton);
 
  /* Show the widget */
@@ -431,10 +361,10 @@ on_fps1_activate_gtkbuilder_callback                       (GtkMenuItem     *men
    GtkButton       *button;
 
    if ( get_fps_flag() == 1) {
-      button = GTK_BUTTON(lookup_widget(fps_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"radiobutton1"));
    } else {
-      button = GTK_BUTTON(lookup_widget(fps_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"radiobutton2"));
    }
 
@@ -455,13 +385,13 @@ on_fps_window_ok_button_clicked_gtkbuilder_callback        (GtkButton       *but
     button is active then set the flag to 1, if no is active, set it
     to 0.  */
 
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "radiobutton1"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("radiobutton1"))))
       set_fps_flag(1);
 
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "radiobutton2"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("radiobutton2"))))
       set_fps_flag(0);
 
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button), "fps_window"));
+   gtk_widget_destroy(widget_from_builder("fps_window"));
 
 }
 
@@ -472,13 +402,13 @@ on_active_map_ok_button_clicked_gtkbuilder_callback        (GtkButton       *but
                                         gpointer         user_data)
 {
 
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "active_map_radiobutton_yes"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("active_map_radiobutton_yes"))))
       set_active_map_drag_flag(1);
 
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "active_map_radiobutton_no"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("active_map_radiobutton_no"))))
       set_active_map_drag_flag(0);
 
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+   gtk_widget_destroy(widget_from_builder(
 				    "active_map_window"));
 
 }
@@ -493,10 +423,10 @@ on_dragged_map1_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
    GtkButton       *button;
 
    if ( get_active_map_drag_flag() == 1 ) {
-      button = GTK_BUTTON(lookup_widget(active_map_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"active_map_radiobutton_yes"));
    } else {
-      button = GTK_BUTTON(lookup_widget(active_map_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"active_map_radiobutton_no"));
    }
 
@@ -510,7 +440,7 @@ void
 on_map_colour1_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
                                              gpointer         user_data)
 {
-   // GtkWidget *menu = lookup_widget(GTK_WIDGET(menuitem), "rotamer_analysis1");
+   // GtkWidget *menu = widget_from_builder("rotamer_analysis1");
 
    //std::cout << "::::::::::::::::::::::::: on_map_colour1_activate_gtkbuilder_callback() " << std::endl;
 
@@ -549,16 +479,16 @@ on_show_symmetry_ok_button_clicked_gtkbuilder_callback     (GtkButton       *but
    const char *text;
 
 /* Show Symmetry Radiobuttons */
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "show_symmetry_yes_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("show_symmetry_yes_radiobutton"))))
       set_show_symmetry_master(1);
 
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "show_symmetry_no_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("show_symmetry_no_radiobutton"))))
       set_show_symmetry_master(0);
 
 /* Symmetry Radius Entry */
 
-   entry = (GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+   entry = (GTK_ENTRY(widget_from_builder(
 				    "symmetry_radius_entry")));
 
    text = gtk_entry_get_text(entry);
@@ -570,15 +500,15 @@ on_show_symmetry_ok_button_clicked_gtkbuilder_callback     (GtkButton       *but
 
 /* Show UnitCell Radiobuttons */
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "unit_cell_yes_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("unit_cell_yes_radiobutton"))))
       set_show_unit_cells_all(1);
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "unit_cell_no_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("unit_cell_no_radiobutton"))))
       set_show_unit_cells_all(0);
 
 /* The Symmetry Colour Checkbutton */
 
-/*    checkbutton = lookup_widget(GTK_WIDGET(button),  */
+/*    checkbutton = widget_from_builder( */
 /* 			       "show_symmetry_molecule_rotate_colour_map_checkbutton"); */
 
 /*    if (GTK_TOGGLE_BUTTON(checkbutton)->active)  */
@@ -589,7 +519,7 @@ on_show_symmetry_ok_button_clicked_gtkbuilder_callback     (GtkButton       *but
 
 /* The Symmetry Colour by Symop Checkbutton */
 
-/*    checkbutton = lookup_widget(GTK_WIDGET(button),  */
+/*    checkbutton = widget_from_builder( */
 /* 			       "show_symmetry_colour_by_symop_checkbutton"); */
 /*    if (GTK_TOGGLE_BUTTON(checkbutton)->active)  */
 /*      set_symmetry_colour_by_symop(1); */
@@ -599,7 +529,7 @@ on_show_symmetry_ok_button_clicked_gtkbuilder_callback     (GtkButton       *but
 
 /* The Symmetry Whole Chain Checkbutton */
 
-/*    checkbutton = lookup_widget(GTK_WIDGET(button),  */
+/*    checkbutton = widget_from_builder( */
 /* 			       "show_symmetry_whole_molecule_checkbutton"); */
 /*    if (GTK_TOGGLE_BUTTON(checkbutton)->active)  */
 /*      set_symmetry_whole_chain(1); */
@@ -608,7 +538,7 @@ on_show_symmetry_ok_button_clicked_gtkbuilder_callback     (GtkButton       *but
 
 /* The Expanded Atom Label Checkbutton */
 
-   checkbutton = lookup_widget(GTK_WIDGET(button),
+   checkbutton = widget_from_builder(
 			       "show_symmetry_expanded_labels_checkbutton");
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
      set_symmetry_atom_labels_expanded(1);
@@ -616,7 +546,7 @@ on_show_symmetry_ok_button_clicked_gtkbuilder_callback     (GtkButton       *but
      set_symmetry_atom_labels_expanded(0);
 
 /* Goodbye Mr Widget */
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+   gtk_widget_destroy(widget_from_builder(
 				    "show_symmetry_window"));
 
 }
@@ -634,16 +564,16 @@ on_show_symmetry_apply_button_clicked_gtkbuilder_callback  (GtkButton       *but
    const char *text;
 
 /* Show Symmetry Radiobuttons */
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "show_symmetry_yes_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("show_symmetry_yes_radiobutton"))))
       set_show_symmetry_master(1);
 
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "show_symmetry_no_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("show_symmetry_no_radiobutton"))))
       set_show_symmetry_master(0);
 
 /* Symmetry Radius Entry */
 
-   entry = (GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+   entry = (GTK_ENTRY(widget_from_builder(
 				    "symmetry_radius_entry")));
 
    text = gtk_entry_get_text(entry);
@@ -655,15 +585,15 @@ on_show_symmetry_apply_button_clicked_gtkbuilder_callback  (GtkButton       *but
 
 /* Show UnitCell Radiobuttons */
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "unit_cell_yes_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("unit_cell_yes_radiobutton"))))
       set_show_unit_cells_all(1);
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "unit_cell_no_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("unit_cell_no_radiobutton"))))
       set_show_unit_cells_all(0);
 
 /* The Symmetry Colour Checkbutton */
 
-/*    checkbutton = lookup_widget(GTK_WIDGET(button),  */
+/*    checkbutton = widget_from_builder( */
 /* 			       "show_symmetry_molecule_rotate_colour_map_checkbutton"); */
 
 /*    if (GTK_TOGGLE_BUTTON(checkbutton)->active)  */
@@ -674,7 +604,7 @@ on_show_symmetry_apply_button_clicked_gtkbuilder_callback  (GtkButton       *but
 
 /* The Symmetry Colour by Symop Checkbutton */
 
-/*    checkbutton = lookup_widget(GTK_WIDGET(button),  */
+/*    checkbutton = widget_from_builder( */
 /* 			       "show_symmetry_colour_by_symop_checkbutton"); */
 /*    if (GTK_TOGGLE_BUTTON(checkbutton)->active)  */
 /*      set_symmetry_colour_by_symop(1); */
@@ -684,7 +614,7 @@ on_show_symmetry_apply_button_clicked_gtkbuilder_callback  (GtkButton       *but
 
 /* The Symmetry Whole Chain Checkbutton */
 
-/*    checkbutton = lookup_widget(GTK_WIDGET(button),  */
+/*    checkbutton = widget_from_builder( */
 /* 			       "show_symmetry_whole_molecule_checkbutton"); */
 /*    if (GTK_TOGGLE_BUTTON(checkbutton)->active)  */
 /*      set_symmetry_whole_chain(1); */
@@ -693,7 +623,7 @@ on_show_symmetry_apply_button_clicked_gtkbuilder_callback  (GtkButton       *but
 
 /* The Expanded Atom Label Checkbutton */
 
-   checkbutton = lookup_widget(GTK_WIDGET(button),
+   checkbutton = widget_from_builder(
 			       "show_symmetry_expanded_labels_checkbutton");
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
      set_symmetry_atom_labels_expanded(1);
@@ -730,7 +660,7 @@ void
 on_about_ok_button_clicked_gtkbuilder_callback             (GtkButton       *button,
                                         gpointer         user_data)
 {
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+   gtk_widget_destroy(widget_from_builder(
 				    "about_window"));
 }
 
@@ -752,10 +682,10 @@ on_anisotropic_atoms1_activate_gtkbuilder_callback         (GtkMenuItem     *men
 
 /* Show Aniso Radiobuttons */
    if (get_show_aniso() == 1) {
-      button = GTK_BUTTON(lookup_widget(aniso_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"show_aniso_yes_radiobutton"));
    } else {
-      button = GTK_BUTTON(lookup_widget(aniso_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"show_aniso_no_radiobutton"));
    }
    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), TRUE);
@@ -763,10 +693,10 @@ on_anisotropic_atoms1_activate_gtkbuilder_callback         (GtkMenuItem     *men
 
 /* Set Limit Radiobuttons */
    if (get_show_limit_aniso() == 1) {
-      button = GTK_BUTTON(lookup_widget(aniso_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"limit_display_radius_yes_radiobutton"));
    } else {
-      button = GTK_BUTTON(lookup_widget(aniso_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"limit_display_radius_no_radiobutton"));
    }
    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), TRUE);
@@ -774,7 +704,7 @@ on_anisotropic_atoms1_activate_gtkbuilder_callback         (GtkMenuItem     *men
 
 /* The Aniso Display Limit Entry */
 
-   entry = lookup_widget(aniso_window, "limit_display_radius_entry");
+   entry = widget_from_builder("limit_display_radius_entry");
 
    text = get_text_for_aniso_limit_radius_entry();
    gtk_entry_set_text(GTK_ENTRY(entry), text);
@@ -783,7 +713,7 @@ on_anisotropic_atoms1_activate_gtkbuilder_callback         (GtkMenuItem     *men
 
 /* The Probability Hscale */
 
-   hscale = GTK_SCALE(lookup_widget(GTK_WIDGET(button),
+   hscale = GTK_SCALE(widget_from_builder(
 				    "aniso_probability_hscale"));
 
    hscale_initial = get_aniso_probability();
@@ -816,12 +746,12 @@ on_show_aniso_ok_button_clicked_gtkbuilder_callback        (GtkButton       *but
 
 /* Limit Display Atoms? */
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button),
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder(
 								    "limit_display_radius_yes_radiobutton"
 								    ))))
       set_limit_aniso(1);
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button),
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder(
 								    "limit_display_radius_no_radiobutton"
 								    ))))
       set_limit_aniso(0);
@@ -829,7 +759,7 @@ on_show_aniso_ok_button_clicked_gtkbuilder_callback        (GtkButton       *but
 
 /* Limit Display Radius Entry */
 
-   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+   entry = GTK_ENTRY(widget_from_builder(
 				   "limit_display_radius_entry"));
 
    text = gtk_entry_get_text(entry);
@@ -837,12 +767,12 @@ on_show_aniso_ok_button_clicked_gtkbuilder_callback        (GtkButton       *but
    set_aniso_limit_size_from_widget(text);
 
  /* Show Aniso Radiobuttons */
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button),
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder(
 								    "show_aniso_yes_radiobutton"))))
 
       set_show_aniso(1);	/* model, state */
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "show_aniso_no_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("show_aniso_no_radiobutton"))))
       set_show_aniso(0);
 }
 
@@ -853,7 +783,7 @@ on_show_aniso_close_button_clicked_gtkbuilder_callback     (GtkButton       *but
                                         gpointer         user_data)
 {
 /* Goodbye Widget */
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),"aniso_window"));
+   gtk_widget_destroy(widget_from_builder("aniso_window"));
 }
 
 extern "C" G_MODULE_EXPORT
@@ -871,17 +801,17 @@ void on_smooth_scrolling_window_ok_button_clicked_gtkbuilder_callback (GtkButton
    const char *text;
 
 /* Show Smooth Scrolling Radio Buttons */
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "smooth_scroll_yes_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("smooth_scroll_yes_radiobutton"))))
 
       set_smooth_scroll_flag(1);
 
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "smooth_scroll_no_radiobutton"))))
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("smooth_scroll_no_radiobutton"))))
 
       set_smooth_scroll_flag(0);
 
 /* Smooth Scroll Distance Limit */
 
-   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+   entry = GTK_ENTRY(widget_from_builder(
 				   "smooth_scroll_limit_entry"));
    text = gtk_entry_get_text(entry);
 
@@ -890,7 +820,7 @@ void on_smooth_scrolling_window_ok_button_clicked_gtkbuilder_callback (GtkButton
 
  /*  Smooth Scroll Steps */
 
-   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+   entry = GTK_ENTRY(widget_from_builder(
 				   "smooth_scroll_steps_entry"));
 
    text = gtk_entry_get_text(entry);
@@ -898,7 +828,7 @@ void on_smooth_scrolling_window_ok_button_clicked_gtkbuilder_callback (GtkButton
    set_smooth_scroll_steps_str(text);
 
 
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),"smooth_scroll_window"));
+   gtk_widget_destroy(widget_from_builder("smooth_scroll_window"));
 
 }
 
@@ -919,10 +849,10 @@ on_recentring1_activate_gtkbuilder_callback                (GtkMenuItem     *men
 /* Show Smooth Scrolling Radio Buttons */
    if (get_smooth_scroll() == 1) {
 
-      button = GTK_BUTTON(lookup_widget(smooth_scroll_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"smooth_scroll_yes_radiobutton"));
    } else {
-      button = GTK_BUTTON(lookup_widget(smooth_scroll_window,
+      button = GTK_BUTTON(widget_from_builder(
 					"smooth_scroll_no_radiobutton"));
    }
    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), TRUE);
@@ -930,7 +860,7 @@ on_recentring1_activate_gtkbuilder_callback                (GtkMenuItem     *men
 
 /* Smooth Scroll Distance Limit */
 
-   entry = lookup_widget(smooth_scroll_window, "smooth_scroll_limit_entry");
+   entry = widget_from_builder("smooth_scroll_limit_entry");
 
    text = get_text_for_smooth_scroll_limit();
    gtk_entry_set_text(GTK_ENTRY(entry), text);
@@ -940,7 +870,7 @@ on_recentring1_activate_gtkbuilder_callback                (GtkMenuItem     *men
 /*  Smooth Scroll Steps */
 
 
-   entry = lookup_widget(smooth_scroll_window, "smooth_scroll_steps_entry");
+   entry = widget_from_builder("smooth_scroll_steps_entry");
 
    text = get_text_for_smooth_scroll_steps();
 
@@ -969,15 +899,15 @@ on_font_size1_activate_gtkbuilder_callback                 (GtkMenuItem     *men
 /* The Font Size RadioButtons */
 
    if (get_font_size() == 1) {
-            button = GTK_BUTTON(lookup_widget(font_size_window,
+            button = GTK_BUTTON(widget_from_builder(
 					"font_size_small_radiobutton"));
    }
    if (get_font_size() == 2) {
-            button = GTK_BUTTON(lookup_widget(font_size_window,
+            button = GTK_BUTTON(widget_from_builder(
 					"font_size_medium_radiobutton"));
    }
    if (get_font_size() == 3) {
-            button = GTK_BUTTON(lookup_widget(font_size_window,
+            button = GTK_BUTTON(widget_from_builder(
 					"font_size_large_radiobutton"));
    }
    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), TRUE);
@@ -993,20 +923,20 @@ on_font_size_ok_button_clicked_gtkbuilder_callback         (GtkButton       *but
 {
 
 /* The Font Size RadioButtons */
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "font_size_small_radiobutton"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("font_size_small_radiobutton"))))
 
       set_font_size(1);
 
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "font_size_medium_radiobutton"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("font_size_medium_radiobutton"))))
 
       set_font_size(2);
 
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "font_size_large_radiobutton"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("font_size_large_radiobutton"))))
 
       set_font_size(3);
 
 /* goodbye widget */
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),"font_size_window"));
+   gtk_widget_destroy(widget_from_builder("font_size_window"));
 
 }
 
@@ -1075,7 +1005,7 @@ on_attach_scroll_wheel_to_which_map_1_activate_gtkbuilder_callback (GtkMenuItem 
 {
   /* it doesn't matter what we pass back, a lookup is done to find the
      submenu */
-  GtkWidget *menu = lookup_widget(GTK_WIDGET(menuitem), "attach_scroll_wheel_to_which_map_1");
+  GtkWidget *menu = widget_from_builder("attach_scroll_wheel_to_which_map_1");
   if (menu) {
     add_on_map_scroll_wheel_choices(menu);
   } else {
@@ -1153,14 +1083,12 @@ on_open_map1_activate_gtkbuilder_callback                  (GtkMenuItem     *men
    sort_button = add_sort_button_fileselection(map_name_fileselection1);
    /*    set_directory_for_fileselection(map_name_fileselection1); */
 
-   push_the_buttons_on_fileselection(filter_button, sort_button,
-				     map_name_fileselection1);
+   // push_the_buttons_on_fileselection(filter_button, sort_button, map_name_fileselection1);
 
    set_file_selection_dialog_size(map_name_fileselection1);
    gtk_widget_show (map_name_fileselection1);
 
-   push_the_buttons_on_fileselection(filter_button, sort_button,
-				     map_name_fileselection1);
+   // push_the_buttons_on_fileselection(filter_button, sort_button, map_name_fileselection1);
 }
 
 
@@ -1171,7 +1099,7 @@ on_cancel_button_map_name_clicked_gtkbuilder_callback      (GtkButton       *but
                                         gpointer         user_data)
 {
 
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+   gtk_widget_destroy(widget_from_builder(
 				     "map_name_fileselection1"));
 
 }
@@ -1223,7 +1151,7 @@ on_phs_info_ok_button_clicked_gtkbuilder_callback          (GtkButton       *but
    phs_pdb_cell_symm(); /* which runs
 			   create_phs_coordinates_fileselection() */
 
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+   gtk_widget_destroy(widget_from_builder(
 				    "phs_info_box"));
 
 }
@@ -1234,7 +1162,7 @@ void
 on_phs_info_cancel_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-   gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+   gtk_widget_destroy(widget_from_builder(
 				    "phs_info_box"));
 
 }
@@ -1246,7 +1174,7 @@ on_cancel_phs_coord_button_clicked_gtkbuilder_callback     (GtkButton       *but
                                         gpointer         user_data)
 {
 
-  gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+  gtk_widget_destroy(widget_from_builder(
 				     "phs_coordinates_fileselection"));
 
 
@@ -1285,7 +1213,7 @@ on_go_to_atom_apply_button_clicked_gtkbuilder_callback (GtkButton       *button,
 
   GtkWidget *widget;
 
-  widget = lookup_widget(GTK_WIDGET(button), "goto_atom_window");
+  widget = widget_from_builder("goto_atom_window");
 
   apply_go_to_atom_from_widget(widget);
 
@@ -1300,10 +1228,10 @@ on_go_to_atom_cancel_button_clicked_gtkbuilder_callback    (GtkButton       *but
 {
   GtkWidget *widget;
 
-  widget     = lookup_widget(GTK_WIDGET(button), "goto_atom_window");
+  widget     = widget_from_builder("goto_atom_window");
 
   unset_go_to_atom_widget();
-  gtk_widget_destroy(widget);	/* There is something that had been
+  gtk_widget_hide(widget);	/* There is something that had been
 				   added to the Go To Atom window that
 				   is not a widget.  It has been
 				   cleared perhaps but not destroyed.
@@ -1321,7 +1249,7 @@ on_go_to_atom1_activate_gtkbuilder_callback                (GtkMenuItem     *men
      GtkWidget *widget;
 
      /* fills the window too */
-     widget = wrapped_create_goto_atom_window();
+     widget = wrapped_create_goto_atom_window(); // uses gtkbuilder
 
 				/* now we need to fill the entry boxes
 				   with default vaules and the option
@@ -1346,21 +1274,21 @@ on_go_to_atom_next_residue_button_clicked_gtkbuilder_callback (GtkButton       *
 /*   gchar *res_str;  */
 /*   gchar *atom_name_str;  */
 
-/*   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),  */
+/*   entry = GTK_ENTRY(widget_from_builder( */
 /* 				  "go_to_atom_chain_entry")); */
 /*   chain_str = gtk_entry_get_text(entry); */
 
-/*   residue_entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),  */
+/*   residue_entry = GTK_ENTRY(widget_from_builder( */
 /* 					  "go_to_atom_residue_entry")); */
 /*   res_str = gtk_entry_get_text(residue_entry); */
 
-/*   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),  */
+/*   entry = GTK_ENTRY(widget_from_builder( */
 /* 				  "go_to_atom_atom_name_entry")); */
 /*   atom_name_str = gtk_entry_get_text(entry); */
 
 /*   goto_next_atom_maybe(chain_str, res_str, atom_name_str, residue_entry); */
 
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button), "goto_atom_window");
+  GtkWidget *window = widget_from_builder("goto_atom_window");
   goto_next_atom_maybe_new(window);
 }
 
@@ -1377,20 +1305,20 @@ on_go_to_atom_previous_residue_button_clicked_gtkbuilder_callback (GtkButton    
 /*   gchar *res_str;  */
 /*   gchar *atom_name_str;  */
 
-/*   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),  */
+/*   entry = GTK_ENTRY(widget_from_builder( */
 /* 				  "go_to_atom_chain_entry")); */
 /*   chain_str = gtk_entry_get_text(entry); */
 
-/*   residue_entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),  */
+/*   residue_entry = GTK_ENTRY(widget_from_builder( */
 /* 					  "go_to_atom_residue_entry")); */
 /*   res_str = gtk_entry_get_text(residue_entry); */
 
-/*   entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),  */
+/*   entry = GTK_ENTRY(widget_from_builder( */
 /* 				  "go_to_atom_atom_name_entry")); */
 /*   atom_name_str = gtk_entry_get_text(entry); */
 /*   goto_prev_atom_maybe(chain_str, res_str, atom_name_str, residue_entry);  */
 
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button), "goto_atom_window");
+  GtkWidget *window = widget_from_builder("goto_atom_window");
   if (! window)
      printf("ERROR:: in on_go_to_atom_previous_residue_button_clicked NULL window\n");
   goto_previous_atom_maybe_new(window);
@@ -1432,7 +1360,7 @@ on_skeleton_box_radius1_activate_gtkbuilder_callback       (GtkMenuItem     *men
   widget = create_skeletonization_box_radius_window();
 
   text = get_text_for_skeleton_box_size_entry();
-  entry = lookup_widget(widget, "skeleton_box_size_entry");
+  entry = widget_from_builder("skeleton_box_size_entry");
   gtk_entry_set_text(GTK_ENTRY(entry), text);
   g_free(text);
 
@@ -1455,7 +1383,7 @@ on_skeletonization_level1_activate_gtkbuilder_callback     (GtkMenuItem     *men
 
 				/* Fill the entry: */
   text = get_text_for_skeletonization_level_entry();
-  entry = lookup_widget(widget, "skeleton_level_entry");
+  entry = widget_from_builder("skeleton_level_entry");
   gtk_entry_set_text(GTK_ENTRY(entry), text);
 
   g_free(text);
@@ -1480,14 +1408,14 @@ on_skel_box_radius_ok_button_clicked_gtkbuilder_callback   (GtkButton       *but
   GtkEntry *entry;
   const char    *txt;
 
-  entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+  entry = GTK_ENTRY(widget_from_builder(
 				  "skeleton_box_size_entry"));
 
   txt = gtk_entry_get_text(entry);
 
   set_skeleton_box_size_from_widget(txt);
 
-  gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+  gtk_widget_destroy(widget_from_builder(
 				   "skeletonization_box_radius_window"));
 
 }
@@ -1499,7 +1427,7 @@ on_skel_box_radius_cancel_button_clicked_gtkbuilder_callback (GtkButton       *b
 					  gpointer         user_data)
 {
 
-  gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+  gtk_widget_destroy(widget_from_builder(
 				   "skeletonization_box_radius_window"));
 
 }
@@ -1514,7 +1442,7 @@ on_skeletonization_level_ok_button_clicked_gtkbuilder_callback (GtkButton       
   GtkEntry *entry;
   const char *txt;
 
-  entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+  entry = GTK_ENTRY(widget_from_builder(
 				  "skeleton_level_entry"));
 
   txt = gtk_entry_get_text(entry);
@@ -1522,7 +1450,7 @@ on_skeletonization_level_ok_button_clicked_gtkbuilder_callback (GtkButton       
   set_skeletonization_level_from_widget(txt); /* does a skeleton
 						 update and redraw */
 
-  gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+  gtk_widget_destroy(widget_from_builder(
 				   "skeletonization_level_window"));
 
 }
@@ -1538,7 +1466,7 @@ on_skeletonization_level_apply_button_clicked_gtkbuilder_callback (GtkButton    
   GtkEntry *entry;
   const char *txt;
 
-  entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+  entry = GTK_ENTRY(widget_from_builder(
 				  "skeleton_level_entry"));
 
   txt = gtk_entry_get_text(entry);
@@ -1556,7 +1484,7 @@ on_skeletonization_level_cancel_button_clicked_gtkbuilder_callback (GtkButton   
 						gpointer         user_data)
 {
 
-  gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
+  gtk_widget_destroy(widget_from_builder(
 				   "skeletonization_level_window"));
 }
 
@@ -1584,9 +1512,10 @@ on_autobuild_ca_off_activate_gtkbuilder_callback           (GtkMenuItem     *men
 extern "C" G_MODULE_EXPORT
 void
 on_display_control_ok_button_clicked_gtkbuilder_callback   (GtkButton       *button,
-                                        gpointer         user_data)
-{
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "display_control_window_glade");
+                                                            gpointer         user_data) {
+
+   // GtkWidget *w = widget_from_builder("display_control_window_glade");
+   GtkWidget *w = widget_from_builder("display_control_window_glade");
    GtkWidget *maps_vbox = 0;
    GtkWidget *molecules_vbox = 0;
    GtkWidget *pane = 0;
@@ -1594,9 +1523,9 @@ on_display_control_ok_button_clicked_gtkbuilder_callback   (GtkButton       *but
   reset_graphics_display_control_window(); /* Needed! (also resets the scroll group) */
   if (w) {
      store_window_position(COOT_DISPLAY_CONTROL_WINDOW, w);
-     maps_vbox      = lookup_widget(w, "display_map_vbox");
-     molecules_vbox = lookup_widget(w, "display_molecule_vbox");
-     pane           = lookup_widget(w, "display_control_vpaned");
+     maps_vbox      = widget_from_builder("display_map_vbox");
+     molecules_vbox = widget_from_builder("display_molecule_vbox");
+     pane           = widget_from_builder("display_control_vpaned");
      /* store the size, actually */
      if (maps_vbox)
 	store_window_position(COOT_DISPLAY_CONTROL_MAPS_VBOX, maps_vbox);
@@ -1606,7 +1535,8 @@ on_display_control_ok_button_clicked_gtkbuilder_callback   (GtkButton       *but
      if (pane)
 	store_window_position(COOT_DISPLAY_CONTROL_PANE, pane);
 
-     gtk_widget_destroy(w);
+     // gtk_widget_destroy(w); // 20220309-PE not these days, buddy-boy
+     gtk_widget_hide(w);
   } else {
     printf("Error:: in on_display_control_ok_button_clicked() failed to lookup display_control_window_glade\n");
   }
@@ -1616,32 +1546,25 @@ on_display_control_ok_button_clicked_gtkbuilder_callback   (GtkButton       *but
 extern "C" G_MODULE_EXPORT
 void
 on_display_control_window_glade_destroy_gtkbuilder_callback (GtkWidget       *object,
-					 gpointer         user_data)
-{
-  reset_graphics_display_control_window(); /* (also resets the scroll group) */
+                                                             gpointer         user_data) {
+
+   // we don't want to use the stored pointer in graphics_info_t any more. We just use
+   // widget_from_builder() to get the display control dialog.
+
+   reset_graphics_display_control_window(); /* (also resets the scroll group) */
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
-on_rotation_centre_size_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
-					   gpointer         user_data)
-{
+on_rotation_centre_size_ok_button_clicked_gtkbuilder_callback(GtkButton       *button,
+                                                              gpointer         user_data) {
 
 				/* pass back the value from the entry */
-  GtkEntry *entry;
-  const char *text;
-
-  entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
-				  "rotation_centre_cube_size_entry"));
-
-  text = gtk_entry_get_text(entry);
-
+  GtkEntry *entry = GTK_ENTRY(widget_from_builder("rotation_centre_cube_size_entry"));
+  const char *text = gtk_entry_get_text(entry);
   set_rotation_centre_size_from_widget(text);
-
-
-  gtk_widget_destroy(lookup_widget(GTK_WIDGET(button),
-				   "rotation_centre_cube_size_window"));
+  gtk_widget_hide(widget_from_builder("rotation_centre_cube_size_window"));
 
 }
 
@@ -1651,21 +1574,20 @@ void
 on_pink_pointer_size1_activate_gtkbuilder_callback         (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
-  GtkWidget *window;
-  GtkWidget *entry;
-  gchar *text;
 
-  window = create_rotation_centre_cube_size_window();
+   // Will this ever get used?
 
-  entry = lookup_widget(GTK_WIDGET(window), "rotation_centre_cube_size_entry");
+   GtkWidget *window;
+   GtkWidget *entry;
+   gchar *text;
 
-  text = get_text_for_rotation_centre_cube_size();
-
-  gtk_entry_set_text(GTK_ENTRY(entry), text);
-
-
-  gtk_widget_show(window);
-  free(text);
+   // window = create_rotation_centre_cube_size_window();
+   window = widget_from_builder("rotation_centre_cube_size_window");
+   entry = widget_from_builder("rotation_centre_cube_size_entry");
+   text = get_text_for_rotation_centre_cube_size();
+   gtk_entry_set_text(GTK_ENTRY(entry), text);
+   gtk_widget_show(window);
+   free(text);
 
 }
 
@@ -1719,9 +1641,10 @@ void
 on_scheme_window_close_button_clicked_gtkbuilder_callback  (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				    "scheme_window");
-  gtk_widget_destroy(window);
+   // 20220309-PE when will this get used...?
+   //  GtkWidget *window = widget_from_builder("scheme_window");
+  GtkWidget *window = widget_from_builder("scheme_window");
+  gtk_widget_hide(window);
 
 }
 
@@ -1820,7 +1743,7 @@ void
 on_dynarama_ok_button_clicked_gtkbuilder_callback          (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				     "dynarama_window");
    int imol = get_mol_from_dynarama(window); /*  return -9999 on edit rama window */
 
@@ -1842,7 +1765,7 @@ void
 on_dynarama_cancel_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				     "dynarama_window");
    int imol = get_mol_from_dynarama(window); // return -9999 on edit rama window
 
@@ -1869,7 +1792,7 @@ on_dynarama_window_destroy_gtkbuilder_callback             (GtkWidget       *obj
                                         gpointer         user_data)
 {
   /* Maybe object is window? */
-   GtkWidget *window = lookup_widget(GTK_WIDGET(object),
+   GtkWidget *window = widget_from_builder(
 				     "dynarama_window");
 /* we can't use store_window_position here because object->window is
    null in the store_window_position() function, heyho. */
@@ -1910,26 +1833,23 @@ on_find_ligands1_activate_gtkbuilder_callback              (GtkMenuItem     *men
                                         gpointer         user_data)
 {
 				/* Not used any more */
+   // see on_model_refine_dialog_find_ligands_button_clicked_gtkbuilder_callback()
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
 on_find_ligand_ok_button_clicked_gtkbuilder_callback       (GtkButton       *button,
-                                        gpointer         user_data)
-{
-   GtkWidget *window;
+                                                            gpointer         user_data) {
 
    int n_ligands = execute_get_mols_ligand_search(GTK_WIDGET(button));
-			                    	/* which then runs
-				                   execute_ligand_search */
-
+			                    	/* which then runs execute_ligand_search */
    if (n_ligands > 0) {
-     window = lookup_widget(GTK_WIDGET(button), "find_ligand_dialog");
-     free_ligand_search_user_data(GTK_WIDGET(button));
-     gtk_widget_destroy(window);
+      GtkWidget *window = widget_from_builder("find_ligand_dialog");
+      // free_ligand_search_user_data(GTK_WIDGET(button)); // not if not destroyed? Needs checking.
+      gtk_widget_hide(window);
    } else {
-     info_dialog("WARNING:: No ligands were selected");
+      info_dialog("WARNING:: No ligands were selected");
    }
 }
 
@@ -1939,9 +1859,9 @@ void
 on_find_ligand_cancel_button_clicked_gtkbuilder_callback   (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button), "find_ligand_dialog");
+   GtkWidget *window = widget_from_builder("find_ligand_dialog");
    free_ligand_search_user_data(GTK_WIDGET(button));
-   gtk_widget_destroy(window);
+   gtk_widget_hide(window);
 }
 
 
@@ -1951,27 +1871,22 @@ on_find_ligand_many_atoms_continue_button_clicked_gtkbuilder_callback (GtkButton
 						   gpointer         user_data)
 {
 
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				     "find_ligand_many_atoms_dialog");
-   GtkWidget *find_ligand_dialog = (GtkWidget *) g_object_get_data(G_OBJECT(window), "dialog");
+   GtkWidget *window = widget_from_builder("find_ligand_many_atoms_dialog");
+   GtkWidget *find_ligand_dialog = widget_from_builder("find_ligand_dialog");
 
-/* Needed at all, the if? */
-#if defined USE_GUILE && defined USE_PYTHON
    execute_ligand_search();
-#endif
-   gtk_widget_destroy(window);
-   gtk_widget_destroy(find_ligand_dialog);
+   gtk_widget_hide(window);
+   gtk_widget_hide(find_ligand_dialog);
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
-on_find_ligand_many_atoms_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
-						 gpointer         user_data)
-{
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				     "find_ligand_many_atoms_dialog");
-   gtk_widget_destroy(window);
+on_find_ligand_many_atoms_cancel_button_clicked_gtkbuilder_callback(GtkButton       *button,
+                                                                    gpointer         user_data) {
+
+   GtkWidget *window = widget_from_builder("find_ligand_many_atoms_dialog");
+   gtk_widget_hide(window);
 }
 
 
@@ -2013,8 +1928,8 @@ on_model_refine_dialog_dismiss_button_clicked_gtkbuilder_callback (GtkButton    
 					       gpointer         user_data)
 {
 
-   GtkWidget *hbox   = lookup_widget(GTK_WIDGET(button), "model_fit_refine_dialog_vbox");
-   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "model_refine_dialog");
+   GtkWidget *hbox   = widget_from_builder("model_fit_refine_dialog_vbox");
+   GtkWidget *dialog = widget_from_builder("model_refine_dialog");
 
    clear_pending_picks();
    normal_cursor();
@@ -2044,7 +1959,7 @@ on_save_coordinates1_activate_gtkbuilder_callback          (GtkMenuItem     *men
 
   widget = create_save_coords_dialog();
 
-  combobox = lookup_widget(GTK_WIDGET(widget), "save_coordinates_combobox");
+  combobox = widget_from_builder("save_coordinates_combobox");
 
   if (combobox) {
 
@@ -2064,8 +1979,8 @@ void
 on_save_coords_dialog_save_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					   gpointer         user_data)
 {
-  GtkWidget *combobox = lookup_widget(GTK_WIDGET(button), "save_coordinates_combobox");
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "save_coords_dialog");
+  GtkWidget *combobox = widget_from_builder("save_coordinates_combobox");
+  GtkWidget *dialog = widget_from_builder("save_coords_dialog");
   GtkWidget *chooser;
   int imol;
   if (! combobox) {
@@ -2099,7 +2014,7 @@ on_save_coords_cancel_button_clicked_gtkbuilder_callback   (GtkButton       *but
 
    // Is this function used now?
    
-   GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "save_coords_fileselection1");
+   GtkWidget *widget = widget_from_builder("save_coords_fileselection1");
    // this looks wrong
    gpointer o = g_object_get_data(G_OBJECT(widget), "stuff");
    free(o);
@@ -2222,9 +2137,9 @@ on_refine_params_dialog_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *widget = widget_from_builder(
 				    "refine_params_dialog");
-  GtkWidget *entry = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *entry = widget_from_builder(
 				   "refine_params_weight_matrix_entry");
   if (entry) {
     set_refinement_weight_from_entry(entry);
@@ -2287,7 +2202,7 @@ void
 on_accept_reject_refinement_accept_button_clicked_gtkbuilder_callback (GtkButton       *button,
 						   gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *window = widget_from_builder(
 				    "accept_reject_refinement_dialog");
 
   /* Pressing Return while focus is on the Accept/Reject dialog brings us here. */
@@ -2305,7 +2220,7 @@ void
 on_accept_reject_refinement_reject_button_clicked_gtkbuilder_callback (GtkButton       *button,
 						   gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *window = widget_from_builder(
 				    "accept_reject_refinement_dialog");
   save_accept_reject_dialog_window_position(window);
   /*   clear_up_moving_atoms(); done in destroy of the window */
@@ -2348,7 +2263,7 @@ void
 on_accept_reject_refinement_docked_accept_button_clicked_gtkbuilder_callback (GtkButton       *button,
 							  gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *window = widget_from_builder(
 				    "accept_reject_dialog_frame_docked");
   accept_regularizement();
   if (accept_reject_dialog_docked_show_state() == 1) {
@@ -2368,7 +2283,7 @@ void
 on_accept_reject_refinement_docked_reject_button_clicked_gtkbuilder_callback (GtkButton       *button,
 							  gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
                                      "accept_reject_dialog_frame_docked");
    /* we only hide the widget, I guess we may have to clean up as well */
    /* done below in hide callback */
@@ -2402,9 +2317,8 @@ on_model_refine_dialog_find_waters_button_clicked_gtkbuilder_callback (GtkButton
 						   gpointer         user_data)
 {
 
-   GtkWidget *widget;
-
-   widget = create_find_waters_dialog();
+   // GtkWidget *widget = create_find_waters_dialog();
+   GtkWidget *widget = widget_from_builder("find_waters_dialog");
 
    fill_find_waters_dialog(widget);
    gtk_widget_show(widget);
@@ -2417,14 +2331,9 @@ void
 on_find_waters_ok_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *widget;
-
-   widget = lookup_widget(GTK_WIDGET(button),
-			  "find_waters_dialog");
-
-   execute_find_waters(GTK_WIDGET(button));
-   gtk_widget_destroy(widget);
-
+   GtkWidget *widget = widget_from_builder("find_waters_dialog");
+   execute_find_waters();
+   gtk_widget_hide(widget);
 }
 
 
@@ -2435,7 +2344,7 @@ on_find_waters_cancel_button_clicked_gtkbuilder_callback   (GtkButton       *but
 {
    GtkWidget *widget;
 
-   widget = lookup_widget(GTK_WIDGET(button),
+   widget = widget_from_builder(
 			  "find_waters_dialog");
 
    gtk_widget_destroy(widget);
@@ -2449,7 +2358,7 @@ on_fast_sss_dialog_cancel_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
   GtkWidget *widget;
-  widget = lookup_widget(GTK_WIDGET(button), "fast_ss_search_dialog");
+  widget = widget_from_builder("fast_ss_search_dialog");
   gtk_widget_destroy(widget);
 
 }
@@ -2479,16 +2388,16 @@ on_fast_sss_dialog_ok_button_clicked_gtkbuilder_callback   (GtkButton       *but
   float radius = 0.;
 
 
-  dialog = lookup_widget(GTK_WIDGET(button), "fast_ss_search_dialog");
+  dialog = widget_from_builder("fast_ss_search_dialog");
 
-  helix_checkbutton   = lookup_widget(dialog, "fast_sss_dialog_helix_checkbutton");
-  helix_temp_combobox = lookup_widget(dialog, "fast_sss_dialog_helix_template_combobox");
-  helix_noaa_combobox = lookup_widget(dialog, "fast_sss_dialog_helix_no_aa_combobox");
-  strand_checkbutton   = lookup_widget(dialog, "fast_sss_dialog_strand_checkbutton");
-  strand_temp_combobox = lookup_widget(dialog, "fast_sss_dialog_strand_template_combobox");
-  strand_noaa_combobox = lookup_widget(dialog, "fast_sss_dialog_strand_no_aa_combobox");
-  radius_checkbutton   = lookup_widget(dialog, "fast_sss_dialog_local_checkbutton");
-  radius_combobox = lookup_widget(dialog, "fast_sss_dialog_radius_combobox");
+  helix_checkbutton   = widget_from_builder("fast_sss_dialog_helix_checkbutton");
+  helix_temp_combobox = widget_from_builder("fast_sss_dialog_helix_template_combobox");
+  helix_noaa_combobox = widget_from_builder("fast_sss_dialog_helix_no_aa_combobox");
+  strand_checkbutton   = widget_from_builder("fast_sss_dialog_strand_checkbutton");
+  strand_temp_combobox = widget_from_builder("fast_sss_dialog_strand_template_combobox");
+  strand_noaa_combobox = widget_from_builder("fast_sss_dialog_strand_no_aa_combobox");
+  radius_checkbutton   = widget_from_builder("fast_sss_dialog_local_checkbutton");
+  radius_combobox = widget_from_builder("fast_sss_dialog_radius_combobox");
 
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(helix_checkbutton))) {
     use_helix = 1;
@@ -2532,7 +2441,7 @@ on_fast_sss_dialog_citation_button_clicked_gtkbuilder_callback
   GtkWidget *dialog;
   GtkWidget *toolbutton;
   dialog = wrapped_create_coot_references_dialog();
-  toolbutton = lookup_widget(dialog, "coot_references_buccaneer_toolbutton");
+  toolbutton = widget_from_builder("coot_references_buccaneer_toolbutton");
   fill_references_notebook(GTK_TOOL_BUTTON(toolbutton), COOT_REFERENCE_BUCCANEER);
 
 }
@@ -2565,7 +2474,7 @@ on_environment_distances1_activate_gtkbuilder_callback     (GtkMenuItem     *men
 /* 						 gpointer         user_data) */
 /* { */
 /*    GtkWidget *widget; */
-/*    widget = lookup_widget(GTK_WIDGET(button), "environment_distance_dialog"); */
+/*    widget = widget_from_builder("environment_distance_dialog"); */
 /*    execute_environment_settings(GTK_WIDGET(button)); */
 /*    gtk_widget_destroy(widget); */
 
@@ -2578,9 +2487,9 @@ on_refine_params_use_torsions_checkbutton_toggled_gtkbuilder_callback (GtkToggle
 						   gpointer         user_data)
 {
 #if 0 // 20211026-PE  old
-   GtkWidget *omega_checkbutton = lookup_widget(GTK_WIDGET(togglebutton),
+   GtkWidget *omega_checkbutton = widget_from_builder(
                                                 "refine_params_use_peptide_omegas_checkbutton");
-   GtkWidget *phi_psi_restraints_vbox = lookup_widget(GTK_WIDGET(togglebutton),
+   GtkWidget *phi_psi_restraints_vbox = widget_from_builder(
                                                       "peptide_torsions_restraints_vbox");
 
    do_torsions_toggle(GTK_WIDGET(togglebutton));
@@ -2661,7 +2570,7 @@ on_refine_params_use_peptide_torsions_checkbutton_toggled_gtkbuilder_callback (G
 							   gpointer         user_data)
 {
 
-   GtkWidget *frame = lookup_widget(GTK_WIDGET(togglebutton),
+   GtkWidget *frame = widget_from_builder(
 				    "peptide_torsions_restraints_vbox");
    if (gtk_toggle_button_get_active(togglebutton)) {
       gtk_widget_set_sensitive(frame, TRUE);
@@ -2689,7 +2598,7 @@ on_cif_dictionary_fileselection_cancel_button_clicked_gtkbuilder_callback
 {
   GtkWidget *fileselection;
 
-  fileselection = lookup_widget(GTK_WIDGET(button), "cif_dictionary_fileselection");
+  fileselection = widget_from_builder("cif_dictionary_fileselection");
   gtk_widget_destroy(fileselection);
 
 }
@@ -2714,10 +2623,10 @@ on_residue_type_chooser_ALA_clicked_gtkbuilder_callback    (GtkButton       *but
                                         gpointer         user_data)
 {
 
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2732,10 +2641,10 @@ void
 on_residue_type_chooser_ARG_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2750,10 +2659,10 @@ void
 on_residue_type_chooser_ASN_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2768,10 +2677,10 @@ void
 on_residue_type_chooser_ASP_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2786,10 +2695,10 @@ void
 on_residue_type_chooser_CYS_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2804,10 +2713,10 @@ void
 on_residue_type_chooser_GLN_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2822,10 +2731,10 @@ void
 on_residue_type_chooser_GLU_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2840,10 +2749,10 @@ void
 on_residue_type_chooser_GLY_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2858,10 +2767,10 @@ void
 on_residue_type_chooser_HIS_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2876,10 +2785,10 @@ void
 on_residue_type_chooser_ILE_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2894,10 +2803,10 @@ void
 on_residue_type_chooser_LEU_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2912,10 +2821,10 @@ void
 on_residue_type_chooser_LYS_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2930,10 +2839,10 @@ void
 on_residue_type_chooser_MET_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2947,10 +2856,10 @@ void
 on_residue_type_chooser_MSE_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2967,10 +2876,10 @@ on_residue_type_chooser_PHE_clicked_gtkbuilder_callback    (GtkButton       *but
                                         gpointer         user_data)
 {
 
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -2985,10 +2894,10 @@ void
 on_residue_type_chooser_PRO_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -3003,10 +2912,10 @@ void
 on_residue_type_chooser_SER_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -3021,10 +2930,10 @@ void
 on_residue_type_chooser_THR_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -3039,10 +2948,10 @@ void
 on_residue_type_chooser_TRP_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -3057,10 +2966,10 @@ void
 on_residue_type_chooser_TYR_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -3076,10 +2985,10 @@ on_residue_type_chooser_VAL_clicked_gtkbuilder_callback    (GtkButton       *but
                                         gpointer         user_data)
 {
 
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *window = widget_from_builder(
 				    "residue_type_chooser_window");
    GtkWidget *stub_button =
-     lookup_widget(window, "residue_type_chooser_stub_checkbutton");
+     widget_from_builder("residue_type_chooser_stub_checkbutton");
    short int istate = 0;
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
      istate = 1;
@@ -3149,14 +3058,13 @@ extern "C" G_MODULE_EXPORT
 void on_rotate_translate_obj_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                                                     gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button),
-				    "rotate_translate_obj_dialog");
+  GtkWidget *widget = widget_from_builder("rotate_translate_obj_dialog");
 
   // graphics_unsetup_rotate_translate_buttons(widget);
   rot_trans_reset_previous();
   accept_regularizement();
   store_window_position(COOT_ROTATE_TRANSLATE_DIALOG, widget);
-  gtk_widget_destroy(widget);
+  gtk_widget_hide(widget);
   clear_up_moving_atoms(); // redraw done here
 
 }
@@ -3166,13 +3074,12 @@ extern "C" G_MODULE_EXPORT
 void on_rotate_translate_obj_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button),
-				    "rotate_translate_obj_dialog");
+  GtkWidget *widget = widget_from_builder("rotate_translate_obj_dialog");
 
  /*   clear_moving_atoms_object(); // redraw done here */
   clear_up_moving_atoms();
   store_window_position(COOT_ROTATE_TRANSLATE_DIALOG, widget);
-  gtk_widget_destroy(widget);
+  gtk_widget_hide(widget);
   normal_cursor();
 }
 
@@ -3219,7 +3126,7 @@ void
 on_delete_item_residue_radiobutton_toggled_gtkbuilder_callback (GtkToggleButton *togglebutton,
 					    gpointer         user_data)
 {
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(togglebutton), "delete_item_residue_radiobutton"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("delete_item_residue_radiobutton"))))
     set_delete_residue_mode();
 
 }
@@ -3230,7 +3137,7 @@ void
 on_delete_item_atom_radiobutton_toggled_gtkbuilder_callback (GtkToggleButton *togglebutton,
 					 gpointer         user_data)
 {
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(togglebutton), "delete_item_atom_radiobutton"))))
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_from_builder("delete_item_atom_radiobutton"))))
     set_delete_atom_mode();
 }
 
@@ -3305,12 +3212,12 @@ on_close_molecule1_activate_gtkbuilder_callback            (GtkMenuItem     *men
 
 /* Old Stylee */
 /*   GtkWidget *widget = create_close_molecule_dialog(); */
-/*   GtkWidget *optionmenu = lookup_widget(widget, "close_molecule_optionmenu"); */
+/*   GtkWidget *optionmenu = widget_from_builder("close_molecule_optionmenu"); */
 /*    fill_close_option_menu_with_all_molecule_options(optionmenu); */
 /*   gtk_widget_show(widget); */
 
-  GtkWidget *widget = wrapped_create_new_close_molecules_dialog();
-  gtk_widget_show(widget);
+   GtkWidget *widget = wrapped_create_new_close_molecules_dialog(); // uses builder
+   gtk_widget_show(widget);
 }
 
 
@@ -3320,9 +3227,9 @@ void
 on_close_molecule_close_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *window = widget_from_builder(
 				    "close_molecule_dialog");
-  GtkWidget *optionmenu = lookup_widget(window, "close_molecule_optionmenu");
+  GtkWidget *optionmenu = widget_from_builder("close_molecule_optionmenu");
   close_molecule_by_widget(optionmenu);
 /*   gtk_widget_destroy(window); */
 }
@@ -3333,7 +3240,7 @@ void
 on_close_molecule_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					 gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *window = widget_from_builder(
 				    "close_molecule_dialog");
   gtk_widget_destroy(window);
 
@@ -3347,7 +3254,7 @@ on_delete_item_cancel_button_clicked_gtkbuilder_callback   (GtkButton       *but
 {
   GtkWidget *widget;
 
-   widget = lookup_widget(GTK_WIDGET(button), "delete_item_dialog");
+   widget = widget_from_builder("delete_item_dialog");
    clear_pending_delete_item();
    clear_pending_picks(); 	/* hmmm.. not sure 20050610 */
    normal_cursor();
@@ -3373,7 +3280,7 @@ void
 on_residue_info_ok_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-   // GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "residue_info_dialog");
+   // GtkWidget *widget = widget_from_builder("residue_info_dialog");
    GtkWidget *widget = widget_from_builder("residue_info_dialog");
    apply_residue_info_changes(widget);
 /*    gtk_widget_destroy(widget); not now that it's the Apply button*/
@@ -3386,7 +3293,7 @@ void
 on_residue_info_cancel_button_clicked_gtkbuilder_callback  (GtkButton       *button,
                                                             gpointer         user_data)
 {
-   // GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "residue_info_dialog");
+   // GtkWidget *widget = widget_from_builder("residue_info_dialog");
    GtkWidget *widget = widget_from_builder("residue_info_dialog");
 
    residue_info_release_memory(widget);  // Hmmm! that seems dangerous
@@ -3401,7 +3308,7 @@ void
 on_residue_info_dialog_destroy_gtkbuilder_callback         (GtkWidget       *object,
                                         gpointer         user_data)
 {
-   GtkWidget *widget = lookup_widget(GTK_WIDGET(object), "residue_info_dialog");
+   GtkWidget *widget = widget_from_builder("residue_info_dialog");
    residue_info_release_memory(widget);
    clear_residue_info_edit_list();
    unset_residue_info_widget();
@@ -3415,8 +3322,8 @@ void
 on_hints_dialog_ok_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "hints_dialog");
-   gtk_widget_destroy(widget);
+   GtkWidget *widget = widget_from_builder("hints_dialog");
+   gtk_widget_hide(widget);
 
 }
 
@@ -3436,7 +3343,7 @@ on_rotamer_selection_ok_button_clicked_gtkbuilder_callback (GtkButton       *but
                                         gpointer         user_data)
 {
 
-   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *dialog = widget_from_builder(
 				    "rotamer_selection_dialog");
    accept_regularizement();
    clear_moving_atoms_object();
@@ -3451,7 +3358,7 @@ on_rotamer_selection_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *dialog = widget_from_builder(
 				    "rotamer_selection_dialog");
    int type;
    int imol;
@@ -3509,7 +3416,7 @@ on_go_to_atom_chain_entry_key_press_event_gtkbuilder_callback
                                         gpointer         user_data)
 {
   if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
-    apply_go_to_atom_values(lookup_widget(widget, "goto_atom_window"));
+    apply_go_to_atom_values(widget_from_builder("goto_atom_window"));
   }
   return FALSE;
 }
@@ -3524,7 +3431,7 @@ on_go_to_atom_residue_entry_key_press_event_gtkbuilder_callback (GtkWidget      
 
 
   if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
-    apply_go_to_atom_values(lookup_widget(widget, "goto_atom_window"));
+    apply_go_to_atom_values(widget_from_builder("goto_atom_window"));
   }
   return FALSE;
 }
@@ -3538,7 +3445,7 @@ on_go_to_atom_atom_name_entry_key_press_event_gtkbuilder_callback (GtkWidget    
 {
 
   if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
-    apply_go_to_atom_values(lookup_widget(widget, "goto_atom_window"));
+    apply_go_to_atom_values(widget_from_builder("goto_atom_window"));
   }
 
   return FALSE;
@@ -3562,7 +3469,7 @@ on_unsaved_changes_cancel_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *dialog = widget_from_builder(
 				     "unsaved_changes_dialog");
    gtk_widget_destroy(dialog);
 }
@@ -3574,7 +3481,7 @@ on_unsaved_changes_continue_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *dialog = widget_from_builder(
 				     "unsaved_changes_dialog");
    gtk_widget_destroy(dialog);
    coot_clear_backup_or_real_exit(0);
@@ -3646,7 +3553,7 @@ void
 on_baton_dialog_ok_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *widget = widget_from_builder(
 				    "baton_dialog");
   try_set_draw_baton(0);
   set_baton_mode(0);		/* if you can't see it, there's no
@@ -3679,7 +3586,7 @@ void
 on_use_weights_checkbutton_toggled_gtkbuilder_callback     (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  GtkWidget *hbox = lookup_widget(GTK_WIDGET(togglebutton),
+  GtkWidget *hbox = widget_from_builder(
 				  "column_label_window_weights_hbox");
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton))) {
     gtk_widget_set_sensitive(GTK_WIDGET(hbox), TRUE);
@@ -3707,7 +3614,7 @@ on_environment_distance_dialog_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
    GtkWidget *widget;
-   widget = lookup_widget(GTK_WIDGET(button), "environment_distance_dialog");
+   widget = widget_from_builder("environment_distance_dialog");
    execute_environment_settings(GTK_WIDGET(button));
    gtk_widget_destroy(widget);
 
@@ -3737,9 +3644,9 @@ on_coordinates_recentring1_activate_gtkbuilder_callback    (GtkMenuItem     *men
 				/* lookup the toggle widgets here and
 				   set the acording to
 				   recentre_on_read_pdb()  */
-  GtkWidget *yes_radio_button = lookup_widget(widget,
+  GtkWidget *yes_radio_button = widget_from_builder(
 					      "read_pdb_recentre_yes_radiobutton");
-  GtkWidget *no_radio_button = lookup_widget(widget,
+  GtkWidget *no_radio_button = widget_from_builder(
 					     "read_pdb_recentre_no_radiobutton");
 
   if (recentre_on_read_pdb()) {
@@ -3777,11 +3684,10 @@ on_read_pdb_recentre_no_radiobutton_toggled_gtkbuilder_callback
                                         gpointer         user_data)
 {
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton))) {
-    set_recentre_on_read_pdb(0);
-   } else {
-    set_recentre_on_read_pdb(1);
-   }
-
+     set_recentre_on_read_pdb(0);
+  } else {
+     set_recentre_on_read_pdb(1);
+  }
 
 }
 
@@ -3792,22 +3698,25 @@ on_read_pdb_recentre_dialog_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button),
-				   "read_pdb_recentre_dialog");
-  gtk_widget_destroy(widget);
+   // GtkWidget *widget = widget_from_builder("read_pdb_recentre_dialog");
+   // gtk_widget_destroy(widget);
+
+   GtkWidget *w = widget_from_builder("read_pdb_recentre_dialog");
+   gtk_widget_hide(w);
 
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
-on_pointer_atom_type_cancel_button_clicked_gtkbuilder_callback
-                                        (GtkButton       *button,
-                                        gpointer         user_data)
-{
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button),
-				    "pointer_atom_type_dialog");
-  gtk_widget_destroy(widget);
+on_pointer_atom_type_cancel_button_clicked_gtkbuilder_callback(GtkButton       *button,
+                                                               gpointer         user_data) {
+
+   // GtkWidget *widget = widget_from_builder("pointer_atom_type_dialog");
+   // gtk_widget_destroy(widget);
+
+   GtkWidget *w = widget_from_builder("pointer_atom_type_dialog");
+   gtk_widget_hide(w);
 
 }
 
@@ -3815,41 +3724,43 @@ on_pointer_atom_type_cancel_button_clicked_gtkbuilder_callback
 extern "C" G_MODULE_EXPORT
 void
 on_pointer_atom_type_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
-                                        gpointer         user_data)
-{
+                                                            gpointer         user_data) {
 
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "pointer_atom_type_dialog");
-  GtkToggleButton *tbut;
+   // GtkWidget *dialog = widget_from_builder("pointer_atom_type_dialog");
 
-  GtkWidget *entry = lookup_widget(GTK_WIDGET(button), "pointer_atom_type_other_entry");
+  GtkWidget *dialog = widget_from_builder("pointer_atom_type_dialog");
+
+  GtkWidget *entry = widget_from_builder("pointer_atom_type_other_entry");
   const char *entry_text = gtk_entry_get_text(GTK_ENTRY(entry));
 
-
   if (strlen(entry_text) > 0) {
-    place_typed_atom_at_pointer(entry_text);
+     place_typed_atom_at_pointer(entry_text);
   } else {
-    /* Adding something here?
-       Remember to change also molecule_class_info_t::add_typed_pointer_atom(). */
-    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_water"));
-    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Water");
-    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_ca"));
-    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Ca");
-    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_mg"));
-    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Mg");
-    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_na"));
-    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Na");
-    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_cl"));
-    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Cl");
-    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_br"));
-    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Br");
-    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_so4"));
-    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("SO4");
-    tbut = GTK_TOGGLE_BUTTON(lookup_widget(GTK_WIDGET(button), "pointer_atom_type_radiobutton_po4"));
-    if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("PO4");
+     /* Adding something here?
+        Remember to change also molecule_class_info_t::add_typed_pointer_atom(). */
+
+     GtkToggleButton *tbut;
+     tbut = GTK_TOGGLE_BUTTON(widget_from_builder("pointer_atom_type_radiobutton_water"));
+     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Water");
+     tbut = GTK_TOGGLE_BUTTON(widget_from_builder("pointer_atom_type_radiobutton_ca"));
+     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Ca");
+     tbut = GTK_TOGGLE_BUTTON(widget_from_builder("pointer_atom_type_radiobutton_mg"));
+     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Mg");
+     tbut = GTK_TOGGLE_BUTTON(widget_from_builder("pointer_atom_type_radiobutton_na"));
+     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Na");
+     tbut = GTK_TOGGLE_BUTTON(widget_from_builder("pointer_atom_type_radiobutton_cl"));
+     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Cl");
+     tbut = GTK_TOGGLE_BUTTON(widget_from_builder("pointer_atom_type_radiobutton_br"));
+     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("Br");
+     tbut = GTK_TOGGLE_BUTTON(widget_from_builder("pointer_atom_type_radiobutton_so4"));
+     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("SO4");
+     tbut = GTK_TOGGLE_BUTTON(widget_from_builder("pointer_atom_type_radiobutton_po4"));
+     if (gtk_toggle_button_get_active(tbut)) place_typed_atom_at_pointer("PO4");
   }
   /* Recall that the molecule is set by the callback from menu item "activate" */
 
-  gtk_widget_destroy(dialog);
+  // gtk_widget_destroy(dialog);
+  gtk_widget_hide(dialog);
 }
 
 
@@ -3859,50 +3770,30 @@ on_refmac_column_labels_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  GtkWidget *frame = lookup_widget(GTK_WIDGET(togglebutton),
-				   "column_label_refmac_frame");
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    gtk_widget_set_sensitive(frame, TRUE);
-  } else {
-    gtk_widget_set_sensitive(frame, FALSE);
-  }
+   GtkWidget *frame = widget_from_builder("column_label_refmac_frame");
+
+   if (gtk_toggle_button_get_active(togglebutton)) {
+      gtk_widget_set_sensitive(frame, TRUE);
+   } else {
+      gtk_widget_set_sensitive(frame, FALSE);
+   }
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
 on_run_refmac_run_button_clicked_gtkbuilder_callback       (GtkButton       *button,
-                                        gpointer         user_data)
-{
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				    "run_refmac_dialog");
-/*   printf("debugging bad window ------------- starting on button click callback.... \n"); */
-
-  execute_refmac(window);
-/*   free_memory_run_refmac(window); */
-/*   printf("debugging bad window about to refmac window destroy\n"); */
-  /* This lookup is for testing/fixing? double running wierdness from
-     the scm_catch */
-  if (GTK_IS_BUTTON(button)) {
-     window = lookup_widget(GTK_WIDGET(button), "run_refmac_dialog");
-     if (window)
-	gtk_widget_destroy(window);
-  }
-/*   printf("debugging bad window done on_run refmac callback...\n"); */
+                                                            gpointer         user_data) {
+   // use the simple refmac interface.
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
 on_run_refmac_cancel_button_clicked_gtkbuilder_callback    (GtkButton       *button,
-                                        gpointer         user_data)
-{
+                                                            gpointer         user_data) {
 
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				    "run_refmac_dialog");
-  free_memory_run_refmac(window);
-  gtk_widget_destroy(window);
-
+   // not used
 }
 
 
@@ -3912,7 +3803,7 @@ on_model_refine_dialog_refmac_button_clicked_gtkbuilder_callback (GtkButton     
 					      gpointer         user_data)
 {
 
-  wrapped_create_run_refmac_dialog();
+   wrapped_create_simple_refmac_dialog(); // uses builder
 
 }
 
@@ -3920,17 +3811,17 @@ on_model_refine_dialog_refmac_button_clicked_gtkbuilder_callback (GtkButton     
 extern "C" G_MODULE_EXPORT
 void
 on_single_map_properties_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
-					    gpointer         user_data)
-{
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				    "single_map_properties_dialog");
-  int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(window), "imol"));
+                                                                gpointer         user_data) {
+
+   GtkWidget *window = widget_from_builder("single_map_properties_dialog");
+
+   int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(window), "imol"));
 
   if (is_valid_map_molecule(imol)) {
     set_contour_by_sigma_step_maybe(window, imol);
     skeletonize_map_single_map_maybe(window, imol);
   }
-  gtk_widget_destroy(window);
+  gtk_widget_hide(window);
 
 }
 
@@ -3940,10 +3831,8 @@ void
 on_single_map_properties_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 						gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				    "single_map_properties_dialog");
-  gtk_widget_destroy(window);
-
+  GtkWidget *window = widget_from_builder("single_map_properties_dialog");
+  gtk_widget_hide(window);
 
 }
 
@@ -4037,55 +3926,16 @@ void
 on_run_refmac_tls_checkbutton_toggled_gtkbuilder_callback  (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    set_refmac_use_tls(1);
-  } else {
-    set_refmac_use_tls(0);
-  }
+   // not used
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
 on_run_refmac_twin_checkbutton_toggled_gtkbuilder_callback (GtkToggleButton *togglebutton,
-                                        gpointer         user_data)
-{
+                                                            gpointer         user_data) {
 
-
-#if 0
-  GtkWidget *map_optionmenu  = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_map_optionmenu");
-  GtkWidget *sad_extras      = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_sad_extra_hbox");
-  GtkWidget *mtz_button      = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_map_mtz_radiobutton");
-  GtkWidget *mtz_frame       = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_map_mtz_hbox");
-  GtkWidget *mtz_file_radiobutton = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_mtz_file_radiobutton");
-  GtkWidget *fobs_hbox       = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_fobs_hbox");
-  GtkWidget *fiobs_hbox      = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_fiobs_hbox");
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    set_refmac_use_twin(1);
-    /* update the column labels */
-    fill_option_menu_with_refmac_labels_options(map_optionmenu);
-    /* hide SAD extras, no need to switch off use_sad as done in use_twin */
-    gtk_widget_hide(sad_extras);
-    /* make the the mtz frame and label insensitive */
-    gtk_widget_set_sensitive(mtz_button, FALSE);
-    gtk_widget_set_sensitive(mtz_frame, FALSE);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mtz_file_radiobutton), TRUE);
-    /* change label box from fobs to fiobs as twin takes both */
-    gtk_widget_hide(fobs_hbox);
-    gtk_widget_show(fiobs_hbox);
-  } else {
-    set_refmac_use_twin(0);
-    /* update the column labels */
-    fill_option_menu_with_refmac_labels_options(map_optionmenu);
-    /* hide the twin mtz frame and label but show the 'normal' ones */
-    gtk_widget_set_sensitive(mtz_button, TRUE);
-    gtk_widget_set_sensitive(mtz_frame, TRUE);
-    /* change label box from fiobs to fobs for 'normal' refinement */
-    gtk_widget_hide(fiobs_hbox);
-    gtk_widget_show(fobs_hbox);
-  }
-
-#endif
+   // not used
 }
 
 
@@ -4094,30 +3944,7 @@ void
 on_run_refmac_sad_checkbutton_toggled_gtkbuilder_callback  (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  GtkWidget *twin_checkbutton = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_twin_checkbutton");
-  GtkWidget *sad_extras = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_sad_extra_hbox");
-  GtkWidget *fobs_hbox  = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_fobs_hbox");
-  GtkWidget *fpm_hbox = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_fpm_hbox");
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    set_refmac_use_sad(1);
-    /* de-sensitise the TWIN button, no need to switch off use_twin as done in use_sad */
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(twin_checkbutton), FALSE);
-    gtk_widget_set_sensitive(twin_checkbutton, FALSE);
-    gtk_widget_show(sad_extras);
-    /* fill the entry with 1st existing atom */
-    fill_refmac_sad_atom_entry(GTK_WIDGET(togglebutton));
-    /* change label box from fobs to f+/- as SAD needs this */
-    gtk_widget_hide(fobs_hbox);
-    gtk_widget_show(fpm_hbox);
-  } else {
-    set_refmac_use_sad(0);
-    gtk_widget_set_sensitive(twin_checkbutton, TRUE);
-    gtk_widget_hide(sad_extras);
-    /* change label box back from f+/- to fobs for 'normal' refinement */
-    gtk_widget_hide(fpm_hbox);
-    gtk_widget_show(fobs_hbox);
-  }
-
+   // not used
 }
 
 
@@ -4127,13 +3954,7 @@ on_run_refmac_map_mtz_radiobutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-
-  /* I am not sure that this - or below does the right thing */
-
-  GtkWidget *map_combobox = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_map_combobox");
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    fill_combobox_with_refmac_mtz_file_options(map_combobox);
-  }
+   // not used
 }
 
 
@@ -4143,13 +3964,7 @@ on_run_refmac_mtz_file_radiobutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  /* I am not sure that this - or the above does the right thing */
-
-  GtkWidget *map_combobox = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_map_combobox");
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    fill_combobox_with_refmac_file_labels_options(map_combobox);
-  }
-
+   // not used
 }
 
 
@@ -4158,28 +3973,9 @@ void
 on_run_refmac_mtz_filechooserdialog_response_gtkbuilder_callback
                                         (GtkDialog       *dialog,
                                         gint             response_id,
-                                        gpointer         user_data)
-{
-  GtkWidget *mtz_fileselection;
-  GtkWidget *mtz_label;
-  GtkWidget *refmac_dialog;
-  const gchar *filename;
+                                        gpointer         user_data) {
 
-  mtz_fileselection = lookup_widget(GTK_WIDGET(dialog),
-				    "run_refmac_mtz_filechooserdialog");
-  if (response_id == GTK_RESPONSE_OK) {
-    save_directory_from_filechooser(mtz_fileselection);
-
-    filename = gtk_file_chooser_get_filename
-      (GTK_FILE_CHOOSER(mtz_fileselection));
-
-    /* save the label name */
-    mtz_label = get_refmac_mtz_file_label();
-    gtk_label_set_text(GTK_LABEL(mtz_label), filename);
-    refmac_dialog = lookup_widget(mtz_label, "run_refmac_dialog");
-    manage_refmac_column_selection(refmac_dialog);
-  }
-  gtk_widget_destroy(mtz_fileselection);
+   // not usedl
 }
 
 
@@ -4189,12 +3985,7 @@ on_run_refmac_mtz_filechooserdialog_destroy_gtkbuilder_callback
                                         (GtkWidget       *object,
                                         gpointer         user_data)
 {
-
-  GtkWidget *mtz_fileselection = lookup_widget(GTK_WIDGET(object),
-					       "run_refmac_mtz_filechooserdialog");
-
-  gtk_widget_destroy(mtz_fileselection);
-
+   // not used
 }
 
 
@@ -4205,13 +3996,7 @@ on_run_refmac_mtz_filechooser_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *mtz_file_chooser;
-  mtz_file_chooser = create_run_refmac_mtz_filechooserdialog();
-  /* add file filter to filechooserbutton */
-  add_filechooser_filter_button(mtz_file_chooser, COOT_DATASET_FILE_SELECTION);
-  add_ccp4i_project_optionmenu(mtz_file_chooser, COOT_DATASET_FILE_SELECTION);
-  gtk_widget_show(mtz_file_chooser);
-
+   // not used
 }
 
 
@@ -4220,10 +4005,7 @@ void
 on_run_refmac_file_help_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = create_run_refmac_file_help_dialog();
-  gtk_widget_show(widget);
-
-
+   // not used
 }
 
 extern "C" G_MODULE_EXPORT
@@ -4232,9 +4014,7 @@ on_run_refmac_file_help_dialog_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "run_refmac_file_help_dialog");
-  gtk_widget_destroy(widget);
-
+   // not used
 }
 
 
@@ -4243,9 +4023,7 @@ void
 on_run_refmac_sad_help_button_clicked_gtkbuilder_callback  (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = create_run_refmac_sad_help_dialog();
-  gtk_widget_show(widget);
-
+   // not used
 }
 
 
@@ -4255,9 +4033,7 @@ on_run_refmac_sad_help_dialog_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "run_refmac_sad_help_dialog");
-  gtk_widget_destroy(widget);
-
+   // not used
 }
 
 
@@ -4266,12 +4042,7 @@ void
 on_run_refmac_nolabels_checkbutton_toggled_gtkbuilder_callback (GtkToggleButton *togglebutton,
                                             gpointer         user_data)
 {
-  GtkWidget *labels = lookup_widget(GTK_WIDGET(togglebutton), "run_refmac_column_labels_frame");
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton))) {
-    gtk_widget_hide(labels);
-  } else {
-    gtk_widget_show(labels);
-  }
+   // not used
 }
 
 
@@ -4305,12 +4076,7 @@ void
 on_run_refmac_ncs_checkbutton_toggled_gtkbuilder_callback  (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    set_refmac_use_ncs(1);
-  } else {
-    set_refmac_use_ncs(0);
-  }
-
+   // not used
 }
 
 /* Actually, we only are interested in the state of this when the
@@ -4321,49 +4087,7 @@ void
 on_run_refmac_phase_combine_checkbutton_toggled_gtkbuilder_callback (GtkToggleButton *togglebutton,
 						 gpointer         user_data)
 {
-
-#if 0				/* complete rewrite */
-  GtkWidget *phases_hbox;
-  GtkWidget *hl_hbox;
-  GtkWidget *phases_optionmenu;
-  GtkWidget *hl_optionmenu;
-  GtkWidget *active_item;
-  GtkWidget *phases_menu;
-  GtkWidget *hl_menu;
-  GtkWidget *phases_button;
-  GtkWidget *hl_button;
-  phases_hbox = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_phases_hbox");
-  hl_hbox     = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_hl_hbox");
-  phases_optionmenu = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_phases_optionmenu");
-  hl_optionmenu     = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_hl_optionmenu");
-  phases_menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(phases_optionmenu));
-  hl_menu     = gtk_option_menu_get_menu(GTK_OPTION_MENU(hl_optionmenu));
-  phases_button = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_phases_radiobutton");
-  hl_button     = lookup_widget(GTK_WIDGET(togglebutton), "refmac_dialog_hl_radiobutton");
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    gtk_widget_show(phases_hbox);
-    gtk_widget_show(hl_hbox);
-    active_item = gtk_menu_get_active(GTK_MENU(phases_menu));
-    if (active_item) {
-      gtk_widget_set_sensitive(phases_hbox, TRUE);
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(phases_button), TRUE);
-    } else {
-      gtk_widget_set_sensitive(phases_hbox, FALSE);
-    }
-    active_item = gtk_menu_get_active(GTK_MENU(hl_menu));
-    if (active_item) {
-      gtk_widget_set_sensitive(hl_hbox, TRUE);
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hl_button), TRUE);
-    } else {
-      gtk_widget_set_sensitive(hl_hbox, FALSE);
-    }
-
-  } else {
-    gtk_widget_hide(phases_hbox);
-    gtk_widget_hide(hl_hbox);
-  }
-
-#endif
+   // not used
 }
 
 
@@ -4390,9 +4114,8 @@ void
 on_undo_molecule_chooser_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					    gpointer         user_data)
 {
-   GtkWidget *widget = lookup_widget(GTK_WIDGET(button),
-				     "undo_molecule_chooser_dialog");
-   gtk_widget_destroy(widget);
+   GtkWidget *widget = widget_from_builder("undo_molecule_chooser_dialog");
+   gtk_widget_hide(widget);
 
 }
 
@@ -4411,11 +4134,13 @@ void
 on_skeleton_ok_button_clicked_gtkbuilder_callback          (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button), "skeleton_dialog");
-  GtkWidget *combobox   = lookup_widget(window, "skeleton_map_combobox");
+   // GtkWidget *window = widget_from_builder("skeleton_dialog");
+   // GtkWidget *combobox   = widget_from_builder("skeleton_map_combobox");
+  GtkWidget *window   = widget_from_builder("skeleton_dialog");
+  GtkWidget *combobox = widget_from_builder("skeleton_map_combobox");
   int do_baton_mode = GPOINTER_TO_INT(user_data);
   /*
-  GtkWidget *optionmenu = lookup_widget(window, "skeleton_map_optionmenu");
+  GtkWidget *optionmenu = widget_from_builder("skeleton_map_optionmenu");
   skeletonize_map_by_optionmenu(optionmenu);
   */
   skeletonize_map_by_combobox(combobox);
@@ -4431,8 +4156,9 @@ void
 on_skeleton_cancel_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button), "skeleton_dialog");
-  gtk_widget_destroy(window);
+   // GtkWidget *window = widget_from_builder("skeleton_dialog");
+  GtkWidget *window = widget_from_builder("skeleton_dialog");
+  gtk_widget_hide(window);
 }
 
 
@@ -4457,10 +4183,10 @@ on_virtual_trackball_menu_pops_gtkbuilder_callback         (GtkMenuItem     *men
   GtkWidget *flat_check_menu_item;
   GtkWidget *spherical_check_menu_item;
 
-  flat_check_menu_item = lookup_widget(GTK_WIDGET(menuitem),
+  flat_check_menu_item = widget_from_builder(
 				       "flat1");
 
-  spherical_check_menu_item = lookup_widget(GTK_WIDGET(menuitem),
+  spherical_check_menu_item = widget_from_builder(
 				       "spherical_surface1");
 
 /*   printf("got menu items 0x%x 0x%x\n",  */
@@ -4552,24 +4278,24 @@ void
 on_crosshairs1_activate_gtkbuilder_callback                (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = create_crosshairs_dialog();
-  GtkWidget *button = lookup_widget(widget, "crosshairs_on_radiobutton");
+   GtkWidget *widget = widget_from_builder("crosshairs_dialog");
+   GtkWidget *button = widget_from_builder("crosshairs_on_radiobutton");
 
-  if (draw_crosshairs_state()) {
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
-  }
-  gtk_widget_show(widget);
+   if (draw_crosshairs_state()) {
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), TRUE);
+   }
+   gtk_widget_show(widget);
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
 on_crosshairs_on_radiobutton_toggled_gtkbuilder_callback   (GtkToggleButton *togglebutton,
-                                        gpointer         user_data)
-{
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton))) {
-    set_draw_crosshairs(1);
-  }
+                                                            gpointer         user_data) {
+
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton))) {
+      set_draw_crosshairs(1);
+   }
 }
 
 
@@ -4589,7 +4315,7 @@ void
 on_display_crosshairs_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					 gpointer         user_data)
 {
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "crosshairs_dialog");
+  GtkWidget *dialog = widget_from_builder("crosshairs_dialog");
 
   gtk_widget_destroy(dialog);
 
@@ -4645,7 +4371,7 @@ void
 on_add_alt_conf_cancel_button_clicked_gtkbuilder_callback  (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "add_alt_conf_dialog");
+  GtkWidget *dialog = widget_from_builder("add_alt_conf_dialog");
   unset_add_alt_conf_dialog();
   unset_add_alt_conf_define();
   gtk_widget_destroy(dialog);
@@ -4676,7 +4402,7 @@ on_validation_dialog_cancel_button_clicked_gtkbuilder_callback (GtkButton       
 					    gpointer         user_data)
 {
 
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "");
+  GtkWidget *widget = widget_from_builder("");
 
   gtk_widget_destroy(widget);
 
@@ -4760,7 +4486,7 @@ void
 on_run_state_file_ok_button_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-   // GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "run_state_file_dialog");    // old glade style
+   // GtkWidget *dialog = widget_from_builder("run_state_file_dialog");    // old glade style
   GtkWidget *dialog = widget_from_builder("run_state_file_dialog");
   gtk_widget_hide(dialog);
   run_state_file();
@@ -4772,7 +4498,7 @@ void
 on_run_state_file_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					 gpointer         user_data)
 {
-   // GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "run_state_file_dialog"); // old glade style
+   // GtkWidget *dialog = widget_from_builder("run_state_file_dialog"); // old glade style
   GtkWidget *dialog = widget_from_builder("run_state_file_dialog");
   gtk_widget_hide(dialog);
   gtk_widget_destroy(dialog);
@@ -4900,7 +4626,7 @@ on_edit_backbone_torsion_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *window = widget_from_builder(
 				    "edit_backbone_torsions_dialog");
   accept_regularizement();	/* does a clear too. */
   destroy_edit_backbone_rama_plot();
@@ -5019,7 +4745,7 @@ on_select_map_for_fitting_button_clicked_gtkbuilder_callback
 
   // this doesn't do anything because gtk_dialog_run() is used
 
-//  GtkWidget *widget = lookup_widget(GTK_WIDGET(button),
+//  GtkWidget *widget = widget_from_builder(
 //				    "select_fitting_map_dialog");
 
  // gtk_widget_destroy(widget);
@@ -5095,7 +4821,7 @@ on_run_refmac_help_dialog_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "run_refmac_help_dialog");
+  GtkWidget *widget = widget_from_builder("run_refmac_help_dialog");
   gtk_widget_destroy(widget);
 
 }
@@ -5119,7 +4845,7 @@ on_run_refmac_nolabels_help_dialog_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "run_refmac_nolabels_help_dialog");
+  GtkWidget *widget = widget_from_builder("run_refmac_nolabels_help_dialog");
   gtk_widget_destroy(widget);
 
 }
@@ -5132,7 +4858,7 @@ on_no_restraints_info_dialog_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button), "no_restraints_info_dialog");
+  GtkWidget *window = widget_from_builder("no_restraints_info_dialog");
   gtk_widget_destroy(window);
 
 }
@@ -5145,7 +4871,7 @@ on_no_cif_dictionary_bonds_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button), "no_cif_dictionary_bonds_dialog");
+  GtkWidget *window = widget_from_builder("no_cif_dictionary_bonds_dialog");
   gtk_widget_destroy(window);
 
 }
@@ -5158,7 +4884,7 @@ on_pointer_atom_type_other_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *entry = lookup_widget(GTK_WIDGET(button), "pointer_atom_type_other_entry");
+  GtkWidget *entry = widget_from_builder("pointer_atom_type_other_entry");
   gtk_widget_set_sensitive(entry, TRUE);
 
 }
@@ -5171,9 +4897,8 @@ on_ligand_big_blob_dismiss_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *window = lookup_widget(GTK_WIDGET(button),
-				   "ligand_big_blob_dialog");
-  gtk_widget_destroy(window);
+  GtkWidget *window = widget_from_builder( "ligand_big_blob_dialog");
+  gtk_widget_hide(window);
 
 }
 
@@ -5185,11 +4910,11 @@ on_edit_chi_angles_dialog_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "edit_chi_angles_dialog");
+  GtkWidget *widget = widget_from_builder("edit_chi_angles_dialog");
   accept_regularizement();
   unset_moving_atom_move_chis();
   store_window_position(COOT_EDIT_CHI_DIALOG, widget);
-  gtk_widget_destroy(widget);
+  gtk_widget_hide(widget);
 
 }
 
@@ -5201,7 +4926,7 @@ on_edit_chi_angles_cancel_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "edit_chi_angles_dialog");
+  GtkWidget *widget = widget_from_builder("edit_chi_angles_dialog");
   clear_up_moving_atoms();	/* and remove the graphics object */
   unset_moving_atom_move_chis();
   store_window_position(COOT_EDIT_CHI_DIALOG, widget);
@@ -5215,7 +4940,7 @@ void
 on_check_waters_ok_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "check_waters_dialog");
+  GtkWidget *widget = widget_from_builder("check_waters_dialog");
   do_check_waters_by_widget(widget);
   gtk_widget_destroy(widget);
 }
@@ -5227,7 +4952,7 @@ on_check_waters_cancel_button_clicked_gtkbuilder_callback  (GtkButton       *but
                                         gpointer         user_data)
 {
 
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "check_waters_dialog");
+  GtkWidget *widget = widget_from_builder("check_waters_dialog");
   gtk_widget_destroy(widget);
 
 }
@@ -5300,7 +5025,7 @@ on_geometry_dialog_close_button_clicked_gtkbuilder_callback
 {
 
 #if 0 // 20211006-PE save for reference
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "geometry_dialog");
+  GtkWidget *dialog = widget_from_builder("geometry_dialog");
   /* should we clear geometry on close dialog?  Currently, I think not. */
   /* it is the COOT_DISTANCES_ANGLES_WINDOW, hmm. */
   store_window_position(COOT_DISTANCES_ANGLES_WINDOW, dialog);
@@ -5371,7 +5096,7 @@ void
 on_new_ligands_info_dialog_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                                                   gpointer         user_data)
 {
-   // GtkWidget *w = lookup_widget(GTK_WIDGET(button), "new_ligands_info_dialog");
+   // GtkWidget *w = widget_from_builder("new_ligands_info_dialog");
    // gtk_widget_destroy(w);
    GtkWidget *w = widget_from_builder("new_ligands_info_dialog");
    gtk_widget_hide(w);
@@ -5383,7 +5108,7 @@ void
 on_no_new_ligands_info_dialog_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                                                      gpointer         user_data)
 {
-   // GtkWidget *w = lookup_widget(GTK_WIDGET(button), "no_new_ligands_info_dialog");
+   // GtkWidget *w = widget_from_builder("no_new_ligands_info_dialog");
    // gtk_widget_destroy(w);
    GtkWidget *w = widget_from_builder("no_new_ligands_info_dialog");
    gtk_widget_hide(w);
@@ -5409,7 +5134,7 @@ on_zoom_dialog_ok_button_clicked_gtkbuilder_callback       (GtkButton       *but
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "zoom_dialog");
+  GtkWidget *w = widget_from_builder("zoom_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -5460,23 +5185,24 @@ on_get_monomer1_activate_gtkbuilder_callback               (GtkMenuItem     *men
 
 extern "C" G_MODULE_EXPORT
 void
-on_libcheck_monomer_ok_button_clicked_gtkbuilder_callback  (GtkButton       *button,
-                                        gpointer         user_data)
-{
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "libcheck_monomer_dialog");
-  GtkWidget *entry  = lookup_widget(widget, "libcheck_monomer_entry");
-  handle_get_libcheck_monomer_code(entry);
+on_get_monomer_ok_button_clicked_gtkbuilder_callback(GtkButton       *button,
+                                                     gpointer         user_data) {
+
+   GtkWidget *dialog = widget_from_builder("libcheck_monomer_dialog");
+   GtkWidget *entry  = widget_from_builder("libcheck_monomer_entry");
+   handle_get_libcheck_monomer_code(entry);
+   gtk_widget_hide(dialog);
 
 /*   gtk_widget_destroy(widget);  done in handle_get_libcheck_monomer_code */
 }
 
 
 extern "C" G_MODULE_EXPORT
-void on_libcheck_monomer_cancel_button_clicked_gtkbuilder_callback(GtkButton       *button,
+void on_get_monomer_cancel_button_clicked_gtkbuilder_callback(GtkButton       *button,
                                                                    gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "libcheck_monomer_dialog");
-  gtk_widget_destroy(widget);
+  GtkWidget *widget = widget_from_builder("libcheck_monomer_dialog");
+  gtk_widget_hide(widget);
 }
 
 
@@ -5500,7 +5226,7 @@ on_recover_coordinates_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "recover_coordinates_dialog");
+  GtkWidget *widget = widget_from_builder("recover_coordinates_dialog");
 
   execute_recover_session(widget); /* widget needed for lookup of user data */
   gtk_widget_destroy(widget);
@@ -5514,7 +5240,7 @@ on_recover_coordinates_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *widget = lookup_widget(GTK_WIDGET(button), "recover_coordinates_dialog");
+  GtkWidget *widget = widget_from_builder("recover_coordinates_dialog");
   gtk_widget_destroy(widget);
 }
 
@@ -5534,8 +5260,8 @@ on_centre_atom_label1_activate_gtkbuilder_callback         (GtkMenuItem     *men
                                         gpointer         user_data)
 {
   GtkWidget *widget = create_centre_atom_label_dialog();
-  GtkWidget *on  = lookup_widget(widget, "centre_atom_label_radiobutton_on");
-  GtkWidget *off = lookup_widget(widget, "centre_atom_label_radiobutton_off");
+  GtkWidget *on  = widget_from_builder("centre_atom_label_radiobutton_on");
+  GtkWidget *off = widget_from_builder("centre_atom_label_radiobutton_off");
   int v = centre_atom_label_status();
   if (v) {
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(on), TRUE);
@@ -5592,7 +5318,7 @@ void
 on_help_chi_angles_dismiss_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					   gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "chi_angle_help_dialog");
+  GtkWidget *w = widget_from_builder("chi_angle_help_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -5600,7 +5326,7 @@ on_help_chi_angles_dismiss_button_clicked_gtkbuilder_callback (GtkButton       *
 extern "C" G_MODULE_EXPORT
 void
 on_rotate_translate_obj_dialog_destroy_gtkbuilder_callback (GtkWidget       *object,
-                                        gpointer         user_data)
+                                                            gpointer         user_data)
 {
    /* need to save the position coordinates of dialog */
    rot_trans_reset_previous();
@@ -5612,7 +5338,7 @@ void
 on_no_symmetry_warning_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					  gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "no_symmetry_warning_dialog");
+  GtkWidget *w = widget_from_builder("no_symmetry_warning_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -5622,7 +5348,7 @@ void
 on_nothing_to_recover_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					 gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "nothing_to_recover_dialog");
+  GtkWidget *w = widget_from_builder("nothing_to_recover_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -5634,9 +5360,9 @@ on_superpose_dialog_superpose_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "superpose_dialog");
+  GtkWidget *w = widget_from_builder("superpose_dialog");
   execute_superpose(w);
-  gtk_widget_destroy(w);
+  gtk_widget_hide(w);
 
 }
 
@@ -5645,8 +5371,8 @@ void
 on_superpose_dialog_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					   gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "superpose_dialog");
-  gtk_widget_destroy(w);
+  GtkWidget *w = widget_from_builder("superpose_dialog");
+  gtk_widget_hide(w);
 }
 
 
@@ -5655,7 +5381,7 @@ void
 on_superpose_nonsense_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					 gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "superpose_nonsense_dialog");
+  GtkWidget *w = widget_from_builder("superpose_nonsense_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -5666,27 +5392,9 @@ on_superpose_nonsense_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "superpose_dialog");
+  GtkWidget *w = widget_from_builder("superpose_dialog");
   gtk_widget_destroy(w);
 
-}
-
-
-
-extern "C" G_MODULE_EXPORT
-void
-on_ssm_superposition1_activate_gtkbuilder_callback         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data)
-{
-  GtkWidget *w = wrapped_create_superpose_dialog();
-
-  /* we get returned w = 0 when there is no MMDBSSM. (We are doing it
-     this way because we don't have to introduce HAVE_MMDBSSM into the
-     *c* compiler arguments (this is simpler)).  */
-  if (w)
-    gtk_widget_show(w);
-  else
-    printf("Function not available - need to recompile with libmmdbssm\n");
 }
 
 extern "C" G_MODULE_EXPORT
@@ -5694,7 +5402,7 @@ void
 on_add_terminal_residue_finds_none_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
 						      gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "add_terminal_residue_finds_none_dialog");
+  GtkWidget *w = widget_from_builder("add_terminal_residue_finds_none_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -5704,8 +5412,8 @@ void
 on_single_map_sigma_checkbutton_toggled_gtkbuilder_callback (GtkToggleButton *togglebutton,
                                                              gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(togglebutton), "single_map_properties_dialog");
-   GtkWidget *entry  = lookup_widget(window, "single_map_sigma_step_entry");
+   GtkWidget *window = widget_from_builder("single_map_properties_dialog");
+   GtkWidget *entry  = widget_from_builder("single_map_sigma_step_entry");
    int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(window), "imol"));
    const char *text = gtk_entry_get_text(GTK_ENTRY(entry));
    float v;
@@ -5878,7 +5586,7 @@ void
 on_chiral_volume_baddies_dialog_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 						       gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "bad_chiral_volumes_dialog");
+  GtkWidget *w = widget_from_builder("bad_chiral_volumes_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -5899,7 +5607,7 @@ void
 on_rigid_body_refinement_failed_dialog_ok_button_clicked_gtkbuilder_callback (GtkButton *button,
                                                                               gpointer user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *w = widget_from_builder(
 			       "rigid_body_refinement_failed_dialog");
   gtk_widget_destroy(w);
 }
@@ -5910,7 +5618,7 @@ void
 on_baton_mode_calculate_skeleton_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
 						    gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *w = widget_from_builder(
 			       "baton_mode_make_skeleton_dialog");
   baton_mode_calculate_skeleton(w); /* get the imol from here */
   gtk_widget_destroy(w);
@@ -5922,7 +5630,7 @@ void
 on_baton_mode_calculate_skeleton_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 							gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *w = widget_from_builder(
 			       "baton_mode_make_skeleton_dialog");
   gtk_widget_destroy(w);
 }
@@ -5935,12 +5643,12 @@ on_column_label_expert_mode_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *frame = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *frame = widget_from_builder(
 				   "column_labels_resolution_limit_frame");
 
-/*   GtkWidget *f_optionmenu = lookup_widget(GTK_WIDGET(button), "optionmenu1"); */
+/*   GtkWidget *f_optionmenu = widget_from_builder("optionmenu1"); */
 
-  GtkWidget *combobox = lookup_widget(GTK_WIDGET(button), "column_selector_amplitudes_combobox");
+  GtkWidget *combobox = widget_from_builder("column_selector_amplitudes_combobox");
 
   /* we also need to redo the F column label chooser to include anomalous option  */
 
@@ -5962,7 +5670,7 @@ on_column_labels_use_resolution_limits_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  GtkWidget *frame = lookup_widget(GTK_WIDGET(togglebutton),
+  GtkWidget *frame = widget_from_builder(
 				   "resolution_limits_hbox");
   if (gtk_toggle_button_get_active(togglebutton))
      gtk_widget_set_sensitive(frame, TRUE);
@@ -5978,7 +5686,7 @@ void
 on_merge_molecules_ok_button_clicked_gtkbuilder_callback   (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "merge_molecules_dialog");
+  GtkWidget *w = widget_from_builder("merge_molecules_dialog");
   do_merge_molecules(w);
   gtk_widget_destroy(w);
 
@@ -5990,7 +5698,7 @@ void
 on_merge_molecules_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 					  gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "merge_molecules_dialog");
+  GtkWidget *w = widget_from_builder("merge_molecules_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -6068,7 +5776,7 @@ on_draw_hydrogens_no_radiobutton_toggled_gtkbuilder_callback
     If this code is activated, then we call apply_bond_parameters()
     and thus set_draw_hydrogens() twice.
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(togglebutton), "bond_parameters_dialog");
+  GtkWidget *w = widget_from_builder("bond_parameters_dialog");
   apply_bond_parameters(w);
   */
 }
@@ -6081,7 +5789,7 @@ on_renumber_residue_range_radiobutton_1_toggled_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *entry_1 = lookup_widget(GTK_WIDGET(togglebutton), "renumber_residue_range_resno_1_entry");
+  GtkWidget *entry_1 = widget_from_builder("renumber_residue_range_resno_1_entry");
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton))) {
     gtk_widget_set_sensitive(GTK_WIDGET(entry_1), FALSE);
   } else {
@@ -6096,7 +5804,7 @@ on_renumber_residue_range_radiobutton_3_toggled_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *entry_2 = lookup_widget(GTK_WIDGET(togglebutton), "renumber_residue_range_resno_2_entry");
+  GtkWidget *entry_2 = widget_from_builder("renumber_residue_range_resno_2_entry");
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton))) {
     gtk_widget_set_sensitive(GTK_WIDGET(entry_2), TRUE);
   } else {
@@ -6111,7 +5819,7 @@ on_renumber_residue_range_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *w = widget_from_builder(
 			       "renumber_residue_range_dialog");
   renumber_residues_from_widget(w);
   gtk_widget_destroy(w);
@@ -6125,7 +5833,7 @@ on_renumber_residue_range_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *w = widget_from_builder(
 			       "renumber_residue_range_dialog");
   gtk_widget_destroy(w);
 
@@ -6156,9 +5864,9 @@ void
 on_add_OXT_ok_button_clicked_gtkbuilder_callback           (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "add_OXT_dialog");
+  GtkWidget *w = widget_from_builder("add_OXT_dialog");
   apply_add_OXT_from_widget(w);
-  gtk_widget_destroy(w);
+  gtk_widget_hide(w);
 }
 
 
@@ -6167,7 +5875,7 @@ void
 on_add_OXT_cancel_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "add_OXT_dialog");
+  GtkWidget *w = widget_from_builder("add_OXT_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -6178,8 +5886,8 @@ on_model_refine_dialog_add_OXT_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = wrapped_create_add_OXT_dialog();
-  gtk_widget_show(w);
+   GtkWidget *w = wrapped_create_add_OXT_dialog(); // uses builder
+   gtk_widget_show(w);
 }
 
 
@@ -6207,7 +5915,7 @@ void
 on_bond_parameters_ok_button_clicked_gtkbuilder_callback   (GtkButton       *button,
                                         gpointer         user_data)
 {
-   // GtkWidget *w = lookup_widget(GTK_WIDGET(button), "bond_parameters_dialog");
+   // GtkWidget *w = widget_from_builder("bond_parameters_dialog");
    // apply_bond_parameters(w);
    // gtk_widget_destroy(w);
 }
@@ -6218,7 +5926,7 @@ on_bond_parameters_apply_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   // GtkWidget *w = lookup_widget(GTK_WIDGET(button), "bond_parameters_dialog");
+   // GtkWidget *w = widget_from_builder("bond_parameters_dialog");
    // apply_bond_parameters(w);
 }
 
@@ -6243,8 +5951,8 @@ on_background_colour1_activate_gtkbuilder_callback         (GtkMenuItem     *men
                                         gpointer         user_data)
 {
 
-   // GtkWidget *wb = lookup_widget(GTK_WIDGET(menuitem), "background_black1");
-   // GtkWidget *ww = lookup_widget(GTK_WIDGET(menuitem), "background_white1");
+   // GtkWidget *wb = widget_from_builder("background_black1");
+   // GtkWidget *ww = widget_from_builder("background_white1");
 
    GtkWidget *wb = widget_from_builder("background_black1");
    GtkWidget *ww = widget_from_builder("background_white1");
@@ -6265,8 +5973,11 @@ void
 on_ligand_no_blobs_OK_button_clicked_gtkbuilder_callback   (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "ligand_no_blobs_dialog");
-  gtk_widget_destroy(dialog);
+   //   GtkWidget *dialog = widget_from_builder("ligand_no_blobs_dialog");
+   // gtk_widget_destroy(dialog);
+
+   GtkWidget *dialog = widget_from_builder("ligand_no_blobs_dialog");
+   gtk_widget_hide(dialog);
 }
 
 
@@ -6278,9 +5989,11 @@ on_new_delete_molecules_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "new_close_molecules_dialog");
-  new_close_molecules(w);
-/*   gtk_widget_destroy(w); */
+   // GtkWidget *w = widget_from_builder("new_close_molecules_dialog");
+   GtkWidget *w = widget_from_builder("new_close_molecules_dialog");
+   new_close_molecules(w);
+
+  /*   gtk_widget_destroy(w); */
 }
 
 
@@ -6290,8 +6003,9 @@ on_new_delete_molecules_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "new_close_molecules_dialog");
-  gtk_widget_destroy(w);
+   // GtkWidget *w = widget_from_builder("new_close_molecules_dialog");
+   GtkWidget *w = widget_from_builder("new_close_molecules_dialog");
+   gtk_widget_hide(w);
 
 }
 
@@ -6336,7 +6050,7 @@ void
 on_find_blobs_ok_button_clicked_gtkbuilder_callback        (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "unmodelled_blobs_dialog");
+  GtkWidget *w = widget_from_builder("unmodelled_blobs_dialog");
   execute_find_blobs_from_widget(w);
   gtk_widget_destroy(w);
 
@@ -6348,7 +6062,7 @@ void
 on_find_blobs_cancel_button_clicked_gtkbuilder_callback    (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "unmodelled_blobs_dialog");
+  GtkWidget *w = widget_from_builder("unmodelled_blobs_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -6361,7 +6075,7 @@ on_chiral_restraints_problem_ok_button_clicked_gtkbuilder_callback (GtkButton   
 						gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "chiral_restraints_problem_dialog");
+  GtkWidget *w = widget_from_builder("chiral_restraints_problem_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -6375,7 +6089,7 @@ on_check_waters_diff_map_ok_button_clicked_gtkbuilder_callback (GtkButton       
 					    gpointer         user_data)
 {
 
-/*   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "check_waters_diff_map_dialog"); */
+/*   GtkWidget *w = widget_from_builder("check_waters_diff_map_dialog"); */
 /*   check_waters_by_difference_map_by_widget(w); */
 /*   gtk_widget_destroy(w); */
 
@@ -6388,7 +6102,7 @@ void
 on_check_waters_diff_map_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 						gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "check_waters_diff_map_dialog");
+  GtkWidget *w = widget_from_builder("check_waters_diff_map_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -6410,7 +6124,7 @@ on_interesting_waters_by_difference_map_check_ok_button_clicked_gtkbuilder_callb
 								 gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *w = widget_from_builder(
 			       "interesting_waters_by_difference_map_check_dialog");
   gtk_widget_destroy(w);
 
@@ -6455,7 +6169,7 @@ on_antialiasing1_activate_gtkbuilder_callback              (GtkMenuItem     *men
   GtkWidget *w = create_antialiasing_dialog();
   GtkWidget *checkbutton;
   if (do_anti_aliasing_state()) {
-    checkbutton = lookup_widget(w, "antialias_dialog_yes_radiobutton");
+    checkbutton = widget_from_builder("antialias_dialog_yes_radiobutton");
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton), TRUE);
   }
   gtk_widget_show(w);
@@ -6497,23 +6211,26 @@ on_antialiasing_dialog_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "antialiasing_dialog");
-  gtk_widget_destroy(w);
+  GtkWidget *w = widget_from_builder("antialiasing_dialog");
+  gtk_widget_hide(w);
 
 }
 
+// ##########################################################################################
+
+//                 is this a good place for geometry_graphs callbacks?
 
 extern "C" G_MODULE_EXPORT
 void
-on_geometry_graphs_ok_button_clicked_gtkbuilder_callback   (GtkButton       *button,
-                                        gpointer         user_data)
-{
+on_geometry_graphs_close_button_clicked_gtkbuilder_callback(GtkButton       *button,
+                                                            gpointer         user_data) {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "geometry_graphs_dialog");
-  if (w)
-    gtk_widget_destroy(w);
-  else
-    printf("ERROR getting dialog in on_geometry_graphs_ok_button_clicked\n");
+   // this usage of user_data was set using glade.
+   GtkWidget *dialog = GTK_WIDGET(user_data);
+   if (dialog)
+      gtk_widget_hide(dialog);
+   else
+      std::cout << "ERROR getting dialog in on_geometry_graphs_ok_button_clicked\n";
 
 }
 
@@ -6521,21 +6238,21 @@ on_geometry_graphs_ok_button_clicked_gtkbuilder_callback   (GtkButton       *but
 extern "C" G_MODULE_EXPORT
 void
 on_geometry_graphs_dialog_destroy_gtkbuilder_callback      (GtkWidget       *object,
-                                        gpointer         user_data)
-{
+                                                            gpointer         user_data) {
 
   /* This is not causing the GTK_IS_WIDGET (widget) unref failure */
 
-   GtkWidget *w = lookup_widget(GTK_WIDGET(object), "geometry_graphs_dialog");
+   GtkWidget *w = widget_from_builder("geometry_graphs_dialog");
    if (! w) {
-     printf("ERROR getting dialog in on_geometry_graphs_dialog_destroy\n");
+     printf("ERROR:: in on_geometry_graphs_dialog_destroy_gtkbuilder_callback() failure getting dialog \n");
    } else {
-/*      printf("DEBUG:: unsetting and freeing graph:\n");  */
-     unset_geometry_graph(w);
-     free_geometry_graph(w);
+      unset_geometry_graph(w);
+      free_geometry_graph(w);
    }
 
 }
+
+// ##########################################################################################
 
 
 extern "C" G_MODULE_EXPORT
@@ -6544,7 +6261,7 @@ on_save_symmetry_coords_fileselection_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "save_symmetry_coords_fileselection");
+  GtkWidget *w = widget_from_builder("save_symmetry_coords_fileselection");
   save_symmetry_coords_from_fileselection(w);
   gtk_widget_destroy(w);
 }
@@ -6556,7 +6273,7 @@ on_save_symmetry_coords_fileselection_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "save_symmetry_coords_fileselection");
+  GtkWidget *w = widget_from_builder("save_symmetry_coords_fileselection");
   gtk_widget_destroy(w);
 
 }
@@ -6758,23 +6475,23 @@ on_stereo1_activate_gtkbuilder_callback(GtkMenuItem     *menuitem,
    GtkWidget *checkbutton;
 
    if (stereo_mode_state() == 1) { /* coot::HARDWARE_STEREO_MODE */
-      checkbutton = lookup_widget(w, "stereo_dialog_hardware_stereo_radiobutton");
+      checkbutton = widget_from_builder("stereo_dialog_hardware_stereo_radiobutton");
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton), TRUE);
    }
    if (stereo_mode_state() == 2) { /* coot::SIDE_BY_SIDE_STEREO */
-      checkbutton = lookup_widget(w, "stereo_dialog_side_by_side_stereo_crosseyed_radiobutton");
+      checkbutton = widget_from_builder("stereo_dialog_side_by_side_stereo_crosseyed_radiobutton");
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton), TRUE);
    }
    if (stereo_mode_state() == 4) { /* coot::SIDE_BY_SIDE_STEREO_WALL_EYE */
-      checkbutton = lookup_widget(w, "stereo_dialog_side_by_side_stereo_walleyed_radiobutton");
+      checkbutton = widget_from_builder("stereo_dialog_side_by_side_stereo_walleyed_radiobutton");
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton), TRUE);
    }
    if (stereo_mode_state() == 3) { /* coot::DTI_SIDE_BY_SIDE_STEREO */
-      checkbutton = lookup_widget(w, "stereo_dialog_dti_side_by_side_stereo_radiobutton");
+      checkbutton = widget_from_builder("stereo_dialog_dti_side_by_side_stereo_radiobutton");
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton), TRUE);
    }
    if (stereo_mode_state() == 5) { /* coot::ZALMAN_STEREO */
-      checkbutton = lookup_widget(w, "stereo_dialog_zalman_stereo_radiobutton");
+      checkbutton = widget_from_builder("stereo_dialog_zalman_stereo_radiobutton");
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton), TRUE);
    }
    gtk_widget_show(w);
@@ -6787,7 +6504,7 @@ void
 on_stereo_dialog_ok_button_clicked_gtkbuilder_callback     (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "stereo_dialog");
+  GtkWidget *w = widget_from_builder("stereo_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -6817,11 +6534,11 @@ on_stereo_dialog_hardware_stereo_radiobutton_toggled_gtkbuilder_callback
     hardware_stereo_mode();
 
     if (stereo_mode_state() != 1) { /* coot::HARDWARE_STEREO_MODE */
-      mono_togglebutton = lookup_widget(GTK_WIDGET(togglebutton), "stereo_dialog_mono_radiobutton");
+      mono_togglebutton = widget_from_builder("stereo_dialog_mono_radiobutton");
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mono_togglebutton), TRUE);
       /* do this in C rather than mess about calling c++ function: */
       nothing_bad_dialog = create_nothing_bad_dialog();
-      label_widget = lookup_widget(nothing_bad_dialog, "nothing_bad_label");
+      label_widget = widget_from_builder("nothing_bad_label");
       gtk_label_set_text(GTK_LABEL(label_widget), "This computer appears not to be able\nto do hardware stereo");
       gtk_widget_show(nothing_bad_dialog);
     }
@@ -6871,6 +6588,118 @@ on_preferences1_activate_gtkbuilder_callback               (GtkMenuItem     *men
   preferences();
 }
 
+extern "C" G_MODULE_EXPORT
+void
+on_shader_preferences_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
+                                                    gpointer         user_data) {
+
+   GtkWidget *w  = widget_from_builder("shader_settings_dialog");
+   GtkWidget *r1 = widget_from_builder("shader_settings_ssao_strength_scale");
+   GtkWidget *r2 = widget_from_builder("shader_settings_ssao_radius_scale");
+   GtkWidget *r3 = widget_from_builder("shader_settings_ssao_n_kernel_samples_scale");
+   GtkWidget *r4 = widget_from_builder("shader_settings_shadow_strength_scale");
+   GtkWidget *r5 = widget_from_builder("shader_settings_depth_blur_focus_depth_scale");
+   GtkWidget *r6 = widget_from_builder("shader_settings_depth_blur_strength_scale");
+   GtkWidget *r7 = widget_from_builder("shader_settings_ssao_bias_scale");
+   GtkWidget *r8 = widget_from_builder("shader_settings_brightness_scale");
+   GtkWidget *r9 = widget_from_builder("shader_settings_gamma_scale");
+
+   GtkWidget *sssb_0 = widget_from_builder("shader_settings_ssao_smoothing_blur_size_0_radiobutton");
+   GtkWidget *sssb_1 = widget_from_builder("shader_settings_ssao_smoothing_blur_size_1_radiobutton");
+   GtkWidget *sssb_2 = widget_from_builder("shader_settings_ssao_smoothing_blur_size_2_radiobutton");
+
+   GtkWidget *sss_1 = widget_from_builder("shader_settings_shadow_softness_1_radiobutton");
+   GtkWidget *sss_2 = widget_from_builder("shader_settings_shadow_softness_2_radiobutton");
+   GtkWidget *sss_3 = widget_from_builder("shader_settings_shadow_softness_3_radiobutton");
+
+   GtkWidget *strm_1 = widget_from_builder("shader_settings_shadow_texture_resolution_multiplier_1_radiobutton");
+   GtkWidget *strm_2 = widget_from_builder("shader_settings_shadow_texture_resolution_multiplier_2_radiobutton");
+   GtkWidget *strm_3 = widget_from_builder("shader_settings_shadow_texture_resolution_multiplier_3_radiobutton");
+   GtkWidget *strm_4 = widget_from_builder("shader_settings_shadow_texture_resolution_multiplier_4_radiobutton");
+   GtkWidget *strm_5 = widget_from_builder("shader_settings_shadow_texture_resolution_multiplier_5_radiobutton");
+   GtkWidget *strm_6 = widget_from_builder("shader_settings_shadow_texture_resolution_multiplier_6_radiobutton");
+
+   GtkWidget *do_blur_checkbutton = widget_from_builder("shader_settings_do_depth_blur_checkbutton");
+
+   GtkWidget    *basic_mode_checkbutton = widget_from_builder("shader_settings_basic_mode_radiobutton");
+   GtkWidget    *fancy_mode_checkbutton = widget_from_builder("shader_settings_fancy_mode_radiobutton");
+   GtkWidget *standard_mode_checkbutton = widget_from_builder("shader_settings_standard_mode_radiobutton");
+
+   GtkWidget *do_depth_fog_checkbutton = widget_from_builder("shader_settings_do_depth_fog_checkbutton");
+
+   graphics_info_t g;
+
+   // oh dear... labels and variables inconsistent
+   if (g.displayed_image_type == g.SHOW_AO_SCENE)    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fancy_mode_checkbutton), TRUE);
+   if (g.displayed_image_type == g.SHOW_BASIC_SCENE) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(standard_mode_checkbutton), TRUE);
+
+   if (g.ssao_blur_size == 0) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sssb_0), TRUE);
+   if (g.ssao_blur_size == 1) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sssb_1), TRUE);
+   if (g.ssao_blur_size == 2) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sssb_2), TRUE);
+
+   if (g.shadow_softness == 1) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sss_1), TRUE);
+   if (g.shadow_softness == 2) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sss_2), TRUE);
+   if (g.shadow_softness == 3) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sss_3), TRUE);
+
+   if (g.shadow_texture_multiplier == 1) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(strm_1), TRUE);
+   if (g.shadow_texture_multiplier == 2) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(strm_2), TRUE);
+   if (g.shadow_texture_multiplier == 3) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(strm_3), TRUE);
+   if (g.shadow_texture_multiplier == 4) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(strm_4), TRUE);
+   if (g.shadow_texture_multiplier == 5) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(strm_5), TRUE);
+   if (g.shadow_texture_multiplier == 6) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(strm_6), TRUE);
+
+   if (g.shader_do_depth_of_field_blur_flag) // not shader_do_depth_blur_flag (what's that used for? - delete it)
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(do_blur_checkbutton), TRUE);
+   else
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(do_blur_checkbutton), FALSE);
+
+   if (graphics_info_t::shader_do_depth_fog_flag)
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(do_depth_fog_checkbutton), TRUE);
+   else
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(do_depth_fog_checkbutton), FALSE);
+
+   // make this insensitve if mode is not fancy
+   GtkWidget *fancy_vbox = widget_from_builder("shader_settings_fancy_vbox");
+   bool is_fancy_mode = true;
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(basic_mode_checkbutton)))    is_fancy_mode = false;
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(standard_mode_checkbutton))) is_fancy_mode = false;
+   if (! is_fancy_mode)
+      gtk_widget_set_sensitive(fancy_vbox, FALSE);
+
+   double v1 = graphics_info_t::ssao_strength;
+   double v2 = graphics_info_t::SSAO_radius;
+   double v3 = graphics_info_t::n_ssao_kernel_samples;
+   double v4 = graphics_info_t::shadow_strength;
+   double v5 = graphics_info_t::focus_blur_z_depth;
+   double v6 = graphics_info_t::focus_blur_strength;
+   double v7 = graphics_info_t::SSAO_bias;
+   double v8 = graphics_info_t::effects_brightness;
+   double v9 = graphics_info_t::effects_gamma;
+
+   gtk_range_set_range(GTK_RANGE(r1), 0.0, 2.0);
+   gtk_range_set_value(GTK_RANGE(r1), v1);
+   gtk_range_set_range(GTK_RANGE(r2), 0.0, 100.0);
+   gtk_range_set_value(GTK_RANGE(r2), v2);
+   gtk_range_set_range(GTK_RANGE(r3), 0.0, 256.0);
+   gtk_range_set_value(GTK_RANGE(r3), v3);
+   gtk_range_set_range(GTK_RANGE(r4), 0.0, 1.0);
+   gtk_range_set_value(GTK_RANGE(r4), v4);
+   gtk_range_set_range(GTK_RANGE(r5), 0.0, 1.0);
+   gtk_range_set_value(GTK_RANGE(r5), v5);
+   gtk_range_set_range(GTK_RANGE(r6), 0.0, 6.0);
+   gtk_range_set_value(GTK_RANGE(r6), v6);
+   gtk_range_set_range(GTK_RANGE(r7), 0.0, 0.4);
+   gtk_range_set_value(GTK_RANGE(r7), v7);
+   gtk_range_set_range(GTK_RANGE(r8), 0.0, 3.0);
+   gtk_range_set_value(GTK_RANGE(r8), v8);
+   gtk_range_set_range(GTK_RANGE(r9), 0.0, 2.0);
+   gtk_range_set_value(GTK_RANGE(r9), v9);
+
+   gtk_widget_show(w);
+}
+
+
+
 
 
 /* end preferences */
@@ -6915,8 +6744,8 @@ on_generate_diff_map_peaks_cancel_button_clicked_gtkbuilder_callback
 
 extern "C" G_MODULE_EXPORT
 void
-on_difference_map_peaks1_activate_gtkbuilder_callback      (GtkMenuItem     *menuitem,
-                                        gpointer         user_data)
+on_difference_map_peaks1_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
+                                                       gpointer         user_data)
 {
   GtkWidget *w = wrapped_create_generate_diff_map_peaks_dialog();
   gtk_widget_show(w);
@@ -6928,8 +6757,7 @@ void
 on_superpose_reference_chain_checkbutton_toggled_gtkbuilder_callback(GtkToggleButton *togglebutton,
                                                                      gpointer user_data) {
 
-  GtkWidget *combobox = lookup_widget(GTK_WIDGET(togglebutton),
-					"superpose_dialog_reference_chain_combobox");
+  GtkWidget *combobox = widget_from_builder("superpose_dialog_reference_chain_combobox");
   if (gtk_toggle_button_get_active(togglebutton)) {
     gtk_widget_set_sensitive(GTK_WIDGET(combobox), TRUE);
     printf("calling fill_superpose_combobox_with_chain_options()\n");
@@ -6950,8 +6778,7 @@ on_superpose_moving_chain_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  GtkWidget *combobox = lookup_widget(GTK_WIDGET(togglebutton),
-				      "superpose_dialog_moving_chain_combobox");
+  GtkWidget *combobox = widget_from_builder("superpose_dialog_moving_chain_combobox");
 
   if (gtk_toggle_button_get_active(togglebutton)) {
     fill_superpose_combobox_with_chain_options(combobox, 0);
@@ -6959,6 +6786,15 @@ on_superpose_moving_chain_checkbutton_toggled_gtkbuilder_callback
   } else {
     gtk_widget_set_sensitive(GTK_WIDGET(combobox), FALSE);
   }
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_draw_fullscreen_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
+                                                gpointer     user_data) {
+
+   fullscreen();
+   set_show_modelling_toolbar(0);
 }
 
 
@@ -6970,7 +6806,7 @@ on_draw_ncs_ghosts_yes_radiobutton_toggled_gtkbuilder_callback
 {
 /* Function no longer used.  Kept in glade (not visible) for historical reasons
 
-   GtkWidget *w = lookup_widget(GTK_WIDGET(togglebutton), "bond_parameters_dialog");
+   GtkWidget *w = widget_from_builder("bond_parameters_dialog");
    if (gtk_toggle_button_get_active(togglebutton)) {
       printf("yes radiobutton toggled on.\n");
       make_ncs_ghosts_maybe(w);
@@ -6994,9 +6830,9 @@ void
 on_ncs_maps_ok_button_clicked_gtkbuilder_callback          (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "ncs_maps_dialog");
+   GtkWidget *w = widget_from_builder("ncs_maps_dialog");
    make_dynamically_transformed_ncs_maps_by_widget(w);
-   gtk_widget_destroy(w);
+   gtk_widget_hide(w);
 }
 
 
@@ -7005,8 +6841,8 @@ void
 on_ncs_maps_cancel_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "ncs_maps_dialog");
-   gtk_widget_destroy(w);
+   GtkWidget *w = widget_from_builder("ncs_maps_dialog");
+   gtk_widget_hide(w);
 }
 
 
@@ -7051,7 +6887,7 @@ void
 on_pointer_distances_ok_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "pointer_distances_dialog");
+   GtkWidget *dialog = widget_from_builder("pointer_distances_dialog");
    execute_pointer_distances_settings(dialog);
    gtk_widget_destroy(dialog);
 }
@@ -7073,7 +6909,7 @@ void
 on_align_and_mutate_ok_button_clicked_gtkbuilder_callback  (GtkButton       *button,
                                         gpointer         user_data)
 {
-   // GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "align_and_mutate_dialog");
+   // GtkWidget *dialog = widget_from_builder("align_and_mutate_dialog");
    GtkWidget *dialog = widget_from_builder("align_and_mutate_dialog");
    int handled_state = do_align_mutate_sequence(dialog);
    if (handled_state == 1)
@@ -7100,7 +6936,7 @@ on_ramachandran_plot_differences_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "ramachandran_plot_differences_dialog");
+   GtkWidget *w = widget_from_builder("ramachandran_plot_differences_dialog");
    int istat = do_ramachandran_plot_differences_by_widget(w);
    if (istat) 			/* the plot was drawn (i.e. no chain selection funnies) */
       gtk_widget_destroy(w);
@@ -7114,7 +6950,7 @@ on_ramachandran_plot_differences_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "ramachandran_plot_differences_dialog");
+   GtkWidget *w = widget_from_builder("ramachandran_plot_differences_dialog");
    gtk_widget_destroy(w);
 
 }
@@ -7138,7 +6974,7 @@ on_ramachandran_plot_differences_first_chain_checkbutton_toggled_gtkbuilder_call
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *combobox = lookup_widget(GTK_WIDGET(togglebutton),
+   GtkWidget *combobox = widget_from_builder(
 				       "ramachandran_plot_differences_first_chain_combobox");
    if (gtk_toggle_button_get_active(togglebutton)) {
       gtk_widget_set_sensitive(GTK_WIDGET(combobox), TRUE);
@@ -7156,7 +6992,7 @@ on_ramachandran_plot_differences_second_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *combobox = lookup_widget(GTK_WIDGET(togglebutton),
+   GtkWidget *combobox = widget_from_builder(
 				       "ramachandran_plot_differences_second_chain_combobox");
 
    if (gtk_toggle_button_get_active(togglebutton)) {
@@ -7349,7 +7185,7 @@ void
 on_base_chooser_A_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *w = widget_from_builder(
 				"nucleic_acid_base_chooser_dialog");
    gtk_widget_destroy(w);
    do_base_mutation("A");
@@ -7361,7 +7197,7 @@ void
 on_base_chooser_C_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *w = widget_from_builder(
 				"nucleic_acid_base_chooser_dialog");
    gtk_widget_destroy(w);
    do_base_mutation("C");
@@ -7373,7 +7209,7 @@ void
 on_base_chooser_G_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *w = widget_from_builder(
 				"nucleic_acid_base_chooser_dialog");
    gtk_widget_destroy(w);
    do_base_mutation("G");
@@ -7385,7 +7221,7 @@ void
 on_base_chooser_T_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *w = widget_from_builder(
 				"nucleic_acid_base_chooser_dialog");
    gtk_widget_destroy(w);
    do_base_mutation("T");
@@ -7397,7 +7233,7 @@ void
 on_base_chooser_U_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *w = widget_from_builder(
 				"nucleic_acid_base_chooser_dialog");
    gtk_widget_destroy(w);
    do_base_mutation("U");
@@ -7410,7 +7246,7 @@ on_base_chooser_cancel_button_clicked_gtkbuilder_callback  (GtkButton       *but
                                         gpointer         user_data)
 {
 
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *w = widget_from_builder(
 				"nucleic_acid_base_chooser_dialog");
    gtk_widget_destroy(w);
 }
@@ -7431,7 +7267,7 @@ void
 on_change_chain_ids2_activate_gtkbuilder_callback          (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
-   GtkWidget *w = wrapped_create_change_chain_id_dialog();
+   GtkWidget *w = wrapped_create_change_chain_id_dialog(); // uses builder
    gtk_widget_show(w);
 
 }
@@ -7444,9 +7280,10 @@ on_change_chains_rechain_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "change_chain_id_dialog");
+   // GtkWidget *w = widget_from_builder("change_chain_id_dialog");
+   GtkWidget *w = widget_from_builder("change_chain_id_dialog");
    change_chain_id_by_widget(w);
-   gtk_widget_destroy(w);
+   gtk_widget_hide(w);
 }
 
 
@@ -7455,8 +7292,11 @@ void
 on_change_chain_cancel_button_clicked_gtkbuilder_callback  (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "change_chain_id_dialog");
-   gtk_widget_destroy(w);
+   // GtkWidget *w = widget_from_builder("change_chain_id_dialog");
+   // gtk_widget_destroy(w);
+
+   GtkWidget *w = widget_from_builder("change_chain_id_dialog");
+   gtk_widget_hide(w);
 
 }
 
@@ -7490,7 +7330,7 @@ on_on_line_documentation_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "doc_urls_dialog");
+   GtkWidget *w = widget_from_builder("doc_urls_dialog");
    gtk_widget_destroy(w);
 
 }
@@ -7503,7 +7343,7 @@ void
 on_save_state_cancel_button1_clicked_gtkbuilder_callback   (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *w = widget_from_builder(
 				"save_state_fileselection");
    gtk_widget_destroy(w);
 }
@@ -7524,11 +7364,11 @@ extern "C" G_MODULE_EXPORT
 void
 on_change_chain_residue_range_yes_radiobutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
-                                        gpointer         user_data)
-{
+                                        gpointer         user_data) {
 
-   GtkWidget *hbox = lookup_widget(GTK_WIDGET(togglebutton),
-				   "change_chain_id_residue_range_hbox");
+   // GtkWidget *hbox = widget_from_builder("change_chain_id_residue_range_hbox");
+   GtkWidget *hbox = widget_from_builder("change_chain_id_residue_range_hbox");
+
    if (gtk_toggle_button_get_active(togglebutton))
       gtk_widget_set_sensitive(hbox, TRUE);
    else
@@ -7569,8 +7409,8 @@ on_check_waters_b_factor_entry_active_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *hbox = lookup_widget(GTK_WIDGET(togglebutton),
-				   "check_waters_b_factor_hbox");
+   // GtkWidget *hbox = widget_from_builder("check_waters_b_factor_hbox");
+   GtkWidget *hbox = widget_from_builder("check_waters_b_factor_hbox");
    if (gtk_toggle_button_get_active(togglebutton))
       gtk_widget_set_sensitive(hbox, TRUE);
    else
@@ -7586,7 +7426,7 @@ on_check_waters_min_dist_entry_active_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *hbox = lookup_widget(GTK_WIDGET(togglebutton),
+   GtkWidget *hbox = widget_from_builder(
 				   "check_waters_min_dist_hbox");
    if (gtk_toggle_button_get_active(togglebutton))
       gtk_widget_set_sensitive(hbox, TRUE);
@@ -7602,8 +7442,8 @@ on_check_waters_max_dist_entry_active_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *hbox = lookup_widget(GTK_WIDGET(togglebutton),
-				   "check_waters_max_dist_hbox");
+   // GtkWidget *hbox = widget_from_builder("check_waters_max_dist_hbox");
+   GtkWidget *hbox = widget_from_builder("check_waters_max_dist_hbox");
    if (gtk_toggle_button_get_active(togglebutton))
       gtk_widget_set_sensitive(hbox, TRUE);
    else
@@ -7618,8 +7458,8 @@ on_check_waters_map_sigma_entry_active_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *hbox = lookup_widget(GTK_WIDGET(togglebutton),
-				   "check_waters_sigma_level_hbox");
+   // GtkWidget *hbox = widget_from_builder("check_waters_sigma_level_hbox");
+   GtkWidget *hbox = widget_from_builder("check_waters_sigma_level_hbox");
    if (gtk_toggle_button_get_active(togglebutton))
       gtk_widget_set_sensitive(hbox, TRUE);
    else
@@ -7634,8 +7474,8 @@ on_check_waters_by_difference_map_active_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *hbox = lookup_widget(GTK_WIDGET(togglebutton),
-				   "check_waters_by_difference_map_hbox");
+   // GtkWidget *hbox = widget_from_builder("check_waters_by_difference_map_hbox");
+   GtkWidget *hbox = widget_from_builder("check_waters_by_difference_map_hbox");
    if (gtk_toggle_button_get_active(togglebutton))
       gtk_widget_set_sensitive(hbox, TRUE);
    else
@@ -7652,8 +7492,8 @@ on_residue_info_occ_apply_all_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   // GtkWidget *entry = lookup_widget(GTK_WIDGET(togglebutton), "residue_info_master_atom_occ_entry");
-   // GtkWidget *alt_conf_checkbutton = lookup_widget(GTK_WIDGET(togglebutton), "residue_info_occ_apply_to_altconf_checkbutton");
+   // GtkWidget *entry = widget_from_builder("residue_info_master_atom_occ_entry");
+   // GtkWidget *alt_conf_checkbutton = widget_from_builder("residue_info_occ_apply_to_altconf_checkbutton");
 
    GtkWidget *entry = widget_from_builder("residue_info_master_atom_occ_entry");
    GtkWidget *alt_conf_checkbutton = widget_from_builder("residue_info_occ_apply_to_altconf_checkbutton");
@@ -7674,8 +7514,8 @@ on_residue_info_occ_apply_to_altconf_checkbutton_toggled_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-   // GtkWidget *occ_entry = lookup_widget(GTK_WIDGET(togglebutton), "residue_info_master_atom_occ_entry");
-   // GtkWidget *alt_conf_entry = lookup_widget(GTK_WIDGET(togglebutton), "residue_info_occ_apply_to_alt_conf_entry");
+   // GtkWidget *occ_entry = widget_from_builder("residue_info_master_atom_occ_entry");
+   // GtkWidget *alt_conf_entry = widget_from_builder("residue_info_occ_apply_to_alt_conf_entry");
 
    GtkWidget *occ_entry      = widget_from_builder("residue_info_master_atom_occ_entry");
    GtkWidget *alt_conf_entry = widget_from_builder("residue_info_occ_apply_to_alt_conf_entry");
@@ -7700,7 +7540,7 @@ on_residue_info_b_factor_apply_all_checkbutton_toggled_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-   // GtkWidget *entry = lookup_widget(GTK_WIDGET(togglebutton), "residue_info_master_atom_b_factor_entry");
+   // GtkWidget *entry = widget_from_builder("residue_info_master_atom_b_factor_entry");
 
    GtkWidget *entry = widget_from_builder("residue_info_master_atom_b_factor_entry");
 
@@ -7718,7 +7558,7 @@ on_other_modelling_tools_close_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   // GtkWidget *w = lookup_widget(GTK_WIDGET(button), "other_model_tools_dialog");
+   // GtkWidget *w = widget_from_builder("other_model_tools_dialog");
    GtkWidget *w = widget_from_builder("other_model_tools_dialog");
 
    // gtk_widget_destroy(w);
@@ -7875,7 +7715,7 @@ void
 on_screendump_image_ok_button_clicked_gtkbuilder_callback  (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *filechooser = lookup_widget(GTK_WIDGET(button), "screendump_filechooser");
+   GtkWidget *filechooser = widget_from_builder("screendump_filechooser");
   /*
 
     To restore this then I need to fix up the usage of gtk_object_get_user_data()
@@ -7905,7 +7745,7 @@ on_screendump_image_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *filechooser = lookup_widget(GTK_WIDGET(button),
+   GtkWidget *filechooser = widget_from_builder(
 					    "screendump_filechooser"); /* now consistent with above */
 
    if (filechooser)
@@ -7946,9 +7786,8 @@ on_other_tools_place_strand_here_button_clicked_gtkbuilder_callback     (GtkButt
 
 extern "C" G_MODULE_EXPORT
 void
-on_diff_map_peaks_dialog_destroy_gtkbuilder_callback       (GtkWidget       *object,
-                                        gpointer         user_data)
-{
+on_diff_map_peaks_dialog_destroy_gtkbuilder_callback(GtkWidget       *object,
+                                        gpointer         user_data) {
   set_difference_map_peaks_widget(0); /* a null pointer */
 }
 
@@ -7960,7 +7799,7 @@ on_symmetry_controller_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "symmetry_controller_dialog");
+  GtkWidget *w = widget_from_builder("symmetry_controller_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -8131,7 +7970,7 @@ on_ncs_controller_ncs_master_chain_ich_radiobutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(togglebutton), "ncs_control_dialog");
+   GtkWidget *w = widget_from_builder("ncs_control_dialog");
    int imol_chain = GPOINTER_TO_INT(user_data);
    int imol = imol_chain/1000;
    int ich = imol_chain - imol*1000;
@@ -8153,8 +7992,8 @@ void
 on_ncs_control_ok_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "ncs_control_dialog");
-   gtk_widget_destroy(w);
+   GtkWidget *w = widget_from_builder("ncs_control_dialog");
+   gtk_widget_hide(w);
 }
 
 
@@ -8189,7 +8028,7 @@ void
 on_lsq_plane_ok_button_clicked_gtkbuilder_callback         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "lsq_plane_dialog");
+  GtkWidget *w = widget_from_builder("lsq_plane_dialog");
   gtk_widget_destroy(w);
   normal_cursor();
 }
@@ -8232,7 +8071,7 @@ void
 on_ncs_ghost_control1_activate_gtkbuilder_callback         (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
-   GtkWidget *w = wrapped_create_ncs_control_dialog();
+   GtkWidget *w = wrapped_create_ncs_control_dialog(); // uses builder
    gtk_widget_show(w);
 }
 
@@ -8251,11 +8090,10 @@ extern "C" G_MODULE_EXPORT
 void
 on_coord_colour_control_ok_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
-                                        gpointer         user_data)
-{
+                                        gpointer         user_data) {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "coords_colour_control_dialog");
-  gtk_widget_destroy(w);
+  GtkWidget *w = widget_from_builder("coords_colour_control_dialog");
+  gtk_widget_hide(w);
 
 }
 
@@ -8266,8 +8104,10 @@ on_bond_colours1_activate_gtkbuilder_callback              (GtkMenuItem     *men
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = wrapped_create_coords_colour_control_dialog();
-  gtk_widget_show(w);
+   // note on_coord_colour_control_ok_button_clicked_gtkbuilder_callback()
+   // (above)
+   GtkWidget *w = wrapped_create_coords_colour_control_dialog(); // uses builder
+   gtk_widget_show(w);
 
 }
 
@@ -8321,7 +8161,7 @@ on_coot_online_doc_search_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkEntry *entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button), "coot_online_doc_search_entry"));
+  GtkEntry *entry = GTK_ENTRY(widget_from_builder("coot_online_doc_search_entry"));
   const char *text = gtk_entry_get_text(entry);
   handle_online_coot_search_request(text);
 }
@@ -8375,27 +8215,41 @@ void on_generic_objects_dialog_response_gtkbuilder_callback(GtkDialog       *dia
 // what a terrible function name!
 extern "C" G_MODULE_EXPORT
 gboolean
-on_entry1_key_press_event_gtkbuilder_callback              (GtkWidget       *widget,
-                                        GdkEventKey     *event,
-                                        gpointer         user_data)
-{
-  GtkEntry *entry = (GTK_ENTRY(lookup_widget(widget, "map_radius_xray_entry")));
-  const char *text = gtk_entry_get_text(entry);
-  if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
-    set_density_size_from_widget(text);
-  }
-  return FALSE;
-}
+on_entry1_key_press_event_gtkbuilder_callback(GtkWidget       *widget,
+                                              GdkEventKey     *event,
+                                              gpointer         user_data) {
 
+   // 1: I don't like the name of this callback.
+   // 2: There is no EM version of this.
+
+   GtkEntry *entry = (GTK_ENTRY(widget_from_builder("map_parameters_x_ray_radius_entry")));
+   const char *text = gtk_entry_get_text(entry);
+   if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
+      set_density_size_from_widget(text);
+   }
+   return FALSE;
+}
 
 extern "C" G_MODULE_EXPORT
 void
-on_map_radius_apply_button_clicked_gtkbuilder_callback     (GtkButton       *button,
-                                        gpointer         user_data)
-{
-   GtkEntry *entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button), "map_radius_xray_entry"));
-   const char *text = gtk_entry_get_text(entry);
+on_map_radius_x_ray_apply_button_clicked_gtkbuilder_callback(GtkButton       *button,
+                                                               gpointer         user_data) {
+
+   GtkEntry *entry_xray = GTK_ENTRY(widget_from_builder("map_parameters_x_ray_radius_entry"));
+   GtkEntry *entry_em   = GTK_ENTRY(widget_from_builder("map_parameters_em_radius_entry"));
+   const char *text = gtk_entry_get_text(entry_xray);
    set_density_size_from_widget(text);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_map_radius_em_apply_button_clicked_gtkbuilder_callback(GtkButton       *button,
+                                                          gpointer         user_data) {
+
+   GtkEntry *entry_xray = GTK_ENTRY(widget_from_builder("map_parameters_x_ray_radius_entry"));
+   GtkEntry *entry_em   = GTK_ENTRY(widget_from_builder("map_parameters_em_radius_entry"));
+   const char *text = gtk_entry_get_text(entry_em);
+   set_density_size_em_from_widget(text);
 }
 
 
@@ -8459,7 +8313,7 @@ on_probe_clashes1_activate_gtkbuilder_callback             (GtkMenuItem     *men
                                         gpointer         user_data)
 {
    const char *type = "probe";
-   GtkWidget *menu = lookup_widget(GTK_WIDGET(menuitem), "probe_clashes1");
+   GtkWidget *menu = widget_from_builder("probe_clashes1");
    if (menu) {
       add_on_validation_graph_mol_options(menu, type);
    } else {
@@ -8478,7 +8332,7 @@ on_validate1_activate_gtkbuilder_callback                  (GtkMenuItem     *men
    GtkWidget *menu_item = 0;
 
    if (probe_available_p() == 0) { /* no */
-      menu_item = lookup_widget(GTK_WIDGET(menuitem), "probe_clashes1");
+      menu_item = widget_from_builder("probe_clashes1");
       if (!menu_item) {
          printf("Failed to get probe_clashes1 menu item :-(\n");
       } else {
@@ -8526,7 +8380,7 @@ void
 on_ideal_rna_ok_button_clicked_gtkbuilder_callback         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "nucleotide_builder_dialog");
+  GtkWidget *w = widget_from_builder("nucleotide_builder_dialog");
   ideal_nucleic_acid_by_widget(w);
   gtk_widget_destroy(w);
 }
@@ -8537,7 +8391,7 @@ void
 on_ideal_rna_cancel_button_clicked_gtkbuilder_callback     (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "nucleotide_builder_dialog");
+  GtkWidget *w = widget_from_builder("nucleotide_builder_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -8571,11 +8425,12 @@ on_unit_cell_no_radiobutton_toggled_gtkbuilder_callback    (GtkToggleButton *tog
 extern "C" G_MODULE_EXPORT
 void
 on_move_molecule_here1_activate_gtkbuilder_callback        (GtkMenuItem     *menuitem,
-                                        gpointer         user_data)
-{
+                                                            gpointer         user_data) {
 
-  GtkWidget *w = wrapped_create_move_molecule_here_dialog();
-  gtk_widget_show(w);
+   // GtkWidget *w = wrapped_create_move_molecule_here_dialog();
+   GtkWidget *w = widget_from_builder("move_molecule_here_dialog");
+   fill_move_molecule_here_dialog(w);
+   gtk_widget_show(w);
 
 }
 
@@ -8587,9 +8442,10 @@ on_move_molecule_here_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "move_molecule_here_dialog");
-  move_molecule_here_by_widget(w);
-  gtk_widget_destroy(w);
+  move_molecule_here_by_widget();
+  GtkWidget *w = widget_from_builder("move_molecule_here_dialog");
+  gtk_widget_hide(w);
+
 }
 
 
@@ -8600,7 +8456,7 @@ on_move_molecule_here_cancel_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "move_molecule_here_dialog");
+  GtkWidget *w = widget_from_builder("move_molecule_here_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -8612,7 +8468,7 @@ on_monomer_library_search_dialog_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "monomer_search_dialog");
+  GtkWidget *w = widget_from_builder("monomer_search_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -8633,10 +8489,10 @@ on_monomer_library_search_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *entry = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *entry = widget_from_builder(
 				   "monomer_search_entry");
   entry_char_type *text;
-  GtkWidget *viewport = lookup_widget(GTK_WIDGET(button),
+  GtkWidget *viewport = widget_from_builder(
 				   "monomer_search_results_viewport");
 
   if (entry) {
@@ -8665,10 +8521,10 @@ on_monomer_search_entry_key_press_event_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *entry = lookup_widget(GTK_WIDGET(widget),
+  GtkWidget *entry = widget_from_builder(
 				   "monomer_search_entry");
   entry_char_type *text;
-  GtkWidget *viewport = lookup_widget(GTK_WIDGET(widget),
+  GtkWidget *viewport = widget_from_builder(
 				   "monomer_search_results_viewport");
 
   if (entry) {
@@ -8709,7 +8565,7 @@ on_least_squares_ok_button_clicked_gtkbuilder_callback     (GtkButton       *but
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "least_squares_dialog");
+  GtkWidget *w = widget_from_builder("least_squares_dialog");
   apply_lsq_matches_by_widget(w);
 
 }
@@ -8720,9 +8576,9 @@ void
 on_least_squares_close_button_clicked_gtkbuilder_callback  (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "least_squares_dialog");
+  GtkWidget *w = widget_from_builder("least_squares_dialog");
   update_lsq_dialog_store_values(w);
-  gtk_widget_destroy(w);
+  gtk_widget_hide(w);
 }
 
 
@@ -8734,8 +8590,8 @@ on_least_squares_cancel_button_clicked_gtkbuilder_callback (GtkButton       *but
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "least_squares_dialog");
-  gtk_widget_destroy(w);
+  GtkWidget *w = widget_from_builder("least_squares_dialog");
+  gtk_widget_hide(w);
 
 }
 
@@ -8746,8 +8602,8 @@ on_lsq_superpose1_activate_gtkbuilder_callback             (GtkMenuItem     *men
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = wrapped_create_least_squares_dialog();
-  gtk_widget_show(w);
+   GtkWidget *w = wrapped_create_least_squares_dialog(); // uses builder
+   gtk_widget_show(w);
 
 }
 
@@ -8798,6 +8654,51 @@ on_display_control_window_glade_configure_event_gtkbuilder_callback
   store_window_position(COOT_DISPLAY_CONTROL_WINDOW, widget);
   return FALSE;
 }
+
+// void
+//nuser_function (GtkMenuItem *menuitem,
+//               gpointer     user_data)
+
+extern "C" G_MODULE_EXPORT
+void
+on_rotate_translate_item_residue_range_item_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
+                                                                         gpointer user_data) {
+
+   std::cout << "on_rotate_translate_item_residue_range_item_activate_gtkbuilder_callback() " << std::endl;
+   set_rot_trans_object_type(ROT_TRANS_TYPE_ZONE);
+   do_rot_trans_setup(1);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_rotate_translate_item_residue_item_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
+                                                                    gpointer user_data) {
+   std::cout << "on_rotate_translate_item_residue_item_activate_gtkbuilder_callback" << std::endl;
+   set_rot_trans_object_type(ROT_TRANS_TYPE_RESIDUE);
+   do_rot_trans_setup(1);
+}
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_rotate_translate_item_molecule_item_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
+                                                                    gpointer user_data) {
+
+   std::cout << "on_rotate_translate_item_molecule_item_activate_gtkbuilder_callback" << std::endl;
+   set_rot_trans_object_type(ROT_TRANS_TYPE_MOLECULE);
+   do_rot_trans_setup(1);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_rotate_translate_item_chain_item_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
+                                                                 gpointer user_data) {
+
+   std::cout << "on_rotate_translate_item_chain_item_activate_gtkbuilder_callback()" << std::endl;
+   set_rot_trans_object_type(ROT_TRANS_TYPE_CHAIN);
+   do_rot_trans_setup(1);
+}
+
 
 
 extern "C" G_MODULE_EXPORT
@@ -9038,7 +8939,7 @@ void
 on_display_manager_button_clicked_gtkbuilder_callback      (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *widget = wrapped_create_display_control_window();
+   GtkWidget *widget = wrapped_create_display_control_window(); // uses widget_from_builder()
    gtk_widget_show(widget);
 }
 
@@ -9087,13 +8988,12 @@ extern "C" G_MODULE_EXPORT
 void
 on_display_control_all_maps_togglebutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
-                                        gpointer         user_data)
-{
+                                        gpointer         user_data) {
 
-  if (gtk_toggle_button_get_active(togglebutton))
-    set_all_maps_displayed(1);
-  else
-    set_all_maps_displayed(0);
+   if (gtk_toggle_button_get_active(togglebutton))
+      set_all_maps_displayed(1);
+   else
+      set_all_maps_displayed(0);
 
 }
 
@@ -9102,12 +9002,12 @@ extern "C" G_MODULE_EXPORT
 void
 on_display_control_all_models_togglebutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
-                                        gpointer         user_data)
-{
-  if (gtk_toggle_button_get_active(togglebutton))
-    set_all_models_displayed_and_active(1);
-  else
-    set_all_models_displayed_and_active(0);
+                                        gpointer         user_data) {
+
+   if (gtk_toggle_button_get_active(togglebutton))
+      set_all_models_displayed_and_active(1);
+   else
+      set_all_models_displayed_and_active(0);
 
 }
 
@@ -9225,13 +9125,13 @@ on_model_toolbar_icons_and_text1_activate_gtkbuilder_callback
                                         gpointer         user_data)
 {
   /*
-  GtkWidget *toolbar = lookup_widget(GTK_WIDGET(menuitem), "model_toolbar");
+  GtkWidget *toolbar = widget_from_builder("model_toolbar");
   if (GTK_CHECK_MENU_ITEM(menuitem)->active){
       gtk_toolbar_set_style (GTK_TOOLBAR (toolbar), GTK_TOOLBAR_BOTH_HORIZ);
       GtkWidget *button;
-      button = lookup_widget(GTK_WIDGET(toolbar), "model_toolbar_refine_control_button");
+      button = widget_from_builder("model_toolbar_refine_control_button");
       gtk_button_set_label(GTK_BUTTON(button), "Refine/Regularize Control...");
-      button = lookup_widget(GTK_WIDGET(toolbar), "model_toolbar_select_map_button");
+      button = widget_from_builder("model_toolbar_select_map_button");
       gtk_button_set_label(GTK_BUTTON(button), "Select Map...");
   }
   */
@@ -9244,13 +9144,13 @@ on_model_toolbar_icons1_activate_gtkbuilder_callback       (GtkMenuItem     *men
                                         gpointer         user_data)
 {
   /*
-  GtkWidget *toolbar = lookup_widget(GTK_WIDGET(menuitem), "model_toolbar");
+  GtkWidget *toolbar = widget_from_builder("model_toolbar");
   if (GTK_CHECK_MENU_ITEM(menuitem)->active){
     gtk_toolbar_set_style (GTK_TOOLBAR (toolbar), GTK_TOOLBAR_ICONS);
     GtkWidget *button;
-    button = lookup_widget(GTK_WIDGET(toolbar), "model_toolbar_refine_control_button");
+    button = widget_from_builder("model_toolbar_refine_control_button");
     gtk_button_set_label(GTK_BUTTON(button), "R/RC");
-    button = lookup_widget(GTK_WIDGET(toolbar), "model_toolbar_select_map_button");
+    button = widget_from_builder("model_toolbar_select_map_button");
     gtk_button_set_label(GTK_BUTTON(button), "Map");
   }
   */
@@ -9263,13 +9163,13 @@ on_model_toolbar_text1_activate_gtkbuilder_callback        (GtkMenuItem     *men
                                         gpointer         user_data)
 {
   /*
-  GtkWidget *toolbar = lookup_widget(GTK_WIDGET(menuitem), "model_toolbar");
+  GtkWidget *toolbar = widget_from_builder("model_toolbar");
   if (GTK_CHECK_MENU_ITEM(menuitem)->active){
     gtk_toolbar_set_style (GTK_TOOLBAR (toolbar), GTK_TOOLBAR_TEXT);
     GtkWidget *button;
-    button = lookup_widget(GTK_WIDGET(toolbar), "model_toolbar_refine_control_button");
+    button = widget_from_builder("model_toolbar_refine_control_button");
     gtk_button_set_label(GTK_BUTTON(button), "Refine/Regularize Control...");
-    button = lookup_widget(GTK_WIDGET(toolbar), "model_toolbar_select_map_button");
+    button = widget_from_builder("model_toolbar_select_map_button");
     gtk_button_set_label(GTK_BUTTON(button), "Select Map...");
   }
   */
@@ -9421,10 +9321,10 @@ on_coords_filechooserdialog1_response_gtkbuilder_callback  (GtkDialog       *dia
   GSList *sel_files;
 /*   GFile  *gfile; for xxx_get_files(), which we don't use (too modern) */
 
-  coords_fileselection1 = lookup_widget(GTK_WIDGET(dialog),
+  coords_fileselection1 = widget_from_builder(
                                         "coords_filechooserdialog1");
 
-  combobox = lookup_widget(GTK_WIDGET(dialog),
+  combobox = widget_from_builder(
                               "coords_filechooserdialog1_recentre_combobox");
   if (combobox) {
     active_index = gtk_combo_box_get_active(GTK_COMBO_BOX(combobox));
@@ -9475,7 +9375,7 @@ on_coords_filechooserdialog1_response_gtkbuilder_callback  (GtkDialog       *dia
   gtk_widget_destroy(coords_fileselection1);
 
  } else {
-  GtkWidget *coords_fileselection1 = lookup_widget(GTK_WIDGET(dialog),
+  GtkWidget *coords_fileselection1 = widget_from_builder(
                                                 "coords_filechooserdialog1");
 
   gtk_widget_destroy(coords_fileselection1);
@@ -9490,7 +9390,7 @@ on_coords_filechooserdialog1_destroy_gtkbuilder_callback  (GtkWidget       *obje
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *coords_fileselection1 = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *coords_fileselection1 = widget_from_builder(
                                                 "coords_filechooserdialog1");
 
   gtk_widget_destroy(coords_fileselection1);
@@ -9526,7 +9426,7 @@ on_dataset_filechooserdialog1_response_gtkbuilder_callback (GtkDialog       *dia
 
       GtkWidget *dataset_fileselection1;
 
-      dataset_fileselection1 = lookup_widget(GTK_WIDGET(dialog),
+      dataset_fileselection1 = widget_from_builder(
 					     "dataset_filechooserdialog1");
 
       save_directory_from_filechooser(dataset_fileselection1);
@@ -9564,7 +9464,7 @@ on_dataset_filechooserdialog1_response_gtkbuilder_callback (GtkDialog       *dia
       gtk_widget_destroy(dataset_fileselection1);
       free(copied_filename);
    } else {
-      GtkWidget *dataset_fileselection1 = lookup_widget(GTK_WIDGET(dialog),
+      GtkWidget *dataset_fileselection1 = widget_from_builder(
 							"dataset_filechooserdialog1");
 
       gtk_widget_destroy(dataset_fileselection1);
@@ -9580,7 +9480,7 @@ on_dataset_filechooserdialog1_destroy_gtkbuilder_callback (GtkWidget       *obje
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *dataset_fileselection1 = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *dataset_fileselection1 = widget_from_builder(
                                                 "dataset_filechooserdialog1");
 
   gtk_widget_destroy(dataset_fileselection1);
@@ -9602,13 +9502,13 @@ on_map_name_filechooserdialog1_response_gtkbuilder_callback
       GtkWidget *checkbutton;
       short int is_diff_map_flag = 0;
 
-      map_name_fileselection1 = GTK_WIDGET(lookup_widget(GTK_WIDGET(dialog),
+      map_name_fileselection1 = GTK_WIDGET(widget_from_builder(
 							 "map_name_filechooserdialog1"));
       save_directory_from_filechooser(map_name_fileselection1);
 
       /* I don't think that we need to malloc this. */
 
-      checkbutton = lookup_widget(GTK_WIDGET(dialog),
+      checkbutton = widget_from_builder(
 				  "map_filechooser_is_difference_map_button");
 
       if (checkbutton)
@@ -9630,7 +9530,7 @@ on_map_name_filechooserdialog1_response_gtkbuilder_callback
       free(sfile);
 
    } else {
-      GtkWidget *map_name_fileselection1 = lookup_widget(GTK_WIDGET(dialog),
+      GtkWidget *map_name_fileselection1 = widget_from_builder(
 							 "map_name_filechooserdialog1");
 
       gtk_widget_destroy(map_name_fileselection1);
@@ -9656,7 +9556,7 @@ on_map_name_filechooserdialog1_destroy_gtkbuilder_callback (GtkWidget       *obj
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *map_name_fileselection1 = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *map_name_fileselection1 = widget_from_builder(
                                                 "map_name_filechooserdialog1");
 
   gtk_widget_destroy(map_name_fileselection1);
@@ -9672,7 +9572,7 @@ on_phs_coordinates_filechooserdialog1_response_gtkbuilder_callback
 {
 
    GtkWidget *phs_fileselection;
-   phs_fileselection = lookup_widget(GTK_WIDGET(dialog),
+   phs_fileselection = widget_from_builder(
                                      "phs_coordinates_filechooserdialog1");
    if (response_id == GTK_RESPONSE_OK) {
      const char *filename;
@@ -9696,7 +9596,7 @@ on_phs_coordinates_filechooserdialog1_destroy_gtkbuilder_callback
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *phs_fileselection1 = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *phs_fileselection1 = widget_from_builder(
                                                 "phs_coordinates_filechooserdialog1");
 
   gtk_widget_destroy(phs_fileselection1);
@@ -9726,7 +9626,7 @@ on_save_coords_filechooserdialog1_response_gtkbuilder_callback
 					gpointer user_data)
 {
   if (response_id == GTK_RESPONSE_OK) {
-    GtkWidget *fileselection = lookup_widget(GTK_WIDGET(dialog), "save_coords_filechooserdialog1");
+    GtkWidget *fileselection = widget_from_builder("save_coords_filechooserdialog1");
     save_directory_for_saving_from_filechooser(fileselection);
     const char *stuff = static_cast<const char *>(g_object_get_data(G_OBJECT(fileselection), "stuff"));
     save_coordinates_using_widget(fileselection);
@@ -9734,7 +9634,7 @@ on_save_coords_filechooserdialog1_response_gtkbuilder_callback
     // free(stuff);
     gtk_widget_destroy(fileselection);
   } else {
-    GtkWidget *fileselection = lookup_widget(GTK_WIDGET(dialog), "save_coords_filechooserdialog1");
+    GtkWidget *fileselection = widget_from_builder("save_coords_filechooserdialog1");
     gtk_widget_destroy(fileselection);
   }
 }
@@ -9748,7 +9648,7 @@ on_save_coords_filechooserdialog1_destroy_gtkbuilder_callback
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *fileselection = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *fileselection = widget_from_builder(
                                                 "save_coords_filechooserdialog1");
 
   gtk_widget_destroy(fileselection);
@@ -9768,7 +9668,7 @@ on_cif_dictionary_filechooserdialog1_response(GtkDialog * dialog,
   GtkWidget *dictionary_molecule_selector_option_menu;
   GtkWidget *menu;
   GtkWidget *active_menu_item;
-  GtkWidget *checkbutton = lookup_widget(GTK_WIDGET(dialog),
+  GtkWidget *checkbutton = widget_from_builder(
 					 "cif_dictionary_file_selector_create_molecule_checkbutton");
   short int new_molecule_checkbutton_state = 0;
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
@@ -9776,12 +9676,12 @@ on_cif_dictionary_filechooserdialog1_response(GtkDialog * dialog,
 
   if (response_id == GTK_RESPONSE_OK) {
 
-     fileselection = lookup_widget(GTK_WIDGET(dialog), "cif_dictionary_filechooserdialog1");
+     fileselection = widget_from_builder("cif_dictionary_filechooserdialog1");
      save_directory_from_filechooser(fileselection);
      filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(fileselection));
 
      dictionary_molecule_selector_option_menu =
-	lookup_widget(GTK_WIDGET(dialog),
+	widget_from_builder(
 		      "cif_dictionary_file_selector_molecule_select_option_menu");
 
      /* GTK3 FIXME
@@ -9804,7 +9704,7 @@ on_cif_dictionary_filechooserdialog1_response(GtkDialog * dialog,
 
      gtk_widget_destroy(fileselection);
 } else {
-   fileselection = lookup_widget(GTK_WIDGET(dialog),
+   fileselection = widget_from_builder(
 				 "cif_dictionary_filechooserdialog1");
 
    gtk_widget_destroy(fileselection);
@@ -9821,7 +9721,7 @@ on_cif_dictionary_filechooserdialog1_destroy_gtkbuilder_callback
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *fileselection = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *fileselection = widget_from_builder(
                                                 "cif_dictionary_filechooserdialog1");
 
   gtk_widget_destroy(fileselection);
@@ -9837,7 +9737,7 @@ on_run_script_filechooserdialog1_response_gtkbuilder_callback
 {
 
   if (response_id == GTK_RESPONSE_OK) {
-    GtkWidget *fileselection = lookup_widget(GTK_WIDGET(dialog),
+    GtkWidget *fileselection = widget_from_builder(
 					   "run_script_filechooserdialog1");
 
     const char *script_filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(fileselection));
@@ -9845,7 +9745,7 @@ on_run_script_filechooserdialog1_response_gtkbuilder_callback
     gtk_widget_destroy(fileselection);
 
   } else {
-    GtkWidget *fileselection = lookup_widget(GTK_WIDGET(dialog),
+    GtkWidget *fileselection = widget_from_builder(
                                                 "run_script_filechooserdialog1");
 
     gtk_widget_destroy(fileselection);
@@ -9862,7 +9762,7 @@ on_run_script_filechooserdialog1_destroy_gtkbuilder_callback
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *fileselection = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *fileselection = widget_from_builder(
                                                 "run_script_filechooserdialog1");
 
   gtk_widget_destroy(fileselection);
@@ -9896,11 +9796,11 @@ on_save_symmetry_coords_filechooserdialog1_response_gtkbuilder_callback
 					gpointer user_data)
 {
   if (response_id == GTK_RESPONSE_OK) {
-    GtkWidget *w = lookup_widget(GTK_WIDGET(dialog), "save_symmetry_coords_filechooserdialog1");
+    GtkWidget *w = widget_from_builder("save_symmetry_coords_filechooserdialog1");
     save_symmetry_coords_from_fileselection(w);
     gtk_widget_destroy(w);
   } else {
-    GtkWidget *coords_fileselection1 = lookup_widget(GTK_WIDGET(dialog),
+    GtkWidget *coords_fileselection1 = widget_from_builder(
                                                 "save_symmetry_coords_filechooserdialog1");
 
     gtk_widget_destroy(coords_fileselection1);
@@ -9917,7 +9817,7 @@ on_save_symmetry_coords_filechooserdialog1_destroy_gtkbuilder_callback
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *coords_fileselection1 = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *coords_fileselection1 = widget_from_builder(
                                                 "save_symmetry_coords_filechooserdialog1");
 
   gtk_widget_destroy(coords_fileselection1);
@@ -9950,7 +9850,7 @@ on_save_state_filechooserdialog1_response_gtkbuilder_callback (GtkDialog * dialo
 					gpointer user_data)
 {
   if (response_id == GTK_RESPONSE_OK) {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(dialog),
+   GtkWidget *w = widget_from_builder(
 				"save_state_filechooserdialog1");
 
    const char *filename = gtk_file_chooser_get_filename
@@ -9960,7 +9860,7 @@ on_save_state_filechooserdialog1_response_gtkbuilder_callback (GtkDialog * dialo
    set_save_state_file_name(filename); /* save as a static in graphics_info_t */
    gtk_widget_destroy(w);
   } else {
-    GtkWidget *coords_fileselection1 = lookup_widget(GTK_WIDGET(dialog),
+    GtkWidget *coords_fileselection1 = widget_from_builder(
 						   "save_state_filechooserdialog1");
 
     gtk_widget_destroy(coords_fileselection1);
@@ -9975,7 +9875,7 @@ on_save_state_filechooserdialog1_destroy_gtkbuilder_callback (GtkWidget * object
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *coords_fileselection1 = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *coords_fileselection1 = widget_from_builder(
                                                 "save_state_filechooserdialog1");
 
   gtk_widget_destroy(coords_fileselection1);
@@ -10010,7 +9910,7 @@ on_screendump_filechooserdialog1_response_gtkbuilder_callback (GtkDialog * dialo
 
   if (response_id == GTK_RESPONSE_OK) {
 
-   GtkWidget *fileselection = lookup_widget(GTK_WIDGET(dialog),
+   GtkWidget *fileselection = widget_from_builder(
 					    "screendump_filechooserdialog1");
    int image_type = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(fileselection), "image_type"));
    const char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(fileselection));
@@ -10027,7 +9927,7 @@ on_screendump_filechooserdialog1_response_gtkbuilder_callback (GtkDialog * dialo
    gtk_widget_destroy(fileselection);
 
   } else {
-    GtkWidget *fileselection = lookup_widget(GTK_WIDGET(dialog),
+    GtkWidget *fileselection = widget_from_builder(
                                                 "screendump_filechooserdialog1");
 
     gtk_widget_destroy(fileselection);
@@ -10043,7 +9943,7 @@ on_screendump_filechooserdialog1_destroy_gtkbuilder_callback (GtkWidget * object
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *fileselection = lookup_widget(GTK_WIDGET(object),
+  GtkWidget *fileselection = widget_from_builder(
                                                 "screendump_filechooserdialog1");
 
   gtk_widget_destroy(fileselection);
@@ -10152,7 +10052,7 @@ extern "C" G_MODULE_EXPORT
 void
 on_fixed_atom_close_button_clicked_gtkbuilder_callback     (GtkButton       *button,
                                                             gpointer         user_data) {
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "fixed_atom_dialog");
+  GtkWidget *dialog = widget_from_builder("fixed_atom_dialog");
   gtk_widget_destroy(dialog);
 }
 
@@ -10216,7 +10116,7 @@ void
 on_add_rep_add_rep_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                                        gpointer         user_data)
 {
-   // GtkWidget *w = lookup_widget(GTK_WIDGET(button), "add_reps_dialog");
+   // GtkWidget *w = widget_from_builder("add_reps_dialog");
    // add_additional_representation_by_widget(w);
    // gtk_widget_destroy(w);
 }
@@ -10258,7 +10158,7 @@ void
 on_add_rep_cancel_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "add_reps_dialog");
+  GtkWidget *w = widget_from_builder("add_reps_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -10305,8 +10205,8 @@ on_all2_activate_gtkbuilder_callback                       (GtkMenuItem     *men
 //                                                          gpointer         user_data) {
 
 
-//   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "residue_editor_select_monomer_type_dialog");
-//   GtkWidget *combo_box = lookup_widget(GTK_WIDGET(button), "residue_editor_select_monomer_type_combobox");
+//   GtkWidget *dialog = widget_from_builder("residue_editor_select_monomer_type_dialog");
+//   GtkWidget *combo_box = widget_from_builder("residue_editor_select_monomer_type_combobox");
 //   const char *t = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_box));
 //   show_restraints_editor(t);
 //   gtk_widget_destroy(dialog);
@@ -10318,7 +10218,7 @@ void
 on_residue_editor_select_monomer_type_cancel_button_clicked_gtkbuilder_callback (GtkButton       *button,
 							gpointer         user_data) {
 
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "residue_editor_select_monomer_type_dialog");
+  GtkWidget *dialog = widget_from_builder("residue_editor_select_monomer_type_dialog");
   gtk_widget_destroy(dialog);
 }
 
@@ -10340,7 +10240,7 @@ on_restraint_editor_add_restraint_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "restraints_editor_dialog");
+  GtkWidget *w = widget_from_builder("restraints_editor_dialog");
   restraints_editor_add_restraint_by_widget(w);
 }
 
@@ -10351,7 +10251,7 @@ on_restraints_editor_close_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "restraints_editor_dialog");
+  GtkWidget *w = widget_from_builder("restraints_editor_dialog");
   if (w) {
     clear_restraints_editor_by_dialog(w);
     gtk_widget_destroy(w);
@@ -10365,7 +10265,7 @@ on_restraints_editor_save_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "restraints_editor_dialog");
+  GtkWidget *w = widget_from_builder("restraints_editor_dialog");
   restraints_editor_save_restraint_by_widget(w);
 }
 
@@ -10376,7 +10276,7 @@ on_restraints_editor_apply_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "restraints_editor_dialog");
+  GtkWidget *w = widget_from_builder("restraints_editor_dialog");
   apply_restraint_by_widget(w);
 }
 
@@ -10386,7 +10286,7 @@ on_restraint_editor_delete_restraint_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "restraints_editor_dialog");
+  GtkWidget *w = widget_from_builder("restraints_editor_dialog");
   restraints_editor_delete_restraint_by_widget(w);
 }
 
@@ -10411,7 +10311,7 @@ on_save_restraint_chooserdialog_response(GtkDialog       *dialog,
 					 gpointer         user_data) {
 /* Maybe there are responses other than OK and cancel, so don't factor
    out the destroy() */
-  GtkWidget *w = lookup_widget(GTK_WIDGET(dialog), "save_restraint_chooserdialog");
+  GtkWidget *w = widget_from_builder("save_restraint_chooserdialog");
   if (response_id == GTK_RESPONSE_OK) {
     save_monomer_restraints_by_widget(dialog);
     gtk_widget_destroy(w);
@@ -10472,7 +10372,7 @@ on_build_na_dialog_cancelbutton_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
    GtkWidget *w;
-   w = lookup_widget(GTK_WIDGET(button), "build_na_dialog");
+   w = widget_from_builder("build_na_dialog");
    gtk_widget_destroy(w);
 
 }
@@ -10487,8 +10387,8 @@ on_build_na_dialog_okbutton_clicked_gtkbuilder_callback    (GtkButton       *but
    GtkEntry *entry;
    const char *text;
    float r;
-   w = lookup_widget(GTK_WIDGET(button), "build_na_dialog");
-   entry = (GTK_ENTRY(lookup_widget(GTK_WIDGET(button),
+   w = widget_from_builder("build_na_dialog");
+   entry = (GTK_ENTRY(widget_from_builder(
                                     "build_na_dialog_radius_entry")));
    text = gtk_entry_get_text(entry);
    r = atof(text);
@@ -10511,7 +10411,7 @@ on_build_na_dialog_radius_entry_activate_gtkbuilder_callback
    GtkWidget *w;
    const char *text;
    float r;
-   w = lookup_widget(GTK_WIDGET(entry), "build_na_dialog");
+   w = widget_from_builder("build_na_dialog");
    text = gtk_entry_get_text(entry);
    r = atof(text);
    find_nucleic_acids_local(r);
@@ -10655,7 +10555,7 @@ on_coot_references_closebutton_clicked_gtkbuilder_callback (GtkButton       *but
                                         gpointer         user_data)
 {
   GtkWidget *dialog;
-  dialog = lookup_widget(GTK_WIDGET(button), "coot_references_dialog");
+  dialog = widget_from_builder("coot_references_dialog");
   gtk_widget_destroy(dialog);
 
 }
@@ -10684,7 +10584,7 @@ on_edit_chi_angles_add_hydrogen_torsions_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-   GtkWidget *vbox = lookup_widget(GTK_WIDGET(togglebutton),"edit_chi_angles_vbox");
+   GtkWidget *vbox = widget_from_builder("edit_chi_angles_vbox");
 
    if (gtk_toggle_button_get_active(togglebutton)) {
       set_find_hydrogen_torsions(1);
@@ -10725,7 +10625,6 @@ on_model_toolbar_rot_trans_toolbutton_clicked_gtkbuilder_callback
                                         (GtkMenuToolButton *toolbutton,
 					 gpointer         user_data) {
 
-  printf("clicked!\n");
   do_rot_trans_setup(1);
 }
 
@@ -10804,7 +10703,7 @@ on_map_sharpening_ok_button_clicked_gtkbuilder_callback    (GtkButton       *but
                                         gpointer         user_data)
 {
 
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "map_sharpening_dialog");
+   GtkWidget *w = widget_from_builder("map_sharpening_dialog");
    gtk_widget_destroy(w);
 
 }
@@ -10814,7 +10713,7 @@ void
 on_map_sharpening_optimize_button_clicked_gtkbuilder_callback ( GtkButton       *button,
                                                                 gpointer         user_data)
 {
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "map_sharpening_dialog");
+   GtkWidget *w = widget_from_builder("map_sharpening_dialog");
    calc_and_set_optimal_b_factor(w);
 }
 
@@ -10824,7 +10723,7 @@ on_map_sharpening_reset_button_clicked_gtkbuilder_callback(GtkButton       *butt
                                                            gpointer         user_data)
 {
     // reset to zero!?
-    GtkWidget *h_scale = lookup_widget(GTK_WIDGET(button), "map_sharpening_hscale");
+    GtkWidget *h_scale = widget_from_builder("map_sharpening_hscale");
     GtkAdjustment *adj = gtk_range_get_adjustment(GTK_RANGE(h_scale));
     gtk_adjustment_set_value(adj, 0.);
 
@@ -10858,7 +10757,7 @@ on_baton_build_params_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "baton_build_params_dialog");
+  GtkWidget *w = widget_from_builder("baton_build_params_dialog");
   set_baton_build_params_from_widget(w);
   gtk_widget_destroy(w);
 
@@ -10872,7 +10771,7 @@ on_baton_build_params_cancel_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "baton_build_params_dialog");
+  GtkWidget *w = widget_from_builder("baton_build_params_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -10900,8 +10799,8 @@ extern "C" G_MODULE_EXPORT
 void
 on_go_to_atom_toolbutton_clicked_gtkbuilder_callback(GtkToolButton   *toolbutton,
                                                      gpointer         user_data) {
-  GtkWidget *widget = wrapped_create_goto_atom_window();
-  gtk_widget_show(widget);
+   GtkWidget *widget = wrapped_create_goto_atom_window(); // uses builder
+   gtk_widget_show(widget);
 }
 
 extern "C" G_MODULE_EXPORT
@@ -10917,7 +10816,7 @@ on_move_molecule_here_big_molecules_checkbutton_toggled_gtkbuilder_callback
                                         (GtkToggleButton *togglebutton,
                                         gpointer         user_data)
 {
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(togglebutton), "move_molecule_here_dialog");
+  GtkWidget *dialog = widget_from_builder("move_molecule_here_dialog");
   fill_move_molecule_here_dialog(dialog);
 }
 
@@ -10984,7 +10883,7 @@ void
 on_pisa_interfces_close_button_clicked_gtkbuilder_callback (GtkButton       *button,
                                                             gpointer         user_data) {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "pisa_interfaces_dialog");
+  GtkWidget *w = widget_from_builder("pisa_interfaces_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -11028,7 +10927,7 @@ on_refine_params_weight_matrix_entry_changed_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *entry = lookup_widget(GTK_WIDGET(editable),
+  GtkWidget *entry = widget_from_builder(
 				   "refine_params_weight_matrix_entry");
   struct entry_info_t ei = coot_entry_to_val(GTK_ENTRY(entry));
   if (ei.float_is_set)
@@ -11053,7 +10952,7 @@ on_refine_params_weight_matrix_entry_changed_gtkbuilder_callback
 // on_remarks_browser_molecule_chooser_cancel_button_clicked_gtkbuilder_callback
 //                                         (GtkButton       *button,
 // 					 gpointer         user_data) {
-//    // GtkWidget *w = lookup_widget(GTK_WIDGET(button), "remarks_browser_molecule_chooser_dialog");
+//    // GtkWidget *w = widget_from_builder("remarks_browser_molecule_chooser_dialog");
 //    // gtk_widget_destroy(w);
 
 //    GtkWidget *dialog = widget_from_builder("remarks_browser_molecule_chooser_dialog");
@@ -11105,7 +11004,7 @@ on_fix_nomenclature_errors_ok_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "fix_nomenclature_errors_dialog");
+  GtkWidget *w = widget_from_builder("fix_nomenclature_errors_dialog");
   int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(w), "imol"));
   fix_nomenclature_errors(imol);
   gtk_widget_destroy(w);
@@ -11119,7 +11018,7 @@ on_fix_nomenclature_errors_cancel_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "fix_nomenclature_errors_dialog");
+  GtkWidget *w = widget_from_builder("fix_nomenclature_errors_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -11138,7 +11037,7 @@ on_multi_residue_torsion_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "multi_residue_torsion_dialog");
+  GtkWidget *w = widget_from_builder("multi_residue_torsion_dialog");
   clear_up_moving_atoms();
   clear_pending_picks(); /* emcompasses in_multi_residue_torsion_define (but not mode) */
   clear_multi_residue_torsion_mode();
@@ -11154,7 +11053,7 @@ on_multi_residue_torsion_OK_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "multi_residue_torsion_dialog");
+  GtkWidget *w = widget_from_builder("multi_residue_torsion_dialog");
   gtk_widget_destroy(w);
   accept_regularizement();
   clear_multi_residue_torsion_mode();
@@ -11183,7 +11082,7 @@ on_multi_residue_torsion_pick_apply_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "multi_residue_torsion_pick_dialog");
+  GtkWidget *w = widget_from_builder("multi_residue_torsion_pick_dialog");
   gtk_widget_destroy(w);
   clear_pending_picks(); /* emcompasses in_multi_residue_torsion_mode */
   normal_cursor();
@@ -11206,7 +11105,7 @@ on_multi_residue_torsion_pick_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "multi_residue_torsion_pick_dialog");
+  GtkWidget *w = widget_from_builder("multi_residue_torsion_pick_dialog");
   gtk_widget_destroy(w);
   clear_pending_picks(); /* emcompasses in_multi_residue_torsion_define (but not mode) */
   clear_multi_residue_torsion_mode();
@@ -11248,7 +11147,7 @@ on_keyboard_go_to_residue_entry_key_press_event_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *w = lookup_widget(widget, "keyboard_goto_residue_window");
+  GtkWidget *w = widget_from_builder("keyboard_goto_residue_window");
   const gchar *text = gtk_entry_get_text(GTK_ENTRY(widget));
   if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
     handle_go_to_residue_keyboarding_mode(text);
@@ -11268,7 +11167,7 @@ on_mogul_geometry_dialog_close_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
 					 gpointer         user_data) {
 
-   GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "mogul_geometry_results_table_dialog");
+   GtkWidget *dialog = widget_from_builder("mogul_geometry_results_table_dialog");
    /* And the histogram?  How do I look that up? */
    gtk_widget_destroy(dialog);
 }
@@ -11279,7 +11178,7 @@ void
 on_ligand_check_okbutton_clicked(GtkButton       *button,
                                  gpointer         user_data) {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "ligand_check_dialog");
+  GtkWidget *w = widget_from_builder("ligand_check_dialog");
   gtk_widget_destroy(w);
 
 }
@@ -11294,7 +11193,7 @@ on_generic_objects_dialog_closebutton_clicked_gtkbuilder_callback
              << "on_generic_objects_dialog_closebutton_clicked_gtkbuilder_callback" << std::endl;
 
 #if 0 // 20211007-PE
-   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "generic_objects_dialog");
+   GtkWidget *w = widget_from_builder("generic_objects_dialog");
    gtk_widget_destroy(w);
    clear_generic_objects_dialog_pointer();
    graphics_draw();
@@ -11380,7 +11279,7 @@ on_export_map_dialog_cancel_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
 					 gpointer         user_data) {
 
-  GtkWidget *w = lookup_widget(GTK_WIDGET(button), "export_map_dialog");
+  GtkWidget *w = widget_from_builder("export_map_dialog");
   gtk_widget_destroy(w);
 }
 
@@ -11390,7 +11289,7 @@ on_export_map_dialog_cancel_button_clicked_gtkbuilder_callback
 /*                                         gpointer         user_data) */
 /* { */
 
-/*   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "export_map_filechooserdialog"); */
+/*   GtkWidget *w = widget_from_builder("export_map_filechooserdialog"); */
 /*   gtk_widget_destroy(w); */
 
 
@@ -11402,7 +11301,7 @@ on_export_map_dialog_cancel_button_clicked_gtkbuilder_callback
 /*                                         gpointer         user_data) */
 /* { */
 
-/*   GtkWidget *w = lookup_widget(GTK_WIDGET(button), "export_map_filechooserdialog"); */
+/*   GtkWidget *w = widget_from_builder("export_map_filechooserdialog"); */
 /*   int imol_map = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(w), "map_molecule_number")); */
 /*   short int is_map_fragment = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(w), "is_map_fragment")); */
 /*   char *txt = (char *) g_object_get_data(G_OBJECT(w), "export_map_radius_entry_text"); */
@@ -11474,7 +11373,7 @@ void
 on_dynarama_outliers_only_togglebutton_toggled_gtkbuilder_callback (GtkToggleButton *togglebutton,
 						gpointer         user_data)
 {
-   GtkWidget *window = lookup_widget(GTK_WIDGET(togglebutton), "dynarama_window");
+   GtkWidget *window = widget_from_builder("dynarama_window");
    toggle_dynarama_outliers(window, gtk_toggle_button_get_active(togglebutton)); /* get the imol from window */
 }
 
@@ -11569,10 +11468,10 @@ on_edit_renumber_residues_activate_gtkbuilder_callback    (GtkMenuItem     *menu
 
 extern "C" G_MODULE_EXPORT
 void
-on_edit_change_chain_ids1_activate_gtkbuilder_callback     (GtkMenuItem     *menuitem,
-                                        gpointer         user_data)
-{
-   GtkWidget *w = wrapped_create_change_chain_id_dialog();
+on_edit_change_chain_ids1_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
+                                                        gpointer         user_data) {
+
+   GtkWidget *w = wrapped_create_change_chain_id_dialog(); // uses builder
    gtk_widget_show(w);
 }
 
@@ -11669,7 +11568,7 @@ on_weight_maxtrix_estimate_button_clicked_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *entry = lookup_widget(GTK_WIDGET(button), "refine_params_weight_matrix_entry");
+  GtkWidget *entry = widget_from_builder("refine_params_weight_matrix_entry");
   /*  and set geometry_vs_map_weight */
   add_estimated_map_weight_to_entry(entry);
 
@@ -11743,10 +11642,10 @@ on_mutate_molecule_sequence_text_button_release_event_gtkbuilder_callback
                                         gpointer         user_data)
 {
 
-  GtkWidget *res_no_1_widget = lookup_widget(GTK_WIDGET(widget), "mutate_molecule_resno_1_entry");
-  GtkWidget *res_no_2_widget = lookup_widget(GTK_WIDGET(widget), "mutate_molecule_resno_2_entry");
-  GtkWidget *text_widget     = lookup_widget(GTK_WIDGET(widget), "mutate_molecule_sequence_text");
-  GtkWidget *label_widget    = lookup_widget(GTK_WIDGET(widget), "mutate_residue_range_counts_label");
+  GtkWidget *res_no_1_widget = widget_from_builder("mutate_molecule_resno_1_entry");
+  GtkWidget *res_no_2_widget = widget_from_builder("mutate_molecule_resno_2_entry");
+  GtkWidget *text_widget     = widget_from_builder("mutate_molecule_sequence_text");
+  GtkWidget *label_widget    = widget_from_builder("mutate_residue_range_counts_label");
   mutate_molecule_dialog_check_counts(res_no_1_widget, res_no_2_widget, text_widget, label_widget);
   return FALSE;
 }
@@ -11781,7 +11680,7 @@ void
 on_curlew_install_button_clicked_gtkbuilder_callback(GtkButton *button,
                                                      gpointer   user_data) {
 
-  GtkWidget *dialog = lookup_widget(GTK_WIDGET(button), "curlew_dialog");
+  GtkWidget *dialog = widget_from_builder("curlew_dialog");
   if (dialog) {
      int n_items = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "n_extensions"));
     curlew_dialog_install_extensions(dialog, n_items); /* some of which were selected */
@@ -11996,6 +11895,24 @@ on_calculate_align_and_mutate_activate_gtkbuilder_callback (GtkMenuItem     *men
 
 extern "C" G_MODULE_EXPORT
 void
+on_calculate_find_ligands_item_activate_gtkbuilder_callback() {
+   do_find_ligands_dialog();
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_calculate_find_waters_item_activate_gtkbuilder_callback() {
+
+   std::cout << "################################ on_calculate_find_waters_item_activate_gtkbuilder_callback() " << std::endl;
+   GtkWidget *dialog = widget_from_builder("find_waters_dialog");
+   std::cout << "find_waters_dialog " << dialog << std::endl;
+   fill_find_waters_dialog(dialog);
+   gtk_widget_show(dialog);
+      
+}
+
+extern "C" G_MODULE_EXPORT
+void
 on_calculate_load_tutorial_model_and_data1_activate_gtkbuilder_callback
                                         (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
@@ -12128,7 +12045,7 @@ on_symmetry_always_on_checkbutton_toggled_gtkbuilder_callback (GtkToggleButton *
    GtkWidget *symmetry_on_radio_button = NULL;
    if (gtk_toggle_button_get_active(togglebutton)) {
       add_symmetry_on_to_preferences_and_apply();
-      symmetry_on_radio_button = lookup_widget(GTK_WIDGET(togglebutton), "show_symmetry_yes_radiobutton");
+      symmetry_on_radio_button = widget_from_builder("show_symmetry_yes_radiobutton");
       if (! gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(symmetry_on_radio_button)))
 	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(symmetry_on_radio_button), TRUE);
    }
@@ -12216,7 +12133,7 @@ on_map_radius_em_button_clicked_gtkbuilder_callback        (GtkButton       *but
                                         gpointer         user_data)
 {
 
-  GtkEntry *entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(button), "map_radius_em_entry"));
+  GtkEntry *entry = GTK_ENTRY(widget_from_builder("map_radius_em_entry"));
   const char *text = gtk_entry_get_text(entry);
   printf("set_density_size_em_from_widget() %s\n", text);
   set_density_size_em_from_widget(text);
@@ -12230,7 +12147,7 @@ on_map_radius_em_entry_key_press_event_gtkbuilder_callback (GtkWidget       *wid
                                         gpointer         user_data)
 {
 
-  GtkEntry *entry = (GTK_ENTRY(lookup_widget(widget, "map_radius_em_entry")));
+  GtkEntry *entry = (GTK_ENTRY(widget_from_builder("map_radius_em_entry")));
   const char *text = gtk_entry_get_text(entry);
   if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter)
     set_density_size_em_from_widget(text);
@@ -12242,20 +12159,20 @@ extern "C" G_MODULE_EXPORT
 void
 on_simple_refmac_dialog_response_gtkbuilder_callback       (GtkDialog       *dialog,
                                         gint             response_id,
-                                        gpointer         user_data)
-{
+                                        gpointer         user_data) {
+
    if (response_id == GTK_RESPONSE_CLOSE) {
       /* do I need to do this? */
       /* gtk_widget_destroy(dialog); */
    }
 
    if (response_id == GTK_RESPONSE_CANCEL) {
-      gtk_widget_destroy(GTK_WIDGET(dialog));
+      gtk_widget_hide(GTK_WIDGET(dialog));
    }
 
    if (response_id == GTK_RESPONSE_OK) {
       simple_refmac_run_refmac(GTK_WIDGET(dialog));
-      gtk_widget_destroy(GTK_WIDGET(dialog));
+      gtk_widget_hide(GTK_WIDGET(dialog));
    }
 
 }
@@ -12276,8 +12193,8 @@ on_simple_refmac_mtz_file_button_clicked_gtkbuilder_callback
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = create_simple_refmac_filechooserdialog();
-   GtkWidget *simple_refmac_dialog = lookup_widget(GTK_WIDGET(button), "simple_refmac_dialog");
+   GtkWidget *w = widget_from_builder("simple_refmac_filechooser_dialog");
+   GtkWidget *simple_refmac_dialog = widget_from_builder("simple_refmac_dialog");
    /* automtically file filter only mtz files */
    GtkFileFilter *filterselect = gtk_file_filter_new();
    gtk_file_filter_add_pattern(filterselect, "*.mtz");
@@ -12289,25 +12206,25 @@ on_simple_refmac_mtz_file_button_clicked_gtkbuilder_callback
 
 extern "C" G_MODULE_EXPORT
 void
-on_simple_refmac_filechooserdialog_response_gtkbuilder_callback
-                                        (GtkDialog       *dialog,
-                                        gint             response_id,
-                                        gpointer         user_data)
-{
+on_simple_refmac_filechooser_dialog_response_gtkbuilder_callback (GtkDialog       *dialog,
+                                                                  gint             response_id,
+                                                                  gpointer         user_data) {
+
    const gchar *file_name = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 
    if (response_id == GTK_RESPONSE_CLOSE) {
-      printf("on_simple_refmac_filechooserdialog_response() Close\n");
+      std::cout << "on_simple_refmac_filechooserdialog_response() Close\n";
    }
 
    if (response_id == GTK_RESPONSE_CANCEL) {
-      printf("on_simple_refmac_filechooserdialog_response() Cancel\n");
+      std::cout << "on_simple_refmac_filechooserdialog_response() Cancel\n";
    }
 
    if (response_id == GTK_RESPONSE_OK) {
-      GtkWidget *simple_refmac_dialog = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "simple_refmac_dialog"));
+      // GtkWidget *simple_refmac_dialog = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "simple_refmac_dialog"));
+      GtkWidget *simple_refmac_dialog = widget_from_builder("simple_refmac_dialog");
       if (simple_refmac_dialog) {
-         GtkWidget *file_combobox = lookup_widget(GTK_WIDGET(simple_refmac_dialog), "simple_refmac_mtz_file_combobox");
+         GtkWidget *file_combobox = widget_from_builder("simple_refmac_mtz_file_combobox");
          if (file_combobox) {
             gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(file_combobox));
             gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(file_combobox), file_name);
@@ -12316,7 +12233,7 @@ on_simple_refmac_filechooserdialog_response_gtkbuilder_callback
       }
    }
 
-   gtk_widget_destroy(GTK_WIDGET(dialog));
+   gtk_widget_hide(GTK_WIDGET(dialog));
 
 }
 
@@ -12344,20 +12261,18 @@ on_residue_type_chooser_entry_key_press_event_gtkbuilder_callback
                                         GdkEventKey     *event,
                                         gpointer         user_data)
 {
-  const char *entry_text = gtk_entry_get_text(GTK_ENTRY(widget));
-  GtkWidget *stub_button =
-    lookup_widget(widget, "residue_type_chooser_stub_checkbutton");
-   GtkWidget *window = lookup_widget(GTK_WIDGET(widget),
-                                     "residue_type_chooser_window");
-  short int istate = 0;
+   const char *entry_text = gtk_entry_get_text(GTK_ENTRY(widget));
+   GtkWidget *stub_button = widget_from_builder("residue_type_chooser_stub_checkbutton");
+   GtkWidget *window = widget_from_builder("residue_type_chooser_window");
+   short int istate = 0;
 
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
-    istate = 1;
-  if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
-    handle_residue_type_chooser_entry_chose_type(entry_text, istate);
-    gtk_widget_destroy(window);
-  }
-  return FALSE;
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(stub_button)))
+      istate = 1;
+   if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
+      handle_residue_type_chooser_entry_chose_type(entry_text, istate);
+      gtk_widget_destroy(window);
+   }
+   return FALSE;
 }
 
 extern "C" G_MODULE_EXPORT

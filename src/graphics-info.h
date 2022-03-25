@@ -28,6 +28,7 @@
 #ifndef GRAPHICS_INFO_H
 #define GRAPHICS_INFO_H
 
+#include "compat/coot-sysdep.h"
 // need gtk things
 #include <gtk/gtk.h>
 
@@ -120,6 +121,7 @@
 #include "HUDMesh.hh"
 #include "HUDTextureMesh.hh"
 #include "Instanced-Markup-Mesh.hh"
+#include "Model.hh"
 
 #include "boids.hh"
 
@@ -498,7 +500,6 @@ class graphics_info_t {
    static long int T0;
    static long int Frames;
    //
-   static int show_fps_flag;
    static short int active_map_drag_flag;
 
 
@@ -534,6 +535,7 @@ class graphics_info_t {
    static coot::Cartesian angle_tor_pos_4;
 
    static GtkBuilder *gtkbuilder; // use this for widget lookups
+   static GtkBuilder *preferences_gtkbuilder; // use this for widget lookups in the preferences dialog
    //
    static GtkWidget *display_control_window_;
 
@@ -740,6 +742,8 @@ class graphics_info_t {
    void run_post_manipulation_hook_py(int imol, int mode);
 #endif
 
+   // void run_post_read_model_hook(int imol); // now public as it is called from handle_read_draw_molecule()
+
    void run_post_set_rotation_centre_hook();
    // which uses the following...
 #ifdef USE_GUILE
@@ -927,6 +931,10 @@ public:
 
    static bool do_expose_swap_buffers_flag;
 
+#ifdef USE_GUILE
+   static bool scm_boot_guile_booted; // false until my_wrap_scm_boot_guile() has been run
+#endif
+
    // static std::queue<std::chrono::time_point<std::chrono::high_resolution_clock> > frame_draw_queue;
    static std::chrono::time_point<std::chrono::high_resolution_clock> previous_frame_time;
    static std::chrono::time_point<std::chrono::high_resolution_clock> previous_frame_time_for_per_second_counter;
@@ -988,7 +996,9 @@ public:
 
    // New-style gtkbuilder!
    static void set_gtkbuilder(GtkBuilder *builder) { gtkbuilder = builder; }
+   static void set_preferences_gtkbuilder(GtkBuilder *builder) { preferences_gtkbuilder = builder; }
    static GtkWidget *get_widget_from_builder(const std::string &w_name); // use gtkbuilder to do new-style lookup_widget();
+   static GtkWidget *get_widget_from_preferences_builder(const std::string &w_name); // use gtkbuilder to do new-style lookup_widget();
    static bool gui_from_gtkbuilder() { return (gtkbuilder == NULL) ? false : true; }
 
    enum {GL_CONTEXT_MAIN = 0, GL_CONTEXT_SECONDARY = 1};
@@ -1081,6 +1091,7 @@ public:
    enum stereo_eye_t { FRONT_EYE, LEFT_EYE, RIGHT_EYE };
    static stereo_eye_t which_eye;
    static glm::vec3 eye_position; // useful in projection (testing)
+   static bool stereo_style_2010;
 
    // return a vector of the current valid map molecules
    std::vector<int> valid_map_molecules() const;
@@ -1268,6 +1279,11 @@ public:
          return clipping_back;
    }
 
+   void increase_clipping_front();
+   void increase_clipping_back();
+   void decrease_clipping_front();
+   void decrease_clipping_back();
+
    // This is for the display object
    static short int display_lists_for_maps_flag;
 
@@ -1283,6 +1299,7 @@ public:
    static float smooth_scroll_zoom_limit; // above this value we zoom, if zoom is on.
    static int   smooth_scroll_do_zoom;
    static bool smooth_scroll_on_going;
+   static int go_to_ligand_animate_view_n_steps; // 50 default
 
    static
    gboolean smooth_scroll_animation_func(GtkWidget *widget,
@@ -1377,6 +1394,8 @@ public:
 
    static void set_rotation_centre(const clipper::Coord_orth &pt);
    void run_post_manipulation_hook(int imol, int mode);
+
+   void run_post_read_model_hook(int imol); // conditional compilation handled internally
 
    void update_things_on_move();
    void update_things_on_move_and_redraw();
@@ -2089,7 +2108,7 @@ public:
 
    // geometry graphs
    void update_geometry_graphs(const atom_selection_container_t &asc, int imol_moving_atoms);
-   void update_geometry_graphs(int imol_moving_atoms); // convenience function
+   void update_geometry_graphs(int imol_moving_atoms); // convenience function - includes sequence view too!
    void update_validation_graphs(int imol);  // and ramachandran
    // 20211201-PE currently upadte_geometry
    void update_ramachandran_plot(int imol);
@@ -2126,7 +2145,7 @@ public:
    // scripting
    static short int guile_gui_loaded_flag;
    static short int python_gui_loaded_flag;
-   static std::vector<std::string> *command_line_scripts;
+   static std::vector<std::string> command_line_scripts;
    static coot::command_line_commands_t command_line_commands;
    static std::vector<std::string> command_line_accession_codes;
 
@@ -2146,6 +2165,7 @@ public:
    void set_sequence_view_is_displayed(GtkWidget *seq_view_canvas, int imol);
    GtkWidget * get_sequence_view_is_displayed(int imol) const;
    static int nsv_canvas_pixel_limit;
+   void sequence_view_highlight_residue_maybe(mmdb::Atom *next_atom, GtkWidget *svc);
 
    // Geometry Graphs:
 
@@ -2409,7 +2429,12 @@ public:
    int set_imol_refinement_map(int imol);
    float get_estimated_map_weight(int imol_map);
 
-   void make_moving_atoms_graphics_object(int imol, const atom_selection_container_t &asc);
+   enum moving_atoms_do_rama_markup { MOVING_ATOMS_DO_RAMA_MARKUP_FALSE, MOVING_ATOMS_DO_RAMA_MARKUP_TRUE, MOVING_ATOMS_DO_RAMA_MARKUP_USE_INTERNAL_SETTING};
+   enum moving_atoms_do_rota_markup { MOVING_ATOMS_DO_ROTA_MARKUP_FALSE, MOVING_ATOMS_DO_ROTA_MARKUP_TRUE, MOVING_ATOMS_DO_ROTA_MARKUP_USE_INTERNAL_SETTING};
+
+   void make_moving_atoms_graphics_object(int imol, const atom_selection_container_t &asc,
+                                          unsigned int do_rama_markup=MOVING_ATOMS_DO_RAMA_MARKUP_USE_INTERNAL_SETTING,
+                                          unsigned int do_rota_markup=MOVING_ATOMS_DO_ROTA_MARKUP_USE_INTERNAL_SETTING);
    static short int moving_atoms_asc_type;
    void make_moving_atoms_restraints_graphics_object();
    static coot::extra_restraints_representation_t moving_atoms_extra_restraints_representation;
@@ -3045,7 +3070,7 @@ public:
    // used by above:
    // (imol should be encoded into vbox - it isn't yet) // FIXME
    int fill_chi_angles_vbox(GtkWidget *vbox, std::string res_type, edit_chi_edit_type mode);
-   void clear_out_container(GtkWidget *vbox);
+   static void clear_out_container(GtkWidget *vbox);
    static std::string chi_angle_alt_conf;
 
    // multi-residue torsion
@@ -3152,6 +3177,7 @@ public:
    static void draw_generic_objects_solid();
    static void draw_generic_text();
    static void draw_particles();
+   static void draw_molecules_atom_labels();
    static void draw_boids();
    static void draw_happy_face_residue_markers();
    static void draw_anchored_atom_markers();
@@ -3736,9 +3762,24 @@ public:
    // -------- Base Pairing (Watson Crick) -------------
    static int in_base_paring_define;
 
+   // -------- Meshes control (i.e. the Meshes of molecule_class_info)
+   void set_show_molecular_representation(int imol, unsigned int mesh_idx, bool on_off);
+   void update_main_window_molecular_representation_widgets();
+   static void main_window_meshes_togglebutton_toggled(GtkToggleButton *button, gpointer *user_data);
+
+   int add_molecular_representation(int imol,
+                                    const std::string &atom_selection,
+				    const std::string &colour_scheme,
+				    const std::string &style);
+   void remove_molecular_representation(int imol, int idx);
+   
+
    // -------- Texture Meshes (for importing glTF models) -------------
    static std::vector<TextureMesh> texture_meshes;
    static void draw_texture_meshes();
+
+   static Mesh mesh_for_eyelashes;
+   static Mesh &get_mesh_for_eyelashes();
 
    // these are for non-molecule based generic display objects using instancing
    static std::vector<Instanced_Markup_Mesh> instanced_meshes;
@@ -4306,6 +4347,7 @@ string   static std::string sessionid;
 
    // ---------------------------------------------
    bool init_shaders(); // return status (true = OK)
+   void init_framebuffers();// 20220129-PE a crows thing
 
    // draw-2 functions
    void init_screen_quads();
@@ -4318,6 +4360,8 @@ string   static std::string sessionid;
    static bool draw_hud_tooltip_flag;
    static glm::mat4 get_molecule_mvp(bool debug_matrices=false);
    static glm::mat4 get_model_view_matrix();
+   glm::mat4 get_mvp_for_shadow_map(const glm::vec3 &light_position) const;
+   static glm::mat4 get_light_space_mvp(int light_index);
    static glm::vec3 get_world_space_eye_position();
    static glm::vec4 unproject(float z);
    static glm::vec4 unproject(float x, float y, float z);
@@ -4325,20 +4369,25 @@ string   static std::string sessionid;
    static glm::vec3 get_screen_y_uv();
    static glm::vec3 get_screen_x_uv();
 
-   static glm::mat4 get_view_rotation();
+   static glm::mat4 get_model_rotation(); // the quaterion from the mouse now rotates the model (not the view)
    static void setup_map_uniforms(Shader *shader_p, // in the draw loop
                                   const glm::mat4 &mvp,
                                   const glm::mat4 &view_rotation,
                                   float density_surface_opacity);
-   static gboolean render(bool render_to_screendump_framebuffer_flag=false, const std::string &output_file_name="coot-screendump.tga");
+   static gboolean render(bool render_to_screendump_framebuffer_flag=false,
+                          const std::string &output_file_name="coot-screendump.tga");
+   static gboolean render_scene(); // like crows
+   enum { PASS_TYPE_STANDARD, PASS_TYPE_FOR_SHADOWS, PASS_TYPE_SSAO};
    static void render_scene_with_x_blur();
    static void render_scene_with_y_blur();
    static void render_scene_with_screen_ao_shader();
    static void render_scene_with_texture_combination_for_depth_blur();
    static void draw_map_molecules(bool draw_transparent_maps);
+   static void draw_map_molecules_with_shadows();
    static void draw_model_molecules();
-   static void draw_intermediate_atoms();
-   static void draw_intermediate_atoms_rama_balls();
+   static void draw_model_molecules_with_shadows();
+   static void draw_intermediate_atoms(unsigned int pass_type);
+   static void draw_intermediate_atoms_rama_balls(unsigned int pass_type);
    static void draw_molecule_atom_labels(molecule_class_info_t &m,
                                          const glm::mat4 &mvp,
                                          const glm::mat4 &view_rotation);
@@ -4346,7 +4395,7 @@ string   static std::string sessionid;
    static void draw_molecular_triangles();
    static void draw_molecules();
    static void draw_meshes();
-   static void draw_meshed_generic_display_object_meshes();
+   static void draw_meshed_generic_display_object_meshes(unsigned int pass_type);
    static void draw_instanced_meshes();
    static void draw_unit_cells();
    static void draw_cube(GtkGLArea *glarea, unsigned int cube_type);
@@ -4388,9 +4437,17 @@ string   static std::string sessionid;
                       int imol_map_with_data_attached,
                       int imol_updating_difference_map);
 
+   // this has a different API!
+   coot::util::sfcalc_genmap_stats_t
+   sfcalc_genmaps_using_bulk_solvent(int imol_model,
+                                     int imol_map_with_data_attached,
+                                     clipper::Xmap<float> *xmap_2fofc_p,
+                                     clipper::Xmap<float> *xmap_fofc_p);
+
    static bool refinement_has_finished_moving_atoms_representation_update_needed_flag;
 
-#ifdef HAVE_CXX_THREAD
+   static bool ignore_pseudo_zeros_for_map_stats;
+
    static std::atomic<bool> restraints_lock;
    static bool continue_threaded_refinement_loop; // so that the ESC key can stop the refinement
    static int  threaded_refinement_loop_counter;
@@ -4398,7 +4455,7 @@ string   static std::string sessionid;
    static bool threaded_refinement_needs_to_clear_up; // because ESC was pressed
    static bool threaded_refinement_needs_to_accept_moving_atoms; // because Return was pressed
    static int  threaded_refinement_redraw_timeout_fn_id; // -1 initially
-#endif // HAVE_CXX_THREAD
+
    static int regenerate_intermediate_atoms_bonds_timeout_function();
    // static int regenerate_intermediate_atoms_bonds_timeout_function_and_draw(); old timeout style
    static gint regenerate_intermediate_atoms_bonds_timeout_function_and_draw(gpointer data);
@@ -4590,6 +4647,182 @@ string   static std::string sessionid;
 
    static void fullscreen();
    static void unfullscreen();
+
+   // 20220129-PE integrating crows
+
+   static void render_scene_sans_depth_blur(Shader *shader_for_tmeshes_p, Shader *shader_for_meshes_p,
+                                     Shader *shader_for_tmeshes_with_shadows_p,
+                                     Shader *shader_for_meshes_with_shadows_p,
+                                     int width, int height);
+
+   static void render_scene_with_depth_blur(Shader *shader_for_tmeshes_p, Shader *shader_for_meshes_p,
+                                            Shader *shader_for_tmeshes_with_shadows_p,
+                                            Shader *shader_for_meshes_with_shadows_p,
+                                            int width, int height);
+
+   static Shader shader_for_meshes; // 20220208-PE temporary shader for molecules-as-meshes while I merge the crow code. No shadows.
+   static Shader shader_for_tmeshes;
+   static Shader shader_for_tmeshes_with_shadows;
+   static Shader shader_for_meshes_with_shadows;
+   static Shader shader_for_tmeshes_for_ssao; // render to white, don't use texture (like ssao_geometry)
+   static Shader shader_for_meshes_for_ssao;  // render to white
+   static Shader shader_for_texture_meshes_shadow_map;
+   static Shader shader_for_meshes_shadow_map;
+   static Shader shader_for_shadow_map_image_texture_mesh;
+   static Shader shader_for_effects; // colour balance or gamma ramp, say.
+   // static bool show_shadow_map;
+   enum { SHOW_SHADOW_MAP, SHOW_BASIC_SCENE, SHOW_SHADOWED_SCENE, SHOW_DEPTH_BLUR_SCENE, SHOW_AO_SCENE };
+   static unsigned short int displayed_image_type;
+   static HUDTextureMesh tmesh_for_shadow_map;
+   static bool show_just_shadows; // show *just* the shadows in the texture-mesh-with-shadows shader
+
+   void draw_models(Shader *shader_for_tmeshes_p,
+                    Shader *shader_for_meshes_p,
+                    Shader *shader_for_tmeshes_with_shadows_p,
+                    Shader *shader_for_meshes_with_shadows_p,
+                    int graphics_x_size,
+                    int graphics_y_size,
+                    bool draw_shadows=false,
+                    float shadow_strength = 0.4,
+                    bool show_just_shadows = false);
+
+   void draw_models_with_shadows(Shader *shader_for_tmeshes_with_shadows_p,
+				 Shader *shader_for_meshes_with_shadows_p,
+				 int graphics_x_size,
+				 int graphics_y_size,
+				 bool draw_shadows=false,
+				 float shadow_strength = 0.4,
+				 bool show_just_shadows = false);
+
+   void draw_Models_for_shadow_map(unsigned int light_index); // Models with a capital M (Models, not molecular models)
+                                                              // Maybe use a better name?
+   void draw_molecules_for_shadow_map(unsigned int light_index);
+
+   static void draw_models_for_ssao();
+   static void draw_molecules_for_ssao();
+   static void draw_molecules_with_shadows(); // use the above created shadow map to colour the pixels
+
+   // DOF blur
+
+   // static bool use_depth_blur_state;
+
+   // void render_scene_with_texture_combination_for_depth_blur();
+   // void render_scene_with_x_blur();
+   // void render_scene_with_y_blur();
+
+   static GtkAdjustment *focus_blur_z_depth_adjustment;
+   // static float focus_blur_z_depth;
+   // static float focus_blur_strength;
+   // static GLuint blur_x_quad_vertex_array_id;
+   //    static GLuint blur_y_quad_vertex_array_id;
+   // static GLuint combine_textures_using_depth_quad_vertex_array_id;
+   // static Shader shader_for_x_blur;
+   // static Shader shader_for_y_blur;
+   // static Shader shader_for_dof_blur_by_texture_combination;
+   // static framebuffer combine_textures_using_depth_framebuffer;
+   // static framebuffer blur_x_framebuffer;
+
+   static GLuint screen_AO_quad_vertex_array_id;
+   static GLuint screen_AO_quad_VBO;
+
+   static unsigned int shadow_texture_multiplier; 
+   static unsigned int shadow_texture_width;  //  = 4 * 1024; // too big?      // derived from the above (n x 1024)
+   static unsigned int shadow_texture_height; //  = 4 * 1024;
+   void set_shadow_texture_resolution_multiplier(unsigned int m) {
+      if (m != 0) {
+         if (m < 8) {
+            if (shadow_texture_multiplier != m) {
+               shadow_texture_multiplier = m;
+               shadow_texture_width  = 1024 * m;
+               shadow_texture_height = 1024 * m;
+               // rengerate the framebuffer texture
+               glBindTexture(GL_TEXTURE_2D, shadow_depthMap_texture);
+               glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadow_texture_width, shadow_texture_height,
+                            0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+            }
+         }
+      }
+   }
+   static float shadow_strength;
+   static unsigned int shadow_softness; // 1, 2 or 3
+   static unsigned int shadow_depthMap_framebuffer; // change this to a real framebuffer
+                                             // when things are working
+   static unsigned int shadow_depthMap_texture; // for the framebuffer texture
+
+   static unsigned int rboDepth;
+   static unsigned int n_ssao_kernel_samples;
+   static void generate_ssao_kernel_samples();
+   // static framebuffer blur_y_framebuffer;
+   static framebuffer framebuffer_for_ssao_gbuffer;
+   static framebuffer framebuffer_for_ssao;
+   static framebuffer framebuffer_for_ssao_blur;
+   static framebuffer framebuffer_for_effects;
+   enum { EFFECTS_SHADER_STANDARD, EFFECTS_SHADER_INPUT_TEXTURE, EFFECTS_SHADER_SSAO, EFFECTS_SHADER_DEPTH};
+   static unsigned int effects_shader_output_type;
+
+   // AO new try (dec-2021)
+
+   static void draw_hud_elements();
+   static void render_3d_scene(GtkGLArea *gl_area);
+   static void render_3d_scene_for_ssao(); // c.f. above, this one doesn't pass the gl_area.
+                                           // I don't know which is best.
+   static void render_3d_scene_with_shadows(); // change the shader from meshes.shader to meshes-with-shadows.shader
+   void init_joey_ssao_stuff();
+   void read_some_test_models();
+
+   static std::vector<Model> models; // from crows 20220129-PE
+   static void add_model(const Model &model) {
+      models.push_back(model);
+   }
+
+
+   // static unsigned int gBufferFBO;
+   static unsigned int ssaoFBO;
+   static unsigned int ssaoBlurFBO;
+   static Shader shaderGeometryPass;
+   static Shader shaderSSAO;
+   static Shader shaderSSAOBlur;
+
+   // now in the framebuffer
+   // static unsigned int gPosition;
+   // static unsigned int gNormal;
+   // static unsigned int gAlbedo;
+   static unsigned int noiseTexture;
+   static unsigned int ssaoColorBuffer;
+   static unsigned int ssaoColorBufferBlur;
+   static unsigned int ssao_blur_size; // in the blur shader, how big should the box be
+                                       // 0,1,2.
+
+   // now uniforms
+   static float SSAO_radius;
+   static float SSAO_bias;
+   static bool use_ssao;
+   static float ssao_strength;
+   static bool show_just_ssao; // show *just* the SSAO colour in the effects shader
+
+   static float effects_brightness;
+   static float effects_gamma;
+
+   static void renderQuad();
+   static std::vector<glm::vec3> ssaoKernel;
+   // Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
+   // static Camera camera;
+
+   static bool show_fps_flag;
+   static glm::mat4 get_projection_matrix(bool do_orthographic_projection,
+                                          int graphics_x_size, int graphics_y_size);
+
+   static glm::mat4 get_view_matrix(); // the lookAt() matrix
+   static glm::mat4 get_model_matrix();
+
+   void resize_framebuffers_textures_renderbuffers(int width, int height);
+
+   void read_test_gltf_models();
+
+   static void attach_buffers() {
+      auto gl_area = glareas[0];
+      gtk_gl_area_attach_buffers(GTK_GL_AREA(gl_area));
+   }
 
 };
 

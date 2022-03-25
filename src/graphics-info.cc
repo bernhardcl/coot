@@ -105,6 +105,14 @@ graphics_info_t::get_widget_from_builder(const std::string &w_name) { // use gtk
    return w;
 }
 
+// static
+GtkWidget *
+graphics_info_t::get_widget_from_preferences_builder(const std::string &w_name) { // use gtkbuilder to do new-style lookup_widget();
+
+   GtkWidget *w = GTK_WIDGET(gtk_builder_get_object(preferences_gtkbuilder, w_name.c_str()));
+   return w;
+}
+
 // return a vector of the current valid map molecules
 std::vector<int>
 graphics_info_t::valid_map_molecules() const {
@@ -139,12 +147,12 @@ graphics_info_t::post_recentre_update_and_redraw() {
    std::cout << "Fix timer in post_recentre_update_and_redraw()\n";
    for (int ii=0; ii<n_molecules(); ii++) {
       molecules[ii].update_clipper_skeleton();
-      molecules[ii].update_map(graphics_info_t::auto_recontour_map_flag);  // uses statics in graphics_info_t
-                                   // and redraw the screen using the new map
+      molecules[ii].update_map(auto_recontour_map_flag);  // uses statics in graphics_info_t
+                                                          // and redraw the screen using the new map
    }
 
-   int t1 = 0; // glutGet(GLUT_ELAPSED_TIME);
-   std::cout << "Elapsed time for map contouring: " << t1-t0 << "ms" << std::endl;
+   // int t1 = 0; // glutGet(GLUT_ELAPSED_TIME);
+   // std::cout << "Elapsed time for map contouring: " << t1-t0 << "ms" << std::endl;
 
    for (int ii=0; ii<n_molecules(); ii++) {
       // std::cout << "update symmetry  for ii " << ii << std::endl;
@@ -909,7 +917,6 @@ graphics_info_t::smooth_scroll_animation_func(GtkWidget *widget,
    // this is not sinusoidal. The first step is 1.
 
    float frac = 1.0;
-   graphics_info_t::smooth_scroll_n_steps = 20; // should be user choice?
    if (graphics_info_t::smooth_scroll_n_steps > 0)
       frac = 1.0/static_cast<float>(graphics_info_t::smooth_scroll_n_steps);
    smooth_scroll_current_step += 1;
@@ -941,7 +948,7 @@ graphics_info_t::smooth_sinusoidal_scroll_animation_func(GtkWidget *widget,
                                                          GdkFrameClock *frame_clock,
                                                          gpointer data) {
 
-   smooth_scroll_n_steps = 20; // make this user-defined, or use frame_clock
+   // smooth_scroll_n_steps = 20; // make this user-defined, or use frame_clock
 
    smooth_scroll_current_step++;
    if (smooth_scroll_current_step <= smooth_scroll_n_steps) {
@@ -962,6 +969,7 @@ graphics_info_t::smooth_sinusoidal_scroll_animation_func(GtkWidget *widget,
       // finished moving
       graphics_info_t g;
       g.update_things_on_move_and_redraw();
+      g.update_environment_distances_by_rotation_centre_maybe(g.go_to_atom_molecule());
       return G_SOURCE_REMOVE;
    }
 }
@@ -1017,7 +1025,7 @@ graphics_info_t::smooth_scroll_maybe_sinusoidal_acceleration(float x, float y, f
       smooth_scroll_on = 1; // flag to stop wirecube being drawn.
       double v_acc = 0; // accumulated distance
       gpointer user_data = 0;
-      smooth_scroll_current_step = 0;
+      smooth_scroll_current_step = -1; // first thing the function does is add 1 to smooth_scroll_current_step.
       smooth_scroll_delta = coot::Cartesian(xd, yd, zd);
       if (false) {
          std::cout << "in smooth_scroll_maybe_sinusoidal_acceleration() with set smooth_scroll_delta "
@@ -1029,6 +1037,8 @@ graphics_info_t::smooth_scroll_maybe_sinusoidal_acceleration(float x, float y, f
                    << std::endl;
       }
 
+      // put this in glarea_tick_func() ?
+      //
       gtk_widget_add_tick_callback(glareas[0], smooth_sinusoidal_scroll_animation_func, user_data, NULL);
       done_the_move = true;
 
@@ -1555,7 +1565,8 @@ graphics_info_t::accept_moving_atoms() {
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
    }
 
-   if (false) {
+   bool debug = false;
+   if (debug) {
       std::cout << ":::: INFO:: accept_moving_atoms() imol moving atoms is " << imol_moving_atoms
                 << std::endl;
       std::cout << ":::: INFO:: accept_moving_atoms() imol moving atoms type is "
@@ -1606,8 +1617,8 @@ graphics_info_t::accept_moving_atoms() {
 
    GtkWidget *w = coot::get_validation_graph(imol_moving_atoms, coot::RAMACHANDRAN_PLOT);
    if (w) {
-      coot::rama_plot *plot = (coot::rama_plot *) g_object_get_data(G_OBJECT(w), "rama_plot");
-      // std::cout << "updating rama plot for " << imol_moving_atoms << std::endl;
+      coot::rama_plot *plot = static_cast<coot::rama_plot *>(g_object_get_data(G_OBJECT(w), "rama_plot"));
+      std::cout << "debug:: accept_moving_atoms:: updating rama plot for " << imol_moving_atoms << std::endl;
       handle_rama_plot_update(plot);
       update_ramachandran_plot_point_maybe(imol_moving_atoms, *moving_atoms_asc);
    }
@@ -1629,25 +1640,76 @@ graphics_info_t::accept_moving_atoms() {
    // Why do I want to do this when the intermediate atoms are undisplayed?
    // To *clear up* the interactive probe dots.
    if (do_coot_probe_dots_during_refine_flag)
-      do_interactive_coot_probe();
+      do_interactive_coot_probe(); // in accept_moving_atoms() to turn off the dots
 
    int mode = MOVINGATOMS;
    run_post_manipulation_hook(imol_moving_atoms, mode);
+
+   if (debug) {
+      std::cout << ":::: INFO:: accept_moving_atoms() imol moving atoms finishes " << std::endl;
+   }
 
    return rr;
 }
 
 void
+graphics_info_t::run_post_read_model_hook(int imol) {
+
+   std::string s;
+
+#ifdef USE_GUILE
+
+   s = "post-read-model-hook";
+   SCM v = safe_scheme_command(s.c_str());
+   std::cout << "scm v " << v << std::endl;
+   if (scm_is_true(scm_procedure_p(v))) {
+      s += "(" + s + " " + int_to_string(imol) + ")";
+      SCM result = safe_scheme_command(s);
+   } else {
+   }
+#endif
+
+#ifdef USE_PYTHON
+   s = "post_read_model_hook";
+   PyObject *pName_coot = myPyString_FromString("__main__");  // not "coot" at the moment
+   PyObject *pModule = PyImport_Import(pName_coot);
+   PyObject *pDict = PyModule_GetDict(pModule);
+   PyObject *pFunc = PyDict_GetItemString(pDict, s.c_str());
+
+   if (false) {
+      PyObject *keys = PyDict_Keys(pDict);
+      unsigned int l = PyObject_Length(keys);
+      for (std::size_t i=0; i<l; i++) {
+	 PyObject *item = PyList_GetItem(keys, i);
+	 std::cout << "key " << i << " " << myPyString_AsString(item) << std::endl;
+      }
+   }
+
+   if (PyCallable_Check(pFunc)) {
+      PyObject *arg_list = PyTuple_New(1);
+      PyObject *imol_py = PyLong_FromLong(imol);
+      PyTuple_SetItem(arg_list, 0, imol_py);
+      PyObject *result_py = PyEval_CallObject(pFunc, arg_list);
+      std::cout << "DEBUG:: post_read_model_hook() got result " << result_py << std::endl;
+   } else {
+      std::cout << "INFO:: in run_post_read_model_hook() pFunc " << pFunc << " is not callable" << std::endl;
+      std::cout << "INFO:: in run_post_read_model_hook() pDict " << pDict << " " << std::endl;
+      std::cout << "INFO:: in run_post_read_model_hook() pModule " << pModule << " " << std::endl;
+   }
+#endif
+
+}
+
+void
 graphics_info_t::run_post_manipulation_hook(int imol, int mode) {
 
-#if defined USE_GUILE && !defined WINDOWS_MINGW
+#ifdef USE_GUILE
    run_post_manipulation_hook_scm(imol, mode);
 #endif // GUILE
 #ifdef USE_PYTHON
    // turn this off for the moment.
    // run_post_manipulation_hook_py(imol, mode);
 #endif
-
 }
 
 #ifdef USE_GUILE
@@ -1920,7 +1982,8 @@ graphics_info_t::clear_up_moving_atoms() {
    moving_atoms_lock  = false;
 
    // std::cout << "calling rebond_molecule_corresponding_to_moving_atoms() " << std::endl;
-   graphics_info_t::rebond_molecule_corresponding_to_moving_atoms(); // haven't we done this?
+   // 20220220-PE I will comment this out (because I think the answer to the below question is "yes"
+   // graphics_info_t::rebond_molecule_corresponding_to_moving_atoms(); // haven't we done this?
 
 }
 
@@ -1975,11 +2038,13 @@ graphics_info_t::delete_molecule_from_from_display_manager(int imol, bool was_ma
    if (dc_window) { // is being displayed
       std::string display_frame_name = "display_mol_frame_";
       if (was_map)
-    display_frame_name = "display_map_frame_";
+         display_frame_name = "display_map_frame_";
       display_frame_name += int_to_string(imol);
-      GtkWidget *display_frame = lookup_widget(dc_window, display_frame_name.c_str());
+      // GtkWidget *display_frame = lookup_widget(dc_window, display_frame_name.c_str());
+      GtkWidget *display_frame = 0;
+      std::cout << "FIXME in delete_molecule_from_from_display_manager()  correctly set teh display_frame " << std::endl;
       if (display_frame) {
-    gtk_widget_destroy(display_frame);
+         gtk_widget_destroy(display_frame);
       }
    } else {
       // std::cout << "close: display_control_window is not active" << std::endl;
@@ -1996,7 +2061,10 @@ graphics_info_t::delete_molecule_from_from_display_manager(int imol, bool was_ma
 //
 void
 graphics_info_t::make_moving_atoms_graphics_object(int imol,
-                                                   const atom_selection_container_t &asc) {
+                                                   const atom_selection_container_t &asc,
+                                                   unsigned int do_rama_markup_in, // default MOVING_ATOMS_DO_RAMA_MARKUP_USE_INTERNAL_SETTING,
+                                                   unsigned int do_rota_markup_in  // default MOVING_ATOMS_DO_ROTA_MARKUP_USE_INTERNAL_SETTING
+                                                   ) {
 
    if (! moving_atoms_asc) {
       std::cout << "info:: make_moving_atoms_graphics_object() makes a new moving_atoms_asc" << std::endl;
@@ -2112,6 +2180,11 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
 
       bool do_rama_markup = graphics_info_t::do_intermediate_atoms_rama_markup;
       bool do_rota_markup = graphics_info_t::do_intermediate_atoms_rota_markup;
+      // check the args:
+      if (do_rama_markup_in == MOVING_ATOMS_DO_RAMA_MARKUP_FALSE) do_rama_markup = false;
+      if (do_rama_markup_in == MOVING_ATOMS_DO_RAMA_MARKUP_TRUE ) do_rama_markup = true;
+      if (do_rota_markup_in == MOVING_ATOMS_DO_ROTA_MARKUP_FALSE) do_rota_markup = false;
+      if (do_rota_markup_in == MOVING_ATOMS_DO_ROTA_MARKUP_TRUE ) do_rota_markup = true;
 
       // wrap the filling of the rotamer probability tables
       //
@@ -2152,12 +2225,19 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
       moving_atoms_bonds_lock = 0; // unlocked
    }
 
+   // 20220209-PE adding an atom selection to moving_atoms_molecule. Is this safe?
+   // It's needed because I use
+   //       int udd_handle_bonded_type = atom_sel.mol->GetUDDHandle(mmdb::UDR_ATOM, "found bond");
+   // for the sphere vs hemisphere test
+   //
+   moving_atoms_molecule.atom_sel = asc;
+
    moving_atoms_molecule.bonds_box = regularize_object_bonds_box; // needed? or does
                                                                   // make_glsl_bonds_type_checked()
                                                                   // update this?
    float bond_width = molecules[imol].get_bond_thickness();
-   moving_atoms_molecule.set_bond_thickness(0.56f * bond_width); // why scaled like this is needed!?. At some
-                                                                 // state remove this and intermediate atom
+   moving_atoms_molecule.set_bond_thickness(0.7f * bond_width); // why scaled like this is needed!?. At some
+                                                                 // stage remove this and intermediate atom
                                                                  // radius adjustment in make_glsl_bonds_type_checked()
    moving_atoms_molecule.is_intermediate_atoms_molecule = true;
 
@@ -2346,7 +2426,7 @@ graphics_info_t::get_rotamer_dodecs() {
 
 mmdb::Atom *
 graphics_info_t::get_moving_atom(const pick_info &pi) const {
-   mmdb::Atom *at  = 0;
+   mmdb::Atom *at = 0;
    if (moving_atoms_asc) {
       if (moving_atoms_asc->mol) {
          at = moving_atoms_asc->atom_selection[pi.atom_index];
@@ -3052,17 +3132,17 @@ graphics_info_t::add_label(const std::string &l, const glm::vec3 &p, const glm::
 void
 graphics_info_t::update_environment_graphics_object(int atom_index, int imol) {
 
-   environment_object_bonds_box =
-      molecules[imol].make_environment_bonds_box(atom_index, geom_p);
+   environment_object_bonds_box = molecules[imol].make_environment_bonds_box(atom_index, geom_p);
 
    gtk_gl_area_attach_buffers(GTK_GL_AREA(graphics_info_t::glareas[0]));
-   mesh_for_environment_distances.init(environment_object_bonds_box,
-                                       background_is_black_p());
+   mesh_for_environment_distances.init(environment_object_bonds_box, background_is_black_p());
+
    Material material;
    // mesh_for_environment_distances.mesh.setup(&shader_for_moleculestotriangles, material); 20210910-PE
    mesh_for_environment_distances.mesh.setup(material);
 
    labels.clear(); // remove everything
+
    add_distance_labels_for_environment_distances();
 
 }
@@ -3351,9 +3431,11 @@ graphics_info_t::get_geometry_torsion() const {
 void
 graphics_info_t::pepflip() {
 
-   molecules[imol_pepflip].pepflip(atom_index_pepflip);
-   normal_cursor();
-   model_fit_refine_unactive_togglebutton("model_refine_dialog_pepflip_togglebutton");
+   if (is_valid_model_molecule(imol_pepflip)) {
+      molecules[imol_pepflip].pepflip(atom_index_pepflip);
+      normal_cursor();
+      model_fit_refine_unactive_togglebutton("model_refine_dialog_pepflip_togglebutton");
+   }
 }
 
 
@@ -4245,8 +4327,9 @@ graphics_info_t::apply_undo() {
    // std::cout << "DEBUG:: undo molecule : " << umol << std::endl;
    if (umol == -2) {
       if (use_graphics_interface_flag) {
-         GtkWidget *dialog = create_undo_molecule_chooser_dialog();
-         GtkWidget *combobox = lookup_widget(dialog, "undo_molecule_chooser_combobox");
+         // GtkWidget *dialog = create_undo_molecule_chooser_dialog();
+         GtkWidget *dialog = widget_from_builder("undo_molecule_chooser_dialog");
+         GtkWidget *combobox = widget_from_builder("undo_molecule_chooser_combobox");
          fill_combobox_with_undo_options(combobox);
          gtk_widget_show(dialog);
       }
@@ -4315,8 +4398,9 @@ graphics_info_t::apply_redo() {
 
    int umol = Undo_molecule(coot::REDO);
    if (umol == -2) { // ambiguity
-      GtkWidget *dialog = create_undo_molecule_chooser_dialog();
-      GtkWidget *combobox = lookup_widget(dialog, "undo_molecule_chooser_combobox");
+      // GtkWidget *dialog = create_undo_molecule_chooser_dialog();
+      GtkWidget *dialog = widget_from_builder("undo_molecule_chooser_dialog");
+      GtkWidget *combobox = widget_from_builder("undo_molecule_chooser_combobox");
       fill_combobox_with_undo_options(combobox);
       gtk_widget_show(dialog);
    } else {
@@ -4370,10 +4454,9 @@ graphics_info_t::activate_redo_button() {
 
    GtkWidget *dialog = model_fit_refine_dialog;
 
-
    if (dialog) {
       // which it should be!
-      GtkWidget *button = lookup_widget(dialog, "model_refine_dialog_redo_button");
+      GtkWidget *button = widget_from_builder("model_refine_dialog_redo_button");
       gtk_widget_set_sensitive(button, TRUE);
    }
 }
@@ -4642,7 +4725,7 @@ graphics_info_t::destroy_edit_backbone_rama_plot() {  // only one of these.
 
    if (edit_phi_psi_plot) {
       // we need to get to the widget "dynarama_window" and destroy it.
-      edit_phi_psi_plot->destroy_yourself();
+      edit_phi_psi_plot->hide_yourself();
       edit_phi_psi_plot = 0; // Richard Baxter bug
    } else {
       std::cout << "WARNING:: edit_phi_psi_plot is NULL\n";
@@ -5773,10 +5856,13 @@ graphics_info_t::set_moving_atoms(atom_selection_container_t asc,
 // static
 void graphics_info_t::bond_parameters_molecule_combobox_changed(GtkWidget *combobox_molecule, gpointer data) {
 
+   std::cout << "-------------------- bond_parameters_molecule_combobox_changed() "
+             << combobox_molecule << std::endl;
+
    graphics_info_t g;
    int imol = g.combobox_get_imol(GTK_COMBO_BOX(combobox_molecule)); // not static
    bond_parameters_molecule = imol;
-   GtkWidget *w = widget_from_builder("bond_parameters_dialog");
+   // GtkWidget *w = widget_from_builder("bond_parameters_dialog");
    fill_bond_parameters_internals(combobox_molecule, imol);
 
 }
@@ -5812,40 +5898,42 @@ graphics_info_t::rotamer_dialog_neighbour_rotamer(int istep) {
       int active_button_number = 0;
       int new_active_button_number;
       for (int i=0; i<n_rotamers; i++) {
-    std::string button_name = "rotamer_selection_button_rot_";
-    button_name += int_to_string(i);
-    button = lookup_widget(g.rotamer_dialog, button_name.c_str());
-    if (button) {
-       if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
-          ifound_active_button = 1;
-          active_button_number = i;
-          break;
-       }
-    } else {
-       std::cout << "ERROR:: rotamer button not found " << button_name << std::endl;
-    }
+         std::string button_name = "rotamer_selection_button_rot_";
+         button_name += int_to_string(i);
+         // button = lookup_widget(g.rotamer_dialog, button_name.c_str());
+         button = widget_from_builder(button_name.c_str());
+         if (button) {
+            if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
+               ifound_active_button = 1;
+               active_button_number = i;
+               break;
+            }
+         } else {
+            std::cout << "ERROR:: rotamer button not found " << button_name << std::endl;
+         }
       }
       if (ifound_active_button) {
-    if (istep == 1) {
-       new_active_button_number = active_button_number + 1;
-       if (new_active_button_number == n_rotamers) {
-          new_active_button_number = 0;
-       }
-    } else {
-       new_active_button_number = active_button_number - 1;
-       if (new_active_button_number < 0) {
-          new_active_button_number = n_rotamers -1;
-       }
-    }
-    std::string button_name = "rotamer_selection_button_rot_";
-    button_name += int_to_string(new_active_button_number);
-    GtkWidget *new_button = lookup_widget(g.rotamer_dialog, button_name.c_str());
+         if (istep == 1) {
+            new_active_button_number = active_button_number + 1;
+            if (new_active_button_number == n_rotamers) {
+               new_active_button_number = 0;
+            }
+         } else {
+            new_active_button_number = active_button_number - 1;
+            if (new_active_button_number < 0) {
+               new_active_button_number = n_rotamers -1;
+            }
+         }
+         std::string button_name = "rotamer_selection_button_rot_";
+         button_name += int_to_string(new_active_button_number);
+         // GtkWidget *new_button = lookup_widget(g.rotamer_dialog, button_name.c_str());
+         GtkWidget *new_button = widget_from_builder(button_name.c_str());
 
-    std::cout << "GTK-FIXME rotamer_dialog_neighbour_rotamer() gtk_signal_emit_by_name()" << std::endl;
-    //gtk_signal_emit_by_name(GTK_OBJECT(new_button), "clicked");
+         std::cout << "GTK-FIXME rotamer_dialog_neighbour_rotamer() gtk_signal_emit_by_name()" << std::endl;
+         //gtk_signal_emit_by_name(GTK_OBJECT(new_button), "clicked");
 
       } else {
-    std::cout << "ERROR:: not active rotamer button found " << std::endl;
+         std::cout << "ERROR:: not active rotamer button found " << std::endl;
       }
    }
 }
@@ -5883,14 +5971,15 @@ void graphics_info_t::difference_map_peaks_neighbour_peak(int istep) { // could 
    graphics_info_t g;
    if (g.difference_map_peaks_dialog) {
       int n_peaks = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(g.difference_map_peaks_dialog), "n_peaks"));
-      GtkWidget *button;
       short int ifound_active_button = 0;
       int active_button_number = -99;     // set later
       int new_active_button_number = -99; // set later
       for (int i=0; i<n_peaks; i++) {
          std::string button_name = "difference_map_peaks_button_";
          button_name +=  int_to_string(i);
-         button = lookup_widget(g.difference_map_peaks_dialog, button_name.c_str());
+         // GtkWidget *button = lookup_widget(g.difference_map_peaks_dialog, button_name.c_str());
+         GtkWidget *button = nullptr;
+         std::cout << "FIXME in difference_map_peaks_neighbour_peak() set the button correctly" << std::endl;
          if (button) {
             if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
                ifound_active_button = 1;
@@ -5913,8 +6002,9 @@ void graphics_info_t::difference_map_peaks_neighbour_peak(int istep) { // could 
       }
       std::string button_name = "difference_map_peaks_button_";
       button_name += int_to_string(new_active_button_number);
-      GtkWidget *new_button = lookup_widget(g.difference_map_peaks_dialog,
-                                            button_name.c_str());
+      // GtkWidget *new_button = lookup_widget(g.difference_map_peaks_dialog, button_name.c_str());
+      GtkWidget *new_button = 0;
+      std::cout << "FIXME in difference_map_peaks_neighbour_peak() set the button 2 correctly" << std::endl;
       std::cout << "GTK-FIXME difference_map_peaks_neighbour_peak() gtk_signal_emit_by_name() " << std::endl;
          // gtk_signal_emit_by_name(GTK_OBJECT(new_button), "clicked");
 
@@ -5937,37 +6027,41 @@ graphics_info_t::checked_waters_next_baddie(int dir) {
       int new_active_button_number = -99; // set later
 
       for (int i=0; i<n_baddies; i++) {
-    std::string button_name = "checked_waters_baddie_button_";
-    button_name += int_to_string(i);
-    button = lookup_widget(dialog, button_name.c_str());
-    if (button) {
-       if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
-          ifound_active_button = 1;
-          active_button_number = i;
-       }
-    } else {
-       std::cout << "failed to find button " << button_name
-         << std::endl;
-    }
+         std::string button_name = "checked_waters_baddie_button_";
+         button_name += int_to_string(i);
+         // button = lookup_widget(dialog, button_name.c_str());
+         button = nullptr;
+         std::cout << "FIXME in checked_waters_next_baddie() set the button correctly " << std::endl;
+         if (button) {
+            if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) {
+               ifound_active_button = 1;
+               active_button_number = i;
+            }
+         } else {
+            std::cout << "failed to find button " << button_name
+                      << std::endl;
+         }
       }
       if (ifound_active_button) {
-    if (dir == 1) {
-       new_active_button_number = active_button_number + 1;
-       if (new_active_button_number == n_baddies) {
-          new_active_button_number = 0;
-       }
-    } else {
-       new_active_button_number = active_button_number - 1;
-       if (new_active_button_number < 0)
-          new_active_button_number = n_baddies - 1;
-    }
-    std::string active_button_name = "checked_waters_baddie_button_";
-    active_button_name += int_to_string(new_active_button_number);
-    GtkWidget *new_active_button = lookup_widget(dialog, active_button_name.c_str());
-    std::cout << "----- GTK-FIXME checked_waters_next_baddie() gtk_signal_emit_by_name()" << std::endl;
-    // gtk_signal_emit_by_name(GTK_OBJECT(new_active_button), "clicked");
+         if (dir == 1) {
+            new_active_button_number = active_button_number + 1;
+            if (new_active_button_number == n_baddies) {
+               new_active_button_number = 0;
+            }
+         } else {
+            new_active_button_number = active_button_number - 1;
+            if (new_active_button_number < 0)
+               new_active_button_number = n_baddies - 1;
+         }
+         std::string active_button_name = "checked_waters_baddie_button_";
+         active_button_name += int_to_string(new_active_button_number);
+         // GtkWidget *new_active_button = lookup_widget(dialog, active_button_name.c_str());
+         GtkWidget *new_active_button = 0;
+         std::cout << "----- GTK-FIXME checked_waters_next_baddie() gtk_signal_emit_by_name()" << std::endl;
+         std::cout << "FIXME in checked_waters_next_baddie() set the button correctly 2 " << std::endl;
+         // gtk_signal_emit_by_name(GTK_OBJECT(new_active_button), "clicked");
       } else {
-    std::cout << "active button not found" << std::endl;
+         std::cout << "active button not found" << std::endl;
       }
    }
 }
@@ -5979,11 +6073,20 @@ graphics_info_t::checked_waters_next_baddie(int dir) {
 SCM
 graphics_info_t::safe_scheme_command(const std::string &scheme_command) {
 
+   // if this happens, it's because reading the PDB file (from the command line) is happening too early
+   // i.e. before I've called my_wrap_scm_boot_guile()
+   //
+   if (! scm_boot_guile_booted) return SCM_BOOL_F;
+
+   // std::cout << "starting safe_scheme_command() with scheme_command " << scheme_command << std::endl;
+
+   // return SCM_BOOL_F;
+
    // FIXME!
    SCM handler = scm_c_eval_string ("(lambda (key . args) (display (list \"(safe_scheme_command) Error in proc: key: \" key \" args: \" args)) (newline))");
 
    // I am undecided if I want this or not:
-   // std::cout << "debug:: safe running :" << scheme_command << ":" << std::endl;
+   // std::cout << "debug:: safe_scheme_command(): :" << scheme_command << ":" << std::endl;
    std::string thunk("(lambda() ");
    thunk += scheme_command;
    thunk += " )";
@@ -6389,13 +6492,15 @@ graphics_info_t::sfcalc_genmap(int imol_model,
                         on_going_updating_map_lock = true;
                         float cls = molecules[imol_updating_difference_map].get_contour_level_by_sigma();
                         molecules[imol_map_with_data_attached].fill_fobs_sigfobs();
-                        const clipper::HKL_data<clipper::data32::F_sigF> &fobs_data =
-                        molecules[imol_map_with_data_attached].get_original_fobs_sigfobs();
-                        const clipper::HKL_data<clipper::data32::Flag> &free_flag =
-                        molecules[imol_map_with_data_attached].get_original_rfree_flags();
-                        molecules[imol_model].sfcalc_genmap(fobs_data, free_flag, xmap_p);
-                        molecules[imol_updating_difference_map].set_mean_and_sigma();
-                        molecules[imol_updating_difference_map].set_contour_level_by_sigma(cls); // does an update
+                        const clipper::HKL_data<clipper::data32::F_sigF> *fobs_data =
+                           molecules[imol_map_with_data_attached].get_original_fobs_sigfobs();
+                        const clipper::HKL_data<clipper::data32::Flag> *free_flag =
+                           molecules[imol_map_with_data_attached].get_original_rfree_flags();
+                        if (fobs_data && free_flag) {
+                           molecules[imol_model].sfcalc_genmap(*fobs_data, *free_flag, xmap_p);
+                           molecules[imol_updating_difference_map].set_mean_and_sigma(false, ignore_pseudo_zeros_for_map_stats);
+                           molecules[imol_updating_difference_map].set_contour_level_by_sigma(cls); // does an update
+                        }
                         on_going_updating_map_lock = false;
                      } else {
                         std::cout << "DEBUG:: on_going_updating_map_lock was set! - aborting map update." << std::endl;
@@ -6431,6 +6536,67 @@ graphics_info_t::delete_pointers_to_map_in_other_molecules(int imol_map) {
          }
       }
    }
+}
+
+coot::util::sfcalc_genmap_stats_t
+graphics_info_t::sfcalc_genmaps_using_bulk_solvent(int imol_model,
+                                                   int imol_map_with_data_attached,
+                                                   clipper::Xmap<float> *xmap_2fofc_p, // 2mFo-DFc I mean, of course
+                                                   clipper::Xmap<float> *xmap_fofc_p) {
+
+   coot::util::sfcalc_genmap_stats_t stats;
+   if (is_valid_model_molecule(imol_model)) {
+      if (is_valid_map_molecule(imol_map_with_data_attached)) {
+         try {
+            if (! on_going_updating_map_lock) {
+               on_going_updating_map_lock = true;
+               molecules[imol_map_with_data_attached].fill_fobs_sigfobs();
+
+               // 20210815-PE used to be const reference (get_original_fobs_sigfobs() function changed too)
+               // const clipper::HKL_data<clipper::data32::F_sigF> &fobs_data = molecules[imol_map_with_data_attached].get_original_fobs_sigfobs();
+               // const clipper::HKL_data<clipper::data32::Flag> &free_flag = molecules[imol_map_with_data_attached].get_original_rfree_flags();
+               // now the full object (40us for RNAse test).
+               // 20210815-PE OK, the const reference was not the problem. But we will leave it as it is now, for now.
+               //
+               clipper::HKL_data<clipper::data32::F_sigF> *fobs_data_p = molecules[imol_map_with_data_attached].get_original_fobs_sigfobs();
+               clipper::HKL_data<clipper::data32::Flag>   *free_flag_p = molecules[imol_map_with_data_attached].get_original_rfree_flags();
+
+               if (fobs_data_p && free_flag_p) {
+
+                  if (true) {
+                     // sanity check data
+                     const clipper::HKL_info &hkls_check = fobs_data_p->base_hkl_info();
+                     const clipper::Spacegroup &spgr_check = hkls_check.spacegroup();
+                     const clipper::Cell &cell_check = fobs_data_p->base_cell();
+                     const clipper::HKL_sampling &sampling_check = fobs_data_p->hkl_sampling();
+
+                     std::cout << "DEBUG:: in sfcalc_genmaps_using_bulk_solvent() imol_map_with_data_attached "
+                               << imol_map_with_data_attached << std::endl;
+
+                     std::cout << "DEBUG:: Sanity check in graphics_info_t:sfcalc_genmaps_using_bulk_solvent(): HKL_info: "
+                               << "base_cell: " << cell_check.format() << " "
+                               << "spacegroup: " << spgr_check.symbol_xhm() << " "
+                               << "sampling is null: " << sampling_check.is_null() << " "
+                               << "resolution: " << hkls_check.resolution().limit() << " "
+                               << "invsqreslim: " << hkls_check.resolution().invresolsq_limit() << " "
+                               << "num_reflections: " << hkls_check.num_reflections()
+                               << std::endl;
+                  }
+
+                  stats = molecules[imol_model].sfcalc_genmaps_using_bulk_solvent(*fobs_data_p, *free_flag_p, xmap_2fofc_p, xmap_fofc_p);
+
+               } else {
+                  std::cout << "ERROR:: null data pointer in graphics_info_t::sfcalc_genmaps_using_bulk_solvent() " << std::endl;
+               }
+               on_going_updating_map_lock = false;
+            }
+         }
+         catch (const std::runtime_error &rte) {
+            std::cout << rte.what() << std::endl;
+         }
+      }
+   }
+   return stats;
 }
 
 void

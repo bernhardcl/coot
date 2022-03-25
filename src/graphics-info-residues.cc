@@ -434,9 +434,11 @@ graphics_info_t::perpendicular_ligand_view(int imol, const coot::residue_spec_t 
             coot::Cartesian rot_centre = RotationCentre();
             coot::view_info_t view1(g.glm_quat,  rot_centre,      zoom, "current");
             // target_quat in view2 has been wrongly calculated
-            std::cout << "calling interpolate with view2 position " << res_centre << std::endl;
+            std::cout << "INFO:: perpendicular_ligand_view() calling interpolate with view2 position "
+                      << res_centre << std::endl;
             coot::view_info_t view2(target_quat, res_centre, nice_zoom, "ligand-perp");
-            int nsteps = 60;
+            int nsteps = go_to_ligand_animate_view_n_steps; // 20220303-PE No API to change this yet
+            // std::cout << "perpendicular_ligand_view() calling interpolate()" << std::endl;
             coot::view_info_t::interpolate(view1, view2, nsteps);
 
          }
@@ -609,7 +611,7 @@ graphics_info_t::add_distance_labels_for_environment_distances() {
          glm::vec3 mid_point = 0.5f * (s + e);
          glm::vec3 offset_mid_point = mid_point + glm::vec3(0.15, 0.05, 0.05);
          std::ostringstream ss;
-         ss << std::setprecision(3) << std::fixed << d;
+         ss << std::setprecision(2) << std::fixed << d;
          // ss << std::fixed << d;
          std::string text(ss.str());
 

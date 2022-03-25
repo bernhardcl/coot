@@ -68,6 +68,7 @@ GTKGL_CONTEXT_LIBS   = $(GTKGL_LIBS) $(GTKGLEXT_LIBS)
 COOT_EXTRA_LIBS = \
 	$(top_builddir)/lbg/libcoot-lidia.la      		\
 	$(top_builddir)/pli/libcoot-pli.la      		\
+	$(top_builddir)/ligand/libcoot-res-tracer.la  		\
 	$(top_builddir)/ligand/libcoot-ligand.la      		\
 	$(top_builddir)/lidia-core/libcoot-lidia-core.la      	\
 	$(top_builddir)/goograph/libcoot-goograph.la      	\
@@ -104,7 +105,7 @@ EXTRA_DIST = \
         post-process-coot-wrap-guile.sh \
         post-process-coot-wrap-python.sh \
         fixup-interface.h.sh \
-	coot_wrap_guile_pre.cc dynarama.glade single-map-properties-dialog.glade
+	coot_wrap_guile_pre.cc dynarama.glade
 
 
 subpkgdatadir = $(pkgdatadir)
@@ -122,7 +123,13 @@ dist_cootdata_DATA = atom-label.shader blur.shader central-cube.shader \
 		     rama-plot-phi-psi-markers.shader rama-plot-axes-and-ticks.shader \
 		     hud-image-texture.shader hud-lines.shader \
 		     depth-of-field.shader blur-x.shader blur-y.shader texture-meshes.shader \
-		     camera-facing-quad-shader-for-testing.shader outline-of-active-residue.shader
+		     camera-facing-quad-shader-for-testing.shader outline-of-active-residue.shader \
+                     meshes.shader meshes-shadow-map.shader meshes-with-shadows.shader \
+                     meshes-for-ssao.shader effects.shader 9.ssao_blur.shader 9.ssao_geometry.shader 9.ssao.shader \
+		     texture-meshes-for-ssao.shader texture-meshes-with-shadows.shader \
+		     texture-meshes-shadow-map.shader shadow-map-image-texture.shader
+
+
 
 # use -DHAVE_MMDBSSM or use (expanded from) $(MMDBSSM) works.
 # SWIG_FLAGS is either blank or defines COOT_USE_GTK2_INTERFACE usage
@@ -314,7 +321,7 @@ check_PROGRAMS = test-coot-align test-cholesky
 #	fix-nomenclature.cc    \
 #	coot-nomenclature.cc
 
-coot_bin_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc glade-callbacks-preferences.cc
+coot_bin_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc glade-callbacks-preferences.cc glade-callbacks-shader-settings.cc
 
 coot_bin_LDADD =  \
         libcootsumo.la \
@@ -510,13 +517,13 @@ libcootsumo_la_SOURCES = \
 	graphics-info.cc	 \
 	graphics-info-defines.cc \
 	graphics-info-draw.cc    \
+	graphics-info-draw-models.cc \
 	graphics-info-graphs.cc	 \
 	graphics-info-gui.cc	 \
 	graphics-info-init.cc	 \
 	graphics-info-intermediate.cc	 \
 	graphics-info-modelling.cc \
 	graphics-info-navigation.cc	\
-	graphics-info-navigation-gtk1.cc\
 	graphics-info-navigation-gtk2.cc\
 	graphics-info-preferences.cc	\
 	graphics-info-network.cc \
@@ -526,8 +533,9 @@ libcootsumo_la_SOURCES = \
 	graphics-info-pick.cc	 \
 	graphics-info-refmac.cc  \
 	graphics-info-render.cc	 \
-	graphics-info-residues.cc	\
-	graphics-info-refine.cc	\
+	graphics-info-render-scene.cc \
+	graphics-info-residues.cc     \
+	graphics-info-refine.cc	 \
 	graphics-info-scripting.cc	\
 	graphics-info-state.cc	 \
 	graphics-info-statics.cc \
@@ -542,7 +550,7 @@ libcootsumo_la_SOURCES = \
 	graphics-info.h 	 \
 	gtk-manual.cc		 \
 	gtk-manual.h		 \
-	gtk-widget-conversion-utils.h \
+	gtk-widget-conversion-utils.h  \
 	gtk-widget-conversion-utils.cc \
 	gtk2-interface.c	 \
 	gtk-manual.hh		 \
@@ -563,9 +571,9 @@ libcootsumo_la_SOURCES = \
 	LigandViewMesh.cc        \
 	LigandViewMesh.hh        \
 	lsq-dialog-values.hh     \
-	lbg-interface.hh 	 \
-	lbg-callbacks-outer.cc 	 \
-	lbg-interface.cc 	 \
+	lbg-interface.hh         \
+	lbg-callbacks-outer.cc   \
+	lbg-interface.cc         \
 	ligand-check.hh          \
 	Model.cc Model.hh        \
 	make-a-dodec.cc make-a-dodec.hh \
@@ -575,8 +583,10 @@ libcootsumo_la_SOURCES = \
 	Mesh.cc Mesh.hh          \
 	Mesh-from-glTF.cc        \
 	Mesh-from-graphical-bonds-instanced.cc     \
+	Mesh-from-graphical-bonds.cc     \
 	meshed-generic-display-object.hh \
 	meshed-generic-display-object.cc \
+	map-statistics.hh        \
 	merge-molecule-results-info-t.hh \
 	model-composition-statistics.hh \
 	molecule-class-info.cc 	 \
@@ -595,7 +605,7 @@ libcootsumo_la_SOURCES = \
 	molecule-class-info-mutate.cc 	\
 	molecule-class-info-residues.cc \
 	molecule-class-info-refine.cc   \
-        molecule-class-info-kk.cc       \
+	molecule-class-info-kk.cc       \
 	molecule-class-info-surface.cc 	\
 	molecule-class-info-string.cc 	\
 	molecule-class-info-patterson.cc   \
@@ -644,6 +654,7 @@ libcootsumo_la_SOURCES = \
 	screen-utils.cc		 \
 	screendump-tga.hh        \
 	screendump-tga.cc        \
+	sound.cc \
 	sdf-interface.hh         \
 	sdf-internal.hh          \
 	sdf-interface.cc         \
@@ -688,7 +699,7 @@ libcootsumo_la_SOURCES = \
 	atom-attribute.hh 	 \
 	animated-ligand.hh 	 \
 	atom-selection.hh 	 \
-	ncs.hh 		         \
+	ncs.hh 		 \
 	model-view.hh 		 \
 	validation.hh            \
 	validation.cc            \
@@ -701,6 +712,9 @@ libcootsumo_la_SOURCES = \
 	widget-from-builder.cc   \
         json.hpp
 
+
+# 20220228-PE this appeared in a merge - not sure if it's needed (or should be included directly)
+# coot_bin_SOURCES += coot_wrap_python.cc
 
 EXTRA_DIST += coot_wrap_python_pre.cc
 dist_python_PYTHON = coot.py coot.pth

@@ -42,15 +42,16 @@ void main() {
 
    int n_pixels_max = 10;
    vec3 sum = vec3(0.0, 0.0, 0.0);
-   float nf = 0.11; // normalizing factor
+   float weight_sum = 0.0;
    for (int ix=-n_pixels_max; ix<=n_pixels_max; ix++) {
       float k = kern[abs(ix)];
+      float weight = 1.0;
       vec2 offset_coords = TexCoords + vec2(tex_scale.x * ix, 0.0);
       vec3 t = texture(screenTexture, offset_coords).rgb;
-      sum += t * vec3(k,k,k) * vec3(nf);
+      sum += t * vec3(k,k,k) * weight;
+      weight_sum += weight;
    }
-   result = sum;
-
+   result = 2.4 * sum/weight_sum; // I don't know where this scale factor comes from :-)
    // result = texture(screenTexture, TexCoords).rgb;
    out_colour = vec4(result, 1.0);
 

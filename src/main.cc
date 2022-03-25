@@ -96,6 +96,7 @@
 // since the follwing two include python graphics-info.h is moved up
 //
 #if defined (WINDOWS_MINGW)
+#include <locale.h>
 #ifdef DATADIR
 #undef DATADIR
 #endif // DATADIR
@@ -134,7 +135,6 @@ int setup_screen_size_settings();
 void setup_application_icon(GtkWindow *window);
 void setup_symm_lib();
 void check_reference_structures_dir();
-void create_rot_trans_menutoolbutton_menu(GtkWidget *window1);
 #include "boot-python.hh"
 
 #ifdef USE_MYSQL_DATABASE
@@ -154,6 +154,8 @@ int setup_database();
 
 #include "dynamic-menus.hh"
 
+#include "widget-from-builder.hh"
+
 void
 windows_set_error_mode() {
 
@@ -163,7 +165,27 @@ windows_set_error_mode() {
 #endif // MINGW
 }
 
+
+
+GtkWidget*
+my_create_splash_screen_window (void) {
+
+   GtkWidget *splash_screen_window = gtk_window_new (GTK_WINDOW_POPUP);
+   gtk_window_set_title (GTK_WINDOW (splash_screen_window), "Coot");
+   gtk_window_set_position (GTK_WINDOW (splash_screen_window), GTK_WIN_POS_CENTER);
+   gtk_window_set_type_hint (GTK_WINDOW (splash_screen_window), GDK_WINDOW_TYPE_HINT_SPLASHSCREEN);
+
+   GtkWidget *image10854 = create_pixmap(splash_screen_window, "coot-0.9.9-pre.png");
+   gtk_widget_show (image10854);
+   gtk_container_add(GTK_CONTAINER(splash_screen_window), image10854);
+
+   return splash_screen_window;
+}
+
+
 GtkWidget *do_splash_screen(const command_line_data &cld) {
+
+   // 20220313-PE this runs before builder is set.
 
    GtkWidget *splash_screen = 0;
    setup_splash_screen();
@@ -172,7 +194,9 @@ GtkWidget *do_splash_screen(const command_line_data &cld) {
       if (graphics_info_t::use_graphics_interface_flag) {
          std::string f = cld.alternate_splash_screen_file_name;
          if (f.empty()) {
-            splash_screen = create_splash_screen_window();
+            splash_screen = my_create_splash_screen_window();
+            // splash_screen = widget_from_builder("splash_screen_window");
+            // std::cout << "-- in do_splash_screen() splash_screen set to " << splash_screen << std::endl;
          } else {
             splash_screen = create_splash_screen_window_for_file(f.c_str());
          }
@@ -190,6 +214,52 @@ GtkWidget *do_splash_screen(const command_line_data &cld) {
       }
    }
    return splash_screen;
+}
+
+void
+setup_pixmap_directory() {
+
+   // default location:
+   std::string dir = coot::package_data_dir();
+   std::string pixmap_dir = coot::util::append_dir_dir(dir, "pixmaps");
+
+   // over-ridden by user?
+   char *s = getenv("COOT_PIXMAPS_DIR");
+   if (s)
+      pixmap_dir = s;
+
+   add_pixmap_directory(pixmap_dir.c_str());
+
+}
+
+
+
+
+std::string
+make_main_window_title() {
+
+   std::string version_string = VERSION;
+   std::string main_title = "Coot " + version_string;
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+   // main_title += " EL";
+#endif
+
+#ifdef COOT_MAIN_TITLE_EXTRA
+   main_title += COOT_MAIN_TITLE_EXTRA;
+#else
+   // if this is a pre-release, stick in the revision number too
+   if (version_string.find("-pre") != std::string::npos) {
+      main_title += " (revision count ";
+      main_title += coot::util::int_to_string(git_revision_count());
+      main_title += ")";
+   }
+#endif
+
+#ifdef WINDOWS_MINGW
+   main_title = "Win" + main_title;
+#endif
+
+   return main_title;
 }
 
 void do_main_window(const command_line_data &cld) {
@@ -220,13 +290,13 @@ void do_main_window(const command_line_data &cld) {
       main_title = "Win" + main_title;
 #endif
 
-      GtkWidget *model_toolbar = lookup_widget(window1, "model_toolbar");
+      GtkWidget *model_toolbar = lookup_widget(window1, "model_toolbar"); // in do_main_window()
       gtk_widget_show(model_toolbar);
 
       gtk_window_set_title(GTK_WINDOW (window1), main_title.c_str());
-      GtkWidget *vbox = lookup_widget(window1, "main_window_vbox");
+      GtkWidget *vbox = lookup_widget(window1, "main_window_vbox"); // in do_main_window()
       // make this a grid, so that we can have 2x3 (say) graphics contexts
-      GtkWidget *graphics_hbox = lookup_widget(window1, "main_window_graphics_hbox");
+      GtkWidget *graphics_hbox = lookup_widget(window1, "main_window_graphics_hbox"); // in do_main_window()
 
       GtkWidget *glarea = create_and_pack_gtkglarea(graphics_hbox, false);
       my_glarea_add_signals_and_events(glarea);
@@ -252,13 +322,12 @@ void do_main_window(const command_line_data &cld) {
 	    gtk_widget_show(graphics_info_t::glareas[1]);
 
 	 // and setup (store) the status bar
-	 GtkWidget *sb = lookup_widget(window1, "main_window_statusbar");
+	 GtkWidget *sb = lookup_widget(window1, "main_window_statusbar"); // in do_main_window()
 	 graphics_info_t::statusbar = sb;
 	 graphics_info_t::statusbar_context_id =
 	    gtk_statusbar_get_context_id(GTK_STATUSBAR(sb), "picked atom info");
 
 	 gtk_widget_show (window1);
-	 create_rot_trans_menutoolbutton_menu(window1);
 
          create_dynamic_menus(window1);
 
@@ -296,8 +365,6 @@ do_self_tests() {
 
 void on_glarea_realize(GtkGLArea *glarea);
 
-#include "widget-from-builder.hh"
-
 // return success status
 bool init_from_gtkbuilder() {
 
@@ -306,7 +373,8 @@ bool init_from_gtkbuilder() {
    bool status = true;
 
    std::string dir = coot::package_data_dir();
-   std::string glade_file_full = coot::util::append_dir_file(dir, "a6.glade");
+   std::string dir_glade = coot::util::append_dir_dir(dir, "glade");
+   std::string glade_file_full = coot::util::append_dir_file(dir_glade, "a6.glade");
 
    if (coot::file_exists("a6.glade"))  // Hack for now
       glade_file_full = "a6.glade";
@@ -323,6 +391,11 @@ bool init_from_gtkbuilder() {
                 << " add_from_file_status: " << add_from_file_status << std::endl;
 
    GtkWidget *graphics_hbox = GTK_WIDGET(gtk_builder_get_object(builder, "main_window_graphics_hbox"));
+
+   // 20220310-PE and the preferences builder too now
+
+   GtkBuilder *preferences_builder = get_builder_for_preferences_dialog();
+   graphics_info_t::set_preferences_gtkbuilder(preferences_builder);
 
    if (graphics_hbox) {
 
@@ -343,6 +416,9 @@ bool init_from_gtkbuilder() {
 
       if (main_window)
          graphics_info_t::set_main_window(main_window);
+
+      std::string main_title = make_main_window_title();
+      gtk_window_set_title(GTK_WINDOW(main_window), main_title.c_str());
 
       graphics_info_t::statusbar = sb;
 
@@ -460,6 +536,8 @@ main (int argc, char *argv[]) {
          do_main_window(cld);
       }
 
+      setup_pixmap_directory();
+
       if (cld.use_gtkbuilder) {
          bool success = init_from_gtkbuilder();
          if (success) {
@@ -512,7 +590,7 @@ main (int argc, char *argv[]) {
    // to start the graphics, we need to init glut and gtk with the
    // command line args.
 
-   desensitive_scripting_menu_item_maybe(window1);
+   // desensitive_scripting_menu_item_maybe(window1);
 
    // Hack this in to get Python scripts to work - not sure where the correct place to put this is.
    //
@@ -564,20 +642,7 @@ main (int argc, char *argv[]) {
 
 void desensitive_scripting_menu_item_maybe(GtkWidget *window1) {
 
-   // Finally desensitize the missing scripting menu
-   if (graphics_info_t::use_graphics_interface_flag) {
-      GtkWidget *w;
-#ifndef USE_GUILE
-      // This lookup fails - I don't know why. Get rid of it for now - to remove startup message
-      // w = lookup_widget(window1, "scripting_scheme1");
-      // std::cout << "debug:: in desensitive_scripting_menu_item_maybe() w " << w << std::endl;
-      // gtk_widget_set_sensitive(w, FALSE);
-#endif
-#ifndef USE_PYTHON
-      w = lookup_widget(window1, "scripting_python1");
-      gtk_widget_set_sensitive(w, FALSE);
-#endif
-   }
+   // it's not allowed to build coot without python and guile
 }
 
 
@@ -607,8 +672,7 @@ setup_splash_screen() {
 
    // default location:
    std::string splash_screen_pixmap_dir = coot::package_data_dir();
-   splash_screen_pixmap_dir += "/";
-   splash_screen_pixmap_dir += "pixmaps";
+   splash_screen_pixmap_dir = coot::util::append_dir_dir(splash_screen_pixmap_dir, "pixmaps");
 
    // over-ridden by user?
    char *s = getenv("COOT_PIXMAPS_DIR");
@@ -616,9 +680,8 @@ setup_splash_screen() {
       splash_screen_pixmap_dir = s;
    }
 
-   if (0)
-      std::cout << "INFO:: splash_screen_pixmap_dir "
-		<< splash_screen_pixmap_dir << std::endl;
+   if (false)
+      std::cout << "INFO:: splash_screen_pixmap_dir " << splash_screen_pixmap_dir << std::endl;
 
    // now add splash_screen_pixmap_dir to the pixmaps_directories CList
    //
@@ -669,42 +732,3 @@ menutoolbutton_rot_trans_activated(GtkWidget *item, GtkPositionType pos) {
    }
 }
 
-void create_rot_trans_menutoolbutton_menu(GtkWidget *window1) {
-
-   //
-   GtkWidget *menu_tool_button = lookup_widget(window1, "model_toolbar_rot_trans_toolbutton");
-
-   if (menu_tool_button) {
-      GtkWidget *menu = gtk_menu_new();
-      GtkWidget *menu_item;
-      GSList *group = NULL;
-
-      menu_item = gtk_radio_menu_item_new_with_label(group, "By Residue Range...");
-      group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menu_item));
-      gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-      gtk_widget_show(menu_item);
-      g_signal_connect(G_OBJECT(menu_item), "activate",
-	              (GCallback) (menutoolbutton_rot_trans_activated),
-		GINT_TO_POINTER(ROT_TRANS_TYPE_ZONE));
-      /* activate the first item */
-      gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), TRUE);
-
-      menu_item = gtk_radio_menu_item_new_with_label(group, "By Chain...");
-      group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menu_item));
-      gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-      gtk_widget_show(menu_item);
-      g_signal_connect(G_OBJECT(menu_item), "activate",
-			 (GCallback) (menutoolbutton_rot_trans_activated),
-			 GINT_TO_POINTER(ROT_TRANS_TYPE_CHAIN));
-
-      menu_item = gtk_radio_menu_item_new_with_label(group, "By Molecule...");
-      group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menu_item));
-      gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-      gtk_widget_show(menu_item);
-      g_signal_connect(G_OBJECT(menu_item), "activate",
-			 (GCallback) (menutoolbutton_rot_trans_activated),
-			 GINT_TO_POINTER(ROT_TRANS_TYPE_MOLECULE));
-
-      gtk_menu_tool_button_set_menu(GTK_MENU_TOOL_BUTTON(menu_tool_button), menu);
-   }
-}

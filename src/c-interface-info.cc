@@ -2420,17 +2420,17 @@ void fill_environment_widget(GtkWidget *widget) {
    char *text = (char *) malloc(100);
    graphics_info_t g;
 
-   entry = lookup_widget(widget, "environment_distance_min_entry");
+   entry = widget_from_builder("environment_distance_min_entry");
    snprintf(text, 99, "%-5.1f", g.environment_min_distance);
    gtk_entry_set_text(GTK_ENTRY(entry), text);
 
-   entry = lookup_widget(widget, "environment_distance_max_entry");
+   entry = widget_from_builder("environment_distance_max_entry");
    snprintf(text, 99, "%-5.1f" ,g.environment_max_distance);
    gtk_entry_set_text(GTK_ENTRY(entry), text);
    free(text);
 
    GtkWidget *toggle_button;
-   toggle_button = lookup_widget(widget, "environment_distance_checkbutton");
+   toggle_button = widget_from_builder("environment_distance_checkbutton");
 
    if (g.environment_show_distances == 1) {
       // we have to (temporarily) set the flag to 0 because the
@@ -2446,8 +2446,7 @@ void fill_environment_widget(GtkWidget *widget) {
       // std::cout << "filling: button is inactive" << std::endl;
    }
    // set the label button
-   toggle_button = lookup_widget(widget,
-                                 "environment_distance_label_atom_checkbutton");
+   toggle_button = widget_from_builder("environment_distance_label_atom_checkbutton");
    if (g.environment_distance_label_atom) {
      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle_button), 1);
    } else {
@@ -2464,7 +2463,7 @@ void execute_environment_settings(GtkWidget *widget) {
    float val;
    graphics_info_t g;
 
-   entry = lookup_widget(widget, "environment_distance_min_entry");
+   entry = widget_from_builder("environment_distance_min_entry");
    const gchar *text = gtk_entry_get_text(GTK_ENTRY(entry));
    val = atof(text);
    if (val < 0 || val > 1000) {
@@ -2475,7 +2474,7 @@ void execute_environment_settings(GtkWidget *widget) {
       g.environment_min_distance = val;
    }
 
-   entry = lookup_widget(widget, "environment_distance_max_entry");
+   entry = widget_from_builder("environment_distance_max_entry");
    text = gtk_entry_get_text(GTK_ENTRY(entry));
    val = atof(text);
    if (val < 0 || val > 1000) {
@@ -2493,7 +2492,7 @@ void execute_environment_settings(GtkWidget *widget) {
    }
 
    GtkWidget *label_check_button;
-   label_check_button = lookup_widget(widget, "environment_distance_label_atom_checkbutton");
+   label_check_button = widget_from_builder("environment_distance_label_atom_checkbutton");
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(label_check_button))) {
       g.environment_distance_label_atom = 1;
    }
@@ -2697,91 +2696,6 @@ int  show_pointer_distances_state() {
 }
 
 
-
-void fill_single_map_properties_dialog(GtkWidget *window, int imol) {
-
-   GtkWidget *cell_text = lookup_widget(window, "single_map_properties_cell_text");
-   GtkWidget *spgr_text = lookup_widget(window, "single_map_properties_sg_text");
-   GtkWidget *reso_text = lookup_widget(window, "single_map_properties_reso_text");
-
-   GtkWidget *line_width_frame = lookup_widget(window, "map_properties_dialog_line_width_frame");
-   GtkWidget *specular_frame   = lookup_widget(window, "map_properties_dialog_specularity_frame");
-   GtkWidget *fresnel_frame    = lookup_widget(window, "map_properties_dialog_fresnel_frame");
-
-   if (false) { // true for gtk2 version
-      gtk_widget_hide(line_width_frame);
-      gtk_widget_hide(specular_frame);
-      gtk_widget_hide(fresnel_frame);
-   }
-
-   std::string cell_text_string;
-   std::string spgr_text_string;
-   std::string reso_text_string;
-
-   std::string title = "Properties for Map " + coot::util::int_to_string(imol);
-   gtk_window_set_title(GTK_WINDOW(window), title.c_str());
-
-   // 20180924-PE FIXME needs to consider NXmaps
-   //
-   const clipper::Xmap<float> &xmap = graphics_info_t::molecules[imol].xmap;
-   cell_text_string = graphics_info_t::molecules[imol].cell_text_with_embeded_newline();
-   spgr_text_string = "   ";
-   spgr_text_string += xmap.spacegroup().descr().symbol_hm();
-   spgr_text_string += "  [";
-   spgr_text_string += xmap.spacegroup().descr().symbol_hall();
-   spgr_text_string += "]";
-   float r = graphics_info_t::molecules[imol].data_resolution();
-   if (r < 0) {
-      r = 2.0 * xmap.cell().descr().a()/static_cast<float>(xmap.grid_sampling().nu());
-      reso_text_string = " ";
-      reso_text_string += coot::util::float_to_string(r);
-   } else {
-      reso_text_string = coot::util::float_to_string(r);
-   }
-   // now add the grid info to the reso text
-   reso_text_string += " Å (by grid) ";
-   clipper::Grid_sampling gs = xmap.grid_sampling();
-   reso_text_string += coot::util::int_to_string(gs.nu()) + " ";
-   reso_text_string += coot::util::int_to_string(gs.nv()) + " ";
-   reso_text_string += coot::util::int_to_string(gs.nw());
-
-
-   gtk_label_set_text(GTK_LABEL(cell_text), cell_text_string.c_str());
-   gtk_label_set_text(GTK_LABEL(spgr_text), spgr_text_string.c_str());
-   gtk_label_set_text(GTK_LABEL(reso_text), reso_text_string.c_str());
-
-   // And now the map rendering style: transparent surface or standard lines:
-   GtkWidget *rb_1  = lookup_widget(window, "displayed_map_style_as_lines_radiobutton");
-   GtkWidget *rb_2  = lookup_widget(window, "displayed_map_style_as_cut_glass_radiobutton");
-   GtkWidget *rb_3  = lookup_widget(window, "displayed_map_style_as_transparent_radiobutton");
-   GtkWidget *scale = lookup_widget(window, "map_opacity_hscale");
-
-   gtk_widget_hide(rb_2);
-
-   const molecule_class_info_t &m = graphics_info_t::molecules[imol];
-
-   graphics_info_t g;
-   if (! m.draw_it_for_map_standard_lines) {
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rb_3), TRUE);
-   } else {
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rb_1), TRUE);
-   }
-
-   GtkAdjustment *adjustment = gtk_range_get_adjustment(GTK_RANGE(scale));
-   float op = g.molecules[imol].density_surface_opacity;
-   gtk_adjustment_set_value(adjustment, 100.0*op);
-
-   GtkWidget *map_contour_frame =
-      GTK_WIDGET(lookup_widget(GTK_WIDGET(window), "single_map_properties_map_histogram_frame"));
-
-   GtkWidget *alignment =
-      GTK_WIDGET(lookup_widget(GTK_WIDGET(window), "alignment169")); // change the name
-
-   if (map_contour_frame) {
-      fill_map_histogram_widget(imol, alignment);
-   }
-}
-
 #include "goograph/goograph.hh"
 #include "coot-utils/xmap-stats.hh"
 
@@ -2793,7 +2707,8 @@ fill_map_histogram_widget(int imol, GtkWidget *map_contour_frame) {
       // set_and_get_histogram_values(); surely?
 
       unsigned int n_bins = 1000;
-      mean_and_variance<float> mv = graphics_info_t::molecules[imol].set_and_get_histogram_values(n_bins);
+      bool ipz = graphics_info_t::ignore_pseudo_zeros_for_map_stats;
+      mean_and_variance<float> mv = graphics_info_t::molecules[imol].set_and_get_histogram_values(n_bins, ipz);
 
       unsigned int n = mv.size();
 
@@ -2879,7 +2794,7 @@ fill_map_histogram_widget(int imol, GtkWidget *map_contour_frame) {
 
                         // std::pair<GdkRGBA, GdkRGBA> map_colours() const;
                         std::pair<GdkRGBA, GdkRGBA> map_colours =
-                           graphics_info_t::molecules[imol].map_colours();
+                           graphics_info_t::molecules[imol].get_map_colours();
 
 #if 0
                         if (true) { // this test is needed?
@@ -3194,6 +3109,13 @@ std::string pythonize_command_name(const std::string &s) {
       } else {
          ss += s[i];
       }
+   }
+
+   if (s == "run-refmac-by-filename") {
+      ss = "refmac.run_refmac_by_filename";
+   } else  {
+      ss = "coot." + ss; // hideous hack. presumes that all state script commands are in coot module
+                         // (most of them are, of course)
    }
    return ss;
 }
@@ -4416,7 +4338,7 @@ SCM set_monomer_restraints(const char *monomer_type, SCM restraints) {
                                  std::string type   = scm_to_locale_string(type_scm);
                                  double dist        = scm_to_double(dist_scm);
                                  double esd         = scm_to_double(esd_scm);
-                                 coot::dict_bond_restraint_t rest(atom_1, atom_2, type, dist, esd);
+                                 coot::dict_bond_restraint_t rest(atom_1, atom_2, type, dist, esd, 0.0, 0.0, false);
                                  bond_restraints.push_back(rest);
                               }
                            }
@@ -4712,7 +4634,7 @@ PyObject *set_monomer_restraints_py(const char *monomer_type, PyObject *restrain
                         std::string type   = PyBytes_AS_STRING(PyUnicode_AsUTF8String(type_py));
                         float  dist = PyFloat_AsDouble(dist_py);
                         float  esd  = PyFloat_AsDouble(esd_py);
-                        coot::dict_bond_restraint_t rest(atom_1, atom_2, type, dist, esd);
+                        coot::dict_bond_restraint_t rest(atom_1, atom_2, type, dist, esd, 0.0, 0.0, false);
                         bond_restraints.push_back(rest);
                      }
                   }

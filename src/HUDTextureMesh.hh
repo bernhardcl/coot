@@ -30,7 +30,7 @@ class HUDTextureMesh {
    std::vector<HUDTextureMesh_attribs_t> vertices;
    std::vector<g_triangle> triangles;
    std::string name;
-   void init();
+   void init(); // does not call setup_quad()
    void setup_buffers();
    bool draw_this_mesh;
    GLuint inst_positions_id;
@@ -43,9 +43,10 @@ class HUDTextureMesh {
    bool is_instanced;
 
 public:
-   HUDTextureMesh() { init(); }
+   // HUDTextureMesh() { init(); } // ugh. Needed for graphics_ligand_mesh_molecule_t.
    explicit HUDTextureMesh(const std::string &n) : name(n) { init(); }
    enum screen_position_origins_t { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT};
+   void set_name(const std::string &n) { name = n; }
 
    void setup_quad(); // camera-facing, of course
    // for the tooltip background, the position is dynamic (depending on the mouse position)
@@ -53,6 +54,7 @@ public:
    // when the mouse moves.
    void set_position(const glm::vec2 &pos);
    void set_scales(const glm::vec2 &scales);
+   glm::vec2 get_scales() const { return scales; }
    void set_position_and_scales(const glm::vec2 &pos, const glm::vec2 &scales);
    void setup_texture_coords_for_nbcs_only();
    void setup_texture_coords_for_nbcs_and_rama();

@@ -110,6 +110,7 @@ void do_accept_reject_hud_buttons(std::string fit_type, const coot::refinement_r
 
 }
 
+#include "widget-from-builder.hh"
 
 // e.g. fit type is "Rigid Body Fit" or "Regularization" etc.
 //
@@ -117,15 +118,16 @@ void do_accept_reject_hud_buttons(std::string fit_type, const coot::refinement_r
 //
 void do_accept_reject_dialog_with_a_dialog(std::string fit_type, const coot::refinement_results_t &rr) {
 
-   GtkWidget *window = wrapped_create_accept_reject_refinement_dialog();
+   // GtkWidget *window = wrapped_create_accept_reject_refinement_dialog();
+   GtkWidget *window = widget_from_builder("accept_reject_refinement_dialog");
    GtkWindow *main_window = GTK_WINDOW(graphics_info_t::get_main_window());
    GtkWidget *label = NULL;
 
    if (graphics_info_t::accept_reject_dialog_docked_flag == coot::DIALOG_DOCKED){
-      label = lookup_widget(GTK_WIDGET(window),
-			    "accept_dialog_accept_docked_label_string");
+      // label = lookup_widget(GTK_WIDGET(window), "accept_dialog_accept_docked_label_string");
+      label = widget_from_builder("accept_dialog_accept_docked_label_string");
    } else {
-      label = lookup_widget(GTK_WIDGET(window), "accept_dialog_accept_label_string");
+      label = widget_from_builder("accept_dialog_accept_label_string");
    }
 
    if (false)
@@ -149,8 +151,9 @@ void do_accept_reject_dialog_with_a_dialog(std::string fit_type, const coot::ref
    gtk_label_set_text(GTK_LABEL(label), txt.c_str());
 
    // atom pull autoclear state
+   // GtkWidget *auto_clear_atom_pull_restraint_checkbutton = lookup_widget(window, "accept_reject_refinement_atom_pull_autoclear_checkbutton");
    GtkWidget *auto_clear_atom_pull_restraint_checkbutton =
-      lookup_widget(window, "accept_reject_refinement_atom_pull_autoclear_checkbutton");
+      widget_from_builder("accept_reject_refinement_atom_pull_autoclear_checkbutton");
 
    if (auto_clear_atom_pull_restraint_checkbutton) {
       // it's on by default, should we turn it off?
@@ -166,7 +169,8 @@ void do_accept_reject_dialog_with_a_dialog(std::string fit_type, const coot::ref
    // Was this a torsion general, in which we need to active the reverse button?
    GtkWidget *reverse_button;
    if (graphics_info_t::accept_reject_dialog_docked_flag == coot::DIALOG_DOCKED) {
-      reverse_button = lookup_widget(window, "accept_reject_docked_reverse_button");
+      // reverse_button = lookup_widget(window, "accept_reject_docked_reverse_button");
+      reverse_button = widget_from_builder("accept_reject_docked_reverse_button");
       if (fit_type == "Torsion General") {
 	 gtk_widget_show(reverse_button);
       } else {
@@ -174,7 +178,7 @@ void do_accept_reject_dialog_with_a_dialog(std::string fit_type, const coot::ref
       }
    } else {
       if (fit_type == "Torsion General") {
-	 reverse_button = lookup_widget(window, "accept_reject_reverse_button");
+	 reverse_button = widget_from_builder("accept_reject_reverse_button");
 	 gtk_widget_show(reverse_button);
       }
    }
@@ -182,7 +186,7 @@ void do_accept_reject_dialog_with_a_dialog(std::string fit_type, const coot::ref
    if (graphics_info_t::accept_reject_dialog_docked_flag == coot::DIALOG_DOCKED){
       // we need to show some individual widget to make sure we get the right amount
       // of light boxes
-      GtkWidget *button_box = lookup_widget(GTK_WIDGET(main_window), "hbuttonbox1");
+      GtkWidget *button_box = widget_from_builder("hbuttonbox1");
       gtk_widget_show_all(button_box);
       gtk_widget_show(label);
       if (graphics_info_t::accept_reject_dialog_docked_show_flag == coot::DIALOG_DOCKED_SHOW) {
@@ -225,6 +229,8 @@ void do_accept_reject_dialog_with_a_dialog(std::string fit_type, const coot::ref
 
 void add_accept_reject_lights(GtkWidget *window, const coot::refinement_results_t &ref_results) {
 
+   // 20220311-PE  this function used now?
+
    std::vector<std::pair<std::string, std::string> > boxes;
    boxes.push_back(std::pair<std::string, std::string>("Bonds",                    "bonds"));
    boxes.push_back(std::pair<std::string, std::string>("Angles",                  "angles"));
@@ -237,9 +243,9 @@ void add_accept_reject_lights(GtkWidget *window, const coot::refinement_results_
 
    GtkWidget *frame = 0;
    if (graphics_info_t::accept_reject_dialog_docked_flag == coot::DIALOG_DOCKED) {
-      frame = lookup_widget(window, "accept_reject_lights_frame_docked");
+      frame = widget_from_builder("accept_reject_lights_frame_docked");
    } else {
-      frame = lookup_widget(window, "accept_reject_lights_frame");
+      frame = widget_from_builder("accept_reject_lights_frame");
    }
    gtk_widget_show(frame);
 
@@ -254,7 +260,8 @@ void add_accept_reject_lights(GtkWidget *window, const coot::refinement_results_
       const std::string &distortion_type_string = boxes[ibox].first;
       std::string widget_name = "accept_reject_label_for_box_";
       widget_name += boxes[ibox].second;
-      GtkWidget *w = lookup_widget(frame, widget_name.c_str());
+      // GtkWidget *w = lookup_widget(frame, widget_name.c_str());
+      GtkWidget *w = widget_from_builder(widget_name.c_str());
 
       // here comes the hiding
       // if (w && graphics_info_t::accept_reject_dialog_docked_flag == coot::DIALOG_DOCKED)
@@ -282,13 +289,13 @@ void add_accept_reject_lights(GtkWidget *window, const coot::refinement_results_
 	    // we do not add labels for the docked box
 	    if (graphics_info_t::accept_reject_dialog_docked_flag == coot::DIALOG) {
 	       std::string label_name = boxes[ibox].second + "_label"; // needs fixing
-	       GtkWidget *label = lookup_widget(frame, label_name.c_str());
+	       GtkWidget *label = widget_from_builder(label_name.c_str());
 	       gtk_label_set_text(GTK_LABEL(label), ref_results.lights[i_rest_type].label.c_str());
 	       gtk_widget_show(label);
 	    } else {
                /*
                   GtkTooltips *tooltips;
-                  tooltips = GTK_TOOLTIPS(lookup_widget(window, "tooltips"));
+                  tooltips = GTK_TOOLTIPS(lookup_widget(window, "tooltips")); // commented.
                   std::string tips_info = ref_results.lights[i_rest_type].label;
                   gtk_tooltips_set_tip(tooltips, w, tips_info.c_str(), NULL);
                */
@@ -323,15 +330,12 @@ update_accept_reject_dialog_with_results(GtkWidget *accept_reject_dialog,
       std::cout << "   here with rr.progress " << rr.progress << " c.f. no-progress " << GSL_ENOPROG
 		<< " and success " << GSL_SUCCESS << " and continue " << GSL_CONTINUE << std::endl;
    }
-   GtkWidget *no_progress_label = lookup_widget(GTK_WIDGET(accept_reject_dialog),
-						"accept_reject_dialog_no_progress_label");
+   GtkWidget *no_progress_label = widget_from_builder("accept_reject_dialog_no_progress_label");
 
    // now look up the label in window and change it.
-   GtkWidget *extra_label = lookup_widget(GTK_WIDGET(accept_reject_dialog),
-					  "extra_text_label");
+   GtkWidget *extra_label = widget_from_builder("extra_text_label");
 
-   GtkWidget *chiral_centre_label = lookup_widget(GTK_WIDGET(accept_reject_dialog),
-						  "chiral_centre_text_label");
+   GtkWidget *chiral_centre_label = widget_from_builder("chiral_centre_text_label");
 
    if (text_type == coot::CHI_SQUAREDS) {
       if (rr.progress == GSL_ENOPROG) {
@@ -370,7 +374,7 @@ update_accept_reject_dialog_with_results(GtkWidget *accept_reject_dialog,
       } else {
 
 	 // we have a docked accept/reject dialog
-	 GtkWidget *window = lookup_widget(accept_reject_dialog, "window1");
+	 GtkWidget *window = widget_from_builder("window1");
 	 // GtkTooltips *tooltips;
 	 // GtkTooltipsData *td;
 	 // tooltips = GTK_TOOLTIPS(lookup_widget(GTK_WIDGET(window), "tooltips"));
@@ -378,8 +382,7 @@ update_accept_reject_dialog_with_results(GtkWidget *accept_reject_dialog,
 	 int cis_pep_warn = rr.info_text.find("CIS");
 	 int chirals_warn = rr.info_text.find("chiral");
 
-	 GtkWidget *cis_eventbox = lookup_widget(GTK_WIDGET(accept_reject_dialog),
-						 "cis_peptides_eventbox_docked");
+	 GtkWidget *cis_eventbox = widget_from_builder("cis_peptides_eventbox_docked");
 
 	 GtkWidget *p = 0; // cis_eventbox->parent;
 	 GtkWidget *chirals_eventbox = 0; // lookup_widget(GTK_WIDGET(accept_reject_dialog),"chirals_eventbox_docked");
@@ -445,7 +448,7 @@ wrapped_create_accept_reject_refinement_dialog() {
 
   GtkWidget *w = 0;
   if (graphics_info_t::accept_reject_dialog_docked_flag == coot::DIALOG_DOCKED){
-    w = lookup_widget(GTK_WIDGET(graphics_info_t::get_main_window()), "accept_reject_dialog_frame_docked");
+    w = widget_from_builder("accept_reject_dialog_frame_docked");
   } else {
      if (graphics_info_t::accept_reject_dialog)
 	w = graphics_info_t::accept_reject_dialog;
@@ -535,7 +538,7 @@ graphics_info_t::info_dialog(const std::string &s, bool use_markup) {
       w = wrapped_nothing_bad_dialog(s);
 
       if (use_markup) {
-	 GtkWidget *label = lookup_widget(w, "nothing_bad_label");
+	 GtkWidget *label = widget_from_builder("nothing_bad_label");
 	 gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
 	 gtk_label_set_markup(GTK_LABEL(label), s.c_str());
       }
@@ -548,8 +551,10 @@ graphics_info_t::info_dialog(const std::string &s, bool use_markup) {
       if (s.find(std::string("Warning")) != std::string::npos) warning = true;
       if (s.find(std::string("Oops!"))   != std::string::npos) warning = true;
       if (warning) {
-	 GtkWidget *info_image = lookup_widget(GTK_WIDGET(w), "info_dialog_info_image");
-	 GtkWidget *warn_image = lookup_widget(GTK_WIDGET(w), "info_dialog_warning_image");
+	 // GtkWidget *info_image = lookup_widget(GTK_WIDGET(w), "info_dialog_info_image");
+	 // GtkWidget *warn_image = lookup_widget(GTK_WIDGET(w), "info_dialog_warning_image");
+	 GtkWidget *info_image = widget_from_builder("info_dialog_info_image");
+	 GtkWidget *warn_image = widget_from_builder("info_dialog_warning_image");
 	 if (info_image) {
 	    if (warn_image) {
 	       gtk_widget_hide(GTK_WIDGET(info_image));
@@ -580,13 +585,12 @@ graphics_info_t::info_dialog_alignment(coot::chain_mutation_info_container_t mut
 
    GtkWidget *dialog = info_dialog(s); // get trashed by markup text
    if (dialog) {
-      GtkWidget *label = lookup_widget(dialog, "nothing_bad_label");
+      // GtkWidget *label = lookup_widget(dialog, "nothing_bad_label");
+      GtkWidget *label = widget_from_builder("nothing_bad_label");
       gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
 
       // guessing that we need > 6, could be more than 6.
-#if ( ( (GTK_MAJOR_VERSION == 2) && (GTK_MINOR_VERSION > 6) ) || GTK_MAJOR_VERSION > 2)
       gtk_label_set_markup(GTK_LABEL(label), s.c_str());
-#endif
    }
 }
 
@@ -618,7 +622,8 @@ graphics_info_t::info_dialog_refinement_non_matching_atoms(std::vector<std::pair
 
    GtkWidget *dialog = info_dialog(s); // get trashed by markup text
    if (dialog) {
-      GtkWidget *label = lookup_widget(dialog, "nothing_bad_label");
+      // GtkWidget *label = lookup_widget(dialog, "nothing_bad_label");
+      GtkWidget *label = widget_from_builder("nothing_bad_label");
       gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
    }
 }
@@ -912,7 +917,9 @@ graphics_info_t::activate_scroll_radio_button_in_display_manager(int imol) {
 	 if (is_valid_map_molecule(i)) {
 	    std::string wname = "map_scroll_button_";
 	    wname += graphics_info_t::int_to_string(i);
-	    GtkWidget *w = lookup_widget(g.display_control_window(), wname.c_str());
+	    // GtkWidget *w = lookup_widget(g.display_control_window(), wname.c_str());
+	    GtkWidget *w = nullptr;
+            std::cout << "FIXME:: in activate_scroll_radio_button_in_display_manager() fix the map scroll button " << std::endl;
 	    if (w) {
 	       if (int(i) == g.scroll_wheel_map) {
 		  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), TRUE);
@@ -977,64 +984,7 @@ graphics_info_t::show_select_map_dialog() {
 void
 graphics_info_t::show_select_map_dialog_old_style() {
 
-   if (use_graphics_interface_flag) {
-
-      GtkWidget *dialog = create_select_fitting_map_dialog();
-
-      int imol_map = Imol_Refinement_Map();
-
-      // If no map has been set before, set the map to the top of the
-      // list (if there are maps in the list)
-      //
-      if (imol_map == -1) {
-         for (int imol=0; imol<n_molecules(); imol++) {
-            if (molecules[imol].has_xmap()) {
-               imol_refinement_map = imol;
-               break;
-            }
-         }
-      }
-
-      GtkWidget *combobox = lookup_widget(dialog, "select_map_for_fitting_combobox");
-      GCallback callback = G_CALLBACK(select_refinement_map_combobox_changed);
-      fill_combobox_with_map_options(combobox, callback, imol_refinement_map);
-
-      // now fill the weight entry:
-      GtkWidget *weight_entry = lookup_widget(dialog, "select_fitting_map_dialog_weight_entry");
-      std::string ws = std::to_string(geometry_vs_map_weight);
-      if (weight_entry)
-         gtk_entry_set_text(GTK_ENTRY(weight_entry), ws.c_str());
-      else
-         std::cout << "ERROR:: show_select_map_dialog() failed to get weight entry" << std::endl;
-
-      // add a callback for the weight estimate button
-      GtkWidget *estimate_buton = lookup_widget(dialog, "select_fitting_map_dialog_estimate_button");
-      if (estimate_buton) {
-         g_signal_connect(G_OBJECT(estimate_buton), "clicked",
-                          G_CALLBACK(on_select_fitting_map_dialog_estimate_weight_button_clicked),
-                          weight_entry);
-      } else {
-         std::cout << "ERROR:: show_select_map_dialog() failed to get estimate button" << std::endl;
-      }
-
-      gint resp = gtk_dialog_run(GTK_DIALOG(dialog));
-      if (resp == GTK_RESPONSE_DELETE_EVENT) {
-          if (imol_map == -1) {
-              // unset refinement map if it has not been set previously
-              set_refinement_map(-1);
-          }
-      }
-      if (resp == GTK_RESPONSE_OK) {
-         if (weight_entry) {
-            std::string t = gtk_entry_get_text(GTK_ENTRY(weight_entry));
-            float f = coot::util::string_to_float(t);
-            geometry_vs_map_weight = f;
-         }
-      }
-
-      gtk_widget_destroy(dialog);
-
-   }
+   // 20220311-PE internals removed. Who calls this?
 }
 
 void
@@ -1148,11 +1098,16 @@ graphics_info_t::dialog_box_of_buttons_internal(const std::string &window_title,
 GtkWidget *
 graphics_info_t::wrapped_create_skeleton_dialog(bool show_ca_mode_needs_skel_label) {
 
-   GtkWidget *w = create_skeleton_dialog();
-   GtkWidget *combobox    = lookup_widget(w, "skeleton_map_combobox");
-   GtkWidget *frame = lookup_widget(w, "skeleton_dialog_on_off_frame");
-   GtkWidget *label = lookup_widget(w, "ca_baton_mode_needs_skel_label");
-   GtkWidget *ok_button = lookup_widget(w, "skeleton_ok_button");
+   // GtkWidget *w = create_skeleton_dialog();
+   // GtkWidget *combobox    = lookup_widget(w, "skeleton_map_combobox");
+   // GtkWidget *frame = lookup_widget(w, "skeleton_dialog_on_off_frame");
+   // GtkWidget *label = lookup_widget(w, "ca_baton_mode_needs_skel_label");
+   // GtkWidget *ok_button = lookup_widget(w, "skeleton_ok_button");
+   GtkWidget *w         = widget_from_builder("skeleton_dialog");
+   GtkWidget *combobox  = widget_from_builder("skeleton_map_combobox");
+   GtkWidget *frame     = widget_from_builder("skeleton_dialog_on_off_frame");
+   GtkWidget *label     = widget_from_builder("ca_baton_mode_needs_skel_label");
+   GtkWidget *ok_button = widget_from_builder("skeleton_ok_button");
 
    // add user data to the OK button, we use it to determine if we go
    // on to display the baton dialog
@@ -1162,12 +1117,10 @@ graphics_info_t::wrapped_create_skeleton_dialog(bool show_ca_mode_needs_skel_lab
       show_baton_dialog = 1;
    }
 
-
    g_signal_connect(G_OBJECT(ok_button),
 		    "clicked",
 		    G_CALLBACK(on_skeleton_ok_button_dynamic_clicked),
 		    GINT_TO_POINTER(show_baton_dialog));
-
 
    if (show_ca_mode_needs_skel_label) {
       gtk_widget_show(label);
@@ -1184,10 +1137,11 @@ void
 graphics_info_t::on_skeleton_ok_button_dynamic_clicked (GtkButton       *button,
 							gpointer         user_data) {
 
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button), "skeleton_dialog");
+   // GtkWidget *window = lookup_widget(GTK_WIDGET(button), "skeleton_dialog");
+   GtkWidget *window = widget_from_builder("skeleton_dialog");
 
    // GtkWidget *optionmenu = lookup_widget(window, "skeleton_map_optionmenu");
-   GtkWidget *combobox = lookup_widget(window, "skeleton_map_combobox");
+   GtkWidget *combobox = widget_from_builder("skeleton_map_combobox");
 
    int do_baton_mode = GPOINTER_TO_INT(user_data);
 
@@ -1242,12 +1196,13 @@ graphics_info_t::on_skeleton_ok_button_dynamic_clicked (GtkButton       *button,
 void
 graphics_info_t::skeletonize_map_by_combobox(GtkWidget *combobox) {
 
-   GtkWidget *window = lookup_widget(GTK_WIDGET(combobox), "skeleton_dialog");
+   // GtkWidget *window = lookup_widget(GTK_WIDGET(combobox), "skeleton_dialog");
+   GtkWidget *window = widget_from_builder("skeleton_dialog");
 
    GtkWidget *on_radio_button = NULL;
    GtkWidget *prune_check_button = NULL;
 
-   on_radio_button = lookup_widget(window, "skeleton_on_radiobutton");
+   on_radio_button = widget_from_builder("skeleton_on_radiobutton");
 
    short int do_it = 0;
    short int prune_it = 0;
@@ -1257,7 +1212,8 @@ graphics_info_t::skeletonize_map_by_combobox(GtkWidget *combobox) {
       if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(on_radio_button))) {
 	 do_it = 1;
       }
-      prune_check_button = lookup_widget(window,"skeleton_prune_and_colour_checkbutton");
+      // prune_check_button = lookup_widget(window,"skeleton_prune_and_colour_checkbutton");
+      prune_check_button = widget_from_builder("skeleton_prune_and_colour_checkbutton");
       if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(prune_check_button))) {
 	 prune_it = 1;
       }
@@ -1397,10 +1353,12 @@ graphics_info_t::fill_option_menu_with_coordinates_options_possibly_small(GtkWid
 
 void
 graphics_info_t::set_on_off_skeleton_radio_buttons(GtkWidget *skeleton_frame) {
-   GtkWidget *on_button = lookup_widget(skeleton_frame,
-					"skeleton_on_radiobutton");
-   GtkWidget *off_button = lookup_widget(skeleton_frame,
-					 "skeleton_off_radiobutton");
+
+   // GtkWidget *on_button = lookup_widget(skeleton_frame, "skeleton_on_radiobutton");
+   // GtkWidget *off_button = lookup_widget(skeleton_frame, "skeleton_off_radiobutton");
+
+   GtkWidget *on_button = widget_from_builder("skeleton_on_radiobutton");
+   GtkWidget *off_button = widget_from_builder("skeleton_off_radiobutton");
 
    int imol = map_for_skeletonize;
    if (imol >= 0) {
@@ -1415,10 +1373,11 @@ graphics_info_t::set_on_off_skeleton_radio_buttons(GtkWidget *skeleton_frame) {
 void
 graphics_info_t::set_on_off_single_map_skeleton_radio_buttons(GtkWidget *skeleton_frame,
 							      int imol) {
-   GtkWidget *on_button = lookup_widget(skeleton_frame,
-					"single_map_skeleton_on_radiobutton");
-   GtkWidget *off_button = lookup_widget(skeleton_frame,
-					 "single_map_skeleton_off_radiobutton");
+   // GtkWidget *on_button = lookup_widget(skeleton_frame, "single_map_skeleton_on_radiobutton");
+   // GtkWidget *off_button = lookup_widget(skeleton_frame, "single_map_skeleton_off_radiobutton");
+
+   GtkWidget *on_button = widget_from_builder("single_map_skeleton_on_radiobutton");
+   GtkWidget *off_button = widget_from_builder("single_map_skeleton_off_radiobutton");
 
    if (imol >= 0) {
       if (molecules[imol].xskel_is_filled) {
@@ -1434,8 +1393,8 @@ graphics_info_t::set_on_off_single_map_skeleton_radio_buttons(GtkWidget *skeleto
 void
 graphics_info_t::set_contour_sigma_button_and_entry(GtkWidget *window, int imol) {
 
-   GtkWidget *entry = lookup_widget(window, "single_map_sigma_step_entry");
-   GtkWidget *checkbutton = lookup_widget(window, "single_map_sigma_checkbutton");
+   GtkWidget *entry = widget_from_builder("single_map_sigma_step_entry");
+   GtkWidget *checkbutton = widget_from_builder("single_map_sigma_checkbutton");
 
    if (imol < n_molecules()) {
       if (molecules[imol].has_xmap()) {
@@ -1448,8 +1407,7 @@ graphics_info_t::set_contour_sigma_button_and_entry(GtkWidget *window, int imol)
 	 }
 
 
-	 GtkWidget *level_entry =
-	    lookup_widget(window, "single_map_properties_contour_level_entry");
+	 GtkWidget *level_entry = widget_from_builder("single_map_properties_contour_level_entry");
 	 float lev = molecules[imol].contour_level;
 	 gtk_entry_set_text(GTK_ENTRY(level_entry), float_to_string(lev).c_str());
       }
@@ -1482,8 +1440,7 @@ graphics_info_t::handle_rama_plot_update(coot::rama_plot *plot) {
                              graphics_info_t::molecules[p.first].atom_sel.mol,
                      graphics_info_t::molecules[p.second].atom_sel.mol);
          } else {
-            // close down the plot
-            plot->destroy_yourself();
+            plot->hide_yourself();
          }
       } else {
          // check if selection is there
@@ -1981,11 +1938,13 @@ graphics_info_t::residue_info_edit_b_factor_apply_to_other_entries_maybe(GtkWidg
 	 for (int i=0; i<graphics_info_t::residue_info_n_atoms; i++) {
 	    widget_name = "residue_info_b_factor_entry_";
 	    widget_name += int_to_string(i);
-	    entry = lookup_widget(dialog, widget_name.c_str());
+	    // entry = lookup_widget(dialog, widget_name.c_str());
+	    entry = nullptr;
+            std::cout << "FIXME in residue_info_edit_b_factor_apply_to_other_entries_maybe() find entry correctly " << std::endl;
 	    if (entry) {
 	       gtk_entry_set_text(GTK_ENTRY(entry), entry_text.c_str());
 	    } else {
-	       std::cout << "ERROR: no entry\n";
+	       std::cout << "ERROR: in residue_info_edit_b_factor_apply_to_other_entries_maybe() no entry\n";
 	    }
 	 }
       }
@@ -2023,11 +1982,13 @@ graphics_info_t::residue_info_edit_occ_apply_to_other_entries_maybe(GtkWidget *m
 	 for (int i=0; i<graphics_info_t::residue_info_n_atoms; i++) {
 	    widget_name = "residue_info_occ_entry_";
 	    widget_name += int_to_string(i);
-	    atom_occ_entry = lookup_widget(dialog, widget_name.c_str());
+	    // atom_occ_entry = lookup_widget(dialog, widget_name.c_str());
+	    atom_occ_entry = nullptr;
+            std::cout << "FIXME in residue_info_edit_occ_apply_to_other_entries_maybe() find occ entry correctly " << std::endl;
 	    if (atom_occ_entry) {
 	       gtk_entry_set_text(GTK_ENTRY(atom_occ_entry), entry_text.c_str());
 	    } else {
-	       std::cout << "ERROR: no entry\n";
+	       std::cout << "ERROR: in residue_info_edit_occ_apply_to_other_entries_maybe() no entry\n";
 	    }
 	 }
       } else {
@@ -2040,16 +2001,23 @@ graphics_info_t::residue_info_edit_occ_apply_to_other_entries_maybe(GtkWidget *m
 	    for (int i=0; i<graphics_info_t::residue_info_n_atoms; i++) {
 	       widget_name = "residue_info_occ_entry_";
 	       widget_name += int_to_string(i);
-	       atom_occ_entry = lookup_widget(dialog, widget_name.c_str());
+	       // atom_occ_entry = lookup_widget(dialog, widget_name.c_str());
+	       atom_occ_entry = 0;
+               std::cout << "FIXME in residue_info_edit_occ_apply_to_other_entries_maybe() lookup atom_occ correctly" << std::endl;
 	       widget_name = "residue_info_altloc_entry_";
 	       widget_name += int_to_string(i);
-	       atom_alt_conf_entry = lookup_widget(dialog, widget_name.c_str());
+	       // atom_alt_conf_entry = lookup_widget(dialog, widget_name.c_str());
+	       atom_alt_conf_entry = 0;
+               std::cout << "FIXME in residue_info_edit_occ_apply_to_other_entries_maybe() lookup atom_alt conf correctly" << std::endl;
 	       if (atom_occ_entry && atom_alt_conf_entry) {
 		  std::string alt_conf_text = gtk_entry_get_text(GTK_ENTRY(atom_alt_conf_entry));
 		  if (alt_conf_text == target_alt_conf) {
 		     gtk_entry_set_text(GTK_ENTRY(atom_occ_entry), entry_text.c_str());
 		  }
-	       }
+	       } else {
+                  std::cout << "ERROR:: in residue_info_edit_occ_apply_to_other_entries_maybe() failed to lookup widgets correctly"
+                            << std::endl;
+               }
 	    }
 	 }
       }
@@ -2208,7 +2176,9 @@ graphics_info_t::residue_info_release_memory(GtkWidget *dialog) {
    for (int i=0; i<residue_info_n_atoms; i++) {
       std::string widget_name = "residue_info_b_factor_entry_";
       widget_name += int_to_string(i);
-      entry = lookup_widget(dialog, widget_name.c_str());
+      // entry = lookup_widget(dialog, widget_name.c_str());
+      entry = nullptr;
+      std::cout << "FIXME in residue_info_release_memory() look up entry correctly" << std::endl;
       if (entry) {
 	 coot::select_atom_info *sai_p =
 	    (coot::select_atom_info *) g_object_get_data(G_OBJECT(entry), "select_atom_info");
@@ -2218,11 +2188,15 @@ graphics_info_t::residue_info_release_memory(GtkWidget *dialog) {
 	 } else {
 	    std::cout << "ERROR:: no user data in b-factor entry widget\n";
 	 }
+      } else {
+         std::cout << "ERROR:: in residue_info_release_memory() failed to find entry " << std::endl;
       }
       // same for occ entry:
       widget_name = "residue_info_occ_entry_";
       widget_name += int_to_string(i);
-      entry = lookup_widget(dialog, widget_name.c_str());
+      // entry = lookup_widget(dialog, widget_name.c_str());
+      entry = 0;
+      std::cout << "FIXME in residue_info_release_memory() look up entry correctly" << std::endl;
       if (entry) {
 	 coot::select_atom_info *sai_p =
 	    (coot::select_atom_info *) g_object_get_data(G_OBJECT(entry), "select_atom_info");
@@ -2232,6 +2206,8 @@ graphics_info_t::residue_info_release_memory(GtkWidget *dialog) {
 	 } else {
 	    std::cout << "ERROR:: no user data in occ entry widget\n";
 	 }
+      } else {
+         std::cout << "ERROR:: in residue_info_release_memory() failed to find entry 2 " << std::endl;
       }
    }
 }
@@ -2337,13 +2313,15 @@ graphics_info_t::fill_combobox_with_molecule_options(GtkWidget *combobox,
 
    // This might be OK if combobox had been created by us, not glade code, and has been added to an hbox already.
 
+   gtk_cell_layout_clear(GTK_CELL_LAYOUT(combobox));
+
    GtkListStore *store = gtk_list_store_new(2, G_TYPE_INT, G_TYPE_STRING);
    GtkTreeIter iter;
    int active_idx = 0;
-   int n_mol = molecules_index_vec.size();
-   for (unsigned int imap=0; imap<molecules_index_vec.size(); imap++) {
+   unsigned int n_mol = molecules_index_vec.size();
+   for (unsigned int imap=0; imap<n_mol; imap++) {
 
-      std::cout << "::::::::: debug in fill_combobox_with_molecule_options() imap " << imap << std::endl;
+      //std::cout << "::::::::: debug in fill_combobox_with_molecule_options() imap " << imap << std::endl;
       int imol = molecules_index_vec[imap];
       std::string ss; // = int_to_string(imol); done in renderer now.
       ss += " " ;
@@ -2382,6 +2360,7 @@ graphics_info_t::fill_combobox_with_coordinates_options(GtkWidget *combobox,
 							int imol_active) {
 
    printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- don't use this function -----\n");
+   printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- use fill_combobox_with_coordinates_options --\n");
 
    printf("DEBUG:: fill_combobox_with_coordinates_options(): -------------------------- start -----\n");
 
@@ -2748,12 +2727,16 @@ graphics_info_t::set_baton_build_params(int istart_resno,
 void
 graphics_info_t::model_fit_refine_unactive_togglebutton(const std::string &button_name) const {
 
+   std::cout << "-------------------- debug in model_fit_refine_unactive_togglebutton() " << button_name << std::endl;
+
    if (model_fit_refine_dialog) {
-      GtkWidget *toggle_button = lookup_widget(model_fit_refine_dialog, button_name.c_str());
+      // GtkWidget *toggle_button = lookup_widget(model_fit_refine_dialog, button_name.c_str());
+      GtkWidget *toggle_button = widget_from_builder(button_name.c_str());
       if (toggle_button)
 	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle_button), FALSE);
       else
-	 std::cout << "ERROR:: failed to find button: " << button_name << std::endl;
+	 std::cout << "ERROR:: in model_fit_refine_unactive_togglebutton() failed to find button: "
+                   << button_name << std::endl;
 
    } else {
       // std::cout << "DEBUG:: model_fit_refine_dialog not found" << std::endl;
@@ -2767,8 +2750,8 @@ graphics_info_t::model_fit_refine_unactive_togglebutton(const std::string &butto
       toolbar_button_name = "model_toolbar_regularize_togglebutton";
    if (button_name == "model_refine_dialog_rigid_body_togglebutton")
       toolbar_button_name = "model_toolbar_rigid_body_fit_togglebutton";
-   if (button_name == "model_refine_dialog_rot_trans_toolbutton")
-      toolbar_button_name = "model_toolbar_rot_trans_toolbutton";
+   if (button_name == "model_refine_dialog_rot_trans_togglebutton")
+      toolbar_button_name = "model_toolbar_rot_trans_toolbutton"; // 20220304-PE what should this be?
    if (button_name == "model_refine_dialog_auto_fit_rotamer_togglebutton")
       toolbar_button_name = "model_toolbar_auto_fit_rotamer_togglebutton";
    if (button_name == "model_refine_dialog_rotamer_togglebutton")
@@ -2790,14 +2773,17 @@ graphics_info_t::model_fit_refine_unactive_togglebutton(const std::string &butto
    if (button_name == "model_refine_dialog_fit_terminal_residue_togglebutton")
       toolbar_button_name = "model_toolbar_add_terminal_residue_togglebutton";
 
+   std::cout << "-------------------- debug in model_fit_refine_unactive_togglebutton() toolbar_button_name "
+             << toolbar_button_name << std::endl;
+
    // now, button_name may have been
    // model_refine_dialog_edit_phi_psi_togglebutton or
    // model_refine_dialog_edit_backbone_torsions_togglebutton, we
    // don't have toolbar equivalents of those.
    //
    if (toolbar_button_name != "not-found") {
-      GtkWidget *toggle_button = lookup_widget(graphics_info_t::get_main_window(),
-					       toolbar_button_name.c_str());
+      // GtkWidget *toggle_button = lookup_widget(graphics_info_t::get_main_window(), toolbar_button_name.c_str());
+      GtkWidget *toggle_button = widget_from_builder(toolbar_button_name.c_str());
 //       std::cout << "DEBUG:: toggle_button for gtk2 toolbar: " << button_name << "->"
 // 		<< toolbar_button_name << " " << toggle_button << std::endl;
 
@@ -2816,8 +2802,8 @@ void
 graphics_info_t::other_modelling_tools_unactive_togglebutton(const std::string &button_name) const {
 
    if (other_modelling_tools_dialog) {
-      GtkWidget *toggle_button = lookup_widget(other_modelling_tools_dialog,
-					       button_name.c_str());
+      // GtkWidget *toggle_button = lookup_widget(other_modelling_tools_dialog, button_name.c_str());
+      GtkWidget *toggle_button = widget_from_builder(button_name.c_str());
       if (toggle_button)
 	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle_button), FALSE);
       else
@@ -2844,7 +2830,7 @@ graphics_info_t::wrapped_create_edit_chi_angles_dialog(const std::string &res_ty
    // Fill the vbox with buttons with atom labels about which there
    // are rotatable torsions:
    //
-   GtkWidget *vbox = lookup_widget(dialog,"edit_chi_angles_vbox");
+   GtkWidget *vbox = widget_from_builder("edit_chi_angles_vbox");
 
    std::cout << "calling fill_chi_angles_vbox() with mode " << mode << std::endl;
    int n_boxes = fill_chi_angles_vbox(vbox, res_type, mode);
@@ -2861,8 +2847,7 @@ graphics_info_t::wrapped_create_edit_chi_angles_dialog(const std::string &res_ty
    gtk_widget_show(dialog);
 
    // and now the hydrogen torsion checkbutton:
-   GtkWidget *togglebutton =
-      lookup_widget(dialog, "edit_chi_angles_add_hydrogen_torsions_checkbutton");
+   GtkWidget *togglebutton = widget_from_builder("edit_chi_angles_add_hydrogen_torsions_checkbutton");
 
    if (find_hydrogen_torsions_flag)
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(togglebutton), TRUE);
@@ -2876,17 +2861,11 @@ graphics_info_t::wrapped_create_edit_chi_angles_dialog(const std::string &res_ty
 void
 graphics_info_t::clear_out_container(GtkWidget *vbox) {
 
-   std::cout << "GTK3 FIXME clear_out_container() " << std::endl;
+   auto my_delete_box_items = [] (GtkWidget *widget, void *data) {
+                                    gtk_container_remove(GTK_CONTAINER(data), widget); };
 
-#if 0
-   GList *ls = gtk_container_children(GTK_CONTAINER(vbox));
-
-   while (ls) {
-      GtkWidget *w = GTK_WIDGET(ls->data);
-      gtk_widget_destroy(w);
-      ls = ls->next;
-   }
-#endif
+   if (GTK_IS_CONTAINER(vbox))
+      gtk_container_foreach(GTK_CONTAINER(vbox), my_delete_box_items, vbox);
 }
 
 
@@ -3324,7 +3303,7 @@ graphics_info_t::execute_setup_backbone_torsion_edit(int imol, int atom_index) {
 		  gtk_widget_show(widget);
         // update the graph to show both
         GtkWidget *adj;
-        adj = lookup_widget(widget, "edit_backbone_torsions_rotate_carbonyl_adjustment");
+        adj = widget_from_builder("edit_backbone_torsions_rotate_carbonyl_adjustment");
         g_signal_emit_by_name(G_OBJECT(adj), "value_changed");
 
 	       } else {
@@ -3343,11 +3322,9 @@ graphics_info_t::execute_setup_backbone_torsion_edit(int imol, int atom_index) {
 void
 graphics_info_t::set_edit_backbone_adjustments(GtkWidget *widget) {
 
-   GtkWidget *hscale_peptide = lookup_widget(widget,
-					     "edit_backbone_torsions_rotate_peptide_hscale");
+   GtkWidget *hscale_peptide = widget_from_builder("edit_backbone_torsions_rotate_peptide_hscale");
 
-   GtkWidget *hscale_carbonyl = lookup_widget(widget,
-					     "edit_backbone_torsions_rotate_carbonyl_hscale");
+   GtkWidget *hscale_carbonyl = widget_from_builder("edit_backbone_torsions_rotate_carbonyl_hscale");
 
 //    gfloat value,
 //    gfloat lower,
@@ -3866,8 +3843,7 @@ void
 graphics_info_t::unset_geometry_dialog_torsion_togglebutton() {
 
    if (geometry_dialog) {
-      GtkWidget *toggle_button = lookup_widget(geometry_dialog,
-					       "geometry_torsion_togglebutton");
+      GtkWidget *toggle_button = widget_from_builder("geometry_torsion_togglebutton");
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle_button), FALSE);
    }
 }
@@ -3876,7 +3852,7 @@ graphics_info_t::unset_geometry_dialog_torsion_togglebutton() {
 void
 graphics_info_t::set_zoom_adjustment(GtkWidget *widget) {
 
-   GtkWidget *zoom_hscale = lookup_widget(widget, "zoom_hscale");
+   GtkWidget *zoom_hscale = widget_from_builder("zoom_hscale");
 
    //  GtkAdjustment *adj = GTK_ADJUSTMENT(gtk_adjustment_new(0.0, -18.0, 36.0, 0.01, 1.0, 18));
    //  GtkAdjustment *adj = GTK_ADJUSTMENT(gtk_adjustment_new(0.0, -2.0, 4.0, 0.01, 1.0, 2));
@@ -3944,7 +3920,7 @@ graphics_info_t::wrapped_create_checked_waters_by_variance_dialog(const std::vec
 
    if (v.size() > 0) {
       w = create_interesting_waters_by_difference_map_check_dialog();
-      GtkWidget *vbox = lookup_widget(w, "interesting_waters_by_difference_map_check_vbox");
+      GtkWidget *vbox = widget_from_builder("interesting_waters_by_difference_map_check_vbox");
       GtkWidget *button;
       coot::atom_spec_t *atom_spec;
       GSList *gr_group = NULL;
@@ -4135,7 +4111,7 @@ graphics_info_t::check_chiral_volume_molecule_combobox_changed(GtkWidget *w, gpo
 
 
 void
-graphics_info_t::fill_bond_parameters_internals(GtkWidget *combobox_for_molecule, int imol) {
+graphics_info_t::fill_bond_parameters_internals(GtkWidget *combobox_for_molecule, int imol_active) {
 
    graphics_info_t g;
 
@@ -4152,8 +4128,8 @@ graphics_info_t::fill_bond_parameters_internals(GtkWidget *combobox_for_molecule
 
    int idx_active = -1; // changed if the current bond width is the same as a comboxbox item
    int current_bond_width = 3;
-   if (is_valid_model_molecule(imol))
-      current_bond_width = molecules[imol].get_bond_thickness();
+   if (is_valid_model_molecule(imol_active))
+      current_bond_width = molecules[imol_active].get_bond_thickness();
 
    for (int i=1; i<21; i++) {
       std::string s(int_to_string(i));
@@ -4173,10 +4149,10 @@ graphics_info_t::fill_bond_parameters_internals(GtkWidget *combobox_for_molecule
 
 
    // Draw Hydrogens?
-   if (imol >= 0 ) {
-      if (imol < n_molecules()) {
-	 if (molecules[imol].has_model()) {
-	    if (molecules[imol].draw_hydrogens()) {
+   if (imol_active >= 0 ) {
+      if (imol_active < n_molecules()) {
+	 if (molecules[imol_active].has_model()) {
+	    if (molecules[imol_active].draw_hydrogens()) {
 	       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(draw_hydrogens_yes_radiobutton), TRUE);
 	    } else {
 	       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(draw_hydrogens_no_radiobutton), TRUE);
@@ -4187,11 +4163,11 @@ graphics_info_t::fill_bond_parameters_internals(GtkWidget *combobox_for_molecule
 
 
    // Draw NCS ghosts?
-   if (imol >= 0 ) {
-      if (imol < n_molecules()) {
-	 if (molecules[imol].has_model()) {
-	    if (molecules[imol].draw_ncs_ghosts_p()) {
-	       if (molecules[imol].ncs_ghosts_have_rtops_p()) {
+   if (imol_active >= 0 ) {
+      if (imol_active < n_molecules()) {
+	 if (molecules[imol_active].has_model()) {
+	    if (molecules[imol_active].draw_ncs_ghosts_p()) {
+	       if (molecules[imol_active].ncs_ghosts_have_rtops_p()) {
 		  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(draw_ncs_ghosts_yes_radiobutton), TRUE);
 	       } else {
 		  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(draw_ncs_ghosts_no_radiobutton), TRUE);
@@ -4206,24 +4182,24 @@ graphics_info_t::fill_bond_parameters_internals(GtkWidget *combobox_for_molecule
    // Make the frame be insensitive if there is no NCS.
    GtkWidget *frame = widget_from_builder("ncs_frame");
    short int make_insensitive = 1;
-   if (imol >= 0 ) {
-      if (imol < n_molecules()) {
-	 if (molecules[imol].has_model()) {
-	    if (molecules[imol].has_ncs_p()) {
+   if (imol_active >= 0 ) {
+      if (imol_active < n_molecules()) {
+	 if (molecules[imol_active].has_model()) {
+	    if (molecules[imol_active].has_ncs_p()) {
 	       make_insensitive = 0;
 	    } else {
 	       std::cout << "INFO:: in fill_bond_parameters_internals no NCS for  "
-			 << imol << "\n";
+			 << imol_active << "\n";
 	    }
 	 } else {
 	    std::cout << "ERROR:: bad imol in fill_bond_parameters_internals no model "
-		      << imol << "\n";
+		      << imol_active << "\n";
 	 }
       } else {
-	 std::cout << "ERROR:: bad imol in fill_bond_parameters_internals i " << imol << "\n";
+	 std::cout << "ERROR:: bad imol in fill_bond_parameters_internals i " << imol_active << "\n";
       }
    } else {
-      std::cout << "ERROR:: bad imol in fill_bond_parameters_internals " << imol << "\n";
+      std::cout << "ERROR:: bad imol in fill_bond_parameters_internals " << imol_active << "\n";
    }
    if (make_insensitive)
       gtk_widget_set_sensitive(frame, FALSE);
@@ -4270,7 +4246,7 @@ void
 graphics_info_t::fill_bond_colours_dialog_internal(GtkWidget *w) {
 
    // First the (global) step adjustment:
-   GtkScale *hscale = GTK_SCALE(lookup_widget(w, "bond_parameters_colour_rotation_hscale"));
+   GtkScale *hscale = GTK_SCALE(widget_from_builder("bond_parameters_colour_rotation_hscale"));
    GtkAdjustment *adjustment = GTK_ADJUSTMENT
       (gtk_adjustment_new(rotate_colour_map_on_read_pdb, 0.0, 370.0, 1.0, 20.0, 10.1));
    gtk_range_set_adjustment(GTK_RANGE(hscale), adjustment);
@@ -4279,21 +4255,27 @@ graphics_info_t::fill_bond_colours_dialog_internal(GtkWidget *w) {
 
 
    // Now the "C only" checkbutton:
-   GtkWidget *checkbutton = lookup_widget(w, "bond_parameters_rotate_colour_map_c_only_checkbutton");
+   GtkWidget *checkbutton = widget_from_builder("bond_parameters_rotate_colour_map_c_only_checkbutton");
    if (rotate_colour_map_on_read_pdb_c_only_flag) {
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton), TRUE);
    }
 
+   // 20220315-PE  but it doesn't work and who wants this mode anyway? Pink nitrogens?
+   //
+   GtkWidget *frame_c_only = widget_from_builder("bond_parameters_rotate_colour_map_c_only_frame");
+   gtk_widget_hide(frame_c_only);
 
    // Now the tricky bit, fill the scrolled vbox of molecule colour rotation step sliders:
 
    GtkWidget *frame_molecule_N;
    GtkWidget *coords_colour_control_dialog = w;
-   GtkWidget *coords_colours_vbox = lookup_widget(w, "coords_colours_vbox");
+   GtkWidget *coords_colours_vbox = widget_from_builder("coords_colours_vbox");
    GtkWidget *hbox136;
    GtkWidget *label269;
    GtkWidget *label270;
    GtkWidget *coords_colour_hscale_mol_N;
+
+   clear_out_container(coords_colours_vbox);
 
    for (int imol=0; imol<n_molecules(); imol++) {
       if (molecules[imol].has_model()) {
@@ -4401,7 +4383,7 @@ void graphics_info_t::bonds_colour_rotation_adjustment_changed(GtkAdjustment *ad
 void
 graphics_info_t::fill_add_OXT_dialog_internal(GtkWidget *dialog, int imol) {
 
-   GtkWidget *chain_combobox = lookup_widget(dialog, "add_OXT_chain_combobox");
+   GtkWidget *chain_combobox = widget_from_builder("add_OXT_chain_combobox");
    GCallback signal_func = G_CALLBACK(add_OXT_chain_combobox_changed);
 
    std::string a = fill_combobox_with_chain_options(chain_combobox, imol, signal_func);
@@ -4417,10 +4399,9 @@ graphics_info_t::add_OXT_molecule_combobox_changed(GtkWidget *widget, gpointer d
    int imol = my_combobox_get_imol(GTK_COMBO_BOX(widget));
    add_OXT_molecule = imol;
 
-   std::cout << "in add_OXT_molecule_combobox_changed() " << widget
-	     << " imol " << imol << std::endl;
+   std::cout << "DEBUG:: in add_OXT_molecule_combobox_changed() " << widget << " imol " << imol << std::endl;
 
-   GtkWidget *chain_combobox = lookup_widget(widget, "add_OXT_chain_combobox");
+   GtkWidget *chain_combobox = widget_from_builder("add_OXT_chain_combobox");
    GCallback func = G_CALLBACK(add_OXT_chain_combobox_changed);
    fill_combobox_with_chain_options(chain_combobox, imol, func);
 
@@ -4582,7 +4563,7 @@ graphics_info_t::fill_renumber_residue_range_dialog(GtkWidget *window) {
 
    // GtkWidget *molecule_option_menu = lookup_widget(window, "renumber_residue_range_molecule_optionmenu");
 
-   GtkWidget *molecule_combobox = lookup_widget(window, "renumber_residue_range_combobox");
+   GtkWidget *molecule_combobox = widget_from_builder("renumber_residue_range_combobox");
 
    // GtkWidget *chain_option_menu = lookup_widget(window, "renumber_residue_range_chain_optionmenu");
 
@@ -4611,7 +4592,7 @@ graphics_info_t::fill_renumber_residue_range_dialog(GtkWidget *window) {
 void
 graphics_info_t::fill_renumber_residue_range_internal(GtkWidget *w, int imol) {
 
-   GtkWidget *chain_combobox = lookup_widget(w, "renumber_residue_range_chain_combobox");
+   GtkWidget *chain_combobox = widget_from_builder("renumber_residue_range_chain_combobox");
    GCallback callback_func = G_CALLBACK(renumber_residue_range_chain_combobox_changed);
    std::string a = fill_combobox_with_chain_options(chain_combobox, imol, callback_func);
    if (a != "no-chain") {
@@ -4626,7 +4607,7 @@ graphics_info_t::renumber_residue_range_molecule_combobox_changed(GtkWidget *com
    graphics_info_t g;
    int imol = g.combobox_get_imol(GTK_COMBO_BOX(combobox));
    renumber_residue_range_molecule = imol;
-   GtkWidget *window = lookup_widget(combobox, "renumber_residue_range_dialog");
+   GtkWidget *window = widget_from_builder("renumber_residue_range_dialog");
    g.fill_renumber_residue_range_internal(window, imol);
 
 }
@@ -4666,7 +4647,8 @@ graphics_info_t::wrapped_create_diff_map_peaks_dialog(int imol,
                         return label;
                      };
 
-   GtkWidget *w = create_diff_map_peaks_dialog();
+   // GtkWidget *w = create_diff_map_peaks_dialog();
+   GtkWidget *w = widget_from_builder("diff_map_peaks_dialog");
 
    gtk_window_set_title(GTK_WINDOW(w), dialog_title.c_str());
 
@@ -4675,7 +4657,7 @@ graphics_info_t::wrapped_create_diff_map_peaks_dialog(int imol,
    set_transient_and_position(COOT_DIFF_MAPS_PEAK_DIALOG, w);
    GtkWidget *radio_button;
    GSList *diff_map_group = NULL;
-   GtkWidget *button_vbox = lookup_widget(w, "diff_map_peaks_vbox");
+   GtkWidget *button_vbox = widget_from_builder("diff_map_peaks_vbox");
    GtkWidget *frame;
 
    // for . and , synthetic clicking.
@@ -4799,9 +4781,7 @@ GtkWidget *graphics_info_t::wrapped_create_symmetry_controller_dialog() const {
 	    molecules[imol].fill_symmetry_control_frame(w);
       }
    }
-#if (GTK_MAJOR_VERSION > 1)
    gtk_window_deiconify(GTK_WINDOW(w));
-#endif
    return w;
 }
 
@@ -4825,7 +4805,7 @@ GtkWidget *
 wrapped_create_multi_residue_torsion_dialog(const std::vector<std::pair<mmdb::Atom *, mmdb::Atom *> > &pairs) {
 
    GtkWidget *w = create_multi_residue_torsion_dialog();
-   GtkWidget *vbox = lookup_widget(GTK_WIDGET(w), "multi_residue_torsion_vbox");
+   GtkWidget *vbox = widget_from_builder("multi_residue_torsion_vbox");
    graphics_info_t::multi_residue_torsion_reverse_fragment_mode = 0; // reset every time
 
 
@@ -4862,7 +4842,7 @@ graphics_info_t::on_multi_residue_torsion_button_clicked(GtkButton *button,
 
    graphics_info_t g;
    int i = GPOINTER_TO_INT(user_data);
-   GtkWidget *check_button = lookup_widget(GTK_WIDGET(button), "multi_residue_torsion_reverse_checkbutton");
+   GtkWidget *check_button = widget_from_builder("multi_residue_torsion_reverse_checkbutton");
    std::pair<coot::atom_spec_t, coot::atom_spec_t> *atom_spec_pair =
       static_cast<std::pair<coot::atom_spec_t, coot::atom_spec_t> *> (g_object_get_data (G_OBJECT (button), "spec_pair"));
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(check_button)))
@@ -4923,4 +4903,139 @@ graphics_info_t::get_pointer_position_frac() const {
    double yf = y/y_max;
 
    return std::pair<double, double> (xf, yf);
+}
+
+
+
+int
+graphics_info_t::add_molecular_representation(int imol,
+                                              const std::string &atom_selection,
+                                              const std::string &colour_scheme,
+                                              const std::string &style) {
+
+   GtkWidget *w = widget_from_builder("main_window_meshes_frame");
+   gtk_widget_show(w);
+
+   
+   int status = molecules[imol].add_molecular_representation(atom_selection, colour_scheme, style);
+   update_main_window_molecular_representation_widgets();
+   return status;
+
+}
+
+void
+graphics_info_t::remove_molecular_representation(int imol, int idx) {
+
+   GtkWidget *w = widget_from_builder("main_window_meshes_frame");
+   unsigned int n_mesh = 0;
+   for (unsigned int i=0; i<molecules.size(); i++)
+      n_mesh += molecules[i].meshes.size();
+
+   if (n_mesh == 0)
+      gtk_widget_hide(w);
+
+   molecules[imol].remove_molecular_representation(idx);
+}
+
+
+
+// -------- Meshes control (i.e. the Meshes of molecule_class_info)
+void
+graphics_info_t::set_show_molecular_representation(int imol, unsigned int mesh_idx, bool on_off) {
+
+   GtkWidget *w = widget_from_builder("main_window_meshes_frame");
+   gtk_widget_show(w);
+
+   if (is_valid_model_molecule(imol)) {
+      auto &meshes = molecules[imol].meshes;
+      if (mesh_idx < meshes.size()) {
+         auto mesh = meshes[mesh_idx];
+         mesh.set_draw_mesh_state(on_off);
+      }
+   } 
+}
+
+// static
+void
+graphics_info_t::main_window_meshes_togglebutton_toggled(GtkToggleButton *button, gpointer *user_data) {
+
+   const char *n = static_cast<const char *>(g_object_get_data(G_OBJECT(button), "name"));
+   if (n) {
+      std::string sn(n);
+      int imol     = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "imol"));
+      int mesh_idx = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "mesh_idx"));
+      if (is_valid_model_molecule(imol)) {
+         auto &m = molecules[imol];
+         if (mesh_idx < static_cast<int>(m.meshes.size())) {
+            auto &mesh = m.meshes[mesh_idx];
+            if (gtk_toggle_button_get_active(button)) {
+               mesh.set_draw_mesh_state(true);
+            } else {
+               mesh.set_draw_mesh_state(false);
+            }
+         }
+      } else {
+         std::cout << "ERROR:: main_window_meshes_togglebutton_toggled() not a valid molecule" << std::endl;
+      }
+   }
+   graphics_draw();
+}
+
+void
+graphics_info_t::update_main_window_molecular_representation_widgets() {
+
+   auto find_button = [] (GtkWidget *box, unsigned int imol, unsigned int idx_mesh) {
+                         std::string test_name = "main_window_meshes_dialog_mesh_button_" + std::to_string(imol) + "_" + std::to_string(idx_mesh);
+                         GtkWidget *w = 0;
+                         GList *container_list = gtk_container_get_children(GTK_CONTAINER(box));
+                         int len = g_list_length(container_list);
+                         for(int i=0; i < len; i++) {
+                            GtkWidget *widget = static_cast<GtkWidget *>(g_list_nth_data(container_list, i));
+                            char *n = static_cast<char *>(g_object_get_data(G_OBJECT(widget), "name"));
+                            if (n) {
+                               std::string sn(n);
+                               if (test_name == sn) {
+                                  w = widget;
+                                  break;
+                               }
+                            }
+                         }
+                         return w;
+                      };
+
+   GtkWidget *f    = widget_from_builder("main_window_meshes_frame");
+   GtkWidget *vbox = widget_from_builder("main_window_meshes_vbox");
+   gtk_widget_show(f);
+   unsigned int n_mesh = 0;
+   for (unsigned int i=0; i<molecules.size(); i++)
+      n_mesh += molecules[i].meshes.size();
+
+   if (n_mesh == 0)
+      gtk_widget_hide(f);
+
+   std::cout << "n_mesh " << n_mesh << std::endl;
+   
+   for (unsigned int imol=0; imol<molecules.size(); imol++) {
+      for (unsigned int j=0; j<molecules[imol].meshes.size(); j++) {
+         const auto &mesh = molecules[imol].meshes[j];
+         std::string m_name = mesh.name;
+         std::string name = std::to_string(imol) + ": " + m_name;
+         GtkWidget *w = find_button(vbox, imol, j);
+         if (! w) {
+            std::string label = name;
+            w = gtk_check_button_new_with_label(label.c_str());
+            std::string widget_name = "main_window_meshes_dialog_mesh_button_" + std::to_string(imol) + "_" + std::to_string(j);
+            char *widget_name_cstr = new char[widget_name.length() + 1]; // bleugh!
+            strcpy(widget_name_cstr, widget_name.c_str());               // bleugh!
+            g_object_set_data(G_OBJECT(w), "name", widget_name_cstr);
+            g_object_set_data(G_OBJECT(w), "imol",     GINT_TO_POINTER(imol));
+            g_object_set_data(G_OBJECT(w), "mesh_idx", GINT_TO_POINTER(j));
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), TRUE);
+            g_signal_connect(G_OBJECT(w), "toggled", G_CALLBACK(main_window_meshes_togglebutton_toggled), nullptr);
+            gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, FALSE, 0);
+            gtk_widget_show(w);
+         }
+      }
+   }
+
 }

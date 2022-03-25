@@ -393,13 +393,20 @@ molecule_class_info_t::molecule_is_all_c_alphas() const {
 }
 
 void
-molecule_class_info_t::bond_representation(const coot::protein_geometry *geom_p) {
+molecule_class_info_t::bond_representation(const coot::protein_geometry *geom_p,
+                                           bool force_rebonding) {
 
    bool do_rebond = true;
    if (draw_hydrogens_flag && bonds_box_type == coot::NORMAL_BONDS)
       do_rebond = false;
    if (!draw_hydrogens_flag && bonds_box_type == coot::BONDS_NO_HYDROGENS)
       do_rebond = false;
+
+   if  (force_rebonding)
+      do_rebond = true;
+
+   if (bonds_box_type != coot::NORMAL_BONDS)
+      do_rebond = true;
 
    if (do_rebond) {
       std::set<int> dummy;
@@ -408,33 +415,40 @@ molecule_class_info_t::bond_representation(const coot::protein_geometry *geom_p)
 }
 
 void
-molecule_class_info_t::ca_representation() {
+molecule_class_info_t::ca_representation(bool force_rebonding) {
 
-   if (bonds_box_type != coot::CA_BONDS) {
-      bonds_box.clear_up();
+   if (bonds_box_type != coot::CA_BONDS || force_rebonding) {
 
-      std::cout << "calling make_ca_bonds() in molecule_class_info_t" << std::endl;
-      make_ca_bonds(2.4, 4.7);
-      bonds_box_type = coot::CA_BONDS;
+      if (force_rebonding) {
+         // std::cout << "calling make_ca_bonds() in molecule_class_info_t" << std::endl;
+         bonds_box.clear_up();
+         make_ca_bonds(2.4, 4.7);
+         bonds_box_type = coot::CA_BONDS;
+      }
    }
 }
 
 void
-molecule_class_info_t::ca_plus_ligands_representation(coot::protein_geometry *geom) {
+molecule_class_info_t::ca_plus_ligands_representation(coot::protein_geometry *geom, bool force_rebonding) {
 
    if (bonds_box_type != coot::CA_BONDS_PLUS_LIGANDS) {
-      bonds_box.clear_up();
-      make_ca_plus_ligands_bonds(geom);
-      bonds_box_type = coot::CA_BONDS_PLUS_LIGANDS;
+      if (force_rebonding) {
+         bonds_box.clear_up();
+         make_ca_plus_ligands_bonds(geom);
+         bonds_box_type = coot::CA_BONDS_PLUS_LIGANDS;
+      }
    }
 }
 
 void
 molecule_class_info_t::ca_plus_ligands_and_sidechains_representation(coot::protein_geometry *geom) {
 
-   bonds_box.clear_up();
-   make_ca_plus_ligands_and_sidechains_bonds(geom);
-   bonds_box_type = coot::CA_BONDS_PLUS_LIGANDS_AND_SIDECHAINS;
+   bool force_rebonding = true; // for now
+   if (force_rebonding) {
+      bonds_box.clear_up();
+      make_ca_plus_ligands_and_sidechains_bonds(geom);
+      bonds_box_type = coot::CA_BONDS_PLUS_LIGANDS_AND_SIDECHAINS;
+   }
 }
 
 void
@@ -2813,6 +2827,18 @@ molecule_class_info_t::get_atom(int idx) const {
    return r;
 }
 
+mmdb::Atom *
+molecule_class_info_t::get_atom(const pick_info &pi) const {
+
+   mmdb::Atom *at = 0;
+   if (pi.success == GL_TRUE)
+      if (pi.atom_index < atom_sel.n_selected_atoms)
+         at = atom_sel.atom_selection[pi.atom_index];
+   return at;
+
+}
+
+
 
 // This should check that if "a" is typed, then set "a" as the
 // chain_id if it exists, else convert to "A" (if that exists).
@@ -2836,11 +2862,10 @@ coot::goto_residue_string_info_t::goto_residue_string_info_t(const std::string &
       if (mol) {
          int imod = 1;
          mmdb::Model *model_p = mol->GetModel(imod);
-         mmdb::Chain *chain_p;
          // run over chains of the existing mol
          int nchains = model_p->GetNumberOfChains();
          for (int ichain=0; ichain<nchains; ichain++) {
-            chain_p = model_p->GetChain(ichain);
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
             chain_ids.push_back(chain_p->GetChainID());
          }
       }
@@ -4071,7 +4096,7 @@ molecule_class_info_t::cell_text_with_embeded_newline() const {
 void
 molecule_class_info_t::assign_fasta_sequence(const std::string &chain_id, const std::string &seq_in) {
 
-   std::cout << "##################################### assign_fasta_sequence " << chain_id << std::endl;
+   std::cout << "INFO:: assign_fasta_sequence " << chain_id << "\n" << seq_in << std::endl;
 
    // format "> name\n <sequence>", we ignore everything that is not a
    // letter after the newline.
@@ -4111,13 +4136,47 @@ molecule_class_info_t::assign_fasta_sequence(const std::string &chain_id, const 
    if (seq.length() > 0) {
       std::cout << "debug:: assign_fasta_sequence(): storing sequence: " << seq << " for chain id: " << chain_id
                 << " in molecule number " << imol_no << std::endl;
-      std::cout << "######################## pushing back onto input_sequence" << std::endl;
+      std::cout << "debug:: pushing back onto input_sequence" << std::endl;
       input_sequence.push_back(std::pair<std::string, std::string> (chain_id,seq));
-      std::cout << "######################## input_sequence size " << input_sequence.size() << std::endl;
+      std::cout << "debug:: input_sequence size " << input_sequence.size() << std::endl;
    } else {
       std::cout << "WARNING:: assign_fasta_sequence(): no sequence found or improper fasta sequence format\n";
    }
 }
+
+// add the sequence the file (read depending on file name) to input_sequence vector (chain-id is blank
+// as it could apply to any chain)
+void
+molecule_class_info_t::associate_sequence_from_file(const std::string &seq_file_name) {
+
+   auto file_to_string = [] (const std::string &file_name) {
+                            std::string s;
+                            std::string line;
+                            std::ifstream f(file_name.c_str());
+                            if (!f) {
+                               std::cout << "WARNING:: Failed to open " << file_name << std::endl;
+                            } else {
+                               while (std::getline(f, line)) {
+                                  s += line;
+                                  s += "\n";
+                               }
+                            }
+                            return s;
+                         };
+
+   std::string extension = coot::util::file_name_extension(seq_file_name);
+   std::string chain_id;
+   if (coot::file_exists(seq_file_name)) {
+      std::string seq = file_to_string(seq_file_name);
+      if (extension == ".pir") {
+         assign_pir_sequence(chain_id, seq);
+      } else {
+         assign_fasta_sequence(chain_id, seq);
+      }
+   } else {std::cout << "WARNING:: file does not exist: " << seq_file_name << std::endl;
+   }
+}
+
 
 void
 molecule_class_info_t::assign_pir_sequence(const std::string &chain_id, const std::string &seq_in) {
@@ -7231,7 +7290,8 @@ molecule_class_info_t::read_shelx_ins_file(const std::string &filename) {
          set_have_unit_cell_flag_maybe(true); // but will always have symmetry
 
          if (molecule_is_all_c_alphas()) {
-            ca_representation();
+            bool force_rebonding =  true;
+            ca_representation(force_rebonding);
          } else {
 
             short int do_rtops_flag = 0;
@@ -7365,7 +7425,7 @@ molecule_class_info_t::make_ball_and_stick(const std::string &atom_selection_str
                                            bool do_spheres_flag, gl_context_info_t gl_info,
                                            const coot::protein_geometry *geom) {
 
-   // std::cout << "molecule make_ball_and_stick(A) called ..." << std::endl;
+   std::cout << "molecule make_ball_and_stick(A) called ..." << std::endl;
 
    coot::display_list_object_info dloi;
    // modify a copy of dloi and return it

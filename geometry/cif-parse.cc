@@ -233,23 +233,32 @@ coot::protein_geometry::init_refmac_mon_lib(std::string ciffilename, int read_nu
 			chem_comp_tor_structure(structure, imol_enc);
 		     }
 		  }
-		  
+
+                  if (cat_name == "_lib") {
+		     mmdb::mmcif::Struct *structure = data->GetStructure(cat_name.c_str());
+                     if (structure) {
+                        parse_lib_info(structure);
+                        handled = true; // hack for now - so that we don't get the warning message
+                     }
+                  }
+
 		  if (! handled)   // this can happen if there is not an atom loop, e.g. dictionary
 		                   // with one atom e.g. AM.cif (Americium ion)
 		     std::cout << "WARNING:: in init_refmac_mon_lib() unhandled category \""
 			       << cat_name << "\" file: " << ciffilename << std::endl; 
-		  
+
 	       } else {
-               
+
 		  n_loop_time++;
 
 		  // We currently want to stop adding chem comp info
 		  // if the chem_comp info comes from mon_lib_list.cif:
 		  if (cat_name == "_chem_comp") {
-		     if (read_number_in != coot::protein_geometry::MON_LIB_LIST_CIF)
+		     if (read_number_in != coot::protein_geometry::MON_LIB_LIST_CIF) {
 			comp_id_2 = chem_comp(mmCIFLoop, imol_enc);
-		     else
+                     } else {
 			comp_id_2 = simple_mon_lib_chem_comp(mmCIFLoop, imol_enc);
+                     }
 		  }
 
 		  // monomer info, name, number of atoms etc.
@@ -603,6 +612,20 @@ coot::protein_geometry::chem_comp_chir_structure(mmdb::mmcif::PStruct structure,
    } 
 }
 
+void
+coot::protein_geometry::parse_lib_info(mmdb::mmcif::PStruct structure) {
+
+   // 20220223-PE fill this at some stage
+
+   // example:
+   // data_lib
+   // _lib.name mon_lib
+   // _lib.version 5.60
+   //  _lib.update 16/02/22
+
+}
+
+
 
 // add to simple_monomer_descriptions not dict_res_restraints.
 void
@@ -633,7 +656,7 @@ coot::protein_geometry::simple_mon_lib_add_chem_comp(const std::string &comp_id,
    coot::dictionary_residue_restraints_t blank_res_rest;
    blank_res_rest.residue_info = ri; // now mostly blank
    simple_monomer_descriptions[comp_id] = blank_res_rest;
-   
+
 //    std::cout << "Added [residue info :"
 // 	     << ri.comp_id << ": :"
 // 	     << ri.three_letter_code << ": " 
@@ -820,7 +843,7 @@ coot::protein_geometry::simple_mon_lib_chem_comp(mmdb::mmcif::PLoop mmCIFLoop, i
    for (int j=0; j<mmCIFLoop->GetLoopLength(); j++) { 
       // modify a reference (ierr)
       // 
-      char *s = mmCIFLoop->GetString("id", j, ierr);
+      char *s = mmCIFLoop->GetString("id", j, ierr); // 20220223-PE this might return null
       std::string three_letter_code;
       std::string name;
       std::string group; // e.g. "L-peptide"
@@ -830,44 +853,45 @@ coot::protein_geometry::simple_mon_lib_chem_comp(mmdb::mmcif::PLoop mmCIFLoop, i
 
       if (ierr == 0) {
 	 int ierr_tot = 0;
-	 comp_id = s;
-	 s = mmCIFLoop->GetString("three_letter_code", j, ierr);
-	 ierr_tot += ierr;
-	 if (s)
-	    three_letter_code = s;
-	 else {
-	    three_letter_code = "";
-// 	    std::cout << "WARNING:: failed to get 3-letter code for comp_id: "
-// 		      << comp_id << " error: " << ierr << std::endl;
-	 }
+         if (s) { // 20220223-PE add protection for null id extraction.
+            comp_id = s;
+            s = mmCIFLoop->GetString("three_letter_code", j, ierr);
+            ierr_tot += ierr;
+            if (s)
+               three_letter_code = s;
+            else {
+               three_letter_code = "";
+               // 	    std::cout << "WARNING:: failed to get 3-letter code for comp_id: "
+               // 		      << comp_id << " error: " << ierr << std::endl;
+            }
 
-	 s = mmCIFLoop->GetString("name", j, ierr);
-	 ierr_tot += ierr;
-	 if (s)
-	    name = s;
+            s = mmCIFLoop->GetString("name", j, ierr);
+            ierr_tot += ierr;
+            if (s)
+               name = s;
 
-	 s = mmCIFLoop->GetString("group", j, ierr);
-	 ierr_tot += ierr;
-	 if (s)
-	    group = s; // e.g. "L-peptide"
+            s = mmCIFLoop->GetString("group", j, ierr);
+            ierr_tot += ierr;
+            if (s)
+               group = s; // e.g. "L-peptide"
 
-	 ierr = mmCIFLoop->GetInteger(number_atoms_all, "number_atoms_all", j);
-	 ierr_tot += ierr;
+            ierr = mmCIFLoop->GetInteger(number_atoms_all, "number_atoms_all", j);
+            ierr_tot += ierr;
 
-	 ierr = mmCIFLoop->GetInteger(number_atoms_nh, "number_atoms_nh", j);
-	 ierr_tot += ierr;
+            ierr = mmCIFLoop->GetInteger(number_atoms_nh, "number_atoms_nh", j);
+            ierr_tot += ierr;
 
-	 s = mmCIFLoop->GetString("desc_level", j, ierr);
-	 if (! ierr)
-	    if (s)
-	       description_level = s;  // e.g. "." for full, I think
+            s = mmCIFLoop->GetString("desc_level", j, ierr);
+            if (! ierr)
+               if (s)
+                  description_level = s;  // e.g. "." for full, I think
 
-	 if (ierr_tot == 0) {
-	    simple_mon_lib_add_chem_comp(comp_id, imol_enc,
-					 three_letter_code, name,
-					 group, number_atoms_all, number_atoms_nh,
-					 description_level);
-
+            if (ierr_tot == 0) {
+               simple_mon_lib_add_chem_comp(comp_id, imol_enc,
+                                            three_letter_code, name,
+                                            group, number_atoms_all, number_atoms_nh,
+                                            description_level);
+            }
 	 }
       }
    }
@@ -1384,25 +1408,20 @@ coot::protein_geometry::comp_bond(mmdb::mmcif::PLoop mmCIFLoop, int imol_enc, bo
 	 ierr = mmCIFLoop->GetReal(value_dist_esd, "value_dist_esd", j);
 	 ierr_tot += ierr;
 
-         mmdb::realtype value_dist_nucleus     = -1.0;
-         mmdb::realtype value_dist_nucleus_esd = -1.0;
-         int ierr_nuc     = mmCIFLoop->GetReal(value_dist_nucleus,     "value_dist_nucleus",     j);
-         int ierr_nuc_esd = mmCIFLoop->GetReal(value_dist_nucleus_esd, "value_dist_nucleus_esd", j);
-
-         // for now, instead of sending both to the dict_bond, let's preferentially send
-         // value_dist_nucleus if we can:
-         //
-         if (ierr_nuc == 0) {
-            if (ierr_nuc_esd == 0) {
-               value_dist     = value_dist_nucleus;
-               value_dist_esd = value_dist_nucleus_esd;
-            }
-         }
+         mmdb::realtype value_dist_nuclear     = -1.0;
+         mmdb::realtype value_dist_nuclear_esd = -1.0;
+         int ierr_nuc     = mmCIFLoop->GetReal(value_dist_nuclear,     "value_dist_nucleus",     j);
+         int ierr_nuc_esd = mmCIFLoop->GetReal(value_dist_nuclear_esd, "value_dist_nucleus_esd", j);
 
 	 if (ierr_tot == 0) {
 
+            // if value_dist_nucleus_esd is negative, it's treated as unset
+            //
 	    mon_lib_add_bond(comp_id, imol_enc, atom_id_1, atom_id_2,
-			     type, value_dist, value_dist_esd, aromaticity, blt);
+			     type,
+                             value_dist, value_dist_esd,
+                             value_dist_nuclear, value_dist_nuclear_esd,
+                             aromaticity, blt);
 	    nbond++;
 	 } else {
 
@@ -2118,7 +2137,7 @@ coot::dictionary_residue_restraints_t::write_cif(const std::string &filename) co
 	       std::string annw = util::remove_whitespace(ai.atom_id).c_str();
 	       std::string qan = quoted_atom_name(annw);
 	       mmCIFLoop->PutString(annw.c_str(), "atom_id", i);
-	       std::string up_type_symbol = util::upcase(atom_info[i].type_symbol);
+	       std::string up_type_symbol = util::upcase(util::remove_whitespace(atom_info[i].type_symbol));
 	       ss = up_type_symbol.c_str();
 	       mmCIFLoop->PutString(ss, "type_symbol", i);
 	       // std::cout << "up_type_symbol: " << up_type_symbol << std::endl;

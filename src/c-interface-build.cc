@@ -116,117 +116,9 @@
 
 
 /*  ------------------------------------------------------------------------ */
-/*                   Maps - (somewhere else?):                               */
-/*  ------------------------------------------------------------------------ */
-/*! \brief Calculate SFs from an MTZ file and generate a map.
- @return the new molecule number. */
-int map_from_mtz_by_calc_phases(const char *mtz_file_name,
-				const char *f_col,
-				const char *sigf_col,
-				int imol_coords) {
-
-   int ir = -1; // return value
-   graphics_info_t g;
-   if (is_valid_model_molecule(imol_coords)) {
-      int imol_map = g.create_molecule();
-      std::string m(mtz_file_name);
-      std::string f(f_col);
-      std::string s(sigf_col);
-      atom_selection_container_t a = g.molecules[imol_coords].atom_sel;
-      short int t = molecule_map_type::TYPE_2FO_FC;
-      int istat = g.molecules[imol_map].make_map_from_mtz_by_calc_phases(imol_map,m,f,s,a,t);
-      if (istat != -1) {
-	 graphics_draw();
-	 ir = imol_map;
-      } else {
-	 ir = -1; // error
-	 graphics_info_t::erase_last_molecule();
-      }
-   }
-   std::vector<std::string> command_strings;
-   command_strings.push_back("map-from-mtz-by-calc-phases");
-   command_strings.push_back(mtz_file_name);
-   command_strings.push_back(f_col);
-   command_strings.push_back(sigf_col);
-   command_strings.push_back(graphics_info_t::int_to_string(imol_coords));
-   add_to_history(command_strings);
-   return ir;
-}
-
-
-/*! \brief fire up a GUI, which asks us which model molecule we want
-  to calc phases from.  On "OK" button there, we call
-  map_from_mtz_by_refmac_calc_phases() */
-void calc_phases_generic(const char *mtz_file_name) {
-
-   if (coot::file_exists(mtz_file_name)) {
-      graphics_info_t g;
-      coot::mtz_column_types_info_t r = coot::get_mtz_columns(mtz_file_name);
-      if (r.f_cols.size() == 0) {
-	 std::cout << "No Fobs found in " << mtz_file_name << std::endl;
-	 std::string s =  "No Fobs found in ";
-	 s += mtz_file_name;
-	 g.add_status_bar_text(s);
-      } else {
-	 if (r.sigf_cols.size() == 0) {
-	    std::cout << "No SigFobs found in " << mtz_file_name << std::endl;
-	    std::string s =  "No SigFobs found in ";
-	    s += mtz_file_name;
-	    g.add_status_bar_text(s);
-	 } else {
-	    // normal path:
-	    std::string f_obs_col = r.f_cols[0].column_label;
-	    std::string sigfobs_col = r.sigf_cols[0].column_label;
-	    std::vector<std::string> v;
-	    v.push_back("refmac-for-phases-and-make-map");
-	    // BL says:: dunno if we need the backslashing here, but just do it in case
-	    v.push_back(coot::util::single_quote(coot::util::intelligent_debackslash(mtz_file_name)));
-	    v.push_back(coot::util::single_quote(f_obs_col));
-	    v.push_back(coot::util::single_quote(sigfobs_col));
-	    std::string c = languagize_command(v);
-	    std::cout << "command: " << c << std::endl;
-#ifdef USE_GUILE
-	    safe_scheme_command(c);
-#else
-#ifdef USE_PYTHON
-	    safe_python_command(c);
-#endif
-#endif
-	 }
-      }
-      std::vector<std::string> command_strings;
-      command_strings.push_back("calc-phases-generic");
-      command_strings.push_back(mtz_file_name);
-      add_to_history(command_strings);
-   }
-}
-
-/*! \brief Calculate SFs (using refmac optionally) from an MTZ file
-  and generate a map. Get F and SIGF automatically (first of their
-  type) from the mtz file.
-
-@return the new molecule number, -1 on a problem. */
-int map_from_mtz_by_refmac_calc_phases(const char *mtz_file_name,
-				       const char *f_col,
-				       const char *sigf_col,
-				       int imol_coords) {
-
-   int istat = -1;
-   std::vector<std::string> command_strings;
-   command_strings.push_back("map-from-mtz-by-refmac-calc-phases");
-   command_strings.push_back(mtz_file_name);
-   command_strings.push_back(f_col);
-   command_strings.push_back(sigf_col);
-   command_strings.push_back(graphics_info_t::int_to_string(imol_coords));
-   add_to_history(command_strings);
-   return istat;
-}
-
-
-/*  ------------------------------------------------------------------------ */
 /*                   model/fit/refine functions:                             */
 /*  ------------------------------------------------------------------------ */
-void set_model_fit_refine_rotate_translate_zone_label(const char *txt) {
+ void set_model_fit_refine_rotate_translate_zone_label(const char *txt) {
    graphics_info_t::model_fit_refine_rotate_translate_zone_string = txt;
    // if we have the dialog open we shall change the label
    if (graphics_info_t::model_fit_refine_dialog) {
@@ -848,6 +740,8 @@ void delete_residue(int imol, const char *chain_id, int resno, const char *insco
       int model_number_ANY = mmdb::MinInt4;
       std::string ic(inscode);
       short int istat = g.molecules[imol].delete_residue(model_number_ANY, chain_id, resno, ic);
+
+      g.update_geometry_graphs(imol);
 
       if (istat) {
 	 // now if the go to atom widget was being displayed, we need to
@@ -2052,7 +1946,7 @@ void delete_atom_by_atom_index(int imol, int index, short int do_delete_dialog) 
 		<< ins_code << ": atom-name " << atom_name << ": altconf :"
 		<< altconf << ":" << std::endl;
       delete_atom(imol, chain_id, resno, ins_code, atom_name, altconf);
-      delete_object_handle_delete_dialog(do_delete_dialog);
+      // delete_object_handle_delete_dialog(do_delete_dialog);
    }
 
    // no need for this, the called delete_atom() does it.
@@ -2091,7 +1985,7 @@ void delete_residue_by_atom_index(int imol, int index, short int do_delete_dialo
 				    inscode.c_str(), altloc.c_str());
 
    short int do_delete_dialog = do_delete_dialog_by_ctrl;
-   delete_object_handle_delete_dialog(do_delete_dialog);
+   // delete_object_handle_delete_dialog(do_delete_dialog);
 
    graphics_draw();
    std::string cmd = "delete-residue-by-atom-index";
@@ -2113,7 +2007,7 @@ void delete_residue_hydrogens_by_atom_index(int imol, int index, short int do_de
 
    delete_residue_hydrogens(imol, chain_id.c_str(), resno, inscode.c_str(), altloc.c_str());
 
-   delete_object_handle_delete_dialog(do_delete_dialog);
+   // delete_object_handle_delete_dialog(do_delete_dialog);
    graphics_draw();
    std::string cmd = "delete-residue-hydrogens-by-atom-index";
    std::vector<coot::command_arg_t> args;
@@ -3310,6 +3204,20 @@ void assign_pir_sequence(int imol, const char *chain_id_in, const char *seq) {
    add_to_history(command_strings);
 }
 
+/*! \brief Associate the sequence to the molecule - to be used later for sequence assignment (.c.f pir file)   */
+void associate_sequence_from_file(int imol, const char *file_name) {
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t::molecules[imol].associate_sequence_from_file(std::string(file_name));
+   }
+   std::vector<std::string> command_strings;
+   command_strings.push_back("associate-sequence-from-file");
+   command_strings.push_back(coot::util::int_to_string(imol));
+   command_strings.push_back(single_quote(file_name));
+   add_to_history(command_strings);
+}
+
+
 void assign_sequence_from_file(int imol, const char *file) {
    if (is_valid_model_molecule(imol)) {
       graphics_info_t::molecules[imol].assign_sequence_from_file(std::string(file));
@@ -4397,7 +4305,7 @@ int find_secondary_structure_local(
 	 atom_selection_container_t asc = make_asc(ssfind.mol.pcmmdbmanager());
 	 imol = g.create_molecule();
 	 graphics_info_t::molecules[imol].install_model(imol,asc,g.Geom_p(),"SecStruc",1);
-	 g.molecules[imol].ca_representation();
+	 g.molecules[imol].ca_representation(true);
 	 if (g.go_to_atom_window) {
 	    g.set_go_to_atom_molecule(imol);
 	    g.update_go_to_atom_window_on_new_mol();
@@ -4818,28 +4726,6 @@ void set_secondary_structure_restraints_type(int itype) {
       graphics_info_t::pseudo_bonds_type = coot::HELIX_PSEUDO_BONDS;
    if (itype == 2)
       graphics_info_t::pseudo_bonds_type = coot::STRAND_PSEUDO_BONDS;
-
-#if 0 // 20211027-PE these icons no longer exist
-
-   if (graphics_info_t::use_graphics_interface_flag) {
-      std::string wa_name = "main_toolbar_restraints_alpha_label";
-      std::string wb_name = "main_toolbar_restraints_beta_label";
-      GtkWidget *w_a = lookup_widget(graphics_info_t::get_main_window(), wa_name.c_str());
-      GtkWidget *w_b = lookup_widget(graphics_info_t::get_main_window(), wb_name.c_str());
-      if (itype == 0) {
-	 gtk_widget_hide(w_a);
-	 gtk_widget_hide(w_b);
-      }
-      if (itype == 1) {
-	 gtk_widget_show(w_a);
-	 gtk_widget_hide(w_b);
-      }
-      if (itype == 2) {
-	 gtk_widget_hide(w_a);
-	 gtk_widget_show(w_b);
-      }
-   }
-#endif
 
 #endif // HAVE_GSL
 }

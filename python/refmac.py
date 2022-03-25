@@ -1,4 +1,3 @@
-import numbers
 # refmac.py 
 #
 # Copyright 2005, 2006 by Bernhard Lohkamp
@@ -37,6 +36,12 @@ import numbers
 # 3.) refmac-extra-params.txt
 #
 # deftexi refmac_extra_params
+
+import os
+import sys
+import numbers
+import coot
+import coot_utils
 
 global refmac_extra_params
 # refmac_extra_params has to be a list
@@ -147,6 +152,8 @@ def run_loggraph(logfile):
 #
 # BL says: I believe in python we have everything handled already correctly,
 # so this is just a different name for now with not invoked functions.
+# Not sure why we want to block the graphics? Maybe needs a new keywd arg
+# to run in thread or not!?
 #
 def run_refmac_by_filename(pdb_in_filename, pdb_out_filename,
                            mtz_in_filename, mtz_out_filename,
@@ -224,7 +231,7 @@ def run_refmac_by_filename_inner(pdb_in_filename, pdb_out_filename,
     import os, stat, operator
 
     # first check if refmac exists?
-    refmac_execfile = find_exe("refmac5", "CBIN", "CCP4_BIN", "PATH")
+    refmac_execfile = coot_utils.find_exe("refmac5", "CBIN", "CCP4_BIN", "PATH")
     if not refmac_execfile:
         print("WARNING:: run_refmac_by_filename_inner(): no refmac found")
         print("  - no new map and molecule available")
@@ -236,7 +243,7 @@ def run_refmac_by_filename_inner(pdb_in_filename, pdb_out_filename,
 
     # some additional argument jiggery-pokery: convert
     # [["/crystal/thing/R-free"]] to ["/crystal/thing/R-free"]
-    if (isinstance(r_free_col, list)):
+    if isinstance(r_free_col, list):
         if r_free_col:
             if (isinstance(r_free_col[0], list)):
                 r_free_col = r_free_col[0]
@@ -299,7 +306,7 @@ def run_refmac_by_filename_inner(pdb_in_filename, pdb_out_filename,
        if force_n_cycles >=0:
            if (refinement_type == 1):
                std_lines.append("RIGIDbody NCYCle " + str(force_n_cycles))
-               if (coot.get_refmac_refinement_method() == 1):
+               if coot.get_refmac_refinement_method() == 1:
                    group_no = 1
                    if (coot.is_valid_model_molecule(imol_coords)):
                        for chain_id in coot_utils.chain_ids(imol_coords):
@@ -322,7 +329,7 @@ def run_refmac_by_filename_inner(pdb_in_filename, pdb_out_filename,
         std_lines.append(tls_string)
 
     # TWIN?
-    if (coot.refmac_use_twin_state()):
+    if False: # coot.refmac_use_twin_state():
         std_lines.append("TWIN")
 
     # SAD?
@@ -332,7 +339,7 @@ def run_refmac_by_filename_inner(pdb_in_filename, pdb_out_filename,
     std_lines.extend(refmac_sad_params())
 
     # NCS?
-    if(coot.refmac_use_ncs_state()):
+    if False: # coot.refmac_use_ncs_state():
         if (get_refmac_version()[1] >= 5):
             std_lines.append("NCSR LOCAL")
         else:
@@ -385,9 +392,11 @@ def run_refmac_by_filename_inner(pdb_in_filename, pdb_out_filename,
 
     data_lines += ["END"]
 
-    if (coot_utils.coot_has_gobject() and sys.version_info >= (2, 4)
-        and make_molecules_flag):
+    if coot_utils.coot_has_gobject() and sys.version_info >= (2, 4) and make_molecules_flag:
+
         # can spawn refmac and add button
+
+        print("calling run_concurrently with ", refmac_execfile, command_line_args, data_lines, refmac_log_file_name, to_screen_flag)
 
         refmac_process, logObj = coot_utils.run_concurrently(refmac_execfile,
                                                   command_line_args,
@@ -648,7 +657,7 @@ def refmac_ncs_params():
 
 def refmac_sad_params():
     ret_ls = []
-    if (refmac_use_sad_state() == 1):
+    if False: # refmac_use_sad_state() == 1:
         sad_atom_ls = get_refmac_sad_atom_info()
         for sad_atom in sad_atom_ls:
             sad_string = ""
@@ -666,6 +675,9 @@ def refmac_sad_params():
             ret_ls.append(sad_string)
 
     return ret_ls
+# This is not run as a sub-thread now
+#
+# @return the output mtz file name or False
 #
 def run_refmac_for_phases(imol, mtz_file_name, f_col, sig_f_col):
 
@@ -690,7 +702,7 @@ def run_refmac_for_phases(imol, mtz_file_name, f_col, sig_f_col):
                 coot.set_refmac_use_ncs(0)
                 coot.set_refmac_use_tls(0)
                 run_refmac_by_filename(pdb_in, pdb_out,
-                        mtz_file_name, mtz_out, 
+                        mtz_file_name, mtz_out,
                         cif_lib_filename, 0, 0, -1,
                         1, 0, [], 0, 1, "",
                         f_col, sig_f_col, "")
@@ -700,11 +712,18 @@ def run_refmac_for_phases(imol, mtz_file_name, f_col, sig_f_col):
                 coot.set_refmac_use_ncs(ncs_state)
                 coot.set_refmac_use_tls(tls_state)
                 #print "BL DEBUG:: reset states", ncs_state, tls_state
+                # check for success???? Just check for availability of mtz outfile
+                # since we return this
+                if os.path.isfile(mtz_out):
+                    return mtz_out
 
         else:
             print("BL WARNING:: no valid model molecule!")
     else:
         print("BL WARNING:: mtzfile %s not found" %mtz_file_name)
+
+    # something went wrong somewhere...
+    return False
 
 
 def refmac_for_phases_and_make_map(mtz_file_name, f_col, sig_f_col):

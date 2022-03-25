@@ -1,16 +1,47 @@
 
-  Pre-Release 0.9.6-1
+----
 
+  Pre-Release 0.9.8
 
-  o Window build script updates
+  o BUG-FIX:  Fix python extension scripts
 
-  o Python GUI and updates to match scheme version - now pyrogen work on Windows
+  o BUG-FIX:  Fix active item in Bond Parameters bond-width combobox
 
-  o Add angles in coot-ligand-validation
+  o BUG-FIX:  Now can parse cif files with long molecule names (Eugene Krissinel)
 
-  o Fix gui simple mutation crash [John Bollinger].
+  o BUG-FIX:  Fix bond orders in RNA and DNA
 
-  o Fix crash when coot tries to exit while the program is still refining [James Holton]
+  o BUG-FIX:  Fix crash when parsing data_lib in mmcif files
+
+  o BUG-FIX:  Fix Wikipedia redirect of molecule name
+
+  o BUG-FIX:  rename() is no longer used when installing curlew files
+
+  o BUG-FIX:  Fix crash on using the Generic Objects dialog Close button
+
+----
+
+Release 0.9.7
+
+  o FEATURE: Add angles in coot-ligand-validation
+
+  o FEATURE: "Updating Maps" added to the API and GUI
+
+  o FEATURE: Stereo style can now be switched back to how it used to be in 2010 [Dirk Kostrewa]
+
+  o CHANGE:  Better B-factors for added waters
+
+  o CHANGE:  Windows build script updates
+
+  o CHANGE:  RSR GM restraints now filtered by distance difference
+
+  o BUG-FIX: Python GUI and updates to match scheme version - now pyrogen work on Windows
+
+  o BUG-FIX: Fix gui simple mutation crash [John Bollinger].
+
+  o BUG-FIX: add a null function (no-coot-tips) for those that have this in their startup scripts
+
+  o BUG-FIX: Fix crash when coot tries to exit while the refinement is still refining [James Holton]
 
 ----
 

@@ -26,6 +26,11 @@ bool graphics_info_t::prefer_python = 0;
 #endif // USE_PYTHON test
 #endif // USE_GUILE_GTK test
 
+#ifdef USE_GUILE
+bool graphics_info_t::scm_boot_guile_booted = false; // false until my_wrap_scm_boot_guile() has been run
+#endif
+
+
 
 #else // USE_GUILE test (no guile path)
 #ifdef USE_PYTHON
@@ -41,7 +46,7 @@ bool graphics_info_t::prefer_python = 1; // Default: yes in Windows
 short int graphics_info_t::python_at_prompt_flag = 0;
 
 int graphics_info_t::show_paths_in_display_manager_flag = 0;
-std::vector<std::string> *graphics_info_t::command_line_scripts = 0;
+std::vector<std::string> graphics_info_t::command_line_scripts;
 coot::command_line_commands_t graphics_info_t::command_line_commands;
 std::vector<std::string> graphics_info_t::command_line_accession_codes;
 
@@ -137,7 +142,7 @@ int graphics_info_t::refmac_molecule = -1;
 short int graphics_info_t::active_map_drag_flag = 1; // true
 long int graphics_info_t::Frames = 0;  // These 2 are to measure graphics speed.
 long int graphics_info_t::T0 = 0;
-int    graphics_info_t::show_fps_flag = 0;
+bool    graphics_info_t::show_fps_flag = false;
 int    graphics_info_t::control_is_pressed = 0 ; // false
 short int graphics_info_t::control_key_for_rotate_flag = 1;
 short int graphics_info_t::pick_pending_flag = 0;
@@ -156,7 +161,7 @@ float  graphics_info_t::rotation_centre_z = 0.0;
 coot::Cartesian graphics_info_t::old_rotation_centre(0,0,0);
 float  graphics_info_t::zoom                = 100;
 int    graphics_info_t::smooth_scroll       =   1; // flag: default is ..
-int    graphics_info_t::smooth_scroll_n_steps =  10;
+int    graphics_info_t::smooth_scroll_n_steps =  20;
 float  graphics_info_t::smooth_scroll_limit =  20.0; // A
 float  graphics_info_t::smooth_scroll_zoom_limit = 30.0; // A
 int    graphics_info_t::smooth_scroll_do_zoom = 0;  // initially no, too ugly ATM.
@@ -166,6 +171,7 @@ coot::Cartesian graphics_info_t::smooth_scroll_delta;
 int    graphics_info_t::mouse_just_cliked     = 0;
 float  graphics_info_t::rotation_centre_cube_size = 0.1; // Angstroems
 short int graphics_info_t::quanta_like_zoom_flag = 0;
+int    graphics_info_t::go_to_ligand_animate_view_n_steps = 50;
 
 // graphics display size:
 int graphics_info_t::graphics_x_size = GRAPHICS_WINDOW_X_START_SIZE;
@@ -296,7 +302,7 @@ int       graphics_info_t::symmetry_shift_search_size = 1; // which_boxes search
 
 // short int graphics_info_t::symmetry_as_calphas = 0; // moved to per molecule basis
 // short int graphics_info_t::symmetry_rotate_colour_map_flag = 0; // moved to per molecule basis
-float     graphics_info_t::symmetry_operator_rotate_colour_map = 37; //degrees
+float     graphics_info_t::symmetry_operator_rotate_colour_map = 60.0; //degrees
 // int       graphics_info_t::symmetry_colour_by_symop_flag = 1; // moved to per molecule basis
 // int       graphics_info_t::symmetry_whole_chain_flag = 0;  // moved to per molecule basis
 
@@ -669,6 +675,7 @@ std::vector<coot::coord_orth_triple> graphics_info_t::measure_angle_object_vec;
 Mesh graphics_info_t::mesh_for_measure_distance_object_vec = Mesh("mesh-for-measure-distance-object-vec");
 Mesh graphics_info_t::mesh_for_measure_angle_object_vec    = Mesh("mesh-for-measure-angle-object-vec");
 std::vector<atom_label_info_t> graphics_info_t::labels_for_measure_distances_and_angles;
+Mesh graphics_info_t::mesh_for_eyelashes("eyelashes");
 
 // Mesh graphics_info_t::mesh_for_pointer_distances = Mesh("mesh-for-pointer-distances");
 meshed_generic_display_object graphics_info_t::mesh_for_pointer_distances("mesh-in-generic-display-object for pointer distances");
@@ -1341,6 +1348,7 @@ std::string graphics_info_t::mtz_file_for_refmac;
 bool graphics_info_t::convert_dictionary_planes_to_improper_dihedrals_flag = false;
 
 GtkBuilder *graphics_info_t::gtkbuilder  = NULL;
+GtkBuilder *graphics_info_t::preferences_gtkbuilder  = NULL;
 GtkWidget  *graphics_info_t::main_window = NULL;
 
 // now the clipping planes are scale, not offsets
@@ -1413,6 +1421,7 @@ Shader graphics_info_t::shader_for_x_blur;
 Shader graphics_info_t::shader_for_y_blur;
 Shader graphics_info_t::shader_for_blur;  // old
 Shader graphics_info_t::shader_for_dof_blur_by_texture_combination;
+Shader graphics_info_t::shader_for_effects;
 Shader graphics_info_t::shader_for_hud_lines;
 Shader graphics_info_t::shader_for_lines;
 Shader graphics_info_t::shader_for_anchored_atom_markers;
@@ -1554,7 +1563,7 @@ HUDMesh graphics_info_t::mesh_for_hud_geometry = HUDMesh("hud-geometry");
 Texture graphics_info_t::texture_for_camera_facing_quad;
 TextureMesh graphics_info_t::tmesh_for_camera_facing_quad;
 Shader graphics_info_t::camera_facing_quad_shader;
-HUDTextureMesh graphics_info_t::tmesh_for_hud_image_testing;
+HUDTextureMesh graphics_info_t::tmesh_for_hud_image_testing = HUDTextureMesh("tmesh_for_hud_image_testing");
 
 TextureMesh graphics_info_t::tmesh_for_happy_face_residues_markers = TextureMesh("tmesh-for-happy-faces");
 Texture graphics_info_t::texture_for_happy_face_residue_marker;
@@ -1605,7 +1614,7 @@ bool graphics_info_t::use_harmonic_approximation_for_NBCs = false;
 
 std::vector<coot::colour_holder> graphics_info_t::user_defined_colours; // initially empty
 
-float graphics_info_t::contact_dots_density = 1.0;
+float graphics_info_t::contact_dots_density = 0.4; // 20220308-PE was 1.0
 float graphics_info_t::contact_dot_sphere_subdivisions = 1;
 bool graphics_info_t::all_atom_contact_dots_ignore_water_flag = false;
 bool graphics_info_t::all_atom_contact_dots_do_vdw_surface = false;
@@ -1614,6 +1623,70 @@ bool graphics_info_t::refinement_has_finished_moving_atoms_representation_update
 
 gl_rama_plot_t graphics_info_t::gl_rama_plot;
 
-float graphics_info_t::focus_blur_z_depth = 0.4;
-float graphics_info_t::focus_blur_strength = 2.0;
+float graphics_info_t::focus_blur_z_depth = 0.15;
+float graphics_info_t::focus_blur_strength = 1.0;
 
+// 20220129-PE crows
+
+std::vector<Model> graphics_info_t::models;
+
+unsigned int graphics_info_t::noiseTexture = 0;
+unsigned int graphics_info_t::ssaoColorBuffer = 0;
+unsigned int graphics_info_t::ssaoColorBufferBlur = 0;
+std::vector<glm::vec3> graphics_info_t::ssaoKernel;
+unsigned int graphics_info_t::ssao_blur_size = 1;
+
+Shader graphics_info_t::shader_for_meshes;
+Shader graphics_info_t::shader_for_tmeshes;
+Shader graphics_info_t::shader_for_meshes_shadow_map;
+Shader graphics_info_t::shader_for_texture_meshes_shadow_map;
+Shader graphics_info_t::shader_for_shadow_map_image_texture_mesh;
+
+float graphics_info_t::SSAO_bias = 0.1;
+float graphics_info_t::SSAO_radius = 30.0;
+float graphics_info_t::ssao_strength = 0.4;
+bool graphics_info_t::use_ssao  = true;  // in the effects filter, adds (or not) the SSAO effects
+bool graphics_info_t::show_just_ssao = false; // in the effects filter, shows *just* the SSAO effects
+unsigned int graphics_info_t::effects_shader_output_type(EFFECTS_SHADER_STANDARD);
+
+float graphics_info_t::effects_brightness = 1.0f;
+float graphics_info_t::effects_gamma = 1.0f;
+
+Shader graphics_info_t::shader_for_tmeshes_for_ssao;
+Shader graphics_info_t::shader_for_meshes_for_ssao;
+
+unsigned int graphics_info_t::rboDepth = 0;
+unsigned int graphics_info_t::ssaoFBO = 0;
+unsigned int graphics_info_t::ssaoBlurFBO = 0;
+
+framebuffer graphics_info_t::framebuffer_for_ssao_gbuffer;
+framebuffer graphics_info_t::framebuffer_for_ssao;
+framebuffer graphics_info_t::framebuffer_for_ssao_blur;
+
+unsigned int graphics_info_t::n_ssao_kernel_samples = 64;
+Shader graphics_info_t::shaderGeometryPass;
+Shader graphics_info_t::shaderSSAO;
+Shader graphics_info_t::shaderSSAOBlur;
+
+framebuffer graphics_info_t::framebuffer_for_effects;
+
+unsigned int graphics_info_t::shadow_depthMap_framebuffer = 0;
+unsigned int graphics_info_t::shadow_depthMap_texture = 0; // the texture
+float graphics_info_t::shadow_strength = 0.0; // 0 to 1 (strong shadows don't look good)
+unsigned int graphics_info_t::shadow_softness = 2; // 1, 2 or 3
+unsigned int graphics_info_t::shadow_texture_multiplier = 2;
+unsigned int graphics_info_t::shadow_texture_width  = graphics_info_t::shadow_texture_multiplier * 1024;
+unsigned int graphics_info_t::shadow_texture_height = graphics_info_t::shadow_texture_multiplier * 1024;
+bool graphics_info_t::show_just_shadows = false; // show *just* the shadows in the texture-mesh-with-shadows shader
+unsigned short int graphics_info_t::displayed_image_type = graphics_info_t::SHOW_AO_SCENE;
+
+GLuint graphics_info_t::screen_AO_quad_vertex_array_id = 0;
+GLuint graphics_info_t::screen_AO_quad_VBO = 0;
+
+Shader graphics_info_t::shader_for_tmeshes_with_shadows;
+Shader graphics_info_t::shader_for_meshes_with_shadows;
+HUDTextureMesh graphics_info_t::tmesh_for_shadow_map = HUDTextureMesh("tmesh-for-shadow-map");
+
+bool graphics_info_t::stereo_style_2010 = false;
+
+bool graphics_info_t::ignore_pseudo_zeros_for_map_stats = true;

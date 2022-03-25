@@ -33,6 +33,8 @@
 
 #include <deque>
 
+#include "compat/coot-sysdep.h"
+
 enum {CONTOUR_UP, CONTOUR_DOWN};
 
 // needs:
@@ -106,6 +108,8 @@ enum {CONTOUR_UP, CONTOUR_DOWN};
 
 #include "ligand/dipole.hh"
 #include "density-contour/density-contour-triangles.hh"
+
+#include "coot-utils/sfcalc-genmap.hh"
 
 #include "gl-bits.hh"
 #include "pli/flev-annotations.hh" // animated ligand interactions
@@ -580,9 +584,9 @@ class molecule_class_info_t {
    bool original_fphis_filled;
    bool original_fobs_sigfobs_filled;
    bool original_fobs_sigfobs_fill_tried_and_failed;
-   clipper::HKL_data< clipper::datatypes::F_phi<float> >  original_fphis;
-   clipper::HKL_data< clipper::datatypes::F_sigF<float> > original_fobs_sigfobs;
-   clipper::HKL_data< clipper::data32::Flag> original_r_free_flags;
+   clipper::HKL_data< clipper::datatypes::F_phi<float> >  *original_fphis_p;
+   clipper::HKL_data< clipper::datatypes::F_sigF<float> > *original_fobs_sigfobs_p;
+   clipper::HKL_data< clipper::data32::Flag> *original_r_free_flags_p;
 
 
    // is the CCP4 map a EM map? (this is so that we can fill the
@@ -739,10 +743,13 @@ public:        //                      public
    void set_bond_colour_for_goodsell_mode(int icol, bool against_a_dark_background);
 
    // return the colour, don't call glColor3f();
-   coot::colour_t get_bond_colour_basic(int colour_index, bool against_a_dark_background);
+   coot::colour_t get_bond_colour_basic(int colour_index, bool against_a_dark_background) const;
    // return the colour, don't call glColor3f();
-   coot::colour_t get_bond_colour_by_mol_no(int colour_index, bool against_a_dark_background);
+   // make this static? so that get_glm_colour_func() works from Mesh::make_from_graphical_bonds()?
+   coot::colour_t get_bond_colour_by_mol_no(int colour_index, bool against_a_dark_background) const;
 
+   // 20220214-PE modern colour
+   glm::vec4 get_bond_colour_by_colour_wheel_position(int i, int bonds_box_type) const;
    void set_bond_colour_by_colour_wheel_position(int i, int bonds_box_type);
    bool use_bespoke_grey_colour_for_carbon_atoms;
    coot::colour_t bespoke_carbon_atoms_colour;
@@ -772,7 +779,8 @@ public:        //                      public
 			  std::string weight_col,
 			  int use_weights,
 			  int is_diff_map,
-			  float map_sampling_rate);
+			  float map_sampling_rate,
+                          bool updating_existing_map_flag=false);
 
    void map_fill_from_mtz(const coot::mtz_to_map_info_t &mmi, const std::string &wcd, float sampling_rate);
 
@@ -787,7 +795,8 @@ public:        //                      public
 					   short int use_reso_flag,
 					   float low_reso_limit,
 					   float high_reso_limit,
-					   float map_sampling_rate);
+					   float map_sampling_rate,
+                                           bool updating_existing_map_flag=false);
 
    // return succes status, if mtz file is broken or empty, or
    // non-existant, return 0.
@@ -813,6 +822,8 @@ public:        //                      public
    //
    int draw_it; // used by Molecule Display control, toggled using
 	                  // toggle fuctions.
+   bool draw_model_molecule_as_lines; // default false
+   void set_draw_model_molecule_as_lines(bool state); // redo the bonding if state is different
    bool draw_it_for_map;
    bool draw_it_for_map_standard_lines; // was draw_it_for_map
    int pickable_atom_selection;  // ditto (toggling).
@@ -971,6 +982,8 @@ public:        //                      public
 
    mmdb::Atom *get_atom(int idx) const;
 
+   mmdb::Atom *get_atom(const pick_info &pi) const;
+
    bool have_atom_close_to_position(const coot::Cartesian &pos) const;
 
    // return the maximum residue number in the chain. first of false means failure to do so.
@@ -998,15 +1011,15 @@ public:        //                      public
    void make_ca_bonds();
    void make_ca_plus_ligands_bonds(coot::protein_geometry *pg);
    void make_ca_plus_ligands_and_sidechains_bonds(coot::protein_geometry *pg);
-   void make_colour_by_chain_bonds(); // simple/usual interfce to below function
-   void make_colour_by_chain_bonds(const std::set<int> &no_bonds_to_these_atoms, bool c_only_flag, bool goodsell_mode);
-   void make_colour_by_molecule_bonds();
+   void make_colour_by_chain_bonds(bool rebonding_is_needed); // simple/usual interfce to below function
+   void make_colour_by_chain_bonds(const std::set<int> &no_bonds_to_these_atoms, bool c_only_flag, bool goodsell_mode, bool rebonding_is_needed);
+   void make_colour_by_molecule_bonds(bool rebonding_is_needed);
    void bonds_no_waters_representation();
    void bonds_sec_struct_representation();
    void ca_plus_ligands_sec_struct_representation(coot::protein_geometry *pg);
    void ca_plus_ligands_rainbow_representation(coot::protein_geometry *pg);
-   void ca_representation();
-   void ca_plus_ligands_representation(coot::protein_geometry *pg);
+   void ca_representation(bool rebonding_is_needed);
+   void ca_plus_ligands_representation(coot::protein_geometry *pg, bool rebonding_is_needed);
    void ca_plus_ligands_and_sidechains_representation(coot::protein_geometry *pg);
    void b_factor_representation();
    void b_factor_representation_as_cas();
@@ -1461,7 +1474,12 @@ public:        //                      public
    int sfcalc_genmap(const clipper::HKL_data<clipper::data32::F_sigF> &fobs,
                      const clipper::HKL_data<clipper::data32::Flag> &free,
                      clipper::Xmap<float> *xmap_p);
-   void fill_fobs_sigfobs(); // caches
+   coot::util::sfcalc_genmap_stats_t
+   sfcalc_genmaps_using_bulk_solvent(const clipper::HKL_data<clipper::data32::F_sigF> &fobs,
+                                     const clipper::HKL_data<clipper::data32::Flag> &free,
+                                     clipper::Xmap<float> *xmap_2fofc_p,
+                                     clipper::Xmap<float> *xmap_fofc_p);
+   void fill_fobs_sigfobs(); // re-reads MTZ file (currently 20210816-PE)
    bool sanity_check_atoms(mmdb::Manager *mol); // sfcalc_genmap crashes after merge of ligand.
                                                 // Why? Something wrong with the atoms after merge?
                                                 // Let's diagnose.... Return false on non-sane.
@@ -1603,26 +1621,31 @@ public:        //                      public
    mmdb::Residue *residue_from_external(int reso, const std::string &insertion_code,
 					const std::string &chain_id) const;
 
-   const clipper::HKL_data<clipper::data32::F_sigF> &get_original_fobs_sigfobs() {
+   // used to be a const ref. Now return the whole thing!. Caller must call
+   // fill_fobs_sigfobs() directly before using this function - meh, not a good API.
+   // Return a *pointer* to the data so that we don't get this hideous non-reproducable
+   // crash when we access this data item after the moelcule vector has been resized
+   // 20210816-PE.
+   clipper::HKL_data<clipper::data32::F_sigF> *get_original_fobs_sigfobs() const {
       if (!original_fobs_sigfobs_filled) {
          std::string m("Original Fobs/sigFobs is not filled");
          throw(std::runtime_error(m));
       }
-      return original_fobs_sigfobs;
+      return original_fobs_sigfobs_p;
    }
 
-      const clipper::HKL_data<clipper::data32::Flag> &get_original_rfree_flags() {
+   clipper::HKL_data<clipper::data32::Flag> *get_original_rfree_flags() const {
       if (!original_fobs_sigfobs_filled) {
          std::string m("Original Fobs/sigFobs is not filled - so no RFree flags");
          throw(std::runtime_error(m));
       }
-      return original_r_free_flags;
+      return original_r_free_flags_p;
    }
 
 
    // for the "Render As: " menu items:
    //
-   void bond_representation(const coot::protein_geometry *geom_p);
+   void bond_representation(const coot::protein_geometry *geom_p, bool rebonding_is_needed);
    //
 
    float bonds_colour_map_rotation; // OpenGL1
@@ -1962,7 +1985,7 @@ public:        //                      public
 
    void set_map_colour(GdkRGBA col) { map_colour = col; update_map(true); /* for now */ }
    std::vector<std::string> set_map_colour_strings() const;
-   std::pair<GdkRGBA, GdkRGBA> map_colours() const;
+   std::pair<GdkRGBA, GdkRGBA> get_map_colours() const;
    void colour_map_using_map(const clipper::Xmap<float> &xmap);
    void colour_map_using_map(const clipper::Xmap<float> &xmap, float table_bin_start, float table_bin_size,
                              const std::vector<coot::colour_t> &colours);
@@ -2348,13 +2371,18 @@ public:        //                      public
    bool is_fasta_aa(const std::string &a) const;
    bool is_pir_aa  (const std::string &a) const;
 
+   // add the sequence the file (read depending on file name) to input_sequence vector (chain-id is blank
+   // as it could apply to any chain)
+   void associate_sequence_from_file(const std::string &seq_file_name);
+
    // sequence [a -other function]
-   void assign_fasta_sequence(const std::string &chain_id, const std::string &seq);
+   void assign_fasta_sequence(const std::string &chain_id, const std::string &seq); // add to input_sequence vector
    void assign_sequence(const clipper::Xmap<float> &xmap, const std::string &chain_id);
    std::vector<std::pair<std::string, std::string> > sequence_info() const { return input_sequence; };
 
    void assign_pir_sequence(const std::string &chain_id, const std::string &seq);
 
+   // this does an alignment! How confusing
    void assign_sequence_from_file(const std::string &filename);
 
    // Apply to NCS-related chains too, if present
@@ -3053,8 +3081,13 @@ public:        //                      public
    GLuint m_VertexBufferID;
    GLuint m_IndexBuffer_for_map_lines_ID;
    GLuint m_IndexBuffer_for_map_triangles_ID; // solid and transparent surfaces
-   GLuint m_NormalBufferID; // is this map or model - or something else? Be clear!
-   GLuint m_ColourBufferID; // Likewise.
+
+   // 20220211-PE pre map-as-mesh rewrite.
+   // GLuint m_NormalBufferID; // is this map or model - or something else? Be clear!
+   // GLuint m_ColourBufferID; // Likewise.
+
+   Mesh map_as_mesh;
+   Mesh map_as_mesh_gl_lines_version;
 
    GLuint m_VertexArray_for_model_ID;
    GLuint n_vertices_for_model_VertexArray;
@@ -3078,6 +3111,20 @@ public:        //                      public
 
    Material material_for_maps;
    Material material_for_models;
+
+
+   void draw_map_molecule(bool draw_transparent_maps,
+                          Shader &shader, // unusual reference.. .change to pointer for consistency?
+                          const glm::mat4 &mvp,
+                          const glm::mat4 &view_rotation,
+                          const glm::vec3 &eye_position,
+                          const glm::vec4 &ep,
+                          const std::map<unsigned int, lights_info_t> &lights,
+                          const glm::vec3 &background_colour,
+                          bool perspective_projection_flag);
+
+   // A map is not a Mesh at the moment, so this needs a new function
+   void draw_map_molecule_for_ssao(Shader *shader_p, const glm::mat4 &model_matrix, const glm::mat4 &view_matrix, const glm::mat4 &proj_matrix);
 
    // using current contour level,
    // return world coordinates and normals
@@ -3425,9 +3472,7 @@ public:        //                      public
 
 
 #ifdef USE_MOLECULES_TO_TRIANGLES
-#ifdef HAVE_CXX11
    std::vector<std::shared_ptr<MolecularRepresentationInstance> > molrepinsts;
-#endif
 #endif // USE_MOLECULES_TO_TRIANGLES
 
    // return the index in the molrepinsts vector (can be negative for failure)
@@ -3468,7 +3513,7 @@ public:        //                      public
    std::vector<std::pair<mmdb::Atom *, mmdb::Atom *> > peptide_C_N_pairs(const std::vector<mmdb::Residue *> &residues) const;
 
    mean_and_variance<float> map_histogram_values;
-   mean_and_variance<float> set_and_get_histogram_values(unsigned int n_bins); // fill above
+   mean_and_variance<float> set_and_get_histogram_values(unsigned int n_bins, bool ignore_pseudo_zeroes); // fill above
 
    void resolve_clashing_sidechains_by_deletion(const coot::protein_geometry *geom_p);
    void resolve_clashing_sidechains_by_rebuilding(const coot::protein_geometry *geom_p,
@@ -3489,12 +3534,19 @@ public:        //                      public
    // watch for changes in the model of a different molecule (denoted by change of backup index)
    // and act on it (by updating this difference map). This needs to be static because its
    // called by g_timeout.
-   static int watch_coordinates_updates(gpointer);
+   static int watch_coordinates_updates(gpointer);  // for just the difference map
+
+   int previous_backup_index;
+   static int updating_coordinates_updates_genmaps(gpointer); // oh dear, the triggers for this work the other way.
+                                                              // i.e. a change in the coordinates forces
+                                                              // a change in the maps, not (as above) where a
+                                                              // map molecule looks for a change in the model.
+                                                              // In this case, both maps are calculated together.
    int other_molecule_backup_index;
    int get_other_molecule_backup_index() const { return other_molecule_backup_index; }
 
    // allow this to be called from the outside, when this map gets updated (by sfcalc_genmap)
-   void set_mean_and_sigma();
+   void set_mean_and_sigma(bool show_terminal=true, bool ignore_pseudo_zeroes=false);
 
    std::string pdb_string() const;
 
@@ -3554,6 +3606,9 @@ public:        //                      public
    bool export_molecule_as_obj(const std::string &file_name);
    bool export_map_molecule_as_obj(const std::string &file_name) const;
    bool export_model_molecule_as_obj(const std::string &file_name);
+   bool export_molecule_as_gltf(const std::string &file_name) const;
+   bool export_map_molecule_as_gltf(const std::string &file_name) const;
+   bool export_model_molecule_as_gltf(const std::string &file_name) const;
 
    void export_these_as_3d_object(const std::vector<vertex_with_rotation_translation> &vertices,
                                   const std::vector<g_triangle> &triangles);
@@ -3577,12 +3632,19 @@ public:        //                      public
    bool this_molecule_has_crystallographic_symmetry;
    Mesh mesh_for_symmetry_atoms;
 
+   // either we have licorice/ball-and-stick (licorice is a form of ball-and-stick) or big-ball-no-bonds
+   unsigned int model_representation_mode;
+   void set_model_molecule_representation_style(unsigned int mode);
+
    // These meshes are the molecule, replacing the inital way of representing the molecule. Uses
    // instances of cylinders and spheres and hemispheres. Put them in a Model at some stage.
-   void make_meshes_from_bonds_box(); // fills the below meshes.
-   Mesh molecule_as_mesh_atoms_1;
-   Mesh molecule_as_mesh_atoms_2;
-   Mesh molecule_as_mesh_bonds;
+   std::vector<glm::vec4> make_colour_table() const;
+   void make_mesh_from_bonds_box();
+   void make_meshes_from_bonds_box_instanced_version(); // fills the below meshes (for instancing)
+   Mesh molecule_as_mesh; // non-instancing
+   Mesh molecule_as_mesh_atoms_1; // for instancing
+   Mesh molecule_as_mesh_atoms_2; // for instancing
+   Mesh molecule_as_mesh_bonds;   // for instancing
    Mesh molecule_as_mesh_rama_balls;
    Mesh molecule_as_mesh_rota_dodecs;
    // pass this function to the Mesh so that we can determine the atom and bond colours

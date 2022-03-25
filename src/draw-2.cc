@@ -78,7 +78,8 @@ glarea_tick_func(GtkWidget *widget,
    }
 
    if (graphics_info_t::do_tick_spin) {
-         float delta = 0.002;
+         float delta = 0.004;
+         // delta *= 10.0;
          glm::vec3 EulerAngles(0, delta, 0);
          glm::quat quat_delta(EulerAngles);
          glm::quat normalized_quat_delta(glm::normalize(quat_delta));
@@ -278,8 +279,10 @@ on_glarea_realize(GtkGLArea *glarea) {
 
       g.tmesh_for_hud_refinement_dialog_arrow = HUDTextureMesh("HUD tmesh for refinement dialog arrow");
       g.tmesh_for_hud_refinement_dialog_arrow.setup_quad();
-      g.texture_for_hud_refinement_dialog_arrow             = Texture("refinement-dialog-arrrow.png");
-      g.texture_for_hud_refinement_dialog_arrow_highlighted = Texture("refinement-dialog-arrrow-highlighted.png");
+      g.texture_for_hud_refinement_dialog_arrow             = Texture("refinement-dialog-arrrow.png", Texture::DIFFUSE);
+      g.texture_for_hud_refinement_dialog_arrow_highlighted = Texture("refinement-dialog-arrrow-highlighted.png", Texture::DIFFUSE);
+
+      g.tmesh_for_shadow_map.setup_quad();
 
       gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(glarea), TRUE);
 
@@ -304,6 +307,8 @@ on_glarea_realize(GtkGLArea *glarea) {
 
       float x_scale = 4.4;  // what are these numbers!?
       float y_scale = 1.2;
+      x_scale = 1.002;
+      y_scale = 1.002;
       g.tmesh_for_labels.setup_camera_facing_quad(&g.shader_for_atom_labels, x_scale, y_scale);
 
       g.setup_hud_geometry_bars();
@@ -326,6 +331,9 @@ on_glarea_realize(GtkGLArea *glarea) {
       if (false) { // testing how textures work
          setup_test_texture();
       }
+
+      g.init_framebuffers();
+      g.init_joey_ssao_stuff();
 
       err = glGetError();
       if (err) std::cout << "#### GL ERROR on_glarea_realize() --end-- with err " << err << std::endl;
@@ -381,6 +389,8 @@ on_glarea_resize(GtkGLArea *glarea, gint width, gint height) {
 
    // std::cout << "INFO:: Reset frame buffers " << width << "x" << height << std::endl;
    g.reset_frame_buffers(width, height);
+
+   g.resize_framebuffers_textures_renderbuffers(width, height); // 20220131-PE added from crows merge
 
    g.reset_hud_buttons_size_and_position();
 }
@@ -487,24 +497,26 @@ on_glarea_button_press(GtkWidget *widget, GdkEventButton *event) {
             int w = allocation.width;
             int h = allocation.height;
             auto rama_plot_hit = g.gl_rama_plot.get_mouse_over_hit(event->x, event->y, w, h);
-            if (rama_plot_hit.first) {
-               std::cout << "::::::::::::::::: click " << rama_plot_hit.second << std::endl;
-               std::string message = "Rama plot clicked residue: ";
-               message += rama_plot_hit.second.chain_id;
-               message += " ";
-               message += std::to_string(rama_plot_hit.second.res_no);
-               if (! rama_plot_hit.second.ins_code.empty()) {
+            if (rama_plot_hit.plot_was_clicked) {
+               if (rama_plot_hit.residue_was_clicked) {
+                  std::cout << "::::::::::::::::: click " << rama_plot_hit.residue_was_clicked << std::endl;
+                  std::string message = "Rama plot clicked residue: ";
+                  message += rama_plot_hit.residue_spec.chain_id;
                   message += " ";
-                  message += rama_plot_hit.second.ins_code;
-               }
-               add_status_bar_text(message.c_str());
+                  message += std::to_string(rama_plot_hit.residue_spec.res_no);
+                  if (! rama_plot_hit.residue_spec.ins_code.empty()) {
+                     message += " ";
+                     message += rama_plot_hit.residue_spec.ins_code;
+                  }
+                  add_status_bar_text(message.c_str());
 
-               g.set_go_to_residue_intelligent(rama_plot_hit.second.chain_id,
-                                               rama_plot_hit.second.res_no,
-                                               rama_plot_hit.second.ins_code);
-               int success = g.try_centre_from_new_go_to_atom();
-               if (success) {
-                  g.update_things_on_move_and_redraw();
+                  g.set_go_to_residue_intelligent(rama_plot_hit.residue_spec.chain_id,
+                                                  rama_plot_hit.residue_spec.res_no,
+                                                  rama_plot_hit.residue_spec.ins_code);
+                  int success = g.try_centre_from_new_go_to_atom();
+                  if (success) {
+                     g.update_things_on_move_and_redraw();
+                  }
                }
                handled = true;
             }
@@ -587,7 +599,6 @@ on_glarea_button_release(GtkWidget *widget, GdkEventButton *event) {
       g.check_if_hud_button_clicked(event->x, event->y);
 
    if (event->state & GDK_BUTTON2_MASK) {
-      graphics_info_t g;
       double delta_x = g.GetMouseClickedX() - event->x;
       double delta_y = g.GetMouseClickedY() - event->y;
       if (std::abs(delta_x) < 10.0) {
@@ -752,12 +763,12 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
       g.check_if_hud_button_moused_over(event->x, event->y, button_1_is_down);
    }
 
-   auto mouse_view_rotate = [control_is_pressed] (GtkWidget *widget) {
+   auto mouse_view_rotate = [control_is_pressed] (GtkWidget *w) {
                                if (control_is_pressed) {
-                                  do_drag_pan_gtk3(widget);
+                                  do_drag_pan_gtk3(w);
                                } else {
                                   GtkAllocation allocation;
-                                  gtk_widget_get_allocation(widget, &allocation);
+                                  gtk_widget_get_allocation(w, &allocation);
                                   int w = allocation.width;
                                   int h = allocation.height;
                                   graphics_info_t::update_view_quaternion(w, h);
@@ -793,17 +804,19 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
       int w = allocation.width;
       int h = allocation.height;
       auto rama_plot_hit = g.gl_rama_plot.get_mouse_over_hit(event->x, event->y, w, h);
-      if (rama_plot_hit.first) {
-         // std::cout << "::::::::::::::::: hit " << rama_plot_hit.second << std::endl;
-         std::string message = "Rama plot residue: ";
-         message += rama_plot_hit.second.chain_id;
-         message += " ";
-         message += std::to_string(rama_plot_hit.second.res_no);
-         if (! rama_plot_hit.second.ins_code.empty()) {
+      if (rama_plot_hit.plot_was_clicked) {
+         if (rama_plot_hit.residue_was_clicked) {
+            // std::cout << "::::::::::::::::: hit " << rama_plot_hit.second << std::endl;
+            std::string message = "Rama plot residue: ";
+            message += rama_plot_hit.residue_spec.chain_id;
             message += " ";
-            message += rama_plot_hit.second.ins_code;
+            message += std::to_string(rama_plot_hit.residue_spec.res_no);
+            if (! rama_plot_hit.residue_spec.ins_code.empty()) {
+               message += " ";
+               message += rama_plot_hit.residue_spec.ins_code;
+            }
+            add_status_bar_text(message.c_str());
          }
-         add_status_bar_text(message.c_str());
       }
    }
 
@@ -816,10 +829,21 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
       }
    }
 
-   if (event->state & GDK_BUTTON3_MASK) {
+   int mouse_action_button_mask = GDK_BUTTON3_MASK;
+   int mouse_other_button = GDK_BUTTON1_MASK;
+
+   // test for being a mac laptop? - or a user setting
+#ifdef __APPLE__  // this needs improvement
+   if (true) {
+      mouse_action_button_mask = GDK_BUTTON1_MASK;
+      mouse_other_button = GDK_BUTTON3_MASK;
+   }
+#endif
+
+   if (event->state & mouse_action_button_mask) {
       double delta_x = event->x - g.GetMouseBeginX();
       double delta_y = event->y - g.GetMouseBeginY();
-      if (event->state & GDK_BUTTON1_MASK) {
+      if (event->state & mouse_other_button) {
          // chording
          g.mouse_zoom(delta_x, delta_y);
       } else {
@@ -870,11 +894,12 @@ on_glarea_key_press_notify(GtkWidget *widget, GdkEventKey *event) {
      found = true;
    }
 
-   int kv = event->keyval;
-   if (kv == graphics_info_t::update_go_to_atom_from_current_residue_key) {
-      update_go_to_atom_from_current_position();
-      handled = TRUE;
-   }
+   // Don't make a special case for P now.
+   // int kv = event->keyval;
+   // if (kv == graphics_info_t::update_go_to_atom_from_current_residue_key) {
+   // update_go_to_atom_from_current_position();
+   // handled = TRUE;
+   // }
 
    if (! found)
       if (! handled)

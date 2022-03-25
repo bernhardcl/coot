@@ -550,7 +550,7 @@ void clear_restraints_editor_by_dialog(GtkWidget *dialog); /* close button press
 /*! \name move molecule here (wrapper to scheme function) */
 /* { */
 GtkWidget *wrapped_create_move_molecule_here_dialog();
-void move_molecule_here_by_widget(GtkWidget *w);
+void move_molecule_here_by_widget(); /* no widget */
 int move_molecule_to_screen_centre_internal(int imol);
 void fill_move_molecule_here_dialog(GtkWidget *w);
 
@@ -708,7 +708,7 @@ void  free_blob_dialog_memory(GtkWidget *w);
 
 void fill_find_waters_dialog(GtkWidget *find_ligand_dialog);
 /* interface fluff */
-void execute_find_waters(GtkWidget *ok_button);
+void execute_find_waters();
 
 void on_big_blob_button_clicked(GtkButton *button, gpointer user_data);
 

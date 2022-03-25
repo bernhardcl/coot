@@ -102,7 +102,8 @@ GtkWidget *
 gl_gtk3_widget(GtkWidget *vbox, short int try_stereo_flag) {
 
    GtkWidget *drawing_area = gtk_gl_area_new();
-   GtkWidget *main_window_graphics_hbox = lookup_widget(vbox, "main_window_graphics_hbox");
+   // GtkWidget *main_window_graphics_hbox = lookup_widget(vbox, "main_window_graphics_hbox");
+   GtkWidget *main_window_graphics_hbox = 0; // 20220309-PE removing lookup-widget()s
    gtk_container_add(GTK_CONTAINER(main_window_graphics_hbox), drawing_area);
    gtk_widget_set_size_request(drawing_area, 500, 500);
    gtk_widget_show(drawing_area);
@@ -269,7 +270,8 @@ gl_extras(GtkWidget* vbox1, short int try_stereo_flag) { // rename gl_extras_gtk
 // 				     gl_context_x_size,
 // 				     gl_context_y_size);
 
-	GtkWindow *window1 = GTK_WINDOW(lookup_widget(vbox1,"window1"));
+	// GtkWindow *window1 = GTK_WINDOW(lookup_widget(vbox1,"window1"));
+	GtkWindow *window1 = 0; // 20220309-PE so that it compiles at least.
 	gtk_window_set_default_size(window1,
 				    n_contexts * gl_context_x_size,
 				    n_contexts * gl_context_y_size);
@@ -332,8 +334,8 @@ gl_extras(GtkWidget* vbox1, short int try_stereo_flag) { // rename gl_extras_gtk
 			  G_CALLBACK(glarea_scroll_event), NULL);
 
 	/* put glarea into vbox */
-	GtkWidget *main_window_graphics_hbox =
-	   lookup_widget(vbox1, "main_window_graphics_hbox");
+	// GtkWidget *main_window_graphics_hbox = lookup_widget(vbox1, "main_window_graphics_hbox");
+	GtkWidget *main_window_graphics_hbox = 0; // removing lookup_widget()s.
 	gtk_container_add(GTK_CONTAINER(main_window_graphics_hbox), GTK_WIDGET(drawing_area_tmp));
 
 // #endif here? confliced merge
@@ -2546,11 +2548,13 @@ gint glarea_button_press(GtkWidget *widget, GdkEventButton *event) {
 	 if ( nearest_atom_index_info.success == GL_TRUE ) {
 
 	    int im = nearest_atom_index_info.imol;
-	    info.molecules[im].add_to_labelled_atom_list(nearest_atom_index_info.atom_index);
-	    mmdb::Residue          *r = info.molecules[im].atom_sel.atom_selection[nearest_atom_index_info.atom_index]->residue;
-	    std::string alt_conf = info.molecules[im].atom_sel.atom_selection[nearest_atom_index_info.atom_index]->altLoc;
-	    info.setup_graphics_ligand_view(im, r, alt_conf);
-	    info.graphics_draw();
+            if (is_valid_model_molecule(im)) {
+               info.molecules[im].add_to_labelled_atom_list(nearest_atom_index_info.atom_index);
+               mmdb::Residue          *r = info.molecules[im].atom_sel.atom_selection[nearest_atom_index_info.atom_index]->residue;
+               std::string alt_conf = info.molecules[im].atom_sel.atom_selection[nearest_atom_index_info.atom_index]->altLoc;
+               info.setup_graphics_ligand_view(im, r, alt_conf);
+               info.graphics_draw();
+            }
 
 	 } else {
 
@@ -2655,8 +2659,9 @@ gint glarea_button_release(GtkWidget *widget, GdkEventButton *event) {
 		  int im = nearest_atom_index_info.imol;
                   if (is_valid_model_molecule(nearest_atom_index_info.imol)) {
                      std::cout << "INFO:: recentre: clicked on imol: " << im << std::endl;
-                     g.setRotationCentre(nearest_atom_index_info.atom_index,
-                                         nearest_atom_index_info.imol);
+                     mmdb::Atom *at = g.molecules[im].get_atom(nearest_atom_index_info);
+                     g.setRotationCentre(nearest_atom_index_info.atom_index, nearest_atom_index_info.imol);
+                     g.sequence_view_highlight_residue_maybe(at, g.get_sequence_view_is_displayed(im));
                   } else {
                      mmdb::Atom *at = g.get_moving_atom(nearest_atom_index_info);
                      if (at) {

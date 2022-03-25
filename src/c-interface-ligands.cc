@@ -79,6 +79,7 @@
 #include "c-interface-bonds.hh"
 
 #include "widget-headers.hh"
+#include "widget-from-builder.hh"
 
 PyObject *go_to_ligand_py() {
 
@@ -92,34 +93,41 @@ PyObject *go_to_ligand_py() {
 clipper::Coord_orth
 go_to_ligand_inner() {
 
+   // note to self: this function *starts* the view interpolation and finishes quickly
+
    clipper::Coord_orth new_rotation_centre;
 
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
    if (pp.first) {
       int imol = pp.second.first;
       if (is_valid_model_molecule(imol)) {
+
 	 graphics_info_t g;
 	 clipper::Coord_orth rc(graphics_info_t::RotationCentre_x(),
 				graphics_info_t::RotationCentre_y(),
 				graphics_info_t::RotationCentre_z());
 	 coot::new_centre_info_t new_centre =
 	    graphics_info_t::molecules[pp.second.first].new_ligand_centre(rc, graphics_info_t::go_to_ligand_n_atoms_limit);
-         std::cout << "debug:: go_to_ligand_inner(): new_centre: "
-                   << new_centre.position.format() << " info \""
-                   << new_centre.info_string << "\" "
-                   << new_centre.residue_spec << " type "
-                   << new_centre.type << " "
-                   << std::endl;
+         if (false)
+            std::cout << "debug:: go_to_ligand_inner(): new_centre: "
+                      << new_centre.position.format() << " info \""
+                      << new_centre.info_string << "\" "
+                      << new_centre.residue_spec << " type "
+                      << new_centre.type << " "
+                      << std::endl;
 	 new_rotation_centre = new_centre.position;
 	 if (new_centre.type == coot::NORMAL_CASE) {
-            std::cout << "-------------------- normal " << std::endl;
 	    // g.setRotationCentre(new_centre.position); // the target position is (should be) reached by the tick animation
                                                          // in coot::view_info_t::interpolate()
 	    g.perpendicular_ligand_view(imol, new_centre.residue_spec);
+            std::cout << "::::::::::::::::::::::::::: go_to_ligand_inner() C " << std::endl;
             std::string name = g.molecules[imol].get_residue_name(new_centre.residue_spec);
 
-	    g.update_things_on_move_and_redraw(); // now not done in perpendicular_ligand_view()
-	    std::string s = "Centred on residue ";
+            // 20220303-PE  No, we are still at the starting point when we get here.
+            // view_info_t::interpolate() sets up it's own animation function (glarea_tick_function() is not used)
+	    // g.update_things_on_move_and_redraw(); // now not done in perpendicular_ligand_view()
+
+	    std::string s = "INFO:: Centred on residue ";
 	    s += new_centre.residue_spec.chain_id;
 	    s+= " ";
 	    s += coot::util::int_to_string(new_centre.residue_spec.res_no);
@@ -131,9 +139,8 @@ go_to_ligand_inner() {
 	    s += coot::util::int_to_string(pp.second.first);
 	    s += ".";
 	    add_status_bar_text(s.c_str());
-            std::cout << "status bar: " << s << std::endl;
+            std::cout << "INFO:: status bar text: " << s << std::endl;
 	 } else {
-            std::cout << "-------------------- not normal " << std::endl;
 	    if (new_centre.type == coot::NO_LIGANDS) {
 	       std::string s = "No ligand (hetgroup) found in this molecule (#";
 	       s += coot::util::int_to_string(pp.second.first);
@@ -1049,8 +1056,9 @@ execute_ligand_search_internal(coot::wligand *wlig_p) {
 #endif // USE_PYGTK
 #endif // USE_GUILE
 
-	 GtkWidget *w = create_new_ligands_info_dialog();
-	 GtkWidget *label = lookup_widget(w, "new_ligands_info_dialog_label");
+	 // GtkWidget *w = create_new_ligands_info_dialog();
+	 GtkWidget *w = widget_from_builder("new_ligands_info_dialog");
+	 GtkWidget *label = widget_from_builder("new_ligands_info_dialog_label");
 	 std::string label_str("  Found ");
 	 label_str += graphics_info_t::int_to_string(n_new_ligand);
 	 if (n_new_ligand == 1)
@@ -1360,19 +1368,22 @@ mask_map_by_atom_selection(int map_mol_no, int coords_mol_no, const char *mmdb_a
 
 
 void do_find_ligands_dialog() {
-   GtkWidget *dialog;
+
    int istate;
-   dialog = create_find_ligand_dialog();
+   GtkWidget *dialog = widget_from_builder("find_ligand_dialog");
    istate = fill_ligands_dialog(dialog); /* return OK, we have map(s), ligand(s), masking(s) */
+
    if (istate == 0) {
-      gtk_widget_destroy(dialog);
+      gtk_widget_hide(dialog);
       std::string s("Problem finding maps, coords or ligands!");
       graphics_info_t g;
       g.add_status_bar_text(s);
       std::cout << s << std::endl;
-   }
-   else
+   } else {
+
+      std::cout << "do_find_ligands_dialog()  showing dialog " << dialog << std::endl;
      gtk_widget_show(dialog);
+   }
 
 }
 
@@ -1401,14 +1412,12 @@ handle_make_monomer_search(const char *text, GtkWidget *viewport) {
    bool use_sbase_molecules = 0;
    std::string t(text);
 
-   GtkWidget *vbox_current = lookup_widget(viewport, "monomer_search_results_vbox");
-   GtkWidget *checkbutton =
-      lookup_widget(viewport, "monomer_search_minimal_descriptions_checkbutton");
-   GtkWidget *use_sbase_checkbutton =
-      lookup_widget(viewport, "monomer_search_sbase_molecules_checkbutton");
+   GtkWidget *vbox_current = widget_from_builder("monomer_search_results_vbox");
+   GtkWidget *checkbutton = widget_from_builder("monomer_search_minimal_descriptions_checkbutton");
+   GtkWidget *use_sbase_checkbutton = widget_from_builder("monomer_search_sbase_molecules_checkbutton");
 
    short int allow_minimal_descriptions_flag = 0;
-   GtkWidget *dialog = lookup_widget(viewport, "monomer_search_dialog");
+   GtkWidget *dialog = widget_from_builder("monomer_search_dialog");
 
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
       allow_minimal_descriptions_flag = 1;
@@ -1511,7 +1520,7 @@ handle_make_monomer_search(const char *text, GtkWidget *viewport) {
 
    // a box of 14 is 400 pixels.  400 is about max size, I'd say
    g_signal_emit_by_name(G_OBJECT(vbox), "check_resize");
-   gtk_widget_show (vbox);
+   gtk_widget_show(vbox);
    return stat;
 
 }
@@ -1822,8 +1831,14 @@ SCM matching_compound_names_from_dictionary_scm(const char *compound_name_fragme
 
    graphics_info_t g;
    std::vector<std::pair<std::string, std::string> > matching_comp_ids =
-      g.Geom_p()->matching_names(compound_name_fragment,
-				 allow_minimal_descriptions_flag);
+      g.Geom_p()->matching_names(compound_name_fragment, allow_minimal_descriptions_flag);
+
+   if (false) { // this was needed to see the bug in mmdb parser on long molecule names.
+      for (unsigned int i=0; i<matching_comp_ids.size(); i++) {
+         std::cout << " " << i << " " << matching_comp_ids[i].first << " " << matching_comp_ids[i].second
+                   << std::endl;
+      }
+   }
    std::vector<std::string> rv;
    for (unsigned int i=0; i<matching_comp_ids.size(); i++)
       rv.push_back(matching_comp_ids[i].first);

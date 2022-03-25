@@ -127,8 +127,8 @@ exptl::nsv::nsv(mmdb::Manager *mol,
    if (paned) {
       GtkWidget *pane_child_1 = gtk_paned_get_child1(GTK_PANED(paned));
       GtkWidget *pane_child_2 = gtk_paned_get_child2(GTK_PANED(paned));
-      std::cout << "::::::::::::::: paned child 1 " << pane_child_1 << std::endl;
-      std::cout << "::::::::::::::: paned child 2 " << pane_child_2 << std::endl;
+      // std::cout << "::::::::::::::: paned child 1 " << pane_child_1 << std::endl;
+      // std::cout << "::::::::::::::: paned child 2 " << pane_child_2 << std::endl;
       if (pane_child_1) {
          std::cout << "DEBUG:: nsv::nsv Something already in slot 1!" << std::endl;
          // make_top_level_dialog = true;
@@ -165,6 +165,14 @@ exptl::nsv::nsv(mmdb::Manager *mol,
 
    canvas_group = goo_canvas_get_root_item(GOO_CANVAS(canvas));
    scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+   if (make_top_level_dialog) {
+      gtk_box_pack_start(GTK_BOX(container_vbox), GTK_WIDGET(scrolled_window), TRUE, TRUE, 1);
+      gtk_widget_set_size_request(top_lev, 120, 70);
+   } else {
+      // if the sequence view is docked then we use two use panes
+      gtk_paned_add1(GTK_PANED(paned), scrolled_window);
+      gtk_widget_set_size_request(scrolled_window, -1, 80);
+   }
    g_object_set_data(G_OBJECT(scrolled_window), "imol", GINT_TO_POINTER(molecule_number));
    gtk_container_add(GTK_CONTAINER(scrolled_window), GTK_WIDGET(canvas));
 
@@ -195,7 +203,7 @@ exptl::nsv::nsv(mmdb::Manager *mol,
    g_object_set_data(G_OBJECT(canvas), "nsv", (gpointer) this); // used to regenerate.
 
    // sequence_letter_background_colour = "white";
-   sequence_letter_background_colour = "#202020"; // for a dark background, should be configurable
+   sequence_letter_background_colour = "#404040"; // for a dark background, should be configurable
    int y_size_initial = setup_canvas(mol);
 
    if (top_lev)
@@ -233,7 +241,8 @@ void
 exptl::nsv::on_nsv_close_button_clicked(GtkButton *button,
 					gpointer user_data) {
 
-   GtkWidget *window = lookup_widget(GTK_WIDGET(button), "nsv_dialog");
+   // GtkWidget *window = lookup_widget(GTK_WIDGET(button), "nsv_dialog");
+   GtkWidget *window = widget_from_builder("nsv_dialog");
    if (! window) {
       std::cout << "ERROR:: window not found in on_nsv_close_button_clicked()" << std::endl;
    }
@@ -265,7 +274,7 @@ exptl::nsv::setup_canvas(mmdb::Manager *mol) {
    pixels_per_letter = 10; // 10 for my F10 box
    pixels_per_chain  = 12;
 
-   bool debug = true;
+   bool debug = false;
 
    int canvas_x_size = 0;
    int canvas_y_size = 0;
@@ -414,7 +423,7 @@ exptl::nsv::setup_canvas(mmdb::Manager *mol) {
 	 double x_offset = - 0.0666 * total_res_range * pixels_per_letter + total_res_range * 0.65;
 
 	 if (debug)
-	    std::cout << " -> x_offset:" << x_offset << std::endl;
+	    std::cout << "DEBUG:: -> x_offset:" << x_offset << std::endl;
 
 
 	 goo_canvas_set_bounds(GOO_CANVAS(canvas),
@@ -1300,7 +1309,7 @@ exptl::nsv::colour_by_secstr(mmdb::Residue *residue_p) const {
    switch (residue_p->SSE)  {
 
       // case mmdb::SSE_Strand : s = "firebrick3";  break;
-   case mmdb::SSE_Strand : s = "fuchsia";  break;
+   case mmdb::SSE_Strand : s = "tomato";  break;
    case mmdb::SSE_Bulge  : s = "firebrick1";  break;
       // case mmdb::SSE_3Turn  : s = "MediumBlue";  break;
    case mmdb::SSE_3Turn  : s = "LightBlue";  break;
