@@ -248,8 +248,8 @@ coot::Cartesian graphics_info_t::angle_tor_pos_4 = coot::Cartesian(0.0, 0.0, 0.0
 // Shall we have file name filtering (i.e. before fileselection is
 // displayed) on by default?
 int graphics_info_t::filter_fileselection_filenames_flag = 0; // no
-int graphics_info_t::file_selection_dialog_x_size = -1; // unset
-int graphics_info_t::file_selection_dialog_y_size = -1;
+int graphics_info_t::file_chooser_dialog_x_size = -1; // unset
+int graphics_info_t::file_chooser_dialog_y_size = -1;
 
 
 // things for quaternion-based view rotation:
@@ -787,7 +787,7 @@ glm::vec3 graphics_info_t::background_colour = glm::vec3(17.0 * norm_255,
                                                          17.0 * norm_255);
 //
 short int graphics_info_t::delete_item_atom = 0;
-short int graphics_info_t::delete_item_residue = 1;
+short int graphics_info_t::delete_item_residue = 0;
 short int graphics_info_t::delete_item_residue_zone = 0;
 short int graphics_info_t::delete_item_residue_hydrogens = 0;
 short int graphics_info_t::delete_item_water = 0;
@@ -1440,6 +1440,7 @@ long graphics_info_t::frame_counter = 0;
 long graphics_info_t::frame_counter_at_last_display = 0;
 float graphics_info_t::fps = 0.0;
 float graphics_info_t::fps_std_dev = -1.0;
+float graphics_info_t::fps_times_scale_factor = 0.025;
 std::list<std::chrono::time_point<std::chrono::high_resolution_clock> > graphics_info_t::frame_time_history_list;
 
 std::set<mmdb::Residue *> graphics_info_t::moving_atoms_visited_residues;
@@ -1614,6 +1615,8 @@ bool graphics_info_t::use_harmonic_approximation_for_NBCs = false;
 
 std::vector<coot::colour_holder> graphics_info_t::user_defined_colours; // initially empty
 
+unsigned int graphics_info_t::bond_smoothness_factor = 1; // changes num_subdivisions and n_slices
+
 float graphics_info_t::contact_dots_density = 0.4; // 20220308-PE was 1.0
 float graphics_info_t::contact_dot_sphere_subdivisions = 1;
 bool graphics_info_t::all_atom_contact_dots_ignore_water_flag = false;
@@ -1654,6 +1657,7 @@ float graphics_info_t::effects_gamma = 1.0f;
 
 Shader graphics_info_t::shader_for_tmeshes_for_ssao;
 Shader graphics_info_t::shader_for_meshes_for_ssao;
+Shader graphics_info_t::shader_for_rotation_centre_cross_hairs_for_ssao;
 
 unsigned int graphics_info_t::rboDepth = 0;
 unsigned int graphics_info_t::ssaoFBO = 0;

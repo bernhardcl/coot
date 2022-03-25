@@ -3295,8 +3295,9 @@ public:
    void set_directory_for_filechooser_string(std::string filename);
    void set_directory_for_saving_for_filechooser_string(std::string filename);
 
-   static int file_selection_dialog_x_size;
-   static int file_selection_dialog_y_size;
+   // 20220319-PE what do these do these days?
+   static int file_chooser_dialog_x_size;
+   static int file_chooser_dialog_y_size;
 
    // Origin marker for Johan
    static int show_origin_marker_flag;
@@ -4179,7 +4180,8 @@ string   static std::string sessionid;
    static float contact_dots_density; // 1 by default
    static void setup_cylinder_clashes(const coot::atom_overlaps_dots_container_t &c,
                                       int imol, float tube_radius, bool extra_annotation=false);
-   
+
+   static unsigned int bond_smoothness_factor; // default 1, changes num_subdivisions and n_slices
 
    void coot_all_atom_contact_dots_instanced(mmdb::Manager *mol, int imol); // creates/updates
    // meshes in molecules.
@@ -4300,6 +4302,7 @@ string   static std::string sessionid;
    static Shader shader_for_moleculestotriangles;
    static Shader shader_for_origin_cube;
    static Shader shader_for_central_cube;
+   static Shader shader_for_rotation_centre_cross_hairs_for_ssao; // central_cube by a modern name
    static Shader shader_for_hud_text;
    static Shader shader_for_hud_buttons;
    static Shader shader_for_hud_image_texture;
@@ -4401,7 +4404,7 @@ string   static std::string sessionid;
    static void draw_cube(GtkGLArea *glarea, unsigned int cube_type);
    static void draw_central_cube(GtkGLArea *glarea);
    static void draw_origin_cube(GtkGLArea *glarea);
-   static void draw_rotation_centre_crosshairs(GtkGLArea *glarea);
+   static void draw_rotation_centre_crosshairs(GtkGLArea *glarea, unsigned int pass_type);
    static void draw_outlined_active_residue();
    static void draw_hud_ligand_view();
    static void draw_hud_buttons();
@@ -4598,6 +4601,7 @@ string   static std::string sessionid;
    static void draw_delete_item_pulse();
    static std::vector<glm::vec3> delete_item_pulse_centres;
    std::vector<glm::vec3> residue_to_positions(mmdb::Residue *residue_p) const;
+   std::vector<glm::vec3> residue_to_side_chain_positions(mmdb::Residue *residue_p) const;
    void setup_delete_item_pulse(mmdb::Residue *residue_p);
    void setup_delete_residues_pulse(const std::vector<mmdb::Residue *> &residues);
    void setup_invalid_residue_pulse(mmdb::Residue *residue_p);
@@ -4809,6 +4813,7 @@ string   static std::string sessionid;
    // static Camera camera;
 
    static bool show_fps_flag;
+   static float fps_times_scale_factor;
    static glm::mat4 get_projection_matrix(bool do_orthographic_projection,
                                           int graphics_x_size, int graphics_y_size);
 

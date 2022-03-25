@@ -1407,8 +1407,18 @@ molecule_class_info_t::get_bond_colour_by_colour_wheel_position(int icol, int bo
 
       // 30 is the size of rainbow colours, 0 -> 1.0 is the range of rainbow colours
 
-      float rotation_size = 1.0 - float(icol-offset) * 0.7/max_colour + bonds_colour_map_rotation/360.0;
-      rgb = rotate_rgb(rgb, rotation_size);
+      if (bonds_box_type == coot::COLOUR_BY_RAINBOW_BONDS) {
+         // rotation_size is a fraction of a circle
+         float rotation_size = 1.0 - float(icol-offset) * 0.7/max_colour;
+         rgb = rotate_rgb(rgb, rotation_size);
+         if (false)
+            std::cout << "icol " << std::setw(2) <<  icol << " rotation size " << std::setw(7) << rotation_size
+                      << "  rgb " << std::setw(6) << rgb[0] << " " << std::setw(6) << rgb[1] << " "
+                      << std::setw(6) << rgb[2] << std::endl;
+      } else {
+         float rotation_size = 1.0 - float(icol-offset) * 0.7/max_colour + bonds_colour_map_rotation/360.0;
+         rgb = rotate_rgb(rgb, rotation_size);
+      }
    }
 
    // rotation_size size has useful colours between
@@ -1693,6 +1703,13 @@ molecule_class_info_t::draw_unit_cell(Shader *shader_p,
          lines_mesh_for_cell.draw(shader_p, mvp, dummy);
       }
    }
+
+   // 20220320-PE
+   // this is needed beacuse the unit cell is setup *during* (the first time) a draw call.
+   // That's not right - it should be setup before this draw call.
+   // setup and draw need to be untangled - but for now let's add an extra draw.
+   //
+   graphics_info_t::graphics_draw();
 
 }
 
@@ -3776,7 +3793,8 @@ molecule_class_info_t::make_colour_table() const {
    std::vector<glm::vec4> colour_table(bonds_box.num_colours, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
    for (int icol=0; icol<bonds_box.num_colours; icol++) {
       if (bonds_box_type == coot::COLOUR_BY_RAINBOW_BONDS) {
-         get_bond_colour_by_colour_wheel_position(icol, coot::COLOUR_BY_RAINBOW_BONDS); // bleugh
+         glm::vec4 col = get_bond_colour_by_colour_wheel_position(icol, coot::COLOUR_BY_RAINBOW_BONDS);
+         colour_table[icol] = col;
       } else {
          coot::colour_t cc = get_bond_colour_by_mol_no(icol, dark_bg_flag);
          colour_table[icol] = cc.to_glm();
@@ -3793,6 +3811,23 @@ molecule_class_info_t::make_colour_table() const {
    if (bonds_box.n_consolidated_atom_centres > bonds_box.num_colours) {
       colour_table = std::vector<glm::vec4>(bonds_box.n_consolidated_atom_centres, glm::vec4(0.6f, 0.0f, 0.6f, 1.0f));
    }
+
+   auto pastelize = [] (glm::vec4 &col, float degree) {
+                       for (unsigned int i=0; i<3; i++) {
+                          const float &cc = col[i];
+                          float r = 1.0f - cc;
+                          col[i] += r * degree;
+                          col[i] *= (1.0f - 0.5f * degree); // I don't want bright pastel
+                       }
+                    };
+
+   if (is_intermediate_atoms_molecule) {
+      // pastelize the colour table
+      float degree = 0.5f;
+      for (auto &col : colour_table) {
+         pastelize(col, degree); //ref
+      }
+   }
    return colour_table;
 }
 
@@ -3800,18 +3835,29 @@ molecule_class_info_t::make_colour_table() const {
 void
 molecule_class_info_t::make_mesh_from_bonds_box() { // smooth or fast should be an argument SMOOTH, FAST, default FAST
 
-   unsigned int num_subdivisions = 2;
+   unsigned int num_subdivisions = 1;
    unsigned int n_slices = 8;
-   unsigned int n_stacks = 2;
+
+   // num_subdivisions = 2 corresponds to n_slices = 16 ie.. num_slices = 4 * 2^(n_subdivision)
+
+   unsigned int n_stacks = 2; // top and bottom stacks.
    float atom_radius = 0.02 * bond_width; // use atom_radius_scale_factor
    if (is_intermediate_atoms_molecule) atom_radius *= 1.5; // 20220220-PE hack, I don't know why I need this.
 
    float bond_radius = atom_radius;
 
    // do smooth
-   if (false) {
-      num_subdivisions = 3;
+   if (graphics_info_t::bond_smoothness_factor == 1) {
+      num_subdivisions = 1;
+      n_slices = 8;
+   }
+   if (graphics_info_t::bond_smoothness_factor == 2) {
+      num_subdivisions = 2;
       n_slices = 16;
+   }
+   if (graphics_info_t::bond_smoothness_factor == 3) {
+      num_subdivisions = 3;
+      n_slices = 32;
    }
 
    // std::cout << "######################## imol_no " << imol_no << std::endl;

@@ -1663,7 +1663,11 @@ graphics_info_t::draw_molecules_with_shadows() {
                                                                                          eye_position, opacity, bg_col_v4, shader_do_depth_fog_flag, light_view_mvp,
                                                                                          shadow_depthMap_texture, shadow_strength, shadow_softness, show_just_shadows);
                                      } else {
-                                        if (opacity < 1.0) m.map_as_mesh.use_blending = true;
+                                        if (opacity < 1.0) {
+                                           m.map_as_mesh.use_blending = true;
+                                           glm::vec3 eye_position_ws = get_world_space_eye_position();
+                                           m.map_as_mesh.sort_map_triangles(eye_position_ws);
+                                        }
                                         m.map_as_mesh.set_material(m.material_for_maps);
                                         m.map_as_mesh.draw_with_shadows(&shader_for_meshes_with_shadows, mvp, model_rotation_matrix, lights,
                                                                         eye_position, opacity, bg_col_v4, shader_do_depth_fog_flag, light_view_mvp,
@@ -2060,6 +2064,8 @@ graphics_info_t::draw_meshes() {
 void
 graphics_info_t::draw_cube(GtkGLArea *glarea, unsigned int cube_type) {
 
+   // std::cout << "draw_cube() with cube_type " << cube_type << std::endl;
+
    gtk_gl_area_make_current(glarea);
    GLenum err = glGetError();
    if (err) std::cout << "error draw_central_cube() A0 err " << err << std::endl;
@@ -2099,7 +2105,7 @@ graphics_info_t::draw_cube(GtkGLArea *glarea, unsigned int cube_type) {
       mvp = glm::scale(mvp, sc);
    }
 
-   // we don't diverge here on the cube tye. Maybe change the name of the shader
+   // we don't diverge here on the cube type. Maybe change the name of the shader
    // because it does both
    Shader &shader = shader_for_central_cube;
 
@@ -2148,13 +2154,14 @@ graphics_info_t::draw_central_cube(GtkGLArea *glarea) {
 
 void
 graphics_info_t::draw_origin_cube(GtkGLArea *glarea) {
+
    draw_cube(glarea, ORIGIN_CUBE);
 }
 
 void
-graphics_info_t::draw_rotation_centre_crosshairs(GtkGLArea *glarea) {
+graphics_info_t::draw_rotation_centre_crosshairs(GtkGLArea *glarea, unsigned int pass_type) {
 
-   gtk_gl_area_make_current(glarea); // needed?
+   // gtk_gl_area_make_current(glarea); // needed?, no it isn't.
    GLenum err = glGetError();
    if (err) std::cout << "error draw_rotation_centre_crosshairs() A0 err " << err << std::endl;
 
@@ -2168,7 +2175,13 @@ graphics_info_t::draw_rotation_centre_crosshairs(GtkGLArea *glarea) {
    glBindVertexArray(rotation_centre_crosshairs_vertexarray_id);
    if (err) std::cout << "error draw_rotation_centre_crosshairs() B err " << err << std::endl;
 
-   shader_for_central_cube.Use(); // (it's drawing the crosshairs though - same shader)
+   if (pass_type == PASS_TYPE_STANDARD) {
+      shader_for_central_cube.Use(); // (it's drawing the crosshairs though - same shader)
+   }
+
+   if (pass_type == PASS_TYPE_SSAO) {
+      shader_for_rotation_centre_cross_hairs_for_ssao.Use();
+   }
 
    glm::vec3 rc = graphics_info_t::get_rotation_centre();
    mvp = glm::translate(mvp, rc);
@@ -2187,21 +2200,40 @@ graphics_info_t::draw_rotation_centre_crosshairs(GtkGLArea *glarea) {
    if (err) std::cout << "error::draw_rotation_centre_crosshairs() glUniformMatrix4fv() for view_rotation " << err
                       << std::endl;
 
-    bool is_bb = graphics_info_t::background_is_black_p();
-   glm::vec4 line_colour(0.8f, 0.8f, 0.8f, 1.0f);
-   if (! is_bb) 
-      line_colour = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+   if (pass_type == PASS_TYPE_STANDARD) {
+      bool is_bb = graphics_info_t::background_is_black_p();
+      glm::vec4 line_colour(0.8f, 0.8f, 0.8f, 1.0f);
+      if (! is_bb) 
+         line_colour = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 
-   GLuint line_colour_uniform_location = shader_for_central_cube.line_colour_uniform_location;
-   glUniform4fv(line_colour_uniform_location, 1, glm::value_ptr(line_colour));
+      GLuint line_colour_uniform_location = shader_for_central_cube.line_colour_uniform_location;
+      glUniform4fv(line_colour_uniform_location, 1, glm::value_ptr(line_colour));
 
-   GLuint background_colour_uniform_location = shader_for_central_cube.background_colour_uniform_location;
-   glm::vec4 bgc(graphics_info_t::background_colour, 1.0);
-   glUniform4fv(background_colour_uniform_location, 1, glm::value_ptr(bgc));
+      GLuint background_colour_uniform_location = shader_for_central_cube.background_colour_uniform_location;
+      glm::vec4 bgc(graphics_info_t::background_colour, 1.0);
+      glUniform4fv(background_colour_uniform_location, 1, glm::value_ptr(bgc));
 
-   err = glGetError();
-   if (err) std::cout << "error::draw_rotation_centre_crosshairs() glUniformMatrix4fv() for background " << err
-                      << std::endl;
+      err = glGetError();
+      if (err) std::cout << "error::draw_rotation_centre_crosshairs() glUniformMatrix4fv() for background " << err
+                         << std::endl;
+   }
+
+   if (pass_type == PASS_TYPE_SSAO) {
+
+      // need to be sent uniforms model, view. projection
+
+      int w = graphics_x_size;
+      int h = graphics_y_size;
+      bool do_orthographic_projection = ! perspective_projection_flag;
+      glm::mat4 model_matrix = get_model_matrix();
+      glm::mat4  view_matrix = get_view_matrix();
+      glm::mat4  proj_matrix = get_projection_matrix(do_orthographic_projection, w, h);
+
+      shader_for_rotation_centre_cross_hairs_for_ssao.set_mat4_for_uniform("model",     model_matrix);
+      shader_for_rotation_centre_cross_hairs_for_ssao.set_mat4_for_uniform("view",       view_matrix);
+      shader_for_rotation_centre_cross_hairs_for_ssao.set_mat4_for_uniform("projection", proj_matrix);
+
+   }
 
    glDrawElements(GL_LINES, 6, GL_UNSIGNED_INT, nullptr);
    if (err) std::cout << "error::draw_rotation_centre_crosshairs() glDrawElements " << err << std::endl;
@@ -2348,8 +2380,9 @@ graphics_info_t::setup_hud_geometry_bars() {
    // glm::vec2 scales(0.56/aspect_ratio, 0.56);
    // mesh_for_hud_geometry_labels.set_position_and_scales(position, scales); // ""NBC, Pull"" texture
 
-   mesh_for_hud_tooltip_background.setup_quad(); // does setup_buffers()
-   mesh_for_hud_tooltip_background.set_scales(glm::vec2(sc_x, sc_y));
+   // 20220319-PE  this is no longer drawn (at the moment)
+   // mesh_for_hud_tooltip_background.setup_quad(); // does setup_buffers()
+   // mesh_for_hud_tooltip_background.set_scales(glm::vec2(sc_x, sc_y));
 
    tmesh_for_hud_geometry_tooltip_label.setup_quad();
    glm::vec2 label_scale(0.000095, 0.000095/aspect_ratio);
@@ -2469,10 +2502,11 @@ graphics_info_t::draw_hud_buttons() {
       const auto &button = hud_button_info[i];
       const std::string &label = button.button_label;
       if (! label.empty()) {
-         std::string mesh_name = "HUDTexturemesh for button with label" + label;
+         std::string mesh_name = "HUDTexturemesh for button with label " + label;
          HUDTextureMesh htm(mesh_name);
          htm.setup_quad();
          float text_scale_raw = 0.4 * 0.00018;
+         text_scale_raw *= 1.2; // 20220324-PE
          // text_scale_raw *= 100.0;
          float text_scale = text_scale_raw * height_adjust;
          glm::vec2 label_scale(text_scale / aspect_ratio, text_scale);
@@ -2480,7 +2514,7 @@ graphics_info_t::draw_hud_buttons() {
          unsigned int n_chars = label.size(); // really I want the sum of x_advance for the letters. Can I get that?
          float x_advance = htm.get_sum_x_advance(label, ft_characters);
          float width_adjust = static_cast<float>(900)/static_cast<float>(w);
-         float tl_adjust = - static_cast<float>(n_chars-1) * text_scale_raw * 2.5 * 50.0 * width_adjust;
+         float tl_adjust = - static_cast<float>(n_chars-1) * text_scale_raw * 2.2 * 50.0 * width_adjust;
          glm::vec2 pos = button.position_offset;
          pos += glm::vec2(0.0, 0.3 * button_height); // vertical adjustment for label
          pos += glm::vec2(0.5 * button_width, 0.00); // horizontal adjustment for label (lefttext is middle of button)
@@ -2619,7 +2653,8 @@ graphics_info_t::draw_hud_fps() {
 
          // make glm::vec2 data and then convert that to OpenGL screen coordinates
          //
-         float ms_to_opengl_y = 0.0025;
+         float ms_to_opengl_y = fps_times_scale_factor; // default 0.0025
+         // ms_to_opengl_y = 0.001;
          unsigned int time_count = 0;
          std::list<std::chrono::time_point<std::chrono::high_resolution_clock> >::const_iterator it;
          for (it = frame_time_history_list.begin(); it != frame_time_history_list.end(); ++it) {
@@ -2836,7 +2871,7 @@ graphics_info_t::get_x_base_for_hud_geometry_bars() {
    float w_adjust = static_cast<float>(w)/static_cast<float>(900);
 
    // shift to more negative x when the window is wider
-   return -0.83 - 0.04 * w_adjust;
+   return -0.83 - 0.02 * w_adjust;
 
 }
 
@@ -2966,8 +3001,9 @@ graphics_info_t::draw_hud_geometry_bars() {
                          coot::residue_spec_t residue_for_bar(baddies[i].first);
                          if (residue_for_bar == active_residue_spec) {
                             glm::vec4 col_pink(1.0f, 0.2f, 1.0f, 0.8f);
-                            HUD_bar_attribs_t bar(col_pink, position_offset, bar_length);
-                            new_bars_p->push_back(bar);
+                            HUD_bar_attribs_t bar(col_pink, position_offset + glm::vec2(0.0f, -0.01f), bar_length);
+                            // new_bars_p->push_back(bar);
+                            new_bars_p->insert(new_bars_p->begin(), bar);
                          }
 
                          sum_l += bar_length + 0.005; // with a gap between bars
@@ -3016,9 +3052,10 @@ graphics_info_t::draw_hud_geometry_bars() {
                               float sum_l = 0;
                               for (unsigned int i=0; i<v.size(); i++) {
 
-                                 bool this_atom_is_in_a_moving_atoms_residue = v[i].spec.int_user_data;
+                                 rotamer_markup_container_t &rm = v[i];
+                                 bool this_atom_is_in_a_moving_atoms_residue = rm.spec.int_user_data;
 
-                                 float pr = v[i].rpi.probability;
+                                 float pr = rm.rpi.probability;
                                  float q = 0.01 * (48.0f - v[i].rpi.probability);
                                  if (q > 1.0) q = 1.0;
                                  if (q < 0.0) q = 0.0;
@@ -3057,9 +3094,10 @@ graphics_info_t::draw_hud_geometry_bars() {
                                  coot::residue_spec_t residue_for_bar(v[i].spec);
                                  if (residue_for_bar == active_residue_spec) {
                                     glm::vec4 col_pink(1.0f, 0.2f, 1.0f, 0.8f);
-                                    glm::vec2 position_offset = to_top_left + glm::vec2(sum_l, 0.0);
+                                    glm::vec2 position_offset = to_top_left + glm::vec2(sum_l, 0.0) + glm::vec2(0.0f, -0.01f);
                                     HUD_bar_attribs_t bar(col_pink, position_offset, bar_length);
-                                    new_bars_p->push_back(bar);
+                                    // new_bars_p->push_back(bar);
+                                    new_bars_p->insert(new_bars_p->begin(), bar);
                                  }
 
                                  sum_l += bar_length + 0.005; // with a gap between bars
@@ -3511,11 +3549,10 @@ graphics_info_t::draw_hud_geometry_tooltip() {
       int w = allocation.width;
       int h = allocation.height;
       float aspect_ratio = static_cast<float>(w)/static_cast<float>(h);
-      std::cout << "pre-set_scales() " << glm::to_string(tmesh_for_hud_geometry_tooltip_label.get_scales()) << std::endl;
       // 20220215-PE Hmmm about 0.00006 will do.
       glm::vec2 label_scale(0.00006, 0.00006 * aspect_ratio);
+      label_scale *= 1.5f;
       tmesh_for_hud_geometry_tooltip_label.set_scales(label_scale);
-      std::cout << "post-set_scales() " << glm::to_string(tmesh_for_hud_geometry_tooltip_label.get_scales()) << std::endl;
 
       tmesh_for_hud_geometry_tooltip_label.draw_label(label, use_label_highlight,
                                                       &shader_for_hud_geometry_tooltip_text,
@@ -3564,7 +3601,7 @@ graphics_info_t::render_3d_scene(GtkGLArea *gl_area) {
    draw_origin_cube(gl_area);
    err = glGetError(); if (err) std::cout << "render scene lambda post cubes err " << err << std::endl;
 
-   draw_rotation_centre_crosshairs(gl_area);
+   draw_rotation_centre_crosshairs(gl_area, PASS_TYPE_STANDARD);
 
    draw_molecules(); // includes particles, happy-faces and boids (should they be there (maybe not))
                      // so rename this function? Or just bring everything here?  Put this render() function
@@ -3591,16 +3628,20 @@ graphics_info_t::render_3d_scene_with_shadows() {
 
    //  ------------------- render scene ----------------------------
 
+   GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
+
+   // Try not using the meshes-with-shadows.shader
+   // render_3d_scene(gl_area);
+   // return;
+
    glEnable(GL_DEPTH_TEST);
    GLenum err = glGetError();
    if (err) std::cout << "render_3d_scene_with_shadows B err " << err << std::endl;
 
-   GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
-
    draw_origin_cube(gl_area);
    err = glGetError(); if (err) std::cout << "render scene lambda post cubes err " << err << std::endl;
 
-   draw_rotation_centre_crosshairs(gl_area);
+   draw_rotation_centre_crosshairs(gl_area, PASS_TYPE_STANDARD);
 
    draw_molecules_with_shadows(); // includes particles, happy-faces and boids (should they be there (maybe not))
                                   // so rename this function? Or just bring everything here?  Put this render() function

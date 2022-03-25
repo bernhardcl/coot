@@ -104,10 +104,12 @@ gl_rama_plot_t::update_hud_tmeshes(const std::map<coot::residue_spec_t, rama_plo
 
    // mark the corners of the plot for scaling and offset testing
 
-   new_other_normal_positions.push_back(glm::vec2(sf * -180.0, sf * -180.0));
-   new_other_normal_positions.push_back(glm::vec2(sf *  180.0, sf * -180.0));
-   new_other_normal_positions.push_back(glm::vec2(sf * -180.0, sf *  180.0));
-   new_other_normal_positions.push_back(glm::vec2(sf *  180.0, sf *  180.0));
+   if (false) {
+      new_other_normal_positions.push_back(glm::vec2(sf * -180.0, sf * -180.0));
+      new_other_normal_positions.push_back(glm::vec2(sf *  180.0, sf * -180.0));
+      new_other_normal_positions.push_back(glm::vec2(sf * -180.0, sf *  180.0));
+      new_other_normal_positions.push_back(glm::vec2(sf *  180.0, sf *  180.0));
+   }
 
    if (false) // check the z-depth and/or draw order
       for (unsigned int i=0; i<new_other_normal_positions.size(); i++)
@@ -246,16 +248,18 @@ gl_rama_plot_t::generate_phi_psis(int imol, mmdb::Manager *mol) {
       }
    }
 
-   // add in some fake points for testing
-   coot::residue_spec_t f1("Test", 1, "");
-   coot::residue_spec_t f2("Test", 2, "");
-   coot::residue_spec_t f3("Test", 3, "");
-   coot::residue_spec_t f4("Test", 4, "");
+   if (false) {
+      // add in some fake points for testing
+      coot::residue_spec_t f1("Test", 1, "");
+      coot::residue_spec_t f2("Test", 2, "");
+      coot::residue_spec_t f3("Test", 3, "");
+      coot::residue_spec_t f4("Test", 4, "");
 
-   r[f1] = rama_plot::phi_psi_t(-180, -180, "Test-Res", "TR1", 1, "", "A", false);
-   r[f2] = rama_plot::phi_psi_t( 180, -180, "Test-Res", "TR2", 2, "", "A", false);
-   r[f3] = rama_plot::phi_psi_t( 180,  180, "Test-Res", "TR3", 3, "", "A", false);
-   r[f4] = rama_plot::phi_psi_t(-180,  180, "Test-Res", "TR4", 4, "", "A", false);
+      r[f1] = rama_plot::phi_psi_t(-180, -180, "Test-Res", "TR1", 1, "", "A", false);
+      r[f2] = rama_plot::phi_psi_t( 180, -180, "Test-Res", "TR2", 2, "", "A", false);
+      r[f3] = rama_plot::phi_psi_t( 180,  180, "Test-Res", "TR3", 3, "", "A", false);
+      r[f4] = rama_plot::phi_psi_t(-180,  180, "Test-Res", "TR4", 4, "", "A", false);
+   }
 
    return r;
 }

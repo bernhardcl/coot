@@ -3092,12 +3092,10 @@ get_show_unit_cell(int imol) {
 void
 set_show_unit_cell(int imol, short int state) {
 
-
-   //    for (int imol=0; imol<graphics_n_molecules(); imol++) {
    if (is_valid_model_molecule(imol)) {
       graphics_info_t::molecules[imol].show_unit_cell_flag = state;
    }
-   //    }
+
    graphics_draw();
    std::string cmd = "set-show-unit-cell";
    std::vector<coot::command_arg_t> args;
@@ -3117,7 +3115,6 @@ void set_show_unit_cells_all(short int istate) {
       }
    }
 
-   std::cout << "calling graphics_draw()" << std::endl;
    graphics_draw();
 
    std::string cmd = "set-show-unit-cells-all";
@@ -5197,6 +5194,7 @@ void graphics_to_ca_representation(int imol) {
    graphics_info_t g;
    if (is_valid_model_molecule(imol)) {
       bool force_rebonding = false;
+      std::cout << "calling ca_representation() for imol " << imol << std::endl;
       g.molecules[imol].ca_representation(force_rebonding);
    } else {
       std::cout << "WARNING:: no such valid molecule " << imol
@@ -5262,6 +5260,19 @@ void graphics_to_bonds_representation(int imol) {
 		<< " in graphics_to_bonds_representation" << std::endl;
    graphics_draw();
 
+}
+
+void graphics_to_colour_by_molecule(int imol) {
+
+   if (is_valid_model_molecule(imol)) {
+      bool force_rebonding = false;
+      graphics_info_t::molecules[imol].make_colour_by_molecule_bonds(force_rebonding);
+      graphics_draw();
+   }
+   std::string cmd = "set-colour-by-molecule";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(imol);
+   add_to_history_typed(cmd, args);
 }
 
 void graphics_to_bonds_no_waters_representation(int imol) {
@@ -5454,7 +5465,7 @@ void set_draw_moving_atoms_restraints(int state) {
 
 
 int
-graphics_molecule_bond_type(int imol) {
+get_graphics_molecule_bond_type(int imol) {
 
    graphics_info_t g;
    // std::cout << "graphics_molecule_bond_type for mol: " << imol << std::endl;
@@ -5469,77 +5480,105 @@ graphics_molecule_bond_type(int imol) {
 }
 
 void change_model_molecule_representation_mode(int up_or_down) {
-
+   // enum { UNSET_TYPE = -1, NORMAL_BONDS=1, CA_BONDS=2,
+   //        COLOUR_BY_CHAIN_BONDS=3,
+   //        CA_BONDS_PLUS_LIGANDS=4, BONDS_NO_WATERS=5, BONDS_SEC_STRUCT_COLOUR=6,
+   //        BONDS_NO_HYDROGENS=15,
+   //        CA_BONDS_PLUS_LIGANDS_SEC_STRUCT_COLOUR=7,
+   //        CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR=14,
+   //        CA_BONDS_PLUS_LIGANDS_AND_SIDECHAINS=17,
+   //        COLOUR_BY_MOLECULE_BONDS=8,
+   //        COLOUR_BY_RAINBOW_BONDS=9,
+   //        COLOUR_BY_B_FACTOR_BONDS=10,
+   //        COLOUR_BY_OCCUPANCY_BONDS=11,
+   //        COLOUR_BY_USER_DEFINED_COLOURS_BONDS=12 };
+   
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
    if (pp.first) {
       int imol = pp.second.first;
-      int bond_type = graphics_molecule_bond_type(imol);
+      int bond_type = get_graphics_molecule_bond_type(imol);
 
-      if (bond_type == 1) { /* atom type bonds */
-	 if (up_or_down == 1)
-	    graphics_to_ca_representation(imol);
-	 else
-	    graphics_to_occupancy_representation(imol);
+      std::cout << "in change_model_molecule_representation_mode up_or_down " << up_or_down << " bond_type " << bond_type << std::endl;
+
+      // up_or_down  1 means scroll up
+      // up_or_down -1 means scroll down 
+
+      if (up_or_down == 1) {
+         if (bond_type == coot::NORMAL_BONDS) { /* atom type bonds */
+            graphics_to_occupancy_representation(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_CHAIN_BONDS) {
+            graphics_to_bonds_representation(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_MOLECULE_BONDS) {
+            graphics_to_colour_by_chain(imol);
+         }
+         if (bond_type == coot::CA_BONDS) {
+            graphics_to_colour_by_molecule(imol);
+         }
+         if (bond_type == coot::CA_BONDS_PLUS_LIGANDS) {
+            graphics_to_ca_representation(imol);
+         }
+         if (bond_type == coot::CA_BONDS_PLUS_LIGANDS_SEC_STRUCT_COLOUR) {
+            graphics_to_ca_plus_ligands_representation(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_RAINBOW_BONDS) {
+            graphics_to_ca_plus_ligands_sec_struct_representation(imol);
+         }
+         if (bond_type == coot::BONDS_SEC_STRUCT_COLOUR) {
+            graphics_to_rainbow_representation(imol);
+         }
+         if (bond_type == coot::BONDS_NO_WATERS) {
+            graphics_to_sec_struct_bonds_representation(imol);
+         }
+         if (bond_type == coot::CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR) {
+            graphics_to_bonds_no_waters_representation(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_B_FACTOR_BONDS) {
+            graphics_to_b_factor_cas_representation(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_OCCUPANCY_BONDS) {
+            graphics_to_b_factor_representation(imol);
+         }
       }
-      if (bond_type == 2) { /* CA bonds */
-	 if (up_or_down == 1)
-	    set_colour_by_chain(imol);
-	 else
-	    graphics_to_bonds_representation(imol);
-      }
-      if (bond_type == 3) { /* segid-coloured bonds */
-	 if (up_or_down == 1)
-	    graphics_to_ca_plus_ligands_representation(imol);
-	 else
-	    graphics_to_ca_representation(imol);
-      }
-      if (bond_type == 4) { /* CA_BONDS_PLUS_LIGANDS */
-	 if (up_or_down == 1)
-	    graphics_to_bonds_no_waters_representation(imol);
-	 else
-	    set_colour_by_chain(imol);
-      }
-      if (bond_type == 5) { /* BONDS_NO_WATERS */
-	 if (up_or_down == 1)
-	    graphics_to_sec_struct_bonds_representation(imol);
-	 else
-	    graphics_to_ca_plus_ligands_representation(imol);
-      }
-      if (bond_type == 6) { /* BONDS_SEC_STRUCT_COLOUR */
-	 if (up_or_down == 1)
-	    graphics_to_ca_plus_ligands_sec_struct_representation(imol);
-	 else
-	    graphics_to_bonds_no_waters_representation(imol);
-      }
-      if (bond_type == 7) { /* CA_BONDS_PLUS_LIGANDS_SEC_STRUCT_COLOUR */
-	 if (up_or_down == 1)
-	    set_colour_by_molecule(imol);
-	 else
-	    graphics_to_sec_struct_bonds_representation(imol);
-      }
-      if (bond_type == 8) { /* COLOUR_BY_MOLECULE_BONDS */
-	 if (up_or_down == 1)
-	    graphics_to_rainbow_representation(imol);
-	 else
-	    graphics_to_ca_plus_ligands_sec_struct_representation(imol);
-      }
-      if (bond_type == 9) { /* COLOUR_BY_RAINBOW_BONDS */
-	 if (up_or_down == 1)
-	    graphics_to_b_factor_representation(imol);
-	 else
-	    set_colour_by_molecule(imol);
-      }
-      if (bond_type == 10) { /* COLOUR_BY_B_FACTOR_BONDS */
-	 if (up_or_down == 1)
-	    graphics_to_occupancy_representation(imol);
-	 else
-	    graphics_to_rainbow_representation(imol);
-      }
-      if (bond_type == 11) { /* COLOUR_BY_OCCUPANCY_BONDS */
-	 if (up_or_down == 1)
-	    graphics_to_bonds_representation(imol);
-	 else
-	    graphics_to_b_factor_representation(imol);
+
+      if (up_or_down == -1) {
+         if (bond_type == coot::NORMAL_BONDS) {
+            graphics_to_colour_by_chain(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_CHAIN_BONDS) {
+            graphics_to_colour_by_molecule(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_MOLECULE_BONDS) {
+            graphics_to_ca_representation(imol);
+         }
+         if (bond_type == coot::CA_BONDS) {
+            graphics_to_ca_plus_ligands_representation(imol);
+         }
+         if (bond_type == coot::CA_BONDS_PLUS_LIGANDS) {
+            graphics_to_ca_plus_ligands_sec_struct_representation(imol);
+         }
+         if (bond_type == coot::CA_BONDS_PLUS_LIGANDS_SEC_STRUCT_COLOUR) {
+            graphics_to_rainbow_representation(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_RAINBOW_BONDS) {
+            graphics_to_sec_struct_bonds_representation(imol);
+         }
+         if (bond_type == coot::BONDS_SEC_STRUCT_COLOUR) {
+            graphics_to_bonds_no_waters_representation(imol);
+         }
+         if (bond_type == coot::BONDS_NO_WATERS) {
+            graphics_to_b_factor_cas_representation(imol);
+         }
+         if (bond_type == coot::CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR) {
+            graphics_to_b_factor_representation(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_B_FACTOR_BONDS) {
+            graphics_to_occupancy_representation(imol);
+         }
+         if (bond_type == coot::COLOUR_BY_OCCUPANCY_BONDS) {
+            graphics_to_bonds_representation(imol);
+         }
       }
    }
 }
@@ -6969,9 +7008,9 @@ void post_scheme_scripting_window() {
         // load the fallback window if we have COOT_SCHEME_DIR (only Windows?!)
         // only for gtk2!
 
-        GtkWidget *window;
         GtkWidget *scheme_entry;
-        window = create_scheme_window();
+        // GtkWidget *window = create_scheme_window();
+        GtkWidget *window = widget_from_builder("scheme_window");
 
         // scheme_entry = lookup_widget(window, "scheme_window_entry");
 
@@ -7269,7 +7308,7 @@ run_state_file_maybe() {
 	    graphics_info_t::state_file_was_run_flag = true;
 	 } else {
 	    if (graphics_info_t::use_graphics_interface_flag) {
-	       GtkWidget *dialog = wrapped_create_run_state_file_dialog();
+	       GtkWidget *dialog = wrapped_create_run_state_file_dialog(); // uses builder
 	       gtk_widget_show(dialog);
 	    }
 	 }
@@ -7335,7 +7374,8 @@ GtkWidget *wrapped_create_run_state_file_dialog_py() {
 
    std::string filename("0-coot.state.py");
    short int il = 1;
-   GtkWidget *w = create_run_state_file_dialog();
+   // GtkWidget *w = create_run_state_file_dialog();
+   GtkWidget *w = widget_from_builder("run_state_file_dialog");
 
    // GtkWidget *vbox_mols = lookup_widget(w, "mols_vbox");
    GtkWidget *vbox_mols = widget_from_builder("mols_vbox");

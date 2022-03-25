@@ -368,6 +368,13 @@ void set_effects_shader_gamma(float f) {
 }
 
 
+void set_fps_timing_scale_factor(float f) {
+
+   graphics_info_t::fps_times_scale_factor = f;
+   graphics_draw();
+
+}
+
 //! \brief set the shadow softness (1, 2 or 3)
 void set_shadow_softness(unsigned int softness) {
    graphics_info_t::shadow_softness = softness;
@@ -397,6 +404,14 @@ void set_use_fancy_lighting(short int state) {
    graphics_draw();
 
 }
+
+//! \brief set bond smoothness (default 1 (not smooth))
+void set_bond_smoothness_factor(unsigned int fac) {
+   graphics_info_t::bond_smoothness_factor = fac;
+   // rebonding of the molecules might be needed here.
+   graphics_draw();
+}
+
 
 //! \brief set use simple lines for model molecule
 void set_use_simple_lines_for_model_molecules(short int state) {
