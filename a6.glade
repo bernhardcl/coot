@@ -11788,6 +11788,16 @@ Do you want to continue?
     <property name="can_focus">False</property>
     <property name="pixbuf">pixmaps/refmac.svg</property>
   </object>
+  <object class="GtkImage" id="image16">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-media-play</property>
+  </object>
+  <object class="GtkImage" id="image17">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-delete</property>
+  </object>
   <object class="GtkImage" id="image18">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -12512,6 +12522,15 @@ Do you want to continue?
                             <signal name="activate" handler="on_ssm_superposition1_activate_gtkbuilder_callback" swapped="no"/>
                           </object>
                         </child>
+                        <child>
+                          <object class="GtkMenuItem" id="calculate_updating_maps1">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Updating Maps...</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_calculate_updating_maps1_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>
@@ -12712,57 +12731,6 @@ Do you want to continue?
                             <property name="use_underline">True</property>
                             <property name="use_stock">False</property>
                             <signal name="activate" handler="on_density_size1_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkMenuItem" id="draw_representation_tools">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="label" translatable="yes">Representation Tools...</property>
-                            <property name="use_underline">True</property>
-                            <signal name="activate" handler="on_draw_representation_tools_activate_gtkbuilder_callback" swapped="no"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="skeleton_parameters1">
-                            <property name="label" translatable="yes">Skeleton Parameters</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="use_underline">True</property>
-                            <property name="use_stock">False</property>
-                            <child type="submenu">
-                              <object class="GtkMenu" id="skeleton_parameters1_menu">
-                                <property name="can_focus">False</property>
-                                <child>
-                                  <object class="GtkImageMenuItem" id="skeleton_colour1">
-                                    <property name="label" translatable="yes">Skeleton Colour...</property>
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="use_underline">True</property>
-                                    <property name="use_stock">False</property>
-                                    <signal name="activate" handler="on_skeleton_colour1_activate_gtkbuilder_callback" swapped="no"/>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkMenuItem" id="skeleton_box_radius1">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="label" translatable="yes">Skeleton Box Radius...</property>
-                                    <property name="use_underline">True</property>
-                                    <signal name="activate" handler="on_skeleton_box_radius1_activate_gtkbuilder_callback" swapped="no"/>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkMenuItem" id="skeletonization_level1">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="label" translatable="yes">Skeletonization Level...</property>
-                                    <property name="use_underline">True</property>
-                                    <signal name="activate" handler="on_skeletonization_level1_activate_gtkbuilder_callback" swapped="no"/>
-                                  </object>
-                                </child>
-                              </object>
-                            </child>
                           </object>
                         </child>
                         <child>
@@ -13914,12 +13882,12 @@ the main_window_graphics_hbox in the right child pane (the second one).</propert
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkImageMenuItem">
-                        <property name="label">gtk-delete</property>
+                      <object class="GtkImageMenuItem" id="menubar_for_delete_items_menu_item_top">
+                        <property name="label">Delete</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="use_underline">True</property>
-                        <property name="use_stock">True</property>
+                        <property name="image">image17</property>
+                        <property name="use_stock">False</property>
                         <property name="always_show_image">True</property>
                         <child type="submenu">
                           <object class="GtkMenu">
@@ -14062,6 +14030,51 @@ the main_window_graphics_hbox in the right child pane (the second one).</propert
                     <property name="position">7</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkMenuBar" id="model_toolbar_icons_menubar">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="pack_direction">ttb</property>
+                    <property name="child_pack_direction">ttb</property>
+                    <child>
+                      <object class="GtkImageMenuItem" id="model_toolbar_icons_menubar_top_item">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="image">image16</property>
+                        <property name="use_stock">False</property>
+                        <child type="submenu">
+                          <object class="GtkMenu">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkMenuItem" id="model_toolbar_icons_menubar_icons_and_text_item">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Icons &amp; Text</property>
+                                <property name="use_underline">True</property>
+                                <signal name="activate" handler="on_model_toolbar_icons_menubar_icons_and_text_item_activate_gtkbuilder_callback" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem" id="model_toolbar_icons_menubar_icons_item">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Icons</property>
+                                <property name="use_underline">True</property>
+                                <signal name="activate" handler="on_model_toolbar_icons_menubar_icons_item_activate_gtkbuilder_callback" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">8</property>
+                  </packing>
+                </child>
               </object>
             </child>
           </object>
@@ -14076,7 +14089,10 @@ the main_window_graphics_hbox in the right child pane (the second one).</propert
             <property name="can_focus">False</property>
             <property name="label_xalign">0</property>
             <child>
-              <placeholder/>
+              <object class="GtkToolbar">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
             </child>
           </object>
           <packing>
@@ -15353,7 +15369,45 @@ density (too big to be waters):
           </packing>
         </child>
         <child>
-          <placeholder/>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes"> </property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <object class="GtkCheckButton" id="map_filechooser_is_difference_map_button">
+                <property name="label" translatable="yes">Is Difference Map   </property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="draw_indicator">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="pack_type">end</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
         </child>
       </object>
     </child>
@@ -15479,13 +15533,13 @@ density (too big to be waters):
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkButton" id="merge_molecules_ok_button">
-                    <property name="label" translatable="yes">   Merge   </property>
+                  <object class="GtkButton" id="merge_molecules_cancel_button">
+                    <property name="label" translatable="yes">   Cancel   </property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
                     <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_merge_molecules_ok_button_clicked_gtkbuilder_callback" swapped="no"/>
+                    <signal name="clicked" handler="on_merge_molecules_cancel_button_clicked_gtkbuilder_callback" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -15494,13 +15548,13 @@ density (too big to be waters):
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="merge_molecules_cancel_button">
-                    <property name="label" translatable="yes">   Cancel   </property>
+                  <object class="GtkButton" id="merge_molecules_ok_button">
+                    <property name="label" translatable="yes">   Merge   </property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
                     <property name="use_underline">True</property>
-                    <signal name="clicked" handler="on_merge_molecules_cancel_button_clicked_gtkbuilder_callback" swapped="no"/>
+                    <signal name="clicked" handler="on_merge_molecules_ok_button_clicked_gtkbuilder_callback" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -15598,7 +15652,15 @@ into Molecule:
                   </packing>
                 </child>
                 <child>
-                  <placeholder/>
+                  <object class="GtkComboBoxText" id="merge_molecules_combobox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">3</property>
+                  </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label180">
@@ -25326,7 +25388,7 @@ Then use "Run Refmac..." from the "Model/Fit/Refine" dialog.
                         </child>
                         <child>
                           <object class="GtkRadioButton" id="shader_settings_standard_mode_radiobutton">
-                            <property name="label" translatable="yes">Standard</property>
+                            <property name="label" translatable="yes">Plain</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">False</property>

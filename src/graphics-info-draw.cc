@@ -1524,6 +1524,7 @@ graphics_info_t::draw_hud_refinement_dialog_arrow_tab() {
       glm::vec2 munged_position_offset = p_s.first;
 
       glm::vec2 munged_scales = p_s.second;
+
       auto scaled_munged_pos_cor = munged_position_offset;
       tmesh_for_hud_refinement_dialog_arrow.set_window_resize_position_correction(scaled_munged_pos_cor);
       tmesh_for_hud_refinement_dialog_arrow.set_window_resize_scales_correction(munged_scales);

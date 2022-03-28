@@ -59,6 +59,8 @@ typedef const char entry_char_type;
 #include "utils/coot-utils.hh"
 #include "graphics-info.h"
 
+#include "cc-interface.hh" // for read_ccp4_map()
+
 
 // Let's put the new refinement and regularization control tools together here
 // (although not strictly main window)
@@ -639,11 +641,17 @@ void
 on_map_name_filechooser_dialog_response_gtkbuilder_callback(GtkDialog       *dialog,
                                                             gint             response_id,
                                                             gpointer         user_data) {
+
    if (response_id == GTK_RESPONSE_OK) {
       const char *fnc = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
       if (fnc) {
          std::string fn(fnc);
          std::cout << "Now do something with " << fn << std::endl;
+         bool is_diff_map = false;
+         GtkWidget *checkbutton = widget_from_builder("map_filechooser_is_difference_map_button");
+         if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
+            is_diff_map = true;
+         read_ccp4_map(fn, is_diff_map);
       }
       gtk_widget_hide(GTK_WIDGET(dialog));
    }
@@ -670,7 +678,6 @@ on_coords_filechooser_dialog_response_gtkbuilder_callback(GtkDialog       *dialo
          const char *fnc = static_cast<const char *>(files_list->data);
          if (fnc) {
             std::string fn(fnc);
-            std::cout << "Now do something with " << fn << std::endl;
             handle_read_draw_molecule_with_recentre(fn, 0);
          }
          files_list = g_slist_next(files_list);
@@ -847,4 +854,60 @@ on_delete_item_chain_item_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
                                                        gpointer     user_data) {
 
    set_delete_chain_mode();
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_calculate_updating_maps1_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
+                                                         gpointer     user_data) {
+
+   show_calculate_updating_maps_gui();
+
+}
+
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_model_toolbar_icons_menubar_icons_item_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
+                                                                       gpointer     user_data) {
+
+   GtkWidget *tb;
+
+   tb = widget_from_builder("main_window_model_toolbar_second_top");
+   gtk_toolbar_set_style(GTK_TOOLBAR(tb), GTK_TOOLBAR_ICONS);
+   tb = widget_from_builder("main_window_model_toolbar_lower");
+   gtk_toolbar_set_style(GTK_TOOLBAR(tb), GTK_TOOLBAR_ICONS);
+   tb = widget_from_builder("main_window_model_toolbar_bottom");
+   gtk_toolbar_set_style(GTK_TOOLBAR(tb), GTK_TOOLBAR_ICONS);
+
+   GtkWidget *mi = widget_from_builder("rotate_translate_item_menu_item_top");
+   gtk_menu_item_set_label(GTK_MENU_ITEM(mi), "");
+   mi = widget_from_builder("menubar_for_rsr_item_menuitem");
+   gtk_menu_item_set_label(GTK_MENU_ITEM(mi), "");
+   mi = widget_from_builder("menubar_for_delete_items_menu_item_top");
+   gtk_menu_item_set_label(GTK_MENU_ITEM(mi), "");
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_model_toolbar_icons_menubar_icons_and_text_item_activate_gtkbuilder_callback(GtkMenuItem *menuitem,
+                                                                                gpointer     user_data) {
+
+   GtkWidget *tb;
+
+   tb = widget_from_builder("main_window_model_toolbar_second_top");
+   gtk_toolbar_set_style(GTK_TOOLBAR(tb), GTK_TOOLBAR_BOTH_HORIZ);
+   tb = widget_from_builder("main_window_model_toolbar_lower");
+   gtk_toolbar_set_style(GTK_TOOLBAR(tb), GTK_TOOLBAR_BOTH_HORIZ);
+   tb = widget_from_builder("main_window_model_toolbar_bottom");
+   gtk_toolbar_set_style(GTK_TOOLBAR(tb), GTK_TOOLBAR_BOTH_HORIZ);
+
+   GtkWidget *mi = widget_from_builder("rotate_translate_item_menu_item_top");
+   gtk_menu_item_set_label(GTK_MENU_ITEM(mi), "Rotate/Translate");
+   mi = widget_from_builder("menubar_for_rsr_item_menuitem");
+   gtk_menu_item_set_label(GTK_MENU_ITEM(mi), "Real Space Refinement");
+   mi = widget_from_builder("menubar_for_delete_items_menu_item_top");
+   gtk_menu_item_set_label(GTK_MENU_ITEM(mi), "   Delete");
+
 }
