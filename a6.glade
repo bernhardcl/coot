@@ -12734,6 +12734,38 @@ Do you want to continue?
                           </object>
                         </child>
                         <child>
+                          <object class="GtkMenuItem">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Projection...</property>
+                            <property name="use_underline">True</property>
+                            <child type="submenu">
+                              <object class="GtkMenu">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <child>
+                                  <object class="GtkMenuItem" id="draw_perspective_orthographic_menu_item">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">False</property>
+                                    <property name="label" translatable="yes">Orthographic</property>
+                                    <property name="use_underline">True</property>
+                                    <signal name="activate" handler="on_draw_perspective_orthographic_menu_item_activate_gtkbuilder_callback" swapped="no"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkMenuItem" id="draw_perspective_perspective_menu_item">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">False</property>
+                                    <property name="label" translatable="yes">Perspective</property>
+                                    <property name="use_underline">True</property>
+                                    <signal name="activate" handler="on_draw_perspective_perspective_menu_item_activate_gtkbuilder_callback" swapped="no"/>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkImageMenuItem" id="spin_view_on/off1">
                             <property name="label" translatable="yes">Spin View On/Off</property>
                             <property name="visible">True</property>
@@ -12750,6 +12782,24 @@ Do you want to continue?
                             <property name="label" translatable="yes">Rock View</property>
                             <property name="use_underline">True</property>
                             <signal name="activate" handler="on_draw_rock_view_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="ribbons_colour_rainbow_menu_item">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Ribbons: Rainbow</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_ribbons_colour_rainbow_menu_item_activate_gtkbuilder_callback" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="ribbons_colour_by_chain_menu_item">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Ribbons: By Chain</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="on_ribbons_colour_by_chain_menu_item_activate_gtkbuilder_callback" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -25312,6 +25362,10 @@ Then use "Run Refmac..." from the "Model/Fit/Refine" dialog.
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Coot Shader Settings</property>
     <property name="type_hint">dialog</property>
+    <signal name="close" handler="on_shader_settings_dialog_close_gtkbuilder_callback" swapped="no"/>
+    <signal name="delete-event" handler="on_shader_settings_dialog_delete_event_gtkbuilder_callback" swapped="no"/>
+    <signal name="destroy" handler="on_shader_settings_dialog_destroy_gtkbuilder_callback" swapped="no"/>
+    <signal name="destroy-event" handler="on_shader_settings_dialog_destroy_event_gtkbuilder_callback" swapped="no"/>
     <signal name="response" handler="on_shader_settings_dialog_response_gtkbuilder_callback" swapped="no"/>
     <child internal-child="vbox">
       <object class="GtkBox">
@@ -27146,7 +27200,7 @@ Then use "Run Refmac..." from the "Model/Fit/Refine" dialog.
                 <property name="can_focus">False</property>
                 <property name="xpad">2</property>
                 <property name="ypad">6</property>
-                <property name="label" translatable="yes">Map Settings</property>
+                <property name="label" translatable="yes">----------------------------- Dont Use This! -----------------------</property>
                 <property name="justify">center</property>
               </object>
               <packing>
