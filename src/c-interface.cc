@@ -6400,16 +6400,16 @@ void set_refine_ramachandran_angles(int state) {
 void set_refine_ramachandran_restraints_type(int type) {
    graphics_info_t::restraints_rama_type = type;
    if (type == 0)
-      graphics_info_t::rama_restraints_weight = 1.0; // big numbers make the refinement fail (precision?)
+      graphics_info_t::rama_plot_restraints_weight = 1.0; // big numbers make the refinement fail (precision?)
 }
 
 
 void set_refine_ramachandran_restraints_weight(float w) {
-   graphics_info_t::rama_restraints_weight = w;
+   graphics_info_t::rama_plot_restraints_weight = w;
 }
 
 float refine_ramachandran_restraints_weight() {
-   return graphics_info_t::rama_restraints_weight;
+   return graphics_info_t::rama_plot_restraints_weight;
 }
 
 
@@ -6608,15 +6608,27 @@ int pyrun_simple_string(const char *python_command) {
 }
 
 #ifdef USE_PYTHON
+
 // BL says:: let's have a python command with can receive return values
 // we need to pass the script file containing the funcn and the funcn itself
 // returns a PyObject which can then be used further
 // returns NULL for failed run
 PyObject *safe_python_command_with_return(const std::string &python_cmd) {
 
-   PyObject *ret = NULL;
+   // 20220330-PE I think that this is super ricketty now!
+   // Does it only find things in dynamic_atom_overlaps_and_other_outliers module?
+   // this function was empty before today, returning NULL.
 
-   return ret;
+   const char *modulename = "__main__";
+   PyObject *pName = myPyString_FromString(modulename);
+   PyObject *pModule = PyImport_Import(pName);
+   pModule = PyImport_AddModule("__main__");
+   pModule = PyImport_AddModule("coot");
+   pModule = PyImport_AddModule("coot_utils");
+   pModule = PyImport_AddModule("dynamic_atom_overlaps_and_other_outliers");
+   PyObject *globals = PyModule_GetDict(pModule);
+   PyObject *result = PyRun_String(python_cmd.c_str(), Py_eval_input, globals, globals);
+   return result;
 }
 #endif //PYTHON
 
