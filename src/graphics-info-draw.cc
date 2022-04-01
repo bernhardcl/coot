@@ -476,7 +476,7 @@ graphics_info_t::get_mvp_for_shadow_map(const glm::vec3 &light_direction_eye_spa
    glm::mat4 model_matrix = glm::mat4(1.0);
 
    float box_size = 11.0;
-   box_size = 50.0; // should depend on zoom or something.
+   box_size = 66.0; // should depend on zoom or something.
    glm::mat4 projection_matrix = glm::ortho(-box_size, box_size, -box_size, box_size, -box_size, box_size);
 
    glm::vec3 rc = get_rotation_centre();
@@ -2326,11 +2326,13 @@ graphics_info_t::setup_lights() {
 
    lights_info_t light;
    light.position = glm::vec4(-2.0f, 2.0f, 5.0f, 1.0f);
-   light.direction = glm::normalize(glm::vec3(0.5, 0, 1.0));
+   light.direction = glm::normalize(glm::vec3(0.5, 0.0, 1.0));
+   // light.direction = glm::normalize(glm::vec3(0.0, 0.0, -1.0));
    graphics_info_t::lights[0] = light;
 
    light.position = glm::vec4(3.0f, -2.0f, 4.0f, 1.0f);
    light.direction = glm::normalize(glm::vec3(-1.0, 0.5, 1.0));
+   // light.is_on = false;
    graphics_info_t::lights[1] = light;
 }
 
@@ -2443,7 +2445,8 @@ graphics_info_t::hud_geometry_distortion_to_bar_size_rama(float distortion) {
    float d1 = distortion + 18.0; // 18.0 is carefully chosen (16 too small, 22 too big)
    float d2 = d1 / 6.0f;
    if (d2 < 0.0f) d2 = 0.0f;
-   float d3 = 0.07f * d2 * d2; // carefully chosen.
+   float d3 = 0.055f * d2 * d2; // carefully chosen.
+   if (d3 > 0.08) d3 = 0.08; // carefully chosen
 
    return d3;
 }
@@ -4016,8 +4019,9 @@ graphics_info_t::reset_frame_buffers(int width, int height) {
 
       // width  = width;
       // height = height;
-      std::cout << "debug:: reset_frame_buffers() with sf " << sf << " "
-                << width << " x " << height << std::endl;
+      if (false)
+         std::cout << "debug:: reset_frame_buffers() with sf " << sf << " "
+                   << width << " x " << height << std::endl;
       screen_framebuffer.init(sf * width, sf * height, index_offset, "screen");
       GLenum err = glGetError(); if (err) std::cout << "reset_frame_buffers() err " << err << std::endl;
 
@@ -4030,7 +4034,7 @@ graphics_info_t::reset_frame_buffers(int width, int height) {
       combine_textures_using_depth_framebuffer.init(sf * width, sf * height, index_offset, "combine");
       err = glGetError(); if (err) std::cout << "reset_frame_buffers() err " << err << std::endl;
 
-      std::cout << "debug:: reset_frame_buffers() sf " << sf << " width " << width << " height " << height << std::endl;
+      // std::cout << "debug:: reset_frame_buffers() sf " << sf << " width " << width << " height " << height << std::endl;
 
       // index_offset = 0;
       // g.blur_framebuffer.init(width, height, index_offset, "blur");
@@ -5088,6 +5092,30 @@ graphics_info_t::setup_key_bindings() {
                  return gboolean(TRUE);
               };
 
+   auto l31 = [] () {
+                 graphics_info_t g;
+                 g.decrease_clipping_front();
+                 return gboolean(TRUE);
+              };
+
+   auto l32 = [] () {
+                 graphics_info_t g;
+                 g.increase_clipping_front();
+                 return gboolean(TRUE);
+              };
+
+   auto l33 = [] () {
+                 graphics_info_t g;
+                 g.decrease_clipping_back();
+                 return gboolean(TRUE);
+              };
+
+   auto l34 = [] () {
+                 graphics_info_t g;
+                 g.increase_clipping_back();
+                 return gboolean(TRUE);
+              };
+
    // Note to self, Space and Shift Space are key *Release* functions
 
    std::vector<std::pair<keyboard_key_t, key_bindings_t> > kb_vec;
@@ -5117,6 +5145,12 @@ graphics_info_t::setup_key_bindings() {
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_k,      key_bindings_t(l25, "Fill Partial Residue")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_K,      key_bindings_t(l26, "Delete Sidechain")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_o,      key_bindings_t(l28, "NCS Other Chain")));
+
+   // clipping
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_1,      key_bindings_t(l31, "Clipping Front Expand")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_2,      key_bindings_t(l32, "Clipping Front Reduce")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_3,      key_bindings_t(l33, "Clipping Back Expand")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_4,      key_bindings_t(l34, "Clipping Back Reduce")));
 
    // control
    // meh - ugly and almost useless. Try again.

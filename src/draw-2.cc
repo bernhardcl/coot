@@ -181,7 +181,7 @@ on_glarea_realize(GtkGLArea *glarea) {
    int w = allocation.width;
    int h = allocation.height;
 
-   std::cout << "debug:: on_glarea_realize() about to make_current()" << std::endl;
+   // std::cout << "debug:: on_glarea_realize() about to make_current()" << std::endl;
    gtk_gl_area_make_current(glarea);
    GLenum err = glGetError();
    err = glGetError(); if (err) std::cout << "on_glarea_realize() A err " << err << std::endl;
@@ -272,9 +272,9 @@ on_glarea_realize(GtkGLArea *glarea) {
          err = glGetError(); if (err) std::cout << "on_glarea_realize() blur D shader-framebuffer err " << err << std::endl;
       }
 
-      std::cout << "DEBUG:: calling setup_hud_text for shader " << g.shader_for_hud_text.name << std::endl;
+      // std::cout << "DEBUG:: calling setup_hud_text for shader " << g.shader_for_hud_text.name << std::endl;
       setup_hud_text(w, h, graphics_info_t::shader_for_hud_text, false);
-      std::cout << "DEBUG:: calling setup_hud_text for shader " << g.shader_for_atom_labels.name << std::endl;
+      // std::cout << "DEBUG:: calling setup_hud_text for shader " << g.shader_for_atom_labels.name << std::endl;
       setup_hud_text(w, h, graphics_info_t::shader_for_atom_labels, true);
 
       g.tmesh_for_hud_refinement_dialog_arrow = HUDTextureMesh("HUD tmesh for refinement dialog arrow");
