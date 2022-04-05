@@ -475,8 +475,8 @@ graphics_info_t::get_mvp_for_shadow_map(const glm::vec3 &light_direction_eye_spa
 
    glm::mat4 model_matrix = glm::mat4(1.0);
 
-   float box_size = 11.0;
-   box_size = 66.0; // should depend on zoom or something.
+   float box_size = shadow_box_size; // user setable, default 66.
+   if (box_size < 0.0) box_size = 66.0;
    glm::mat4 projection_matrix = glm::ortho(-box_size, box_size, -box_size, box_size, -box_size, box_size);
 
    glm::vec3 rc = get_rotation_centre();
@@ -1616,6 +1616,8 @@ graphics_info_t::draw_molecules_with_shadows() {
             m.draw_dots(&shader_for_rama_balls, mvp, model_rotation_matrix, lights, eye_position,
                         bg_col_v4, shader_do_depth_fog_flag);
 
+            m.draw_ncs_ghosts(&shader_for_meshes, mvp, model_rotation_matrix, lights, eye_position, bg_col_v4);
+
             glEnable(GL_BLEND);
             // good idea to not use shadows on atom labels?
 
@@ -1729,6 +1731,7 @@ graphics_info_t::draw_molecules_with_shadows() {
 
 
 }
+
 
 void
 graphics_info_t::draw_molecules_atom_labels() {
@@ -2594,8 +2597,10 @@ graphics_info_t::draw_hud_ramachandran_plot() {
 
    // auto tp_0 = std::chrono::high_resolution_clock::now();
    bool draw_gl_ramachandran_plot = true;
-   if (! saved_dragged_refinement_results.refinement_results_contain_overall_rama_plot_score)
-      draw_gl_ramachandran_plot = false;
+   // 20220403-PE Do I want to draw this only if there are Rama restraints? No.
+   // This test was added in 5cba65a245693929a276961928124b112e10291b
+   // if (! saved_dragged_refinement_results.refinement_results_contain_overall_rama_plot_score)
+   //       draw_gl_ramachandran_plot = false;p
    if (draw_gl_ramachandran_plot) { // make this a member of graphics_info_t
       if (moving_atoms_asc) {
          if (moving_atoms_asc->n_selected_atoms > 0) {

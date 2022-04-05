@@ -2392,6 +2392,9 @@ get_map_colour(int imol) {
    return colour;
 }
 
+#if GTK_MAJOR_VERSION >=4 || GTK_DISABLE_DEPRECATED
+#else
+   // can I remove this?
 void
 on_single_map_properties_colour_dialog_color_changed(GtkColorSelection *colorselection,
                                                      gpointer           user_data) {
@@ -2399,6 +2402,7 @@ on_single_map_properties_colour_dialog_color_changed(GtkColorSelection *colorsel
    // this is not used now, I think
    std::cout << "colour changed" << std::endl;
 }
+#endif
 
 void on_single_map_properties_colour_dialog_response(GtkDialog *dialog,
                                                      gint       response_id,
@@ -3108,10 +3112,10 @@ void set_show_unit_cells_all(short int istate) {
 
    for (int imol=0; imol<graphics_n_molecules(); imol++) {
       if (is_valid_model_molecule(imol)) {
-	 graphics_info_t::molecules[imol].show_unit_cell_flag = istate;
+	 graphics_info_t::molecules[imol].set_show_unit_cell(istate);
       }
       if (is_valid_map_molecule(imol)) {
-	 graphics_info_t::molecules[imol].show_unit_cell_flag = istate;
+	 graphics_info_t::molecules[imol].set_show_unit_cell(istate);
       }
    }
 
@@ -7321,7 +7325,10 @@ run_state_file_maybe() {
 	 } else {
 	    if (graphics_info_t::use_graphics_interface_flag) {
 	       GtkWidget *dialog = wrapped_create_run_state_file_dialog(); // uses builder
-	       gtk_widget_show(dialog);
+               if (dialog)
+                  gtk_widget_show(dialog);
+               else
+                  std::cout << "ERROR:: missing dialog" << std::endl;
 	    }
 	 }
       }
@@ -7348,22 +7355,16 @@ GtkWidget *wrapped_create_run_state_file_dialog() {
    GtkWidget *w = NULL;
    GtkWidget *vbox_mols = NULL;
 
-   if (graphics_info_t::gui_from_gtkbuilder()) {
-      w = graphics_info_t::get_widget_from_builder("run_state_file_dialog");
-      vbox_mols = graphics_info_t::get_widget_from_builder("mols_vbox");
-      if (w) {
-         // std::cout << "wrapped_create_run_state_file_dialog():: got widget w " << w << std::endl;
-      } else {
-         std::cout << "wrapped_create_run_state_file_dialog():: widget w was null " << std::endl;
-      }
+   w = widget_from_builder("run_state_file_dialog");
+   vbox_mols = widget_from_builder("mols_vbox");
+
+   std::cout << "########333333333333333 debug:: w " << w << std::endl;
+   std::cout << "########333333333333333 debug:: vbox_mols " << vbox_mols << std::endl;
+
+   if (w) {
+      // std::cout << "wrapped_create_run_state_file_dialog():: got widget w " << w << std::endl;
    } else {
-
-      // Old style - I wonder what this is now...
-
-      // w = create_run_state_file_dialog();
-      w = widget_from_builder("run_state_file_dialog");
-      // vbox_mols = lookup_widget(w, "mols_vbox");
-      vbox_mols = widget_from_builder("mols_vbox");
+      std::cout << "wrapped_create_run_state_file_dialog():: widget w was null " << std::endl;
    }
 
    std::vector<std::string> v = g.save_state_data_and_models(filename, il);

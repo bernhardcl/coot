@@ -242,17 +242,16 @@ AM_CPPFLAGS = \
 	$(RDKIT_CXXFLAGS) 		\
 	$(BOOST_CPPFLAGS) 		\
 	$(ENHANCED_LIGAND_TOOLS_CPPFLAGS) \
+        $(GLM_CXXFLAGS)                 \
+	$(SWIG_FLAGS)			\
+	$(GTKGL_CONTEXT_CFLAGS)		\
+	@GTK_CFLAGS@ 			\
+        $(GOOCANVAS_CFLAGS)             \
 	$(WITH_GUILE_CFLAGS)		\
 	$(USE_GUILE_GTK) 		\
 	$(GUILE_GTK_CFLAGS)		\
 	$(GUILE_CFLAGS)			\
 	$(CANVAS_CFLAGS) 		\
-        $(GLM_CXXFLAGS)                 \
-	$(SWIG_FLAGS)			\
-	$(GTKGL_CONTEXT_CFLAGS)		\
-        $(GOOCANVAS_CFLAGS)             \
-	@GTK_CFLAGS@ 			\
-	$(GLUT_CFLAGS)			\
 	$(MOLTRIANGLES_CPPFLAGS)	\
 	$(LIBSSM_CXXFLAGS) 		\
 	$(MMDB_CXXFLAGS) 		\
@@ -335,10 +334,12 @@ lib_LTLIBRARIES=libcootsumo.la
 
 libcootsumo_la_SOURCES = \
 	atom-pull.hh		 \
+        atom-label-info.hh       \
 	array-2d.hh		 \
 	init_coot_as_python_module.cc \
 	init_coot_as_python_module.hh \
 	boids.hh boids.cc	 \
+        bond-colour-mode.hh      \
 	boot-python.hh           \
 	boot-python.cc           \
 	atom-overlaps.cc         \
@@ -481,6 +482,7 @@ libcootsumo_la_SOURCES = \
         dots-representation.hh   \
 	draw.cc                  \
 	draw-2.cc                \
+	draw-2.hh                \
 	draw.hh                  \
 	drag-and-drop.hh         \
 	drag-and-drop.cc         \
@@ -494,9 +496,11 @@ libcootsumo_la_SOURCES = \
 	flev.cc                  \
         framebuffer.cc           \
         framebuffer.hh           \
+        fresnel-settings.hh      \
 	ft-character.hh \
 	old-generic-display-object.hh\
 	old-generic-display-object.cc\
+        g_triangle.hh            \
 	generic-objects.cc   	 \
         generic-display-objects-c.h \
 	generic-vertex.hh	 \
@@ -570,6 +574,7 @@ libcootsumo_la_SOURCES = \
 	LinesMesh.cc LinesMesh.hh \
 	LigandViewMesh.cc        \
 	LigandViewMesh.hh        \
+        lights-info.hh           \
 	lsq-dialog-values.hh     \
 	lbg-interface.hh         \
 	lbg-callbacks-outer.cc   \
@@ -580,6 +585,8 @@ libcootsumo_la_SOURCES = \
 	matrix-utils.hh          \
 	matrix-utils.cc          \
         map-statistics.hh        \
+        Maaterial.hh             \
+        map_triangle.hh          \
 	Mesh.cc Mesh.hh          \
 	Mesh-from-glTF.cc        \
 	Mesh-from-graphical-bonds-instanced.cc     \
@@ -588,8 +595,9 @@ libcootsumo_la_SOURCES = \
 	meshed-generic-display-object.cc \
 	map-statistics.hh        \
 	merge-molecule-results-info-t.hh \
-	model-composition-statistics.hh \
-	molecule-class-info.cc 	 \
+	model-composition-statistics.hh  \
+        molecular-triangles-mesh.hh      \
+	molecule-class-info.cc 	         \
 	molecule-class-info-alignment.cc \
 	molecule-class-info-analysis.cc \
 	molecule-class-info-bonds.cc    \
@@ -710,6 +718,7 @@ libcootsumo_la_SOURCES = \
 	view.hh 		 \
 	view.cc 		 \
 	new-centre.hh            \
+        widget-headers.hh        \
 	widget-from-builder.hh   \
 	widget-from-builder.cc   \
         json.hpp

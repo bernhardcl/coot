@@ -193,22 +193,28 @@ namespace coot {
       clipper::RTop_orth rtop;
       int SelectionHandle;
       graphical_bonds_container bonds_box;
+      Mesh mesh;
       std::string name;
       std::string chain_id;
       std::string target_chain_id;  // this operator matches to this chain.
-      short int display_it_flag;
+      bool display_it_flag;
       std::vector<int> residue_matches;
-      ghost_molecule_display_t() { SelectionHandle = -1;
-	 display_it_flag = 0; }
+      ghost_molecule_display_t() {
+         SelectionHandle = -1;
+	 display_it_flag = false; }
       ghost_molecule_display_t(const clipper::RTop_orth &rtop_in,
 			       int SelHnd_in,
-			       const std::string &name_in) {
-	 rtop = rtop_in;
+			       const std::string &name_in) : rtop(rtop_in), name(name_in) {
 	 SelectionHandle = SelHnd_in;
-	 name = name_in;
-	 display_it_flag = 1;
+	 display_it_flag = true;
       }
       void update_bonds(mmdb::Manager *mol); // the parent's mol
+      void draw(Shader *shader,
+                const glm::mat4 &mvp,
+                const glm::mat4 &view_rotation_matrix,
+                const std::map<unsigned int, lights_info_t> &lights,
+                const glm::vec3 &eye_position, // eye position in view space (not molecule space)
+                const glm::vec4 &background_colour);
       bool is_empty() { return (SelectionHandle == -1); }
       ncs_residue_info_t get_differences(mmdb::Residue *this_residue_p,
 					 mmdb::Residue *master_residue_p,
@@ -885,8 +891,9 @@ public:        //                      public
 
    // Unit Cell (should be one for each molecule)
    //
-   short int show_unit_cell_flag;
-   short int have_unit_cell;
+   void set_show_unit_cell(bool state);
+   bool show_unit_cell_flag;
+   bool have_unit_cell;
    void set_have_unit_cell_flag_maybe(bool warn_about_missing_symmetry_flag);
 
    void draw_molecule(short int do_zero_occ_spots,
@@ -1078,7 +1085,7 @@ public:        //                      public
    // void draw_unit_cell_internal(float rsc[8][3]);
 
    LinesMesh lines_mesh_for_cell;
-   void setup_unit_cell(Shader *shader_p);
+   void setup_unit_cell();
    void draw_unit_cell(Shader *shader_p, const glm::mat4 &mvp);
 
    void draw_dots(); // 20211022-PE delete this old OpenGL function
@@ -1188,7 +1195,7 @@ public:        //                      public
 				       const coot::Cartesian &back,
 				       bool against_a_dark_background);
 
-   void display_ghost_bonds(int ighost);
+   void draw_ghost_bonds(int ighost);
    void set_display_stick_mode_atoms(bool f) {
       display_stick_mode_atoms_flag = f;
    }
@@ -2496,6 +2503,12 @@ public:        //                      public
    int draw_ncs_ghosts_p() const { // needed for setting the Bond Parameters checkbutton
       return show_ghosts_flag;
    }
+   void draw_ncs_ghosts(Shader *shader_for_meshes,
+                        const glm::mat4 &mvp,
+                        const glm::mat4 &model_rotation_matrix,
+                        const std::map<unsigned int, lights_info_t> &lights,
+                        const glm::vec3 &eye_position,
+                        const glm::vec4 &background_colour);
 
    std::vector<coot::ghost_molecule_display_t> NCS_ghosts() const;
 

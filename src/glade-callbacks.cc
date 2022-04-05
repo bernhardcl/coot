@@ -100,8 +100,8 @@ on_window1_destroy_gtkbuilder_callback (GtkWidget       *object,
 extern "C" G_MODULE_EXPORT
 gboolean
 on_window1_delete_event_gtkbuilder_callback                (GtkWidget       *widget,
-                                        GdkEvent        *event,
-                                        gpointer         user_data)
+                                                            GdkEvent        *event,
+                                                            gpointer         user_data)
 {
    printf("---------------------------- on_window1_delete_event() ------------------\n");
   /* coot_checked_exit() calls coot_real_exit() and that calls exit(),
@@ -1600,9 +1600,8 @@ on_test_thing1_activate_gtkbuilder_callback                (GtkMenuItem     *men
 
 extern "C" G_MODULE_EXPORT
 void
-on_scripting_window_activate_gtkbuilder_callback           (GtkMenuItem     *menuitem,
-                                        gpointer         user_data)
-{
+on_scripting_window_activate_gtkbuilder_callback(GtkMenuItem     *menuitem,
+                                                 gpointer         user_data) {
 }
 
 
@@ -3022,14 +3021,11 @@ void on_rotate_translate_obj_cancel_button_clicked_gtkbuilder_callback (GtkButto
 extern "C" G_MODULE_EXPORT
 void
 on_run_script1_activate_gtkbuilder_callback (GtkMenuItem     *menuitem,
-                                             gpointer         user_data)
-{
-  GtkWidget *widget = coot_run_script_chooser();
-  add_sort_button_fileselection(widget);
-  add_filename_filter_button(widget, COOT_SCRIPTS_FILE_SELECTION);
-  add_ccp4i_project_optionmenu(widget,
-                               COOT_SCRIPTS_FILE_SELECTION);
-  gtk_widget_show(widget);
+                                             gpointer         user_data) {
+
+   GtkWidget *widget = coot_run_script_chooser();
+   add_filename_filter_button(widget, COOT_SCRIPTS_FILE_SELECTION);
+   gtk_widget_show(widget);
 }
 
 
@@ -3789,74 +3785,6 @@ on_single_map_properties_colour_button_clicked_gtkbuilder_callback (GtkButton   
    show_map_colour_selector(imol);
 }
 
-#if 0				/* don't know what to do with optionmenu changed */
-extern "C" G_MODULE_EXPORT
-void
-on_run_refmac_phase_input_optionmenu_changed_gtkbuilder_callback
-                                        (GtkOptionMenu   *optionmenu,
-                                        gpointer         user_data)
-{
-  GtkWidget *phases_hbox;
-  GtkWidget *hl_hbox;
-  GtkWidget *no_labels_checkbutton;
-  GtkWidget *twin_checkbutton;
-  GtkWidget *sad_extras;
-  GtkWidget *fobs_hbox;
-  GtkWidget *fpm_hbox;
-  int phase_combine_flag;
-
-  phases_hbox = lookup_widget(GTK_WIDGET(optionmenu), "refmac_dialog_phases_hbox");
-  hl_hbox     = lookup_widget(GTK_WIDGET(optionmenu), "refmac_dialog_hl_hbox");
-  no_labels_checkbutton = lookup_widget(GTK_WIDGET(optionmenu), "run_refmac_nolabels_checkbutton");
-  twin_checkbutton = lookup_widget(GTK_WIDGET(optionmenu), "run_refmac_twin_checkbutton");
-  sad_extras = lookup_widget(GTK_WIDGET(optionmenu), "run_refmac_sad_extra_hbox");
-  fobs_hbox  = lookup_widget(GTK_WIDGET(optionmenu), "refmac_dialog_fobs_hbox");
-  fpm_hbox   = lookup_widget(GTK_WIDGET(optionmenu), "refmac_dialog_fpm_hbox");
-
-  phase_combine_flag = get_refmac_phase_input();
-
-  if (phase_combine_flag == 1) {
-    gtk_widget_show(phases_hbox);
-    gtk_widget_hide(hl_hbox);
-  } else {
-    if (phase_combine_flag == 2) {
-      gtk_widget_hide(phases_hbox);
-      gtk_widget_show(hl_hbox);
-    } else {
-      gtk_widget_hide(phases_hbox);
-      gtk_widget_hide(hl_hbox);
-    }
-  }
-  if (refmac_runs_with_nolabels() == 2) {
-    if (phase_combine_flag) {
-      /* current version of refmac (5.5) doesnt allow phase input for twin or SAD refinement
-	 so we de-sensitise and uncheck the buttons */
-      gtk_widget_set_sensitive(twin_checkbutton, FALSE);
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(twin_checkbutton), FALSE);
-      /* current version doesnt allow phase input without giving labels */
-      gtk_widget_set_sensitive(no_labels_checkbutton, FALSE);
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(no_labels_checkbutton), FALSE);
-    } else {
-      gtk_widget_set_sensitive(twin_checkbutton, TRUE);
-      gtk_widget_set_sensitive(no_labels_checkbutton, TRUE);
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(no_labels_checkbutton), TRUE);
-    }
-    if (phase_combine_flag == 3) {
-      /* SAD */
-      gtk_widget_show(sad_extras);
-      /* change label box from fobs to f+/- as SAD needs this */
-      gtk_widget_hide(fobs_hbox);
-      gtk_widget_show(fpm_hbox);
-    } else {
-      gtk_widget_hide(sad_extras);
-      /* change label box back from f+/- to fobs for 'normal' refinement */
-      gtk_widget_hide(fpm_hbox);
-      gtk_widget_show(fobs_hbox);
-    }
-
-  }
-}
-#endif
 
 extern "C" G_MODULE_EXPORT
 void
@@ -7172,8 +7100,7 @@ void
 on_base_chooser_A_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = widget_from_builder(
-				"nucleic_acid_base_chooser_dialog");
+   GtkWidget *w = widget_from_builder("nucleic_acid_base_chooser_dialog");
    gtk_widget_hide(w);
    do_base_mutation("A");
 }
@@ -7184,8 +7111,7 @@ void
 on_base_chooser_C_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = widget_from_builder(
-				"nucleic_acid_base_chooser_dialog");
+   GtkWidget *w = widget_from_builder("nucleic_acid_base_chooser_dialog");
    gtk_widget_hide(w);
    do_base_mutation("C");
 }
@@ -7196,8 +7122,7 @@ void
 on_base_chooser_G_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = widget_from_builder(
-				"nucleic_acid_base_chooser_dialog");
+   GtkWidget *w = widget_from_builder("nucleic_acid_base_chooser_dialog");
    gtk_widget_hide(w);
    do_base_mutation("G");
 }
@@ -7208,8 +7133,7 @@ void
 on_base_chooser_T_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = widget_from_builder(
-				"nucleic_acid_base_chooser_dialog");
+   GtkWidget *w = widget_from_builder("nucleic_acid_base_chooser_dialog");
    gtk_widget_hide(w);
    do_base_mutation("T");
 }
@@ -7220,8 +7144,7 @@ void
 on_base_chooser_U_button_clicked_gtkbuilder_callback       (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *w = widget_from_builder(
-				"nucleic_acid_base_chooser_dialog");
+   GtkWidget *w = widget_from_builder("nucleic_acid_base_chooser_dialog");
    gtk_widget_hide(w);
    do_base_mutation("U");
 }
@@ -7233,8 +7156,7 @@ on_base_chooser_cancel_button_clicked_gtkbuilder_callback  (GtkButton       *but
                                         gpointer         user_data)
 {
 
-   GtkWidget *w = widget_from_builder(
-				"nucleic_acid_base_chooser_dialog");
+   GtkWidget *w = widget_from_builder("nucleic_acid_base_chooser_dialog");
    gtk_widget_hide(w);
 }
 
@@ -9708,52 +9630,60 @@ on_cif_dictionary_filechooserdialog1_destroy_gtkbuilder_callback
 {
 
   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *fileselection = widget_from_builder(
-                                                "cif_dictionary_filechooserdialog1");
-
+  GtkWidget *fileselection = widget_from_builder("cif_dictionary_filechooserdialog1");
   gtk_widget_hide(fileselection);
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
-on_run_script_filechooserdialog1_response_gtkbuilder_callback
-					(GtkDialog * dialog,
-					gint response_id,
-					gpointer user_data)
-{
+on_run_script_filechooser_dialog_response_gtkbuilder_callback(GtkDialog * dialog,
+                                                              gint response_id,
+                                                              gpointer user_data) {
 
-  if (response_id == GTK_RESPONSE_OK) {
-    GtkWidget *fileselection = widget_from_builder(
-					   "run_script_filechooserdialog1");
-
-    const char *script_filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(fileselection));
-    run_script(script_filename);
-    gtk_widget_hide(fileselection);
-
-  } else {
-    GtkWidget *fileselection = widget_from_builder(
-                                                "run_script_filechooserdialog1");
-
-    gtk_widget_hide(fileselection);
-  }
+   GtkWidget *file_chooser = widget_from_builder("run_script_filechooser_dialog");
+   if (response_id == GTK_RESPONSE_OK) {
+      const char *script_filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(file_chooser));
+      run_script(script_filename);
+      gtk_widget_hide(file_chooser);
+   }
+   gtk_widget_hide(file_chooser);
 
 }
+
+extern "C" G_MODULE_EXPORT
+void
+on_run_script_filechooser_dialog_file_activated_gtkbuilder_callback(GtkFileChooser* dialog,
+                                                                    gpointer user_data) {
+
+   GtkWidget *file_chooser = widget_from_builder("run_script_filechooser_dialog");
+   const char *script_filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(file_chooser));
+   run_script(script_filename);
+   gtk_widget_hide(file_chooser);
+}
+
 
 
 extern "C" G_MODULE_EXPORT
 void
 on_run_script_filechooserdialog1_destroy_gtkbuilder_callback
 					(GtkWidget * object,
-					gpointer user_data)
-{
+					gpointer user_data) {
 
-  store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
-  GtkWidget *fileselection = widget_from_builder(
-                                                "run_script_filechooserdialog1");
-
-  gtk_widget_hide(fileselection);
+   store_window_size(COOT_FILESELECTION_DIALOG, GTK_WIDGET(object));
+   GtkWidget *file_chooser = widget_from_builder("run_script_filechooser_dialog");
+   gtk_widget_hide(file_chooser);
 }
+
+extern "C" G_MODULE_EXPORT
+gboolean
+on_run_script_filechooser_dialog_delete_event_gtkbuilder_callback(GtkWidget       *widget,
+                                                                  GdkEvent        *event,
+                                                                  gpointer         user_data) {
+
+   return gboolean(TRUE);
+}
+
 
 
 GtkFileChooserConfirmation
@@ -12083,7 +12013,7 @@ on_symmetry_always_on_checkbutton_toggled_gtkbuilder_callback (GtkToggleButton *
 extern "C" G_MODULE_EXPORT
 void
 on_curlew1_activate_gtkbuilder_callback              (GtkMenuItem     *menuitem,
-                                  gpointer         user_data) {
+                                                      gpointer         user_data) {
   curlew();
 }
 
@@ -12408,5 +12338,51 @@ on_single_map_properties_step_size_entry_key_press_event_gtkbuilder_callback (Gt
       }
    }
    return FALSE;
+}
+
+
+extern "C" G_MODULE_EXPORT
+gboolean
+on_cif_dictionary_filechooser_dialog_delete_event_gtkbuilder_callback(GtkWidget       *widget,
+                                                                      GdkEvent        *event,
+                                                                      gpointer         user_data) {
+
+   gtk_widget_hide(widget);
+   return TRUE;
+}
+
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_cif_dictionary_filechooser_dialog_file_activated_gtkbuilder_callback(GtkFileChooser* dialog,
+                                                                        gpointer user_data) {
+
+   // 20220319-PE shouldn't need to connect to this says the documentation - hmmm.....
+   const char *fn = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+   read_cif_dictionary(fn);
+   gtk_widget_hide(GTK_WIDGET(dialog));
+}
+
+
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_cif_dictionary_filechooser_dialog_response_gtkbuilder_callback(GtkDialog       *dialog,
+                                                                  gint             response_id,
+                                                                  gpointer         user_data) {
+
+   if (response_id == GTK_RESPONSE_OK) {
+      const char *fnc = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+      if (fnc) {
+         read_cif_dictionary(fnc);
+      }
+      gtk_widget_hide(GTK_WIDGET(dialog));
+   }
+
+   if (response_id == GTK_RESPONSE_CANCEL) {
+      gtk_widget_hide(GTK_WIDGET(dialog));
+   }
 }
 

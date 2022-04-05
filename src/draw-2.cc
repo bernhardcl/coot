@@ -41,7 +41,7 @@ get_camera_up_direction(const glm::mat4 &mouse_quat_mat) {
 gboolean
 graphics_info_t::tick_function_is_active() {
 
-   if (false)
+   if (true)
       std::cout << "tick_function_is_active() " << do_tick_particles << " " << do_tick_spin << " " << do_tick_boids << " "
                 << do_tick_hydrogen_bonds_mesh << " " << do_tick_happy_face_residue_markers << " "
                 << do_tick_constant_draw << std::endl;
@@ -65,6 +65,8 @@ gboolean
 glarea_tick_func(GtkWidget *widget,
                  GdkFrameClock *frame_clock,
                  gpointer data) {
+
+   graphics_info_t::tick_function_is_active();
 
    if (graphics_info_t::do_tick_particles) {
       if (graphics_info_t::particles.empty()) {
@@ -882,6 +884,7 @@ on_glarea_key_press_notify(GtkWidget *widget, GdkEventKey *event) {
    if (event->keyval == GDK_KEY_Shift_L) g.shift_is_pressed = true;
 
    keyboard_key_t kbk(event->keyval, control_is_pressed_flag);
+   g.add_key_to_history(kbk);
 
    std::map<keyboard_key_t, key_bindings_t>::const_iterator it = g.key_bindings_map.find(kbk);
 
@@ -906,7 +909,8 @@ on_glarea_key_press_notify(GtkWidget *widget, GdkEventKey *event) {
       if (! handled)
          std::cout << "on_glarea_key_press_notify() key not found in map: " << event->keyval << std::endl;
 
-   graphics_info_t::graphics_draw(); // queue
+   g.check_keyboard_history_for_easter_egg_codes();
+   g.graphics_draw(); // queue
 
    return handled;
 

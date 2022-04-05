@@ -1848,20 +1848,20 @@ void push_the_buttons_on_fileselection(GtkWidget *filter_button,
 				       GtkWidget *sort_button,
 				       GtkWidget *fileselection) {
 
-   std::cout << "GTK-FIXME no fileselection C" << std::endl;
+   std::cout << "GTK-FIXME no fileselection C push the buttons" << std::endl;
 }
 
 void
 filelist_into_fileselection_clist(GtkWidget *fileselection, const std::vector<std::string> &v) {
 
-   std::cout << "GTK-FIXME no fileselection" << std::endl;
+   std::cout << "GTK-FIXME no fileselection filelist_into_fileselection_clist " << std::endl;
 }
 
 /*  Eleanor likes to sort her files by date when selecting a file
 */
 GtkWidget *add_sort_button_fileselection(GtkWidget *fileselection) {
 
-   std::cout << "GTK-FIXME no fileselection" << std::endl;
+   std::cout << "GTK-FIXME no fileselection add_sort_button_fileselection" << std::endl;
    return 0;
 }
 
@@ -2162,7 +2162,7 @@ GtkWidget *coot_cif_dictionary_chooser() {
 
 GtkWidget *coot_run_script_chooser() {
 
-   GtkWidget *w = widget_from_builder("run_script_filechooserdialog1");
+   GtkWidget *w = widget_from_builder("run_script_filechooser_dialog");
    return w;
 }
 
@@ -4307,6 +4307,8 @@ void my_delete_menu_items(GtkWidget *widget, void *data) {
 void show_map_colour_selector(int imol) {
 
    if (is_valid_map_molecule(imol)) {
+#if GTK_MAJOR_VERSION >=4 || GTK_DISABLE_DEPRECATED
+#else
       GtkWidget *color_selection_dialog = gtk_color_selection_dialog_new("Map Colour Selection");
       GdkRGBA map_colour = get_map_colour(imol);
       struct map_colour_data_type *map_colour_data = (struct map_colour_data_type *) malloc(sizeof(struct map_colour_data_type));
@@ -4325,6 +4327,7 @@ void show_map_colour_selector(int imol) {
       gtk_widget_show(color_selection_dialog);
       g_signal_connect(color_selection_dialog, "response", G_CALLBACK(on_map_color_selection_dialog_response), map_colour_p);
       g_object_set_data(G_OBJECT(color_selection_dialog), "imol", GINT_TO_POINTER(imol));
+#endif
    }
 }
 
