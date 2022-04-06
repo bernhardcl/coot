@@ -3791,7 +3791,10 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
          frame_time_history_list.pop_front();
    }
 
+   // 20220405-PE the control flow is confusing/unconentional here - I should make it more clear
+
    bool use_crow_code = true;
+   if (to_screendump_framebuffer_flag) use_crow_code = false;
 
    if (use_crow_code) {
       gboolean state = render_scene();
@@ -3826,7 +3829,7 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
 
       render_3d_scene(gl_area);
 
-      if (make_image_for_screen) {
+      if (make_image_for_screen) { // a normal draw
 
          glViewport(0, 0, w, h);
 
@@ -3870,7 +3873,8 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
          unsigned int index_offset = 0;
          screendump_framebuffer.init(sf * w, sf * h, index_offset, "screendump");
          screendump_framebuffer.bind();
-         render_scene_with_screen_ao_shader();
+         render_3d_scene(gl_area);
+         // render_scene_with_screen_ao_shader();
          gtk_gl_area_attach_buffers(gl_area);
          screendump_tga_internal(output_file_name, w, h, sf, screendump_framebuffer.get_fbo());
 
@@ -3894,7 +3898,7 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
    // auto d10 = std::chrono::duration_cast<std::chrono::microseconds>(tp_1 - tp_0).count();
    // std::cout << "INFO:: render() " << d10 << " microseconds" << std::endl;
 
-   std::cout << "calling update_fps_statistics() " << std::endl;
+   // std::cout << "calling update_fps_statistics() " << std::endl;
    update_fps_statistics();
 
    return FALSE;
@@ -4921,7 +4925,9 @@ graphics_info_t::setup_key_bindings() {
 
    auto l16 = []() { graphics_info_t g; g.undo_last_move(); return gboolean(TRUE); };
 
-   auto l18 = []() { graphics_info_t g; g.accept_moving_atoms(); return gboolean(TRUE); };
+   auto l18 = []() { graphics_info_t g; g.clear_hud_buttons(); g.accept_moving_atoms(); return gboolean(TRUE); };
+
+   auto l18_space = []() { graphics_info_t g; if (g.hud_button_info.size()) { g.clear_hud_buttons(); g.accept_moving_atoms(); return gboolean(TRUE); } };
 
    auto l19 = []() {
                  graphics_info_t g;
