@@ -27,7 +27,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 
 
-AC_INIT([coot],[1.0.01-pre])
+AC_INIT([coot],[1.0.01])
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -224,9 +224,9 @@ AC_LANG_POP
 AC_ARG_WITH(gtk4, [  --gtk4 build coot with gtk4 ], with_gtk4="yes", with_gtk4="no")
 
 if test $with_gtk4 = yes ; then
-  PKG_CHECK_MODULES(GTK, gtk+-4.0 >= 3.94)
+   PKG_CHECK_MODULES(GTK, gtk+-4.0 >= 3.94)
 else
-  PKG_CHECK_MODULES(GTK, gtk+-3.0 >= 3.18)
+   PKG_CHECK_MODULES(GTK, gtk+-3.0 >= 3.18)
 fi
 
 # goocanvas for GTK4?

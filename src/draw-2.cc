@@ -833,13 +833,13 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
    }
 
    int mouse_action_button_mask = GDK_BUTTON3_MASK;
-   int mouse_other_button = GDK_BUTTON1_MASK;
+   int mouse_other_button       = GDK_BUTTON1_MASK;
 
    // test for being a mac laptop? - or a user setting
 #ifdef __APPLE__  // this needs improvement
    if (true) {
       mouse_action_button_mask = GDK_BUTTON1_MASK;
-      mouse_other_button = GDK_BUTTON3_MASK;
+      mouse_other_button       = GDK_BUTTON3_MASK;
    }
 #endif
 
@@ -851,7 +851,10 @@ on_glarea_motion_notify(GtkWidget *widget, GdkEventMotion *event) {
          g.mouse_zoom(delta_x, delta_y);
       } else {
          if (! shift_is_pressed) {
-            mouse_view_rotate(widget);
+            // don't rotate the view if we are in atom drag mode
+            if (!g.in_moving_atoms_drag_atom_mode_flag) {
+               mouse_view_rotate(widget);
+            }
          } else {
             g.mouse_zoom(delta_x, delta_y);
          }
@@ -927,24 +930,8 @@ on_glarea_key_release_notify(GtkWidget *widget, GdkEventKey *event) {
    if (event->state & GDK_SHIFT_MASK) g.shift_is_pressed = true;
    if (event->keyval == GDK_KEY_Shift_L) g.shift_is_pressed = true;
 
-   if (event->keyval == GDK_KEY_space) {
-      // g.reorienting_next_residue_mode = false; // hack
-      bool reorienting = graphics_info_t::reorienting_next_residue_mode;
-      if (reorienting) {
-         if (graphics_info_t::shift_is_pressed) {
-            g.reorienting_next_residue(false); // backwards
-         } else {
-            g.reorienting_next_residue(true); // forwards
-         }
-      } else {
-         // old/standard simple translation
-         if (graphics_info_t::shift_is_pressed) {
-            g.intelligent_previous_atom_centring(g.go_to_atom_window);
-         } else {
-            g.intelligent_next_atom_centring(g.go_to_atom_window);
-         }
-      }
-   }
+   // key release is a very special event  - normally we act on key-press.
+
    return TRUE;
 }
 

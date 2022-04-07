@@ -241,14 +241,14 @@ AM_CXXFLAGS = \
 #
 AM_CPPFLAGS = \
         -DUSE_PYTHON \
-	-I$(top_srcdir) \
+	@GTK_CFLAGS@ 			\
+	-I$(top_srcdir)                 \
 	$(RDKIT_CXXFLAGS) 		\
 	$(BOOST_CPPFLAGS) 		\
 	$(ENHANCED_LIGAND_TOOLS_CPPFLAGS) \
         $(GLM_CXXFLAGS)                 \
 	$(SWIG_FLAGS)			\
 	$(GTKGL_CONTEXT_CFLAGS)		\
-	@GTK_CFLAGS@ 			\
         $(GOOCANVAS_CFLAGS)             \
 	$(WITH_GUILE_CFLAGS)		\
 	$(USE_GUILE_GTK) 		\
@@ -586,7 +586,7 @@ libcootsumo_la_SOURCES = \
 	matrix-utils.hh          \
 	matrix-utils.cc          \
         map-statistics.hh        \
-        Maaterial.hh             \
+        Material.hh              \
         map_triangle.hh          \
 	Mesh.cc Mesh.hh          \
 	Mesh-from-glTF.cc        \
