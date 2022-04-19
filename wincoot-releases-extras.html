@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+
+    <meta http-equiv="content-type" content="text/html; charset=windows-1252">
+    <title>WinCoot Releases</title>
+    <meta content="Bernhard Lohkamp" name="author">
+    <meta content="Coot, WinCoot for Windows systems, molecular
+      graphics, releases, download, pre-release" name="description">
+      <link rel="icon" type="image/png" href="coot-favicon.png">
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="coot_script_extras.js"></script>
+
+  </head>
+  <body>
+    <h1>WinCoot release page</h1>
+    <div id="noscript-info">
+      Note: you dont have JavaScript enabled, so the releases wont be listed here. Either enable JavaScript or have a look at the <a href="https://github.com/bernhardcl/coot/releases/">release page</a> for all download options.
+    </div>
+    <script>
+      document.getElementById('noscript-info').innerHTML="";
+    </script>
+
+    <h2> A list of all releases for download...</h2>
+
+    <select id="myselect" onchange="change_myselect(this.value)">
+      <option selected hidden>Choose an option:</option>
+      <option value="all">All releases</option>
+      <option value="false">Stable releases only</option>
+      <option value="true">Pre-releases only</option>
+    </select>
+
+    <table class="table table-bordered table-striped table-downloads">
+      <thead>
+<tr>
+<th>Release name</th>
+<th>Download</th>
+<th>md5sum</th>
+<th>File size</th>
+<th>Release date</th>
+<th>Download count</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+
+
+    <script>
+  // first print all, then have the selection
+    $(document).ready(function() {
+       repo = "bernhardcl/coot";
+       GetReleases(repo, "all");
+  });
+    </script>
+
+    <br>
+    <hr style="width: 100%; height: 2px;">
+    <div style="text-align: left;">
+      <address>Last modified 02/08/2017<br>
+       <script language="javascript">
+<!--
+var ppclink = "Bernhard.Lohkamp at ki.se";
+var ppcname = "Bernhard.Lohkamp";
+var ppchost = "ki.se";
+document.write("<a href=" + "mail" + "to:" + ppcname + "&#64;" + ppchost + ">" + ppclink + "</a>")
+//-->
+</script><noscript>
+email: Bernhard.Lohkamp (at) ki.se
+</noscript></address>
+    </div>
+  </body>
+</html>
