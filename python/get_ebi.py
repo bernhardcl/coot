@@ -212,8 +212,6 @@ def get_eds_pdb_and_mtz(id):
         mtz_file_name = os.path.join(dir_name,
                                      down_code + "_map.mtz")
 
-        print "::::::::: pdb_file_name:", pdb_file_name
-        print "::::::::: mtz_file_name:", mtz_file_name
         if not os.path.isfile(pdb_file_name):
             return False
         else:
@@ -233,13 +231,13 @@ def get_eds_pdb_and_mtz(id):
                 else:
                     return [imol, imol_map, imol_map_d]
 
+    # 20161105 update from John Berrisford
+    # eds_site = "http://eds.bmc.uu.se/eds"
+    # eds_core = "http://eds.bmc.uu.se"
     eds_site = "https://www.ebi.ac.uk/pdbe/coordinates"
-    # https://www.ebi.ac.uk/pdbe/entry/pdb/6tje
-    # eds_core = "some://thing" ;; for web pages
-    eds_core = "https://www.ebi.ac.uk/pdbe/entry/pdb"
+    eds_core = "https://www.ebi.ac.uk/pdbe/entry/pdb" # for web pages
+    # e.g. http://www.ebi.ac.uk/pdbe/entry-files/download/pdb1cbs.ent
     eds_coords_site = "https://www.ebi.ac.uk/pdbe/entry-files/download"
-    # now the map mtz files are like this:
-    # https://www.ebi.ac.uk/pdbe/coordinates/files/zz/4zzn/4zzn_map.mtz
 
     # "1cbds" -> "cb/"
     #
@@ -271,9 +269,8 @@ def get_eds_pdb_and_mtz(id):
             target_mtz_file = down_id + "_map.mtz"
             dir_target_mtz_file = coot_tmp_dir + "/" + target_mtz_file
             # mtz_url = eds_site  + "/files/" + target_mtz_file
-            #mtz_url = eds_site + "/files/" + mid_chars(down_id) + "/" + \
-            #          down_id + "/" + down_id + "_map.mtz"
-            mtz_url = eds_coords_site + "/" + down_id + "_map.mtz"
+            mtz_url = eds_site + "/files/" + mid_chars(down_id) + "/" + \
+                      down_id + "/" + down_id + "_map.mtz"
             eds_info_page = eds_core + "/" + down_id
 
             print "model_url:", model_url
@@ -355,21 +352,12 @@ def get_pdb_redo(text):
             url_py = stub + ".py"
 
             print "getting", url_pdb
-            status = net_get_url(url_pdb, pdb_file_name)
-            if not status == 0:
-                print "Failed to get %s %s status %s" %(url_pdb, pdb_file_name,
-                                                       status)
+            net_get_url(url_pdb, pdb_file_name)
             print "getting", url_mtz
-            status = net_get_url(url_mtz, mtz_file_name)
-            if not status == 0:
-                print "Failed to get %s %s status %s" %(url_mtz, mtz_file_name,
-                                                       status)
+            net_get_url(url_mtz, mtz_file_name)
             print "getting", url_py
-            status = net_get_url(url_py, py_file_name)
-            if not status == 0:
-                print "Failed to get %s %s status %s" %(url_py, py_file_name,
-                                                       status)
-
+            net_get_url(url_py, py_file_name)
+            
             status_imol = read_pdb(pdb_file_name)
             if status_imol < 0:
                 print "BL INFO:: problem opening pdb file. Most likely \
