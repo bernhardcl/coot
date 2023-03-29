@@ -65,7 +65,7 @@ if (use_gui_qm != 2):
                                False, False, 
                                "Import Molecule",
                                lambda text_1, text_2:
-                               import_rdkit_mol_from_smiles(text_1, text_2)))
+                               import_rdkit_mol_from_smiles(text_2, text_1)))
 
 
     add_simple_coot_menu_menuitem(

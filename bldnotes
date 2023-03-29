@@ -10,6 +10,8 @@ run_mogul.py
 ligand_check_refmac_columns in enhanced_ligand.py
 enhanced_ligand.py      test it
 
+check CCP4 WIKI
+
 Dictionaries:
 KCX, TPP
 -------------------------------------------------------
