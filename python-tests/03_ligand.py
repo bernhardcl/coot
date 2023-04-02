@@ -40,6 +40,13 @@ class LigandTestFunctions(unittest.TestCase):
     def test04_0(self):
         """Non-Autoloads"""
 
+        # 20220917-PE says:
+        # as of 8.0 The monomer library no longer contains LIG!
+        # So this test is no longer relevant.
+
+        if self.skip_test(True, "No longer relevant since no more LIG in dictionary"):
+            return
+
         def get_ccp4_version():
             s = shell_command_to_string("cad -i").split("\n")
             if s:

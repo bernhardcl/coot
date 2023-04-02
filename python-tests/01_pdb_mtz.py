@@ -2592,6 +2592,21 @@ class PdbMtzTestFunctions(unittest.TestCase):
         self.failIf(bl > 1.0, "Fail: moved atom %s" %bl)
 
 
+    # Lucrezia Catapano bug
+    #
+    def test63_0(self):
+        """Delete Deuterium Atoms Also"""
+
+        imol = unittest_pdb("pdb7a0l.ent")
+        self.failUnless(valid_model_molecule_qm(imol))
+        delete_hydrogen_atoms(imol)
+        imol_new = new_molecule_by_atom_selection(imol, "//A/*/*[D]")
+        v = valid_model_molecule_qm(imol_new)
+        # Coot should not allow the creation of imol_new - because it should
+        # have no atoms in it.
+        self.failIf(v, "Fail: Coot should have not made %i" %imol_new)
+
+
     def test999_0(self):
         """Renumber residue range without overwriting coordinates."""
 
