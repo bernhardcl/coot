@@ -1273,6 +1273,9 @@ if test "$build_coot_prerelease" = 1 ; then
       echo examining release server files ${AUTOBUILD_SOURCES}/index.html
       coot_version=$(awk  ' /compressed.*a href=/ {f=$6; split($6, arr, "\""); file=arr[2]; gsub(".tar.gz", "", file); files[file]=1; } END { for (file in files) { if (file>final) { final=file } } ; print final } ' \
         ${AUTOBUILD_SOURCES}/index.html | tail -1)
+      coot_version=coot-0.9.8.5
+      coot_version=coot-0.9.8.6
+      coot_version=coot-0.9.8.7
       echo coot_version $coot_version
 
 
@@ -4199,18 +4202,20 @@ echo done coot build.
 # new style
 mon_lib_dir=http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/dependencies
 refmac_mon_lib=refmac-monomer-library.tar.gz
+ccp4_mon_lib=monomers-2023-01-02-23:57:29.tar.gz
 
 if [ -e $install_top_dir/share/coot/lib/data/monomers ] ; then
     echo INFO:: installation has refmac monomer library
-else 
-    echo INSTALLING refmac monomer library...
-    $WGET $mon_lib_dir/$refmac_mon_lib
+else
+    echo INSTALLING CCP4 monomer library...
+    echo INSTALLING CCP4 monomer library... &>2
+    $WGET $mon_lib_dir/$ccp4_mon_lib
     mkdir -p $install_top_dir/share/coot/lib/data
-    tar xzCf $install_top_dir/share/coot/lib/data $AUTOBUILD_SOURCES/$refmac_mon_lib
-fi 
+    tar xzCf $install_top_dir/share/coot/lib/data $AUTOBUILD_SOURCES/$ccp4_mon_lib
+fi
 if [ -e $install_top_dir/share/coot/reference-structures ] ; then
     echo INFO:: installation has reference structures
-else 
+else
     echo GETTING reference structures tar...
     echo GETTING reference structures tar... &>2
     ${WGET} $extras_place/reference-structures.tar.gz

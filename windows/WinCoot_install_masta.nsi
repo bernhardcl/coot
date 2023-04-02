@@ -171,39 +171,6 @@ FunctionEnd
   Call un.ErrorHandlerFunction
 !macroend
 
-; Macro to move files from INSTDIR to USERPROFILE/COOT
-!macro MoveFileToNewHome File isDir
-  ; to avoid duplicate labels...
-  !define ID ${__LINE__}
-  ; check if file exists
-  ClearErrors
-  MessageBox MB_OK `Is "${File}" a dir?`
-  ${If} ${FileExists} "${INSTDIR}\${File}"
-    # your code here
-    MessageBox MB_OK "Try rename"
-    Rename ${INSTDIR}\${File} $%USERPROFILE%\COOT\${File}
-    IfErrors "" skipit_${ID}
-      # somehow couldnt rename, try to copy to dest and remove src
-      # this may be necessary if on different driveletters
-      ClearErrors
-      CopyFiles /Silent ${INSTDIR}\${File} $%USERPROFILE%\COOT\${File}
-      IfErrors "" remove_src_${ID}
-        # couldnt copy, give message
-        MessageBox MB_ICONINFORMATION `"${File}" couldnt be moved from it's old place in \
-        "${INSTDIR}" to new place "$%USERPROFILE%\COOT". \
-        Consider doing it manually if deemed important.`
-        goto skipit_${ID}
-      remove_src_${ID}:
-        ${IF} isDir == "true"
-          RMDir /r ${INSTDIR}\${File}
-        ${Else}
-          Delete ${INSTDIR}\${File}
-        ${EndIf}
-    skipit_${ID}:
-  ${EndIf}
-  !undef ID
-!macroend
-
 ; MUI end ------
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
@@ -491,7 +458,11 @@ Section -AddIcons
 
  exit:
    SetShellVarContext current
-  Call FinishPagePreFunction
+  ; in case we want to install silently (no user intervention)
+  ; we have to call the finish page function, otherwise runwincoot.bat
+  ; won't be edited.
+  IfSilent 0 +2
+    Call FinishPagePreFunction
   IfErrors 0 +5
     ; ${ErrorHandler} 3 "Error in installation. Could not install icons." 0
     DetailPrint "Error in installation. Could not install icons. Continuing."
@@ -501,12 +472,6 @@ Section -AddIcons
 SectionEnd
 
 Section -Post
-  ; first make COOT_HOME in USERPROFILE if it doesnt exist, then move files
-  IfFileExists "$%USERPROFILE%\COOT\*.*" have_usercoot
-    CreateDirectory "$%USERPROFILE%\COOT"
-    Call MoveUserHomeFiles
-  have_usercoot:
-
   ClearErrors
   WriteUninstaller "$INSTDIR\uninst.exe"
 ;  NO MESSING WITH THE REGISTRY!!!!
@@ -744,7 +709,7 @@ Function .onInit
 ; no more examples dir (have data dir now)
 ; so default start dir is $INSTDIR
   ${If} $STARTDIR == ""
-    StrCpy $STARTDIR "$%USERPROFILE%"
+    StrCpy $STARTDIR "$INSTDIR"
   ${EndIf}
   IfErrors 0 +6
     ;${ErrorHandler} 6 "Error in installation. Could not initiate installation." 1
@@ -1067,24 +1032,4 @@ Function ErrorHandler
     Abort $1
   ${EndIf}
 
-FunctionEnd
-
-; Function to move potentially existing WinCoot files and directories from
-; INSTALLDIR to USERPROFILE\COOT
-Function MoveUserHomeFiles
-  ; what shall we move? preferences, backup, downloads dirs, state and history
-  ; state and history files...
-  !insertmacro "MoveFileToNewHome" ".coot-preferences" "true"
-  !insertmacro "MoveFileToNewHome" "coot-backup" "true"
-  !insertmacro "MoveFileToNewHome" "coot-download" "true"
-  !insertmacro "MoveFileToNewHome" "coot-ccp4" "true"
-  !insertmacro "MoveFileToNewHome" "coot-molprobity" "true"
-  !insertmacro "MoveFileToNewHome" "coot-refmac" "true"
-  !insertmacro "MoveFileToNewHome" "coot-acedrg" "true"
-  !insertmacro "MoveFileToNewHome" "coot-pisa" "true"
-  !insertmacro "MoveFileToNewHome" "0-coot-history.scm" "false"
-  !insertmacro "MoveFileToNewHome" "0-coot.state.py" "false"
-  !insertmacro "MoveFileToNewHome" ".coot.py" "false"
-  !insertmacro "MoveFileToNewHome" "0-coot.state.scm" "false"
-  !insertmacro "MoveFileToNewHome" "0-coot-history.scm" "false"
 FunctionEnd

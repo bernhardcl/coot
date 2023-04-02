@@ -16,8 +16,7 @@ REM main line
 set COOT_PREFIX=%~dp0
 set COOT_GUILE_PREFIX=%COOT_PREFIX:\=/%
 
-REM New COOT_HOME is in User directory now
-set COOT_HOME=%USERPROFILE%\COOT
+set COOT_HOME=%COOT_PREFIX%
 set COOT_BACKUP_DIR=%COOT_PREFIX%\coot-backup
 
 set COOT_SHARE=%COOT_PREFIX%\share
