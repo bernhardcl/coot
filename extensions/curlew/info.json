@@ -102,8 +102,8 @@
          "version": "1.0",
          "description": "Use the Keyboard to Mutate Protein Residues - it's a speed-up because you don't need to use the mouse",
          "file-name": "curlew_keyboard_mutate.py",
-         "date": "2020-06-23",
-         "checksum": "9702"
+         "date": "2021-10-15",
+         "checksum": "9518"
       }
    ]
 }
