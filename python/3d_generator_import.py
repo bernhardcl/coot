@@ -119,7 +119,7 @@ def import_from_3d_generator_from_mdl_using_pyrogen(mdl_file_name, comp_id):
         if command_in_path_qm("mogul"):
             args = [file_type_flag, mdl_file_name, "--residue-type", comp_id]
         else:
-            args = ["--no-mogul", "-M", file_type_flag, mdl_file_name,
+            args = ["--no-mogul", file_type_flag, mdl_file_name,
                     "--residue-type", comp_id]
         status = popen_command("pyrogen", args,
                  [], "pyrogen.log", True)
@@ -452,7 +452,7 @@ def new_molecule_by_smiles_string(tlc_text, smiles_text, force_libcheck=False):
             if command_in_path_qm("mogul"):
                 args = ["--residue-type", comp_id, smiles_text]
             else:
-                args = ["--no-mogul", "-M", "--residue-type", comp_id, smiles_text]
+                args = ["--no-mogul", "--residue-type", comp_id, smiles_text]
 
         print "---------- args:", args
         # BL says:: may have to find pyrogen first?! FIXME
