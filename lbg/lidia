@@ -1,5 +1,6 @@
 
 current_exe_dir=`dirname $0`
+systype=`uname`
 
 if [ $current_exe_dir = . ] ; then 
   COOT_PREFIX=`dirname $PWD`
@@ -9,5 +10,8 @@ fi
 
 export COOT_DATA_DIR=$COOT_PREFIX/share/coot
 
-$COOT_PREFIX/libexec/lidia-bin $*
-
+if [[ "$systype" == MINGW* ]] ; then
+  $COOT_PREFIX/bin/lidia-bin $*
+else
+  $COOT_PREFIX/libexec/lidia-bin $*
+fi

@@ -35,7 +35,11 @@ AM_CXXFLAGS = \
 	-DPKGDATADIR='"$(pkgdatadir)"'
 
 
+if OS_WIN32
+bin_PROGRAMS = lidia-bin
+else
 libexec_PROGRAMS = lidia-bin
+endif
 
 dist_bin_SCRIPTS = lidia
 

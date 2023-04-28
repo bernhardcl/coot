@@ -261,9 +261,11 @@ Section "!WinCoot" SEC01
   File "C:\msys64\home\bernhard\Projects\coot\windows\dynarama.bat"
   File "C:\msys64\home\bernhard\Projects\coot\windows\findligand.bat"
   File "C:\msys64\home\bernhard\Projects\coot\windows\findwaters.bat"
+  File "C:\msys64\home\bernhard\Projects\coot\windows\lidia.bat"
   SetOverwrite ifnewer
   File "C:\msys64\home\bernhard\autobuild\extras\coot-icon.ico"
   File "C:\msys64\home\bernhard\autobuild\extras\rama_all.ico"
+  File "C:\msys64\home\bernhard\autobuild\extras\go-to-ligand.ico"
   File "${src_dir}\bin\*.dll"
   File "${src_dir}\bin\coot-bfactan.exe"
   File "${src_dir}\bin\coot"
@@ -284,7 +286,7 @@ Section "!WinCoot" SEC01
   ;gunzip needed?? dont think so
   File "C:\msys64\home\bernhard\autobuild\extras\gunzip"
   File "C:\msys64\home\bernhard\autobuild\extras\gzip.exe"
-  File "${src_dir}\bin\lidia.exe"
+  File "${src_dir}\bin\lidia-bin.exe"
   ;still needed?
 ;  File "C:\msys64\home\bernhard\autobuild\extras\msvcr90.dll"
 ;  File "C:\msys64\home\bernhard\autobuild\extras\Microsoft.VC90.CRT.manifest"
@@ -561,7 +563,9 @@ Section Uninstall
   Delete "$INSTDIR\bin\gunzip"
   Delete "$INSTDIR\bin\gzip.exe"
   Delete "$INSTDIR\bin\iconv.exe"
+  Delete "$INSTDIR\bin\lidia.bat"
   Delete "$INSTDIR\bin\lidia.exe"
+  Delete "$INSTDIR\bin\lidia-bin.exe"
   Delete "$INSTDIR\bin\mini-rsr-bin.exe"
   Delete "$INSTDIR\bin\render.exe"
   Delete "$INSTDIR\bin\clustalw2.exe"
@@ -966,6 +970,8 @@ Function FinishPagePreFunction
   AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\wincoot-for-ccp4i2.bat" "(BU)" "GenericExecute"
   AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\bin\dynarama.bat" "(BA)" "FullAccess"
   AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\bin\dynarama.bat" "(BU)" "GenericExecute"
+  AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\bin\lidia.bat" "(BA)" "FullAccess"
+  AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\bin\lidia.bat" "(BU)" "GenericExecute"
 
 ;  for now dont mess with pixbuf query loader
 ;  ExecWait 'cmd /c ""$INSTDIR\bin\gdk-pixbuf-query-loaders.exe" > "$INSTDIR\etc\gtk-2.0\gdk-pixbuf.loaders""'
@@ -992,6 +998,8 @@ ${If} $update = 0
   CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\WinCoot.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\wincoot.bat"' "$INSTDIR\bin\coot-icon.ico" 0 SW_SHOWMINIMIZED
   Sleep 10
   CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\DynaRama.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\bin\dynarama.bat"' "$INSTDIR\bin\rama_all.ico"
+  Sleep 10
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\Lidia.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\bin\lidia.bat"' "$INSTDIR\bin\go-to-ligand.ico"
   Sleep 10
   SetOutPath "$INSTDIR"
   WriteIniStr "$INSTDIR\WinCoot.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
