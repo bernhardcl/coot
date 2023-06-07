@@ -5,7 +5,6 @@
          "version": "1",
          "file-name": "curlew_add_terminal_residue_complicado.py",
          "description": "New Improved way of adding a peptide, particularly\nfor multiple operations.",
-         "__icon": "images/add-peptide-1.png",
          "icon": "images/add-peptide-1.svg",
          "date": "2020-02-28",
          "checksum": "3117"
