@@ -61,6 +61,16 @@ on_lbg_close_button_clicked(GtkButton *button, gpointer user_data) {
 }
 
 extern "C" G_MODULE_EXPORT void
+on_lbg_window_destroy(GtkWindow *window, gpointer user_data) {
+   GtkWidget *canvas = GTK_WIDGET(user_data);
+   lbg_info_t *l = static_cast<lbg_info_t *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));
+   if (l->is_stand_alone())
+      gtk_exit(0);
+   else
+      gtk_widget_hide(l->lbg_window);
+}
+
+extern "C" G_MODULE_EXPORT void
 on_lbg_search_button_clicked(GtkButton *button, gpointer user_data) {
    GtkWidget *canvas = GTK_WIDGET(user_data);
    lbg_info_t *l = static_cast<lbg_info_t *> (gtk_object_get_user_data(GTK_OBJECT(canvas)));

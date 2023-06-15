@@ -60,6 +60,7 @@
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Lidia: Coot's Ligand Builder</property>
     <property name="icon">pixmaps/coot-icon.png</property>
+    <signal name="destroy" handler="on_lbg_window_destroy" swapped="no"/>
     <child>
       <object class="GtkVBox" id="lbg_vbox">
         <property name="visible">True</property>
