@@ -5,6 +5,8 @@
 #include <atomic>
 #include <array>
 
+#include "compat/coot-sysdep.h"
+
 #include <clipper/core/xmap.h>
 #include "coot-utils/atom-selection-container.hh"
 #include "coot-utils/coot-rama.hh"
