@@ -78,7 +78,7 @@ void to_generic_object_add_line(int object_number,
       if (object_number_u < g.generic_display_objects.size()) {
          std::pair<glm::vec3, glm::vec3> p(coord_orth_to_glm(x1), coord_orth_to_glm(x2));
          meshed_generic_display_object &obj = g.generic_display_objects[object_number];
-         float radius = 0.3;
+         float radius = 0.1 * static_cast<float>(line_width);
          unsigned int n_slices = 12;
          coot::colour_holder col = colour_values_from_colour_name(colour_name);
          obj.add_cylinder(p, col, radius, n_slices, true, true,
@@ -443,7 +443,8 @@ void set_display_generic_object_simple(int object_number, short int istate) {
                 << object_number << std::endl;
    }
 
-#if 0
+#if 0 // 20230521-PE a modern version of this would useful. FIXME.
+
    if (g.generic_objects_dialog) {
 
       // get the togglebutton and set its state

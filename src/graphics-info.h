@@ -945,6 +945,8 @@ class graphics_info_t {
    // bottom left flat ligand view:
    //
    static bool graphics_ligand_view_flag;
+   static int  graphics_ligand_view_imol; // the molecle of the ligand. We don't want to show the HUG ligand
+                                          // if the molecule of which it is part is not displayed.
 
    // ----------------------------------------------------------------
    //             public:
@@ -1345,8 +1347,11 @@ public:
    //
 
    // symm colour is a part of the molecule now
-    static double  symmetry_colour_merge_weight;
-    static std::vector<double> symmetry_colour;
+   static double symmetry_colour_merge_weight;
+   // this is merged with the colour from standard atom colours
+   static glm::vec4 symmetry_colour;
+   static GdkRGBA symmetry_colour_to_rgba();
+   static void rgba_to_symmetry_colour(GdkRGBA rgba);
 
    // Rotate colour map?
    static short int rotate_colour_map_on_read_pdb_flag;
@@ -1373,6 +1378,7 @@ public:
 
    //
    static short int show_symmetry;
+   static void update_symmetry(); // of models
 
    // Clipping Planes:
    static float clipping_front;
@@ -1730,6 +1736,8 @@ public:
 					       int it2, const char *t3);
    void set_go_to_atom_chain_residue_atom_name(const char *chain_id,
 					       int resno, const char *atom_name, const char *altLoc);
+   // 20230611-PE this is indeed a gui callback
+   static void set_go_to_atom(int imol, const coot::atom_spec_t &spec);
 
    // 20230520-PE why isn't this here?
    // void set_go_to_atom(const coot::atom_spec_t &atom_spec);
@@ -2241,8 +2249,11 @@ public:
    // geometry graphs
    void update_geometry_graphs(const atom_selection_container_t &asc, int imol_moving_atoms);
    void update_geometry_graphs(int imol_moving_atoms); // convenience function - includes sequence view too!
-   void update_validation_graphs(int imol);  // and ramachandran
-   // 20211201-PE currently upadte_geometry
+
+   void update_validation(int imol);
+   // which wraps:
+   void update_validation_graphs(int imol);
+   // 20211201-PE currently update_geometry
    void update_ramachandran_plot(int imol);
 
 
@@ -4426,6 +4437,7 @@ string   static std::string sessionid;
 
    static unsigned int bond_smoothness_factor; // default 1, changes num_subdivisions and n_slices
 
+   bool coot_all_atom_contact_dots_are_begin_displayed_for(int imol) const;
    void coot_all_atom_contact_dots_instanced(mmdb::Manager *mol, int imol); // creates/updates
    // meshes in molecules.
    static float contact_dot_sphere_subdivisions;
@@ -4920,8 +4932,12 @@ string   static std::string sessionid;
    static void add_a_tick() {
       // needs glarea-tick-func.hh
       if (! tick_function_is_active())
-         tick_function_id = gtk_widget_add_tick_callback(graphics_info_t::glareas[0], glarea_tick_func, 0, 0);
+         tick_function_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
    }
+
+   static gboolean glarea_tick_func(GtkWidget *widget,
+                                    G_GNUC_UNUSED GdkFrameClock *frame_clock,
+                                    G_GNUC_UNUSED gpointer data);
 
    static gboolean tick_function_is_active();
 
@@ -5188,7 +5204,11 @@ string   static std::string sessionid;
    static std::vector<widgeted_rama_plot_t> rama_plot_boxes;
    static void draw_rama_plots(); // draw the rama plots in the above vector
    static void remove_plot_from_rama_plots(GtkWidget *rama_plot);
-
+   static void rama_plot_boxes_handle_close_molecule(int imol);
+   static void rama_plot_boxes_handle_molecule_update(int imol);
+   static void rama_plot_boxes_handle_molecule_update(GtkWidget *box);
+   static void rama_plot_boxes_handle_molecule_update(GtkWidget *box, const std::string &entry_string); // used in the residue selection
+                                                                                                        // entry change callback
 };
 
 

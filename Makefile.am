@@ -45,7 +45,7 @@ else
    SUBDIRS = auxil scheme python pdb-templates macros compat utils protein_db mini-mol geometry  \
         lidia-core coot-utils angles ccp4mg-utils db-main analysis cootaneer ideal ligand coords \
 	density-contour skeleton high-res build MoleculesToTriangles pli api greg-tests \
-	python-tests cootilus fonts pyrogen lbg data \
+	python-tests cootilus fonts pyrogen data \
 	man rama-data doc glTF pixmaps textures validation-graphs src
 endif
 endif
@@ -53,14 +53,10 @@ endif
 
 # po, no po today.
 
-cootrc: $(top_srcdir)/cootrc.template
-	$(MAKE_COOTRC_CMD) $(top_srcdir)/cootrc.template > $@
-
 
 EXTRA_DIST = 		\
 	autogen.sh 	\
 	make-scheme-tar \
-	cootrc.template	\
 	py-compile      \
 	standard-residues.pdb \
 	BUGS		\
@@ -119,11 +115,11 @@ EXTRA_DIST = 		\
 
 # packdatadir is xxx/share/coot
 subpkgdatadir = $(pkgdatadir)
-subpkgdata_DATA = cootrc standard-residues.pdb colours.def \
+subpkgdata_DATA = standard-residues.pdb colours.def \
 	mtrix-to-ncs-matrix.awk syminfo.lib
 
 cootgladedir = $(pkgdatadir)/glade
-dist_cootglade_DATA = coot-gtk4.ui a6.glade preferences-gtk3.glade single-map-properties-dialog-gtk4.ui
+dist_cootglade_DATA = coot-gtk4.ui restraints-editor.ui preferences-gtk4.ui single-map-properties-dialog-gtk4.ui
 
 appdatadir = ${datarootdir}/appdata
 dist_appdata_DATA = coot.appdata.xml

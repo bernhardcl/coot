@@ -3,6 +3,7 @@
 #include "graphics-info.h"
 #include "c-interface-gtk-widgets.h"
 #include "setup-gui-components.hh"
+#include "utils/coot-utils.hh"
 #include "widget-from-builder.hh"
 
 // this function is both defined and implemented here.
@@ -23,7 +24,7 @@ void setup_menubuttons() {
    GtkWidget* add_module_menubutton = widget_from_builder("add_module_menubutton");
    GMenuModel *modules_menu = menu_model_from_builder("modules-menu");
    gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(add_module_menubutton), modules_menu);
-   
+
    // toolbar button - connect the refine menu to the GtkMenuButton
    GtkWidget *refine_menubutton = widget_from_builder("refine_menubutton");
    GMenuModel *refine_menu = menu_model_from_builder("refine-menu");
@@ -62,12 +63,27 @@ void setup_menubuttons() {
    add_typed_menu_to_mutate_menubutton("PROTEIN");
 }
 
-gboolean generic_hide_on_escape_controller_cb(
-      GtkEventControllerKey  *controller,
-      guint                  keyval,
-      guint                  keycode,
-      GdkModifierType        modifiers,
-      GtkWidget              *to_be_hidden) {
+void setup_mutate_residue_range_dialog() {
+
+   auto callback_func = +[] (GtkTextBuffer* buf, gpointer user_data) {
+        std::cout << "on_mutate_molecule_sequence_text:buffer:changed --- start --- " << std::endl;
+        GtkWidget *res_no_1_widget = widget_from_builder("mutate_molecule_resno_1_entry");
+        GtkWidget *res_no_2_widget = widget_from_builder("mutate_molecule_resno_2_entry");
+        GtkWidget *text_widget     = widget_from_builder("mutate_molecule_sequence_text");
+        GtkWidget *label_widget    = widget_from_builder("mutate_residue_range_counts_label");
+        mutate_molecule_dialog_check_counts(res_no_1_widget, res_no_2_widget, text_widget, label_widget);
+   };
+
+   GtkWidget* mutate_molecule_sequence_text = widget_from_builder("mutate_molecule_sequence_text");
+   GtkTextBuffer* buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(mutate_molecule_sequence_text));
+   g_signal_connect(buffer, "changed", G_CALLBACK(callback_func), nullptr);
+}
+
+gboolean generic_hide_on_escape_controller_cb(GtkEventControllerKey  *controller,
+                                              guint                  keyval,
+                                              guint                  keycode,
+                                              GdkModifierType        modifiers,
+                                              GtkWidget              *to_be_hidden) {
    gboolean handled = TRUE;
    switch (keyval) {
       case GDK_KEY_Escape: {
@@ -135,7 +151,7 @@ void attach_css_style_class_to_overlays() {
       GtkStyleContext *context = gtk_widget_get_style_context(widget);
       gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
       gtk_style_context_add_class (context, "mainWindowOverlayChild");
-      g_debug("'mainWindowOverlayChild' CSS class set for: %p",widget);
+      g_debug("'mainWindowOverlayChild' CSS class set for: %p %s",widget,G_OBJECT_CLASS_NAME(widget));
    };
 
    GtkWidget* overlay = widget_from_builder("main_window_graphics_overlay");
@@ -148,20 +164,115 @@ void attach_css_style_class_to_overlays() {
    }
 }
 
+
+void
+add_python_scripting_entry_completion(GtkWidget *entry) {
+
+   // call this *after* python has been setup!
+
+   graphics_info_t g; // for history
+
+   GtkEntryCompletion *completion = gtk_entry_completion_new();
+   gtk_entry_completion_set_popup_completion(completion, TRUE);
+   gtk_entry_completion_set_text_column(completion, 0);
+   gtk_entry_completion_set_minimum_key_length(completion, 2);
+   gtk_entry_set_completion(GTK_ENTRY(entry), completion);
+
+   std::vector<std::string> completions;
+   std::vector<std::string> module_coot_completions;
+   std::vector<std::string> module_coot_utils_completions;
+
+   PyErr_Clear();
+
+   Py_ssize_t pos = 0;
+   PyObject *key;
+   PyObject *value;
+
+   // Get the module object for the `sys` module.
+   PyObject *module = PyImport_ImportModule("coot");
+   // Get the dictionary object for the `sys` module.
+   PyObject *dict = PyModule_GetDict(module);
+  // Iterate over the keys and values in the dictionary.
+   while (PyDict_Next(dict, &pos, &key, &value)) {
+      // Do something interesting with the key and value.
+      // printf("Key: %s, Value: %s\n", PyUnicode_AsUTF8AndSize(key, NULL), PyUnicode_AsUTF8AndSize(value, NULL));
+      std::string key_c = std::string("coot.") +  (PyUnicode_AsUTF8AndSize(key, NULL));
+      module_coot_completions.push_back(key_c);
+   }
+   // Get the module object for the `sys` module.
+   module = PyImport_ImportModule("coot_utils");
+   // Get the dictionary object for the `sys` module.
+   dict = PyModule_GetDict(module);
+  // Iterate over the keys and values in the dictionary.
+   while (PyDict_Next(dict, &pos, &key, &value)) {
+      // Do something interesting with the key and value.
+      // printf("Key: %s, Value: %s\n", PyUnicode_AsUTF8AndSize(key, NULL), PyUnicode_AsUTF8AndSize(value, NULL));
+      std::string key_c = std::string("coot_utils.") +  (PyUnicode_AsUTF8AndSize(key, NULL));
+      module_coot_utils_completions.push_back(key_c);
+   }
+
+   // command history
+   std::vector<std::string> chv = g.command_history.commands;
+
+   chv = g.command_history.unique_commands(); // there *were* unique already
+
+   if (false) chv.clear(); // 20230516-PE while testing.
+
+   // add together the completions
+   completions.push_back("import coot");
+   completions.push_back("import coot_utils");
+   completions.insert(completions.end(), chv.begin(),                           chv.end());
+   completions.insert(completions.end(), module_coot_completions.begin(),       module_coot_completions.end());
+   completions.insert(completions.end(), module_coot_utils_completions.begin(), module_coot_utils_completions.end());
+
+   // maybe only once!
+   GtkListStore *store = gtk_list_store_new(1, G_TYPE_STRING);
+   GtkTreeIter iter;
+
+   for (unsigned int i=0; i<completions.size(); i++) {
+      gtk_list_store_append( store, &iter );
+      std::string c = completions[i];
+      // std::cout << "adding to gtk-completion: " << c << std::endl;
+      gtk_list_store_set( store, &iter, 0, c.c_str(), -1 );
+   }
+
+   gtk_entry_completion_set_model(completion, GTK_TREE_MODEL(store));
+
+}
+
+
 gboolean
 on_python_scripting_entry_key_pressed(GtkEventControllerKey *controller,
-                                                      guint                  keyval,
-                                                      guint                  keycode,
-                                                      GdkModifierType        modifiers,
-                                                      GtkEntry              *entry) {
+                                      guint                  keyval,
+                                      guint                  keycode,
+                                      GdkModifierType        modifiers,
+                                      GtkEntry              *entry) {
+
+   // This function is called on Ctrl and Shift, and Arrowkey Up and Down key presses
+
    gboolean handled = TRUE;
+   bool control_is_pressed = (modifiers & GDK_CONTROL_MASK);
 
    std::cout << "on_python_scripting_entry_key_pressed() keyval: " << keyval << " keycode: " << keycode << std::endl;
 
    switch(keyval) {
       case GDK_KEY_Up: {
+         handled = TRUE;
+         if (control_is_pressed) {
+            graphics_info_t g;
+            std::string t = g.command_history.get_previous_command();
+            gtk_editable_set_text(GTK_EDITABLE(entry), t.c_str());
+         }
+         break;
       }
       case GDK_KEY_Down: {
+         handled = TRUE;
+         if (control_is_pressed) {
+            graphics_info_t g;
+            std::string t = g.command_history.get_next_command();
+            gtk_editable_set_text(GTK_EDITABLE(entry), t.c_str());
+         }
+         break;
       }
       case GDK_KEY_Escape: {
          auto func = +[] (gpointer data) {
@@ -178,40 +289,21 @@ on_python_scripting_entry_key_pressed(GtkEventControllerKey *controller,
       }
    }
 
-#if 0
-   switch(keyval) {
-      case GDK_KEY_Up: {
-         const char *entry_txt = gtk_editable_get_text(GTK_EDITABLE(entry));
-         if (entry_txt) {
-            std::string t = graphics_info_t::command_history.get_previous_command();
-            gtk_editable_set_text(GTK_EDITABLE(entry), t.c_str());
-            g_debug("Setting command entry text to '%s'",t.c_str());
-         }
-         break;
-      }
-      case GDK_KEY_Down: {
-         std::string t = graphics_info_t::command_history.get_next_command();
-         gtk_editable_set_text(GTK_EDITABLE(entry), t.c_str());
-         g_debug("Setting command entry text to '%s'",t.c_str());
-         break;
-      }
-      case GDK_KEY_Escape: {
-          g_idle_add(+[](gpointer data)-> gboolean {
-            GtkRevealer* revealer = GTK_REVEALER(widget_from_builder("python_scripting_revealer"));
-            gtk_revealer_set_reveal_child(revealer,FALSE);
-            return G_SOURCE_REMOVE;
-         },NULL);
-         break;
-      }
-      default: {
-         handled = FALSE;
-         g_debug("Python scripting entry: Unhandled key: %s",gdk_keyval_name(keyval));
-      }
-   }
-#endif
-
    return gboolean(handled);
 }
+
+void
+on_python_scripting_entry_key_released(GtkEventControllerKey *controller,
+                                       guint                  keyval,
+                                       guint                  keycode,
+                                       guint                  modifiers,
+                                       GtkButton             *button) {
+
+   graphics_info_t g;
+   std::cout << "on_python_scripting_entry_key_released() keyval: " << keyval << " keycode: " << keycode << std::endl;
+
+}
+
 
 // 20230516-PE trying to add back the python completion and history that was in
 // gtk3 coot into gtk4 coot.
@@ -219,7 +311,6 @@ on_python_scripting_entry_key_pressed(GtkEventControllerKey *controller,
 // 20230516-PE I am, for the moment, not adding the header coot-setup-python.hh here because
 // it doesn't include gtk stuff (for now).
 void add_python_scripting_entry_completion(GtkWidget *entry);
-
 
 void on_python_scripting_entry_activated(GtkEntry* entry, gpointer user_data) {
 
@@ -245,15 +336,72 @@ void setup_python_scripting_entry() {
    // for 'Up' and 'Down' keys, i.e. history lookup
    // and for 'Esc' key to hide the revealer
 
-   g_signal_connect(key_controller_entry, "key-pressed", G_CALLBACK(on_python_scripting_entry_key_pressed), entry);
+   g_signal_connect(key_controller_entry, "key-pressed",  G_CALLBACK(on_python_scripting_entry_key_pressed),  entry);
+   // g_signal_connect(key_controller_entry, "key-released", G_CALLBACK(on_python_scripting_entry_key_released), entry);
+
+   gtk_widget_add_controller(entry, key_controller_entry);
 
    // for executing Python commands
    g_signal_connect(entry, "activate", G_CALLBACK(on_python_scripting_entry_activated), entry);
 
-   gtk_widget_add_controller(entry, key_controller_entry);
-
    // PE adds history and completions (in coot-setup-python.cc)
    add_python_scripting_entry_completion(entry);
+}
+
+void set_vertical_toolbar_internal_alignment() {
+   GtkWidget *toolbar = widget_from_builder("main_window_vbox_inner");
+   for(GtkWidget* child = gtk_widget_get_first_child(toolbar); 
+       child != nullptr; 
+       child = gtk_widget_get_next_sibling(child)) {
+         // No need to do this for plain buttons.
+         if(!(GTK_IS_MENU_BUTTON(child)||GTK_IS_TOGGLE_BUTTON(child))) {
+            g_debug("set_vertical_toolbar_internal_alignment: Skippping toolbar item %p of type %s.",child,G_OBJECT_TYPE_NAME(child));
+            continue;
+         }
+         GtkWidget* target = nullptr;
+         if(GTK_IS_MENU_BUTTON(child)) {
+#if GTK_MAJOR_VERSION == 4 && GTK_MINOR_VERSION >= 6
+            target = gtk_menu_button_get_child(GTK_MENU_BUTTON(child));
+#endif
+         } else {
+            target = gtk_button_get_child(GTK_BUTTON(child));
+         }
+         if(!target) {
+            g_debug("set_vertical_toolbar_internal_alignment: Skippping toolbar item %p of type %s because its' \"child\" property is not set.",
+            child,G_OBJECT_TYPE_NAME(child));
+            continue;
+         }
+         // This is a hack. The parent that we get isn't our button but an internal GtkBox 
+         // which is designated for storing GtkButton's 'child' widget.
+         //
+         // Unfortunately, currently there seems to be no other way to set this.
+         // Gtk4 removed the necessary APIs.
+         GtkWidget* parent_widget = gtk_widget_get_parent(target);
+         if(!GTK_IS_BOX(parent_widget)) {
+            if(GTK_IS_BOX(target)) {
+               g_warning("set_vertical_toolbar_internal_alignment: Toolbar item %p of type %s: "
+               "The parent widget that wraps %s::child is not a GtkBox but a %s. "
+               "%s::child however is a GtkBox. Attempt will be made to align it. It might not work.",
+               child,G_OBJECT_TYPE_NAME(child),G_OBJECT_TYPE_NAME(child),G_OBJECT_TYPE_NAME(parent_widget),G_OBJECT_TYPE_NAME(child));
+               parent_widget = target;
+            } else {
+               g_warning("set_vertical_toolbar_internal_alignment: Skippping toolbar item %p of type %s: "
+               "The parent widget that wraps %s::child is not a GtkBox but a %s",
+               child,G_OBJECT_TYPE_NAME(child),G_OBJECT_TYPE_NAME(child),G_OBJECT_TYPE_NAME(parent_widget));
+               continue;
+            }
+         }
+         g_info("set_vertical_toolbar_internal_alignment: Aligning toolbar item %p of type %s.",child,G_OBJECT_TYPE_NAME(child));
+         gtk_widget_set_halign(parent_widget, GTK_ALIGN_START);
+   }
+}
+
+void setup_curlew_banner() {
+    GtkWidget* curlew_banner = widget_from_builder("curlew_banner");
+    std::string dir = coot::package_data_dir();
+    std::string pixmaps_dir = coot::util::append_dir_dir(dir, "pixmaps");
+    std::string banner_filepath = coot::util::append_dir_file(pixmaps_dir, "curlew-long.png");
+    gtk_picture_set_filename(GTK_PICTURE(curlew_banner), banner_filepath.c_str());
 }
 
 void setup_gui_components() {
@@ -261,10 +409,13 @@ void setup_gui_components() {
    g_info("Initializing UI components...");
    setup_menubuttons();
    setup_validation_graph_dialog();
+   setup_mutate_residue_range_dialog();
    setup_ramachandran_plot_chooser_dialog();
    setup_get_monomer();
    setup_accession_code_frame();
    setup_python_scripting_entry();
+   setup_curlew_banner();
    attach_css_style_class_to_overlays();
+   set_vertical_toolbar_internal_alignment();
    g_info("Done initializing UI components.");
 }

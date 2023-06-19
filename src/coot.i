@@ -25,7 +25,7 @@
 #include "manipulation-modes.hh"
 #include "rotamer-search-modes.hh"
 #include "lbg-interface.hh"
-  // #include "sdf-interface.hh"
+#include "sdf-interface.hh"
 #include "probe-clash-score.hh"
 #include "cmtz-interface.hh"
 #include "coot-version.hh"
@@ -34,6 +34,7 @@
 #include "curlew.hh"
 #include "validation.hh"
 #include "cfc.hh"
+#include "rsr-functions.hh"
 #include "cc-interface-user-defined-atom-colours.hh"
 #include "cc-interface-alignment.hh"
 #include "init_coot_as_python_module.hh"
@@ -96,7 +97,7 @@ namespace std {
 %include "manipulation-modes.hh"
 %include "rotamer-search-modes.hh"
 %include "lbg-interface.hh"
- // %include "sdf-interface.hh" // 20230108-PE remove this while reworking chemical feature code for API and gtk3
+%include "sdf-interface.hh"
 %include "geometry/residue-and-atom-specs.hh" // for atom_spec_t
 %include "probe-clash-score.hh"
 %include "coot-version.hh"
@@ -106,6 +107,7 @@ namespace std {
 %include "validation.hh"
 %include "generic-display-objects-c.h"
 %include "cfc.hh"
+%include "rsr-functions.hh"
 %include "cc-interface-user-defined-atom-colours.hh"
 %include "../coords/phenix-geo.hh"
 %include "cc-interface-alignment.hh"

@@ -35,6 +35,15 @@
 enum {VIEW_CENTRAL_CUBE, ORIGIN_CUBE};
 
 
+glm::vec3
+get_camera_up_direction(const glm::mat4 &mouse_quat_mat) {
+
+   glm::vec4 z_p(0.0f, 1.0f, 0.0f, 1.0f);
+   glm::vec4 r = z_p * mouse_quat_mat;
+   glm::vec3 r3(r);
+   return r3;
+}
+
 float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
       // positions   // texCoords
       -1.0f,  1.0f,  0.0f, 1.0f,
@@ -311,7 +320,10 @@ graphics_info_t::mouse_zoom(double delta_x_drag, double delta_y_drag) {
          delta_x = delta_y;
       float sf = 1.0 - delta_x * 0.003;
 
-      std::cout << "delta_x " << delta_x << " sf" << sf << std::endl;
+      // stabilize sf:
+      if (sf < 0.1) sf = 0.1;
+      if (sf > 2.0) sf = 2.0;
+      // std::cout << "mouse_zoom(): delta_x " << delta_x << " sf " << sf << std::endl;
       graphics_info_t::eye_position.z *= sf;
 
       { // own graphics_info_t function - c.f. adjust clipping
@@ -2069,9 +2081,10 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
 
                if (mesh.is_instanced) {
 
+                  bool transferred_colour_is_instanced = false;
                   mesh.draw_instanced(&shader_for_moleculestotriangles, mvp,
-                                              model_rotation, lights, eye_position,
-                                              bg_col, do_depth_fog);
+                                      model_rotation, lights, eye_position,
+                                      bg_col, do_depth_fog, transferred_colour_is_instanced);
                } else {
                   if (pass_type == PASS_TYPE_STANDARD) {
                      bool show_just_shadows = false;
@@ -4133,6 +4146,8 @@ graphics_info_t::render_3d_scene(GtkGLArea *gl_area) {
 
    draw_measure_distance_and_angles(); // maybe in draw_molecules()?
 
+   draw_extra_distance_restraints(PASS_TYPE_STANDARD); // GM_restraints
+
    draw_pointer_distances_objects();
 
    draw_texture_meshes();
@@ -4266,6 +4281,8 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
 
    } else {
 
+      // this works! Nice framebuffer scaling with screendump_tga().
+
       GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
       GtkAllocation allocation;
       gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
@@ -4289,7 +4306,7 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
 
          // screendump
          glDisable(GL_DEPTH_TEST);
-         unsigned int sf = framebuffer_scale;
+         const unsigned int &sf = framebuffer_scale;
          glViewport(0, 0, sf * w, sf * h);
          framebuffer screendump_framebuffer;
          unsigned int index_offset = 0;
@@ -4413,7 +4430,7 @@ graphics_info_t::render_scene_with_texture_combination_for_depth_blur() {
 void
 graphics_info_t::reset_frame_buffers(int window_width, int window_height) {
 
-   if (false)
+   if (true)
       std::cout << "DEBUG:: reset_frame_buffers() " << window_width << " " << window_height
                 << " use_framebuffers: " << use_framebuffers << std::endl;
 
@@ -4426,9 +4443,10 @@ graphics_info_t::reset_frame_buffers(int window_width, int window_height) {
 
       // width  = width;
       // height = height;
-      if (false)
+      if (true)
          std::cout << "debug:: reset_frame_buffers() with sf " << sf << " "
                    << window_width << " x " << window_height << std::endl;
+
       screen_framebuffer.init(sf * window_width, sf * window_height, index_offset, "screen");
       GLenum err = glGetError(); if (err) std::cout << "reset_frame_buffers() err " << err << std::endl;
 
@@ -5129,24 +5147,30 @@ graphics_info_t::setup_draw_for_boids() {
 void
 graphics_info_t::draw_hud_ligand_view() {
 
-   return; // Don't draw the ligand for now           FIXME
+   // 20230618-PE we don't want to do anything here if graphics_ligand_view_flag is false.
+   // graphics_ligand_view_flag is false when we are not centred on a ligand.
 
-   GtkAllocation allocation;
-   gtk_widget_get_allocation(graphics_info_t::glareas[0], &allocation);
-   float w = allocation.width;
-   float h = allocation.height;
-   GLenum err = glGetError();
-   if (err)
-      std::cout << "draw_ligand_view() --- start --- " << err << std::endl;
+   if (graphics_ligand_view_flag) {
+      if  (is_valid_model_molecule(graphics_ligand_view_imol)) {
+         if (molecules[graphics_ligand_view_imol].is_displayed_p()) {
 
-   myglLineWidth(2.0);
-   graphics_ligand_mesh_molecule.draw(&shader_for_ligand_view,
-                                      &shader_for_hud_geometry_tooltip_text,
-                                      w, h, ft_characters);
-   err = glGetError();
+            GtkAllocation allocation;
+            gtk_widget_get_allocation(graphics_info_t::glareas[0], &allocation);
+            float w = allocation.width;
+            float h = allocation.height;
+            GLenum err = glGetError();
+            if (err)
+               std::cout << "draw_ligand_view() --- start --- " << err << std::endl;
 
-   if (err)
-      std::cout << "GL ERROR:: draw_ligand_view() --- end --- " << err << std::endl;
+            graphics_ligand_mesh_molecule.draw(&shader_for_ligand_view,
+                                               &shader_for_hud_geometry_tooltip_text,
+                                               w, h, ft_characters);
+            err = glGetError();
+            if (err)
+               std::cout << "GL ERROR:: draw_ligand_view() --- end --- " << err << std::endl;
+         }
+      }
+   }
 }
 
 
@@ -5172,8 +5196,6 @@ graphics_info_t::draw_boids() {
 
 void
 graphics_info_t::update_hydrogen_bond_mesh(const std::string &label) {
-
-#ifndef EMSCRIPTEN
 
    // caller fills static std::vector<std::pair<glm::vec3, glm::vec3> > hydrogen_bonds_atom_position_pairs
    // before this function
@@ -5201,17 +5223,17 @@ graphics_info_t::update_hydrogen_bond_mesh(const std::string &label) {
    mesh_for_hydrogen_bonds.update_instancing_buffer_data_standard(mats);
    add_a_tick();
    do_tick_hydrogen_bonds_mesh = true;
-#endif
+
 }
 
 void
 graphics_info_t::draw_hydrogen_bonds_mesh() {
 
-#ifndef EMSCRIPTEN
    // 20210827-PE  each molecule should have its own hydrogen bond mesh. Not just one of them.
    // Fix that later.
 
    if (mesh_for_hydrogen_bonds.get_draw_this_mesh()) {
+
       glm::mat4 mvp = get_molecule_mvp();
       glm::vec3 eye_position = get_world_space_eye_position();
       glm::mat4 model_rotation_matrix = get_model_rotation();
@@ -5219,9 +5241,9 @@ graphics_info_t::draw_hydrogen_bonds_mesh() {
 
       mesh_for_hydrogen_bonds.draw_instanced(&shader_for_instanced_objects,
                                              mvp, model_rotation_matrix, lights, eye_position, bg_col,
-                                             shader_do_depth_fog_flag, false, true, 0, 0, 0, 0.2);
+                                             shader_do_depth_fog_flag, false, false, true, 0, 0, 0, 0.2);
    }
-#endif
+
 }
 
 
@@ -5446,6 +5468,8 @@ graphics_info_t::make_extra_distance_restraints_objects() {
 
    // c.f. update_hydrogen_bond_mesh().
 
+   std::cout << "here in make_extra_distance_restraints_objects() " << std::endl;
+
    double penalty_min = 0.1; // only restraints that have more than this "distortion" are considered for drawing.
                              // Make this user-setable.
 
@@ -5505,10 +5529,12 @@ graphics_info_t::make_extra_distance_restraints_objects() {
       extra_distance_restraints_markup_data.push_back(edrmid);
    }
 
-   std::cout << "in make_extra_distance_restraints_objects() bond size "
-             << moving_atoms_extra_restraints_representation.bonds.size() << std::endl;
-   std::cout << "in make_extra_distance_restraints_objects() extra_distance_restraints_markup_data size "
-             << extra_distance_restraints_markup_data.size() << std::endl;
+   if (false) { // 20230519-PE come back to this.
+      std::cout << "in make_extra_distance_restraints_objects() bond size "
+                << moving_atoms_extra_restraints_representation.bonds.size() << std::endl;
+      std::cout << "in make_extra_distance_restraints_objects() extra_distance_restraints_markup_data size "
+                << extra_distance_restraints_markup_data.size() << std::endl;
+   }
    mesh_for_extra_distance_restraints.update_instancing_buffer_data_for_extra_distance_restraints(extra_distance_restraints_markup_data);
 
 }
@@ -5534,18 +5560,20 @@ graphics_info_t::draw_extra_distance_restraints(int pass_type) {
    }
 
    if (pass_type == PASS_TYPE_SSAO) {
-
-      Shader &shader = shader_for_extra_distance_restraints; // wrong shader - needs a new one.
-      GtkAllocation allocation;
-      gtk_widget_get_allocation(GTK_WIDGET(glareas[0]), &allocation);
-      int w = allocation.width;
-      int h = allocation.height;
-      bool do_orthographic_projection = ! perspective_projection_flag;
-      auto model_matrix = get_model_matrix();
-      auto view_matrix = get_view_matrix();
-      auto projection_matrix = get_projection_matrix(do_orthographic_projection, w, h);
-      mesh_for_extra_distance_restraints.draw_instances_for_ssao(&shader,
-                                                                 model_matrix, view_matrix, projection_matrix);
+      if (show_extra_distance_restraints_flag) {
+         if (! extra_distance_restraints_markup_data.empty()) {
+            Shader &shader = shader_for_extra_distance_restraints; // wrong shader - needs a new one.
+            GtkAllocation allocation;
+            gtk_widget_get_allocation(GTK_WIDGET(glareas[0]), &allocation);
+            int w = allocation.width;
+            int h = allocation.height;
+            bool do_orthographic_projection = ! perspective_projection_flag;
+            auto model_matrix = get_model_matrix();
+            auto view_matrix = get_view_matrix();
+            auto projection_matrix = get_projection_matrix(do_orthographic_projection, w, h);
+            mesh_for_extra_distance_restraints.draw_instances_for_ssao(&shader, model_matrix, view_matrix, projection_matrix);
+         }
+      }
    }
 
 }
@@ -5940,18 +5968,19 @@ graphics_info_t::setup_key_bindings() {
 
    auto l29 = [] () {
 
-                 graphics_info_t g;
-                 std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
-                 if (pp.first) {
-                    g.update_mesh_for_outline_of_active_residue(pp.second.first, pp.second.second);
-                    if (! tick_function_is_active()) {
-                       int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
-                    }
-                    outline_for_active_residue_frame_count = 30;
-                    do_tick_outline_for_active_residue = true;
-                 }
-                 return gboolean(TRUE);
-              };
+      std::cout << "highlighting active residue" << std::endl;
+      graphics_info_t g;
+      std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+      if (pp.first) {
+         g.update_mesh_for_outline_of_active_residue(pp.second.first, pp.second.second);
+         if (! tick_function_is_active()) {
+            int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+         }
+         outline_for_active_residue_frame_count = 30;
+         do_tick_outline_for_active_residue = true;
+      }
+      return gboolean(TRUE);
+   };
 
    auto l31 = [] () {
                  graphics_info_t g;
@@ -5994,6 +6023,30 @@ graphics_info_t::setup_key_bindings() {
       return gboolean(TRUE);
    };
 
+   auto l40c = [] () {
+      rsr_refine_chain();
+      return gboolean(TRUE);
+   };
+
+   auto l41 = [] () {
+      box_radius_xray *= (1.0/1.15);
+      // is there an "update maps" function?
+      for (int ii=0; ii<n_molecules(); ii++) {
+         if (is_valid_map_molecule(ii))
+            molecules[ii].update_map(true);
+      }
+      return gboolean(TRUE);
+   };
+
+   auto l42 = [] () {
+      box_radius_xray *= 1.15;
+      for (int ii=0; ii<n_molecules(); ii++) {
+         if (is_valid_map_molecule(ii))
+            molecules[ii].update_map(true);
+      }
+      return gboolean(TRUE);
+   };
+
    // Note to self, Space and Shift Space are key *Release* functions
 
    std::vector<std::pair<keyboard_key_t, key_bindings_t> > kb_vec;
@@ -6026,6 +6079,7 @@ graphics_info_t::setup_key_bindings() {
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_o,      key_bindings_t(l28, "NCS Other Chain")));
 
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_R,      key_bindings_t(l40, "Sphere Refine")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_E,      key_bindings_t(l40c, "Chain Refine")));
 
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_space,  key_bindings_t(l18_space, "Accept Moving Atoms")));
 
@@ -6036,10 +6090,15 @@ graphics_info_t::setup_key_bindings() {
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_4,      key_bindings_t(l34, "Clipping Back Expand")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_F8,     key_bindings_t(l35, "Show Display Manager")));
 
+   // map radius
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_bracketleft,  key_bindings_t(l41, "Decrease Map Radius")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_bracketright, key_bindings_t(l42, "Increase Map Radius")));
+
    // control
    // meh - ugly and almost useless. Try again.
-
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_asciitilde, key_bindings_t(l29, "Highlight Active Residue")));
+   // kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_asciitilde, key_bindings_t(l29, "Highlight Active Residue")));
+   // try backtick:
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_quoteleft, key_bindings_t(l29, "Highlight Active Residue")));
 
    // control keys
 

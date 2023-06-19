@@ -1316,7 +1316,11 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
 				   mol_for_residue_selection,
 				   fixed_atom_specs, xmap_p);
 
-   std::cout << "debug:: on creation last_restraints is " << last_restraints << std::endl;
+   // std::cout << "debug:: on creation last_restraints is " << last_restraints << std::endl;
+
+   bool verbose_refinement_geometry_reporting = false; // make this user-setable
+   if (! verbose_refinement_geometry_reporting)
+      last_restraints->set_quiet_reporting();
 
    last_restraints->set_torsion_restraints_weight(torsion_restraints_weight);
 
@@ -5015,9 +5019,15 @@ graphics_info_t::place_typed_atom_at_pointer(const std::string &type) {
 
    if (is_valid_model_molecule(imol)) {
       if (molecules[imol].is_displayed_p()) {
-         molecules[imol].add_typed_pointer_atom(RotationCentre(), type); // update bonds
+         std::pair<bool, std::string > status_mess =
+            molecules[imol].add_typed_pointer_atom(RotationCentre(), type); // update bonds
          update_environment_distances_by_rotation_centre_maybe(imol);
          graphics_draw();
+         if (status_mess.first == false) {
+            std::string m = "WARNING:: disallowed ";
+            m += status_mess.second;
+            info_dialog(m);
+         }
       } else {
          std::string message = "WARNING:: disallowed addition of ";
          message += type;
@@ -5471,7 +5481,7 @@ graphics_info_t::delete_residue_range(int imol,
       //
       // atom_selection_container_t asc = molecules[imol].atom_sel;
       atom_selection_container_t asc;
-      update_geometry_graphs(asc, imol);
+      update_validation(imol);
    }
    graphics_draw();
 }
@@ -5505,8 +5515,8 @@ graphics_info_t::delete_sidechain_range(int imol,
       // It seems that I have done that now.
       //
       // atom_selection_container_t asc = molecules[imol].atom_sel;
-      atom_selection_container_t asc;
-      update_geometry_graphs(imol);
+      // atom_selection_container_t asc;
+      update_validation(imol);
    }
    graphics_draw();
 
@@ -5908,6 +5918,7 @@ graphics_info_t::auto_fit_rotamer_ng(int imol, const coot::residue_spec_t &res_s
       update_geometry_graphs(&residue_p, 1, imol, imol_map); // yikes!
       std::cout << "Fitting score for best rotamer: " << f << std::endl;
       graphics_draw();
+      run_post_manipulation_hook(imol, 0);
    } else {
       show_select_map_dialog();
    }

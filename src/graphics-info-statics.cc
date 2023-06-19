@@ -294,7 +294,7 @@ float graphics_info_t::place_helix_here_fudge_factor = 1.0; // (it's multiplicat
 
 double graphics_info_t::symmetry_colour_merge_weight = 0.5; // 0.0 -> 1.0
 
-std::vector<double> graphics_info_t::symmetry_colour = std::vector<double> (4, 0.5);
+glm::vec4 graphics_info_t::symmetry_colour = glm::vec4(0.4, 0.4, 0.4, 1.0);
 
 double*  graphics_info_t::skeleton_colour = new double[4];
 int      graphics_info_t::map_for_skeletonize = -1;
@@ -788,6 +788,7 @@ short int graphics_info_t::ligand_water_write_peaksearched_atoms = 0;
 std::vector<clipper::Coord_orth> *graphics_info_t::ligand_big_blobs = NULL;
 
 bool graphics_info_t::graphics_ligand_view_flag = false;
+int  graphics_info_t::graphics_ligand_view_imol = -1;
 
 
 short int graphics_info_t::do_probe_dots_on_rotamers_and_chis_flag = 0;
@@ -1664,7 +1665,7 @@ std::vector<coot::colour_holder> graphics_info_t::user_defined_colours; // initi
 
 unsigned int graphics_info_t::bond_smoothness_factor = 1; // changes num_subdivisions and n_slices
 
-float graphics_info_t::contact_dots_density = 0.4; // 20220308-PE was 1.0
+float graphics_info_t::contact_dots_density = 0.6; // 20220308-PE was 1.0, 20230613-PE was 0.4 (too low for ligand contact dots)
 float graphics_info_t::contact_dot_sphere_subdivisions = 1;
 bool graphics_info_t::all_atom_contact_dots_ignore_water_flag = false;
 bool graphics_info_t::all_atom_contact_dots_do_vdw_surface = false;

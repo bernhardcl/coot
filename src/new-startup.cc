@@ -8,6 +8,7 @@
 #include "create-menu-item-actions.hh"
 #include "setup-gui-components.hh"
 #include "coot-setup-python.hh"
+#include "utils/coot-utils.hh"
 
 void print_opengl_info();
 
@@ -156,7 +157,7 @@ new_startup_on_glarea_render(GtkGLArea *glarea) {
 void
 new_startup_on_glarea_resize(GtkGLArea *glarea, gint width, gint height) {
 
-   if (false)
+   if (true)
       std::cout << "DEBUG:: --- new_startup_on_glarea_resize() " <<  width << " " << height << std::endl;
 
    graphics_info_t g;
@@ -478,8 +479,16 @@ install_icons_into_theme(GtkWidget *w) {
 
    GtkIconTheme *icon_theme = gtk_icon_theme_get_for_display(gtk_widget_get_display(w));
    std::string pkg_data_dir = coot::package_data_dir();
-   std::string icon_dir = coot::util::append_dir_dir(pkg_data_dir, "icons/hicolor/16x16/actions");
-   gtk_icon_theme_add_search_path(icon_theme, icon_dir.c_str());
+   std::string pixmap_dir = coot::util::append_dir_dir(pkg_data_dir, "pixmaps");
+   gtk_icon_theme_add_search_path(icon_theme, pixmap_dir.c_str());
+
+   // This is only necessary when coot is installed in a non-standard location
+   // i.e. other than /usr or ~/.local (or /usr/local perhaps?)
+   // which makes it convenient for testing without system-wide coot installation
+   std::string prefix_dir = coot::prefix_dir();
+   std::string icons_dir = coot::util::append_dir_dir(prefix_dir, "share/icons");
+   gtk_icon_theme_add_search_path(icon_theme, icons_dir.c_str());
+
 }
 
 
@@ -507,9 +516,6 @@ on_go_to_residue_keyboarding_mode_entry_key_controller_key_released(GtkEventCont
       gtk_editable_set_text(GTK_EDITABLE(entry), "");
    }
 }
-
-// in screen-utils.cc
-void setup_application_icon(GtkWindow *window);
 
 void setup_go_to_residue_keyboarding_mode_entry_signals() {
    GtkWidget *entry = widget_from_builder("keyboard_go_to_residue_entry");
@@ -602,8 +608,6 @@ void
 new_startup_application_activate(GtkApplication *application,
                                  gpointer user_data) {
 
-   std::cout << "!!!!!!!!!!!!!!!! new_startup_application_activate() " << std::endl;
-
    application_activate_data* activate_data = (application_activate_data*) user_data;
 
    activate_data->application = application;
@@ -612,7 +616,7 @@ new_startup_application_activate(GtkApplication *application,
    GtkWidget *app_window = gtk_application_window_new(application);
    gtk_window_set_application(GTK_WINDOW(app_window), application);
    gtk_window_set_title(GTK_WINDOW(app_window), window_name.c_str());
-   setup_application_icon(GTK_WINDOW(app_window)); // 20220807-PE not sure what this does in gtk4 or if it works.
+  
    graphics_info_t::set_main_window(app_window);
 
    activate_data->app_window = app_window;
@@ -643,7 +647,9 @@ new_startup_application_activate(GtkApplication *application,
 
       graphics_info.application = application;
 
-      graphics_info.init();
+      // 20230526-PE this now happens i init_coot_as_python_module()
+      // Let's not do it (including geom.init_standard()) twice.
+      // graphics_info.init();
 
       GtkBuilder *builder = gtk_builder_new();
       if (GTK_IS_BUILDER(builder)) {
@@ -653,20 +659,42 @@ new_startup_application_activate(GtkApplication *application,
          exit(0);
       }
 
+      install_icons_into_theme(GTK_WIDGET(app_window));
+      gtk_window_set_icon_name(GTK_WINDOW(app_window), "coot");
+
+      // the main application builder
+
+      // change "glade" to "ui" one day.
       std::string dir = coot::package_data_dir();
       std::string dir_glade = coot::util::append_dir_dir(dir, "glade");
-      std::string glade_file_name = "coot-gtk4.ui";
-      std::string glade_file_full = coot::util::append_dir_file(dir_glade, glade_file_name);
-      if (coot::file_exists(glade_file_name))
-         glade_file_full = glade_file_name;
+      std::string ui_file_name = "coot-gtk4.ui";
+      std::string ui_file_full = coot::util::append_dir_file(dir_glade, ui_file_name);
+      if (coot::file_exists(ui_file_name))
+         ui_file_full = ui_file_name;
 
       GError* error = NULL;
-      gboolean status = gtk_builder_add_from_file(builder, glade_file_full.c_str(), &error);
+      gboolean status = gtk_builder_add_from_file(builder, ui_file_full.c_str(), &error);
       if (status == FALSE) {
-         std::cout << "ERROR:: Failure to read or parse " << glade_file_full << std::endl;
+         std::cout << "ERROR:: Failure to read or parse " << ui_file_full << std::endl;
          std::cout << error->message << std::endl;
          exit(0);
       }
+
+      // the preferences builder:
+      std::string preferences_ui_file_name = "preferences-gtk4.ui";
+      std::string preferences_ui_file_name_full = coot::util::append_dir_file(dir_glade, preferences_ui_file_name);
+      if (coot::file_exists(preferences_ui_file_name))
+         preferences_ui_file_name_full = preferences_ui_file_name;
+      GtkBuilder *preferences_builder = gtk_builder_new();
+      std::cout << "::::::::::::::::::::::: reading " << preferences_ui_file_name_full << std::endl;
+      status = gtk_builder_add_from_file(preferences_builder, preferences_ui_file_name_full.c_str(), &error);
+      std::cout << "::::::::::::::::::::::: done reading " << preferences_ui_file_name_full << std::endl;
+      if (status == FALSE) {
+         std::cout << "ERROR:: Failure to read or parse " << preferences_ui_file_name_full << std::endl;
+         std::cout << error->message << std::endl;
+         exit(0);
+      }
+      graphics_info_t::set_preferences_gtkbuilder(preferences_builder);
 
       python_init();
 
@@ -674,11 +702,8 @@ new_startup_application_activate(GtkApplication *application,
       graphics_info.use_graphics_interface_flag = true;
 
 
-      GtkWidget *sb = GTK_WIDGET(gtk_builder_get_object(builder, "main_window_statusbar"));
-      graphics_info_t::statusbar = sb;
-      // std::cout << "debug:: statusbar: " << sb << std::endl;
 
-      install_icons_into_theme(GTK_WIDGET(sb));
+      
 
 
       guint id = gtk_application_window_get_id(GTK_APPLICATION_WINDOW(app_window));
@@ -705,9 +730,9 @@ new_startup_application_activate(GtkApplication *application,
       gtk_widget_show(gl_area);
       gtk_box_prepend(GTK_BOX(graphics_hbox), gl_area);
       gtk_window_set_application(GTK_WINDOW(app_window), application);
-      gtk_window_set_default_size(GTK_WINDOW(app_window), 900, 300);
+      gtk_window_set_default_size(GTK_WINDOW(app_window), 1000, 900);
       gtk_window_set_default_widget(GTK_WINDOW(app_window), gl_area);
-      gtk_widget_set_size_request(gl_area, 900, 500); // Hmm
+      gtk_widget_set_size_request(gl_area, 900, 900); // Hmm
       gtk_widget_show(app_window);
       gtk_window_set_focus_visible(GTK_WINDOW(app_window), TRUE);
 
@@ -772,7 +797,6 @@ application_open_callback(GtkApplication *app,
                           gchar          *hint,
                           gpointer        user_data) {
 
-   
    command_line_data cld;
 
    for (gint i=0; i<n_files; i++) {
@@ -783,13 +807,13 @@ application_open_callback(GtkApplication *app,
       if (file_info) {
          const char *file_name = g_file_info_get_name(file_info);
          if (file_name) {
-            std::cout << "Handle " << file_name << std::endl;
+            std::cout << "application_open_callback(): handle " << file_name << std::endl;
             cld.add(std::string(file_name));
          } else {
-            std::cout << "file_name was null " << std::endl;
+            std::cout << "ERROR:: application_open_callback(): file_name was null " << std::endl;
          }
       } else {
-         std::cout << "application_open_callback() error " << i << " " << error->message << std::endl;
+         std::cout << "ERROR:: application_open_callback() error " << i << " " << error->message << std::endl;
       }
    }
 
@@ -879,6 +903,18 @@ void application_command_line_callback(GtkApplication *app, GVariant *parameters
   
 }
 
+void window_removed(GtkApplication* self,GtkWindow* window, gpointer user_data) {
+
+   // this is not needed because closing the main window using the window manager
+   // causes g_application_run() in the function below to return. Hence we
+   // just fall out at the end of main().
+   //
+   // Or that's what *should* happen.
+
+   // std::cout << "quit here" << std::endl;
+   // g_application_quit(self);
+
+}
 
 int new_startup(int argc, char **argv) {
 
@@ -887,8 +923,10 @@ int new_startup(int argc, char **argv) {
 #endif
 
    mmdb::InitMatType();
-   setup_symm_lib();
-   check_reference_structures_dir();
+
+   // setup_symm_lib();
+   // check_reference_structures_dir();
+
    gtk_init();
 
    load_css();
@@ -914,6 +952,10 @@ int new_startup(int argc, char **argv) {
    g_signal_connect(app, "open",     G_CALLBACK(application_open_callback), activate_data); // passed on
    // this destroys active_data
    g_signal_connect(app, "activate", G_CALLBACK(new_startup_application_activate), activate_data);
+
+   // how about this - needed for Bernie/Windows?
+   // void window_removed ( GtkApplication* self, GtkWindow* window, gpointer user_data )
+   g_signal_connect(app, "window-removed", G_CALLBACK(window_removed), nullptr);
 
    // delete activate_data; Nope. This is used in new_startup_application_activate.
    // Delete it there if you want to delete it.

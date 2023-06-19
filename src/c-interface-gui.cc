@@ -88,6 +88,7 @@
 #include "c-interface-widgets.hh"
 
 #include "widget-from-builder.hh"
+#include "support.h" // for internationalizations.
 
 // I think this test is wrong. New gtk doesn't have get active text.
 // Use a gtkcomboboxtext for that.
@@ -1430,15 +1431,10 @@ store_window_size(int window_type, GtkWidget *widget) {
 void set_file_selection_dialog_size(GtkWidget *dialog) {
 
    if (graphics_info_t::file_chooser_dialog_x_size > 0) {
-
-#if (GTK_MAJOR_VERSION >= 4)
       graphics_info_t g;
+      std::cout << "DEBUG:: set size request for dialog "
+                << g.file_chooser_dialog_x_size << " " << g.file_chooser_dialog_y_size << std::endl;
       gtk_widget_set_size_request(dialog, g.file_chooser_dialog_x_size, g.file_chooser_dialog_y_size);
-#else
-      gtk_window_resize(GTK_WINDOW(dialog),
-                        graphics_info_t::file_chooser_dialog_x_size,
-                        graphics_info_t::file_chooser_dialog_y_size);
-#endif
    }
 }
 
@@ -4149,14 +4145,20 @@ GtkWidget *wrapped_create_show_symmetry_window() {
           gtk_box_append(GTK_BOX(box_for_colour_button), colour_button_dialog);
 #endif
 
-          GdkRGBA rgba;
-          rgba.red   = (graphics_info_t::symmetry_colour[0]);
-          rgba.green = (graphics_info_t::symmetry_colour[1]);
-          rgba.blue  = (graphics_info_t::symmetry_colour[2]);
-          rgba.alpha = 1.0f;
-          // std::cout << " colours " << rgba.red << " " << rgba.green << " " << rgba.blue << std::endl;
+          auto on_color_set_func = +[] (GtkColorButton *self, gpointer user_data) {
+             GdkRGBA rgba;
+             gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(self), &rgba);
+             std::cout << "Selected color: " << gdk_rgba_to_string(&rgba) << std::endl;
+             graphics_info_t::rgba_to_symmetry_colour(rgba);
+             graphics_info_t::update_symmetry();
+             graphics_info_t::graphics_draw();
+          };
+
+          GdkRGBA rgba = graphics_info_t::symmetry_colour_to_rgba();
+          std::cout << " colours " << rgba.red << " " << rgba.green << " " << rgba.blue << std::endl;
           GtkWidget *colour_button = gtk_color_button_new_with_rgba(&rgba);
           gtk_box_append(GTK_BOX(box_for_colour_button), colour_button);
+          g_signal_connect(G_OBJECT(colour_button), "color-set", G_CALLBACK(on_color_set_func), nullptr);
        }
     }
 
@@ -4366,15 +4368,7 @@ GtkWidget *wrapped_create_bond_parameters_dialog() {
 
    // GtkWidget *widget = create_bond_parameters_dialog();
    GtkWidget *dialog = widget_from_builder("bond_parameters_dialog");
-
-      // old way 20211018-PE
-   // GtkWidget *combobox = widget_from_builder("bond_parameters_molecule_combobox");
-
-   GtkWidget *vbox = widget_from_builder("bond_parameters_hbox_for_molecule_combobox");
-
-   clear_out_container(vbox);
-
-   GCallback callback_func = G_CALLBACK(g.bond_parameters_molecule_combobox_changed);
+   GtkWidget *combobox = widget_from_builder("bond_parameters_molecule_comboboxtext");
 
    // fill the colour map rotation entry
 
@@ -4400,20 +4394,20 @@ GtkWidget *wrapped_create_bond_parameters_dialog() {
       // g.bond_parameters_molecule not set yet.
       g.bond_parameters_molecule = imol;
 
-   // g.fill_combobox_with_coordinates_options(combobox, callback_func, imol);
+   auto get_model_molecule_vector = [] () {
+                                     graphics_info_t g;
+                                     std::vector<int> vec;
+                                     int n_mol = g.n_molecules();
+                                     for (int i=0; i<n_mol; i++)
+                                        if (g.is_valid_model_molecule(i))
+                                           vec.push_back(i);
+                                     return vec;
+                                  };
+   int imol_active = g.bond_parameters_molecule;
+   auto model_list = get_model_molecule_vector();
+   GCallback callback_func = G_CALLBACK(nullptr);
+   g.fill_combobox_with_molecule_options(combobox, callback_func, imol_active, model_list);
 
-   GtkWidget *combobox = gtk_combo_box_new();
-   gtk_widget_show(combobox);
-
-#if (GTK_MAJOR_VERSION == 3 && GTK_MINOR_VERSION == 94) || (GTK_MAJOR_VERSION == 4)
-      // 20220528-PE FIXME reordering child
-   gtk_box_append(GTK_BOX(vbox), combobox);
-#else
-   gtk_box_pack_start(GTK_BOX(vbox), combobox, FALSE, FALSE, 4);
-   gtk_box_reorder_child(GTK_BOX(vbox), combobox, 1);
-#endif
-
-   g.new_fill_combobox_with_coordinates_options(combobox, callback_func, imol);
    g.fill_bond_parameters_internals(combobox, imol);
 
    return dialog;
@@ -5266,20 +5260,17 @@ void add_additional_representation_by_widget(GtkWidget *dialog) {
 
 GtkWidget *wrapped_create_residue_editor_select_monomer_type_dialog() {
 
-   std::cout << "---------------- in wrapped_create_residue_editor_select_monomer_type_dialog()"
-             << std::endl;
-
    // GtkWidget *w = create_residue_editor_select_monomer_type_dialog();
    GtkWidget *w = widget_from_builder("residue_editor_select_monomer_type_dialog");
    GtkWidget *combo_box = widget_from_builder("residue_editor_select_monomer_type_combobox");
 
-   std::cout << "debug::  in wrapped_create_residue_editor_select_monomer_type_dialog() w " << w
-             << " and combobox " << combo_box << std::endl;
+   if (combo_box)
+      gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(combo_box));
 
    graphics_info_t g;
    std::vector<std::string> v = g.Geom_p()->monomer_types();
 
-   // remove the 2 items that are already there from the glade interface (I suppose).
+   // fill the combobox
 
    for (unsigned int i=0; i<v.size(); i++) {
       std::string s = v[i];
@@ -5307,10 +5298,6 @@ void clear_restraints_editor_by_dialog(GtkWidget *dialog) { /* close button pres
    g.clear_restraints_editor_by_dialog(dialog);
 }
 
-
-
-
-
 void show_restraints_editor(std::string monomer_type) {
 
    int imol = 0; // maybe this should be passed? Pretty esoteric though.
@@ -5330,7 +5317,9 @@ void show_restraints_editor(std::string monomer_type) {
 	    coot::dictionary_residue_restraints_t restraints = p.second;
 	    coot::restraints_editor r;
 	    r.fill_dialog(restraints);
-	    set_transient_and_position(COOT_EDIT_RESTRAINTS_DIALOG, r.get_dialog());
+            GtkWidget *dialog = r.get_dialog();
+            std::cout << "DEBUG:: show_restraints_editor(): here with dialog " << dialog << std::endl;
+	    set_transient_and_position(COOT_EDIT_RESTRAINTS_DIALOG, dialog);
 	    g.restraints_editors.push_back(r);
 	 }
       }
@@ -5954,6 +5943,19 @@ generic_objects_dialog_grid_add_object_for_molecule_internal(int imol,
 
 GtkWidget *wrapped_create_generic_objects_dialog() {
 
+   auto clear_the_grid = [] (GtkWidget *grid) {
+      GtkWidget *child = gtk_widget_get_first_child(GTK_WIDGET(grid));
+      unsigned int child_count = 0;
+      while (child) {
+         child_count += 1;
+         GtkWidget *next = gtk_widget_get_next_sibling(child);
+         // gtk_grid_remove_row(GTK_GRID(grid), 0);
+         gtk_grid_remove(GTK_GRID(grid), child);
+         child = next; // for next round
+      };
+      // std::cout << "There were " << child_count << " children in the grid" << std::endl;
+   };
+
    graphics_info_t g;
 
    GtkWidget *dialog = widget_from_builder("generic_objects_dialog");
@@ -5961,6 +5963,8 @@ GtkWidget *wrapped_create_generic_objects_dialog() {
 
    GtkWidget *grid = widget_from_builder("generic_objects_dialog_grid");
    if (grid) {
+
+      clear_the_grid(grid);
       unsigned int io_count = 0;
       unsigned int n_objs = g.generic_display_objects.size();
       for (unsigned int io=0; io<n_objs; io++) {
@@ -6032,7 +6036,7 @@ checksums_match(const std::string &file_name, const std::string &checksum) {
       // boost::crc_basic<16> crc_ccitt1( 0x1021, 0xFFFF, 0, false, false );
       boost::crc_basic<16> crc_ccitt1(0xffff, 0x0, 0, false, false );
       crc_ccitt1.process_bytes(dl_str.c_str(), dl_str.size());
-      std::cout << "checksum compare " << crc_ccitt1.checksum() << " " << checksum << std::endl;
+      // std::cout << "DEBUG:: checksum compare " << crc_ccitt1.checksum() << " " << checksum << std::endl;
       std::string s = coot::util::int_to_string(crc_ccitt1.checksum());
       if (s == checksum)
 	 state = true;
