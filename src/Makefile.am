@@ -840,6 +840,7 @@ libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
 		$(SQLITE3_LIBS)       \
 		@GTK_LIBS@            \
 		$(SHARED_LDFLAGS)     \
+		-lz                   \
 		-lpthread
 
 # make freetype a configure variable FREETYPE_LIBS
