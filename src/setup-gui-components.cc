@@ -192,9 +192,9 @@ add_python_scripting_entry_completion(GtkWidget *entry) {
    // it's because you've messed up the Python startup.
    // Perhaps by calling a function that no longer exists.
 
-   // Get the module object for the `sys` module.
+   // Get the module object for the `coot` module.
    PyObject *module = PyImport_ImportModule("coot");
-   // Get the dictionary object for the `sys` module.
+   // Get the dictionary object for the `coot` module.
    PyObject *dict = PyModule_GetDict(module);
    // Iterate over the keys and values in the dictionary.
    while (PyDict_Next(dict, &pos, &key, &value)) {
@@ -203,10 +203,16 @@ add_python_scripting_entry_completion(GtkWidget *entry) {
       std::string key_c = std::string("coot.") +  (PyUnicode_AsUTF8AndSize(key, NULL));
       module_coot_completions.push_back(key_c);
    }
-   // Get the module object for the `sys` module.
+   // Get the module object for the `coot_utils` module.
    module = PyImport_ImportModule("coot_utils");
-   // Get the dictionary object for the `sys` module.
+   if (module == NULL || PyErr_Occurred()) {
+      PyErr_Print();
+   }
+   // Get the dictionary object for the `coot_utils` module.
    dict = PyModule_GetDict(module);
+   if (dict == NULL || PyErr_Occurred()) {
+      PyErr_Print();
+   }
   // Iterate over the keys and values in the dictionary.
    while (PyDict_Next(dict, &pos, &key, &value)) {
       // Do something interesting with the key and value.
@@ -214,6 +220,7 @@ add_python_scripting_entry_completion(GtkWidget *entry) {
       std::string key_c = std::string("coot_utils.") +  (PyUnicode_AsUTF8AndSize(key, NULL));
       module_coot_utils_completions.push_back(key_c);
    }
+   Py_DECREF(module);
 
    // command history
    std::vector<std::string> chv = g.command_history.commands;
