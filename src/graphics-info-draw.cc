@@ -506,7 +506,7 @@ graphics_info_t::get_mvp_for_shadow_map(const glm::vec3 &light_direction_eye_spa
    glm::mat4 model_matrix = glm::mat4(1.0);
 
    float box_size = shadow_box_size; // user setable, default 66.
-   if (box_size < 0.0) box_size = 66.0;
+   if (box_size < 0.0) box_size = 120.0;
    glm::mat4 projection_matrix = glm::ortho(-box_size, box_size, -box_size, box_size, -box_size, box_size);
 
    glm::vec3 rc = get_rotation_centre();
@@ -6056,6 +6056,7 @@ graphics_info_t::setup_key_bindings() {
 
    auto l41 = [] () {
       box_radius_xray *= (1.0/1.15);
+      box_radius_em *= (1.0/1.15);
       // is there an "update maps" function?
       for (int ii=0; ii<n_molecules(); ii++) {
          if (is_valid_map_molecule(ii))
@@ -6066,6 +6067,7 @@ graphics_info_t::setup_key_bindings() {
 
    auto l42 = [] () {
       box_radius_xray *= 1.15;
+      box_radius_em *= 1.15;
       for (int ii=0; ii<n_molecules(); ii++) {
          if (is_valid_map_molecule(ii))
             molecules[ii].update_map(true);

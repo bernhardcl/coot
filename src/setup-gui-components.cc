@@ -38,7 +38,10 @@ void setup_menubuttons() {
    GMenuModel *delete_item_menu = menu_model_from_builder("delete-item-menu");
    gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(delete_menubutton), delete_item_menu);
 
-   // move this function to where it can be called when we click on the "Mutate"
+   GtkWidget *rotate_translate_button = widget_from_builder("rotate_translate_menubutton");
+   GMenuModel *rotate_translate_menu = menu_model_from_builder("rotate-translate-menu");
+   gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(rotate_translate_button), rotate_translate_menu);
+
    // button (both of them, I suppose).
    auto add_typed_menu_to_mutate_menubutton = [] (const std::string &residue_type) {
       if (residue_type == "PROTEIN") {
@@ -192,9 +195,9 @@ add_python_scripting_entry_completion(GtkWidget *entry) {
    // it's because you've messed up the Python startup.
    // Perhaps by calling a function that no longer exists.
 
-   // Get the module object for the `coot` module.
+   // Get the module object for the `sys` module.
    PyObject *module = PyImport_ImportModule("coot");
-   // Get the dictionary object for the `coot` module.
+   // Get the dictionary object for the `sys` module.
    PyObject *dict = PyModule_GetDict(module);
    // Iterate over the keys and values in the dictionary.
    while (PyDict_Next(dict, &pos, &key, &value)) {
@@ -205,8 +208,15 @@ add_python_scripting_entry_completion(GtkWidget *entry) {
    }
    // Get the module object for the `coot_utils` module.
    module = PyImport_ImportModule("coot_utils");
-   if (module == NULL || PyErr_Occurred()) {
-      PyErr_Print();
+
+   if (module) {
+      if (false)
+         std::cout << "INFO:: add_python_scripting_entry_completion() coot_utils imported successfully" << std::endl;
+   } else {
+      std::cout << "ERROR:: add_python_scripting_entry_completion() coot_utils import failure" << std::endl;
+      if (PyErr_Occurred())
+         PyErr_PrintEx(0);
+      return;
    }
    // Get the dictionary object for the `coot_utils` module.
    dict = PyModule_GetDict(module);

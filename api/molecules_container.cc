@@ -229,7 +229,7 @@ molecules_container_t::read_standard_residues() {
       std::string dir = coot::package_data_dir();
       std::string standard_file_name = coot::util::append_dir_file(dir, "standard-residues.pdb");
 
-      // std::cout << "------------------ read_standard_residues() B " << std::endl;
+      std::cout << "------------------ read_standard_residues() B " << standard_file_name << std::endl;
       struct stat buf;
       int status = stat(standard_file_name.c_str(), &buf);
       if (status != 0) { // standard-residues file was not found in
@@ -284,7 +284,7 @@ molecules_container_t::read_standard_residues() {
          // std::cout << "------------------ read_standard_residues() E " << std::endl;
       }
    } else {
-      std::cout << "------------------ read_standard_residues() F " << std::endl;
+      std::cout << "------------------ read_standard_residues() F " << env_var_filename << std::endl;
       standard_residues_asc = get_atom_selection(env_var_filename, true, false, false);
    }
    // std::cout << "------------------ read_standard_residues() done " << std::endl;
@@ -2062,7 +2062,7 @@ molecules_container_t::add_terminal_residue_directly(int imol, const std::string
          clipper::Xmap<float> &xmap = molecules[imol_refinement_map].xmap;
          coot::residue_spec_t residue_spec(chain_id, res_no, ins_code);
          std::pair<int, std::string> m = molecules[imol].add_terminal_residue_directly(residue_spec, new_res_type,
-                                                                                       geom, xmap);
+                                                                                       geom, xmap, static_thread_pool);
          status  = m.first;
          message = m.second;
          if (! message.empty())
@@ -2092,6 +2092,20 @@ molecules_container_t::add_terminal_residue_directly_using_cid(int imol, const s
    }
    return status;
 }
+
+//! buccaneer building, called by the above
+int
+molecules_container_t::add_terminal_residue_directly_using_bucca_ml_growing_using_cid(int imol, const std::string &cid) {
+
+   int status = 0;
+   if (is_valid_model_molecule(imol)) {
+      coot::atom_spec_t atom_spec = atom_cid_to_atom_spec(imol, cid);
+      coot::residue_spec_t res_spec(atom_spec);
+      status = add_terminal_residue_directly_using_bucca_ml_growing(imol, res_spec);
+   }
+   return status;
+}
+
 
 
 // reset the rail_points (calls reset_the_rail_points()), updates the maps (using internal/clipper SFC)
@@ -4412,3 +4426,33 @@ molecules_container_t::flip_hand(int imol_map) {
    return imol_new;
 }
 
+
+//! @return the suggested initial contour level. Return -1 on not-a-map
+float
+molecules_container_t::get_suggested_initial_contour_level(int imol) const {
+
+   float l = -1;
+   if (is_valid_map_molecule(imol)) {
+      l = molecules[imol].get_suggested_initial_contour_level();
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return l;
+
+}
+
+//! get the mesh for ligand validation vs dictionary, coloured by badness.
+//! greater then 3 standard deviations is fully red.
+//! Less than 0.5 standard deviations is fully green.
+coot::simple_mesh_t
+molecules_container_t::get_mesh_for_ligand_validation_vs_dictionary(int imol, const std::string &ligand_cid) {
+
+   coot::simple_mesh_t m;
+   if (is_valid_model_molecule(imol)) {
+      m = molecules[imol].get_mesh_for_ligand_validation_vs_dictionary(ligand_cid, geom, static_thread_pool);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return m;
+
+}

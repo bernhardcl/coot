@@ -8,6 +8,7 @@
 #include "compat/coot-sysdep.h"
 
 #include <clipper/core/xmap.h>
+#include "utils/ctpl.h"
 #include "coot-utils/atom-selection-container.hh"
 #include "coot-utils/coot-rama.hh"
 #include "coot-utils/sfcalc-genmap.hh"
@@ -40,7 +41,12 @@
 #include "coot-simple-molecule.hh"
 
 #include "coot-utils/coot-map-utils.hh" // for map_molecule_centre_info_t
-#include "api-cell.hh"
+#include "api-cell.hh" // 20230702-PE not needed in this file - remove it from here
+
+// 2023-07-04-PE This is a hack. This should be configured - and the
+// various functions that depend on this being true should be
+// reworked so that they run without a thread pool.
+#define HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
 namespace coot {
 
@@ -321,7 +327,14 @@ namespace coot {
                                              const clipper::Xmap<float> &xmap,
                                              float map_sigma) const;
 
-      // ====================== dragged refinemetn ======================================
+      // ====================== validation ======================================
+
+      std::vector<coot::geometry_distortion_info_container_t>
+      geometric_distortions_from_mol(const atom_selection_container_t &asc, bool with_nbcs,
+                                     coot::protein_geometry &geom,
+                                     ctpl::thread_pool &static_thread_pool);
+
+      // ====================== dragged refinement ======================================
 
       coot::restraints_container_t *last_restraints;
 
@@ -647,6 +660,14 @@ namespace coot {
                                              bool draw_hydrogen_atoms_flag,
                                              coot::protein_geometry *geom_p);
 
+      //! get the mesh for ligand validation vs dictionary, coloured by badness.
+      //! greater then 3 standard deviations is fully red.
+      //! Less than 0.5 standard deviations is fully green.
+      // We need the thread pool?
+      coot::simple_mesh_t get_mesh_for_ligand_validation_vs_dictionary(const std::string &ligand_cid,
+                                                                       coot::protein_geometry &geom,
+                                                                       ctpl::thread_pool &static_thread_pool);
+
       // ------------------------ model-changing functions
 
       int move_molecule_to_new_centre(const coot::Cartesian &new_centre);
@@ -673,7 +694,8 @@ namespace coot {
       std::pair<int, std::string> add_terminal_residue_directly(const residue_spec_t &spec,
                                                                 const std::string &new_res_type,
                                                                 const protein_geometry &geom,
-                                                                const clipper::Xmap<float> &xmap);
+                                                                const clipper::Xmap<float> &xmap,
+                                                                ctpl::thread_pool &static_thread_pool);
 
       int add_compound(const dictionary_residue_restraints_t &monomer_restraints, const Cartesian &position,
                        const clipper::Xmap<float> &xmap, float map_rmsd);
@@ -921,6 +943,9 @@ namespace coot {
       int write_map(const std::string &file_name) const;
       void set_map_is_difference_map(bool flag);
       bool is_difference_map_p() const;
+
+      //! @return the suggested initial contour level. Return -1 on not-a-map
+      float get_suggested_initial_contour_level() const;
 
       // changes the internal map mesh holder (hence not const)
       simple_mesh_t get_map_contours_mesh(clipper::Coord_orth position, float radius, float contour_level);
