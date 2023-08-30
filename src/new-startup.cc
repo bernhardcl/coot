@@ -705,9 +705,6 @@ new_startup_application_activate(GtkApplication *application,
       // set this by parsing the command line arguments
       graphics_info.use_graphics_interface_flag = true;
 
-      // create the preference defaults
-      make_preferences_internal();
-
       guint id = gtk_application_window_get_id(GTK_APPLICATION_WINDOW(app_window));
       // std::cout << "debug:: new_startup_application_activate(): Window id: " << id << std::endl;
 
@@ -755,6 +752,10 @@ new_startup_application_activate(GtkApplication *application,
 
       setup_gui_components();
       setup_go_to_residue_keyboarding_mode_entry_signals();
+
+      // create the preference defaults
+      /// needs to come after python init now
+      make_preferences_internal();
 
       // if there is no command line arguments, the the function that sets this data is not run
       // so cld is null
