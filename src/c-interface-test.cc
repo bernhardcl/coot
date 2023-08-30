@@ -1261,6 +1261,7 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
    std::cout << "--------- prefix_dir " << d << std::endl;
 
 
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
    if (true) {
 
       auto qed_stuff = [] (RDKit::RWMol &rdkm) {
@@ -1402,6 +1403,7 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
          }
       }
    }
+#endif
 
 #if 0
    // There are lots of items in the list, but they don't seem to be toplevels - hmm.
