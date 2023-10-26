@@ -492,23 +492,22 @@ molecule_class_info_t::ca_plus_ligands_rainbow_representation(coot::protein_geom
     //
     Bond_lines_container bonds;
     bonds.do_Ca_plus_ligands_bonds(atom_sel, imol_no, pg,
-        2.4, 4.7,
-        graphics_info_t::draw_missing_loops_flag,
-        coot::COLOUR_BY_RAINBOW,
-        draw_hydrogens_flag); // not COLOUR_BY_RAINBOW_BONDS
-        bonds_box = bonds.make_graphical_bonds_no_thinning();
-        bonds_box_type = coot::COLOUR_BY_RAINBOW_BONDS;
-        make_glsl_bonds_type_checked(__FUNCTION__);
+                                   2.4, 4.7,
+                                   graphics_info_t::draw_missing_loops_flag,
+                                   coot::COLOUR_BY_RAINBOW,
+                                   draw_hydrogens_flag); // not COLOUR_BY_RAINBOW_BONDS
+    bonds_box = bonds.make_graphical_bonds_no_thinning();
+    bonds_box_type = coot::COLOUR_BY_RAINBOW_BONDS;
+    make_glsl_bonds_type_checked(__FUNCTION__);
 
-    }
+}
 
-    void
+void
 molecule_class_info_t::b_factor_representation() {
 
-   Bond_lines_container::bond_representation_type bond_type =
-      Bond_lines_container::COLOUR_BY_B_FACTOR;
+   Bond_lines_container::bond_representation_type bond_type = Bond_lines_container::COLOUR_BY_B_FACTOR;
 
-   Bond_lines_container bonds(atom_sel, imol_no, bond_type);
+   Bond_lines_container bonds(atom_sel, imol_no, graphics_info_t::Geom_p(), bond_type);
    bonds_box = bonds.make_graphical_bonds_no_thinning();
    bonds_box_type = coot::COLOUR_BY_B_FACTOR_BONDS;
    make_glsl_bonds_type_checked(__FUNCTION__);
@@ -517,8 +516,9 @@ molecule_class_info_t::b_factor_representation() {
 void
 molecule_class_info_t::b_factor_representation_as_cas() {
 
-   Bond_lines_container::bond_representation_type bond_type =
-      Bond_lines_container::COLOUR_BY_B_FACTOR;
+   // std::cout << "************************************************ b_factor_representation_as_cas() " << std::endl;
+
+   Bond_lines_container::bond_representation_type bond_type = Bond_lines_container::COLOUR_BY_B_FACTOR;
    Bond_lines_container bonds;
    bonds.do_Ca_plus_ligands_bonds(atom_sel, imol_no, NULL, 2.4, 4.7,
                                   graphics_info_t::draw_missing_loops_flag,
@@ -5000,6 +5000,12 @@ molecule_class_info_t::check_waters_by_difference_map(const clipper::Xmap<float>
 std::pair<std::vector<std::string> , std::vector <coot::atom_spec_t> >
 molecule_class_info_t::bad_chiral_volumes() const {
 
+   return inverted_chiral_volumes();
+}
+
+std::pair<std::vector<std::string>, std::vector<coot::atom_spec_t> >
+molecule_class_info_t::inverted_chiral_volumes() const {
+
    std::vector <coot::atom_spec_t> v;
    std::vector<std::string> unknown_types_vec;
    std::pair<std::vector<std::string>, std::vector<coot::atom_spec_t> > pair(unknown_types_vec, v);
@@ -5016,6 +5022,16 @@ molecule_class_info_t::bad_chiral_volumes() const {
    return pair;
 }
 
+std::pair<std::vector<std::string>, std::vector<std::pair<coot::atom_spec_t, double> > >
+molecule_class_info_t::distorted_chiral_volumes(double chiral_volume_limit_for_outlier) const {
+
+   std::pair<std::vector<std::string> , std::vector<std::pair<coot::atom_spec_t, double> > > p =
+      coot::distorted_chiral_volumes(imol_no, atom_sel.mol, graphics_info_t::Geom_p(),
+                                     graphics_info_t::cif_dictionary_read_number,
+                                     chiral_volume_limit_for_outlier);
+
+   return p;
+}
 
 
 float
@@ -7098,6 +7114,7 @@ molecule_class_info_t::find_water_baddies_AND(float b_factor_lim, const clipper:
 }
 
 
+#include "coot-utils/find-water-baddies.hh"
 
 // This is logical opertator AND on the search criteria.
 //
@@ -7116,186 +7133,11 @@ molecule_class_info_t::find_water_baddies_OR(float b_factor_lim, const clipper::
                                              short int ignore_part_occ_contact_flag,
                                              short int ignore_zero_occ_flag) {
 
-   std::vector <coot::atom_spec_t> v;
-
-   std::vector<std::pair<mmdb::Atom *, float> > marked_for_display;
-
-   bool this_is_marked;
-   float den = 0.0;
-   short int use_b_factor_limit_test = 1;
-   short int use_map_sigma_limit_test = 1;
-   short int use_min_dist_test = 1;
-   short int use_max_dist_test = 1;
-   bool sigma_warned = 0; // we only want to see this message once (at most!), not 184 times.
-
-   if (b_factor_lim < 0.0)
-      use_b_factor_limit_test = 0;
-   if (outlier_sigma_level < -50.0)
-      use_map_sigma_limit_test = 0;
-   if (min_dist < 0.0)
-      use_min_dist_test = 0;
-   if ( max_dist < 0.0 )
-      use_max_dist_test = 0;
-
-//    std::cout << "DEBUG:: passed: b_factor_lim "
-//              << b_factor_lim << " outlier_sigma_level "
-//               << outlier_sigma_level << " min_dist "
-//              << min_dist << " max_dist " << max_dist
-//               << std::endl;
-
-//     std::cout << "DEBUG:: Usage flags b-factor: " << use_b_factor_limit_test
-//              << " map sigma: " << use_map_sigma_limit_test
-//               << " min dist: " << use_min_dist_test
-//               << " max_dist: " << use_max_dist_test << std::endl;
-
-   if (atom_sel.n_selected_atoms > 0) {
-
-      int n_models = atom_sel.mol->GetNumberOfModels();
-      for (int imod=1; imod<=n_models; imod++) {
-
-         mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
-         mmdb::Chain *chain_p;
-         // run over chains of the existing mol
-         int nchains = model_p->GetNumberOfChains();
-         if (nchains <= 0) {
-            std::cout << "bad nchains in molecule " << nchains
-                      << std::endl;
-         } else {
-            for (int ichain=0; ichain<nchains; ichain++) {
-               chain_p = model_p->GetChain(ichain);
-               if (chain_p == NULL) {
-                  // This should not be necessary. It seem to be a
-                  // result of mmdb corruption elsewhere - possibly
-                  // DeleteChain in update_molecule_to().
-                  std::cout << "NULL chain in ... " << std::endl;
-               } else {
-                  int nres = chain_p->GetNumberOfResidues();
-                  mmdb::PResidue residue_p;
-                  mmdb::Atom *at;
-                  for (int ires=0; ires<nres; ires++) {
-                     residue_p = chain_p->GetResidue(ires);
-                     int n_atoms = residue_p->GetNumberOfAtoms();
-
-                     std::string resname = residue_p->GetResName();
-                     if (resname == "WAT" || resname == "HOH") {
-
-                        for (int iat=0; iat<n_atoms; iat++) {
-                           at = residue_p->GetAtom(iat);
-			   bool water_atom_is_hydrogen_atom = false;
-			   // PDBv3 FIXME
-			   if (! strncmp(at->name, " H", 2)) water_atom_is_hydrogen_atom = true;
-			   if (! strncmp(at->name, " D", 2)) water_atom_is_hydrogen_atom = true;
-
-			   if (water_atom_is_hydrogen_atom) continue;
-
-                           this_is_marked = false;
-
-                           if (! at->isTer()) {
-
-                              // density check:
-                              if (map_in_sigma > 0.0) { // it *should* be!
-                                 clipper::Coord_orth a(at->x, at->y, at->z);
-                                 den = coot::util::density_at_point(xmap_in, a);
-
-                                 den /= map_in_sigma;
-                                 if (den < outlier_sigma_level && use_map_sigma_limit_test) {
-                                    this_is_marked = true;
-                                    marked_for_display.push_back(std::pair<mmdb::Atom *, float>(at, den));
-                                 }
-                              } else {
-                                 if (! sigma_warned) {
-                                    std::cout << "Ooops! Map sigma is " << map_in_sigma << std::endl;
-                                    sigma_warned = true;
-                                 }
-                              }
-
-                              // B factor check:
-                              if (! this_is_marked) {
-                                 if (at->tempFactor > b_factor_lim && use_b_factor_limit_test) {
-                                    marked_for_display.push_back(std::pair<mmdb::Atom *, float>(at, den));
-				 }
-                              }
-
-
-                              // distance check
-                              if (! this_is_marked) {
-
-                                 // (ignoring things means less marked atoms)
-                                 if (ignore_part_occ_contact_flag == 0) {
-
-                                    // we do want mark tha  atom as a baddie if ignore-Zero-Occ is off (0)
-                                    //
-                                    if (ignore_zero_occ_flag == false || at->occupancy < 0.01) {
-                                       double dist_to_atoms_min = 99999;
-                                       double d;
-                                       double d_sqrd;
-                                       double dc_sqrd = dist_to_atoms_min * dist_to_atoms_min;
-                                       double d_sqrd_min = 999999999;
-                                       clipper::Coord_orth a(at->x, at->y, at->z);
-                                       for (int j=0; j<atom_sel.n_selected_atoms; j++) {
-                                          if (at != atom_sel.atom_selection[j]) {
-                                             bool is_H = false;
-                                             // PDB v3 FIXME?
-                                             if (! strncmp(atom_sel.atom_selection[j]->name, " H", 2))
-                                                is_H = true;
-                                             clipper::Coord_orth p(atom_sel.atom_selection[j]->x,
-                                                                   atom_sel.atom_selection[j]->y,
-                                                                   atom_sel.atom_selection[j]->z);
-                                             d_sqrd = (p-a).lengthsq();
-                                             if (! is_H) {
-                                                if (d_sqrd < d_sqrd_min)
-                                                   d_sqrd_min = d_sqrd;
-                                             } else {
-                                                // special distance rule for hydrogens?
-                                                //
-                                                // currently ignored...
-                                             }
-                                          }
-                                       }
-                                       bool dist_to_atoms_min_is_set = false;
-                                       if (d_sqrd_min < 999999998) {
-                                          // should be!
-                                          dist_to_atoms_min_is_set = true;
-                                          dist_to_atoms_min = sqrt(d_sqrd_min);
-                                       }
-                                       bool failed_min_dist_test = false;
-                                       bool failed_max_dist_test = false;
-
-                                       if (dist_to_atoms_min_is_set && (dist_to_atoms_min < min_dist) && use_min_dist_test)
-                                          failed_min_dist_test = true;
-
-                                       if (dist_to_atoms_min_is_set && (dist_to_atoms_min > max_dist) && use_max_dist_test)
-                                          failed_max_dist_test = true;
-
-                                       if (failed_min_dist_test || failed_max_dist_test) {
-
-                                          marked_for_display.push_back(std::pair<mmdb::Atom *, float>(at, den));
-                                       }
-                                    }
-                                 }
-                              }
-                           }
-                        }
-                     }
-                  }
-               }
-            }
-         }
-      }
-   }
-
-   for (unsigned int i=0; i<marked_for_display.size(); i++) {
-      std::string s = "B fac: ";
-      s += coot::util::float_to_string(marked_for_display[i].first->tempFactor);
-      if (map_in_sigma > 0.0) {
-         s += "   ED: ";
-         s += coot::util::float_to_string(marked_for_display[i].second);
-         s += " rmsd";
-      }
-      coot::atom_spec_t as(marked_for_display[i].first, s);
-      as.float_user_data = marked_for_display[i].first->occupancy;
-      v.push_back(as);
-   }
+   // 20231016-PE function moved into util so that it can be used by api
+   //
+   std::vector <coot::atom_spec_t> v = coot::find_water_baddies_OR(atom_sel, b_factor_lim, xmap_in, map_in_sigma,
+                                                                   outlier_sigma_level, min_dist, max_dist,
+                                                                   ignore_part_occ_contact_flag, ignore_zero_occ_flag);
    return v;
 }
 
@@ -9494,8 +9336,8 @@ molecule_class_info_t::number_of_chains() const {
       if (model_p) {
          n = model_p->GetNumberOfChains();
       }
-      return n;
    }
+   return n;
 }
 
 
@@ -9633,7 +9475,7 @@ molecule_class_info_t::lsq_improve(mmdb::Manager *mol_ref, const std::string &re
                                    const std::string &moving_selection_str,
                                    int n_res, float dist_crit) {
    if (mol_ref) {
-
+ 
       try {
          make_backup();
          coot::lsq_improve lsq_imp(mol_ref, ref_selection_str, atom_sel.mol, moving_selection_str);
@@ -9648,4 +9490,35 @@ molecule_class_info_t::lsq_improve(mmdb::Manager *mol_ref, const std::string &re
          std::cout << "lsq_improve ERROR::" << rte.what() << std::endl;
       }
    }
+}
+
+// this function is fill_chiral_volume_outlier_markers()
+void
+molecule_class_info_t::fill_chiral_volume_outlier_marker_positions(int state) {
+
+   double chiral_volume_limit_for_outlier = 6.0;
+   chiral_volume_outlier_marker_positions.clear();
+   if (state) {
+      if (atom_sel.mol) {
+         std::pair<std::vector<std::string> , std::vector<std::pair<coot::atom_spec_t, double> > > dcv =
+            coot::distorted_chiral_volumes(imol_no, atom_sel.mol, graphics_info_t::Geom_p(),
+                                           graphics_info_t::cif_dictionary_read_number,
+                                           chiral_volume_limit_for_outlier);
+         for (unsigned int i=0; i<dcv.second.size(); i++) {
+            const auto &atom_spec = dcv.second[i].first;
+            mmdb:: Atom *at = get_atom(atom_spec);
+            if (at) {
+               glm::vec3 p(at->x, at->y, at->z);
+               // std::cout << "set_show_chiral_volume_outlier_markers() adding atom " << at << std::endl;
+               chiral_volume_outlier_marker_positions.push_back(p);
+            }
+         }
+      }
+   }
+}
+
+
+void
+molecule_class_info_t::set_show_non_bonded_contact_baddies_markers(int state) {
+
 }

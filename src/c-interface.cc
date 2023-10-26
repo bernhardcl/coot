@@ -55,11 +55,6 @@
 #include "c-interface-python.hh"
 #endif // USE_PYTHON
 
-#if defined (WINDOWS_MINGW)
-#ifdef DATADIR
-#undef DATADIR
-#endif // DATADIR
-#endif /* MINGW */
 #include "compat/sleep-fixups.h"
 
 // Here we used to define GTK_ENABLE_BROKEN if defined(WINDOWS_MINGW)
@@ -494,69 +489,6 @@ std::vector<float> rotate_rgb(std::vector<float> &rgb, float amount) {
 
 }
 
-
-// ################################ put this in globjects-new.cc ? #############################
-
-//  20220528-PE from globjects.cc
-gint idle_contour_function(gpointer data) {
-
-   gint continue_status = 0;
-   bool something_changed = false;
-
-   bool is_from_contour_level_change(GPOINTER_TO_INT(data));
-
-   // when there's nothing else to do, update the contour levels
-   //
-   // then update maps
-
-   for (int imol=0; imol<graphics_info_t::n_molecules(); imol++) {
-      if (graphics_info_t::molecules[imol].has_xmap()) { // FIXME or nxmap : needs test for being a map molecule
-         int &cc = graphics_info_t::molecules[imol].pending_contour_level_change_count;
-
-         if (cc != 0) {
-
-	          if (cc < 0) {
-	             while (cc != 0) {
-	                cc++;
-	                graphics_info_t::molecules[imol].change_contour(-1);
-	             }
-	          }
-
-	          if (cc > 0) {
-	              while (cc != 0) {
-	                 cc--;
-	                 graphics_info_t::molecules[imol].change_contour(1);
-	              }
-	          }
-
-           graphics_info_t g;
-           bool really_change_the_map_contours = true;
-           if (! is_from_contour_level_change) really_change_the_map_contours = false;
-	   g.molecules[imol].update_map(really_change_the_map_contours);
-           float map_rmsd = g.molecules[imol].map_sigma();
-	   continue_status = 0;
-           float cl = g.molecules[imol].contour_level;
-           float r = cl/map_rmsd;
-           std::cout << "DEBUG:: idle_contour_function() imol: " << imol << " contour level: "
-                     << g.molecules[imol].contour_level << " n-rmsd: " << r << std::endl;
-           g.set_density_level_string(imol, g.molecules[imol].contour_level);
-           std::string s = "Map " + std::to_string(imol) + "  contour_level " +
-              coot::util::float_to_string_using_dec_pl(cl, 3) + "  n-rmsd: " +
-              coot::util::float_to_string_using_dec_pl(r, 3);
-           add_status_bar_text(s.c_str());
-           g.display_density_level_this_image = 1;
-           something_changed = true;
-         }
-      }
-   }
-   // std::cout << "Here with something_changed: " << something_changed << std::endl;
-
-   // is this needed?
-   // if (something_changed)
-   //    graphics_draw();
-   // std::cout << "--- debug:: idle_contour_function() done " << continue_status << std::endl;
-   return continue_status;
-}
 
 
 // ################################ put this in globjects-new.cc ? #############################
@@ -1008,6 +940,22 @@ int read_pdb(const std::string &filename) {
    return handle_read_draw_molecule(filename);
 }
 
+//! set (or unset) GEMMI as the molecule parser. Currently by passing an int.
+void set_use_gemmi_as_model_molecule_parser(int state) {
+
+   if (state) {
+#ifdef USE_GEMMI
+      graphics_info_t g;
+      g.set_use_gemmi(state);
+#else
+      std::cout << "WARNING:: this executable was not compiled with gemmi " << std::endl;
+      add_status_bar_text("WARNING:: this executable was not compiled with gemmi");
+#endif
+   }
+}
+
+
+
 
 /*! \brief replace pdb.  Fail if molecule_number is not a valid model molecule.
   Return -1 on failure.  Else return molecule_number  */
@@ -1015,7 +963,7 @@ int clear_and_update_model_molecule_from_file(int molecule_number,
 					      const char *file_name) {
    int imol = -1;
    if (is_valid_model_molecule(molecule_number)) {
-      atom_selection_container_t asc = get_atom_selection(file_name, graphics_info_t::allow_duplseqnum, true, false);
+      atom_selection_container_t asc = get_atom_selection(file_name, true, graphics_info_t::allow_duplseqnum, true);
       mmdb::Manager *mol = asc.mol;
       graphics_info_t::molecules[molecule_number].replace_molecule(mol);
       imol = molecule_number;
@@ -1595,32 +1543,6 @@ int control_key_for_rotate_state() {
 }
 
 
-
-
-/*  ------------------------------------------------------------------------ */
-/*                         Model/Fit/Refine Functions:                       */
-/*  ------------------------------------------------------------------------ */
-void post_model_fit_refine_dialog() {
-
-   GtkWidget *widget = wrapped_create_model_fit_refine_dialog();
-   if (graphics_info_t::use_graphics_interface_flag) {
-      gtk_widget_set_visible(widget, TRUE);
-   }
-   std::vector<std::string> command_strings;
-   command_strings.push_back("post-model-fit-refine-dialog");
-   add_to_history(command_strings);
-}
-
-void post_other_modelling_tools_dialog() {
-
-   GtkWidget *widget = wrapped_create_model_fit_refine_dialog();
-   if (graphics_info_t::use_graphics_interface_flag) {
-      gtk_widget_set_visible(widget, TRUE);
-   }
-   std::vector<std::string> command_strings;
-   command_strings.push_back("post-other-modelling-tools-dialog");
-   add_to_history(command_strings);
-}
 
 void set_auto_read_column_labels(const char *fwt, const char *phwt,
 				 int is_for_diff_map_flag) {
@@ -2681,6 +2603,8 @@ colour_map_by_other_map_py(int imol_map, int imol_map_used_for_colouring, float 
                }
             }
 
+            std::cout << "debug:: in colour_map_by_other_map_py() colour_list size " << colour_list.size() << std::endl;
+
             if (colour_list.size() == n) {
                // we read the table OK.
                g.molecules[imol_map].colour_map_using_map(xmap_for_colouring,
@@ -2798,7 +2722,7 @@ get_symmetry_bonds_colour(int idummy) {
 //
 void set_show_symmetry_master(short int state) {
 
-   std::cout << "set_show_symmetry_master() " << state << std::endl;
+   // std::cout << "set_show_symmetry_master() " << state << std::endl;
 
    //
    graphics_info_t g;
@@ -5472,11 +5396,11 @@ void graphics_to_b_factor_representation(int imol) {
       command_strings.push_back("graphics-to-b-factor-representation");
       command_strings.push_back(graphics_info_t::int_to_string(imol));
       add_to_history(command_strings);
-   }
-   else
+   } else {
       std::cout << "WARNING:: no such valid molecule " << imol
 		<< " in graphics_to_b_factor_representation"
 		<< std::endl;
+   }
    graphics_draw();
 }
 
@@ -5577,8 +5501,13 @@ void set_grey_carbon_colour(int imol, float r, float g, float b) {
 
 /* undocumented feature for development. */
 void set_draw_moving_atoms_restraints(int state) {
-   graphics_info_t::draw_it_for_moving_atoms_restraints_graphics_object = state;
+   graphics_info_t::draw_it_for_moving_atoms_restraints_graphics_object_user_control = state;
    graphics_draw();
+}
+
+/* undocumented feature for development. */
+short int get_draw_moving_atoms_restraints() {
+   return graphics_info_t::draw_it_for_moving_atoms_restraints_graphics_object_user_control;
 }
 
 
@@ -6480,12 +6409,12 @@ void set_refine_rotamers(int state) {
 
 #include "c-interface-refine.hh"
 
-void set_refinement_geman_mcclure_alpha_from_text(int idx, const char *t) {
+void set_refinement_geman_mcclure_alpha_from_text(int combobox_index, const char *t) {
 
    graphics_info_t g;
    float v = coot::util::string_to_float(t);
    set_refinement_geman_mcclure_alpha(v);
-   graphics_info_t::refine_params_dialog_geman_mcclure_alpha_combobox_position = idx;
+   graphics_info_t::refine_params_dialog_geman_mcclure_alpha_combobox_position = combobox_index;
    // poke the refinement if there are moving atoms
 }
 
@@ -6518,7 +6447,7 @@ void set_refinement_overall_weight_from_text(const char *t) {
       g.poke_the_refinement();
       
    } else {
-      std::cout << "in set_refinement_overall_weight_from_text() t null " << std::endl;
+      std::cout << "WARNING:: in set_refinement_overall_weight_from_text() t null " << std::endl;
    }
 
 }
@@ -6684,17 +6613,33 @@ PyObject *safe_python_command_with_return(const std::string &python_cmd) {
       PyObject *pModule_coot = PyImport_Import(pName);
 
       std::cout << "running command: " << command << std::endl;
-      result = PyRun_String(command.c_str(), Py_file_input, d, d);
-      std::cout << "--------------- in safe_python_command_with_return() result: " << result << std::endl;
-      if (result)
+      PyObject* source_code = Py_CompileString(command.c_str(), "adhoc", Py_eval_input);
+      PyObject* func = PyFunction_New(source_code, d);
+      result = PyObject_CallObject(func, PyTuple_New(0));
+      std::cout << "--------------- in safe_python_command_with_return() result at: " << result << std::endl;
+      if (result) {
+         if(!PyUnicode_Check(result)) {
+             std::cout << "--------------- in safe_python_command_with_return() result is probably not a string." << std::endl;
+         }
+         PyObject* displayed = display_python(result);
+         PyObject* as_string = PyUnicode_AsUTF8String(displayed);
          std::cout << "--------------- in safe_python_command_with_return() result: "
-                   << PyBytes_AS_STRING(PyUnicode_AsUTF8String(display_python(result))) << std::endl;
-      else
+                   << PyBytes_AS_STRING(as_string) << std::endl;
+         Py_XDECREF(displayed);
+         Py_XDECREF(as_string);
+      }
+      else {
          std::cout << "--------------- in safe_python_command_with_return() result was null" << std::endl;
+         if(PyErr_Occurred()) {
+            std::cout << "--------------- in safe_python_command_with_return() Printing Python exception:" << std::endl;
+            PyErr_Print();
+         }
+      }
 
       // debugging
       // PyRun_String("import coot; print(dir(coot))", Py_file_input, d, d);
-
+      Py_XDECREF(func);
+      Py_XDECREF(source_code);
    } else {
       std::cout << "ERROR:: Hopeless failure: module for __main__ is null" << std::endl;
    }
@@ -6931,9 +6876,10 @@ SCM twisted_trans_peptides(int imol) {
 
    if (is_valid_model_molecule(imol)) {
 
+      graphics_info_t g;
       mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;
       std::vector<coot::util::cis_peptide_quad_info_t> v =
-	 coot::util::cis_peptide_quads_from_coords(mol, 0, false);
+	 coot::cis_peptide_quads_from_coords(mol, 0, g.Geom_p(), false);
 
       for (unsigned int i=0; i<v.size(); i++) {
 	 if (v[i].type == coot::util::cis_peptide_quad_info_t::TWISTED_TRANS) {
@@ -7027,9 +6973,10 @@ PyObject *twisted_trans_peptides_py(int imol) {
 
    if (is_valid_model_molecule(imol)) {
 
+      graphics_info_t g;
       mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;
       std::vector<coot::util::cis_peptide_quad_info_t> v =
-	 coot::util::cis_peptide_quads_from_coords(mol, 0, false);
+	 coot::cis_peptide_quads_from_coords(mol, 0, g.Geom_p(), false);
 
       for (unsigned int i=0; i<v.size(); i++) {
 	 if (v[i].type == coot::util::cis_peptide_quad_info_t::TWISTED_TRANS) {
@@ -7653,19 +7600,6 @@ void sequence_view(int imol) {
       gtk_widget_set_hexpand(frame, TRUE);
       gtk_widget_set_vexpand(frame, TRUE);
 
-      GtkWidget *vbox = widget_from_builder("main_window_sequence_view_box");
-      // gtk_box_append(GTK_BOX(vbox), scrolled_window);
-
-      // We need to set the height of the box - and that depends
-      // on the number of chains and the offset per chain.
-      {
-         int n_chains = 3 + graphics_info_t::molecules[imol].number_of_chains();
-         if (n_chains > 10) n_chains = 10;
-         int Y_OFFSET_PER_CHAIN = 16.0;
-         int new_height = 30 + n_chains * Y_OFFSET_PER_CHAIN;
-         gtk_widget_set_size_request(vbox, -1, new_height);
-      }
-
       // The sequence-view is in the frame, the frame is in the scrolled window.
       // The scrolled window is in the overlay.
       // In GTK-overlay speak: the scrolled window is the overlay child
@@ -7710,8 +7644,8 @@ void sequence_view(int imol) {
          };
          // if the sequence view box no longer has children, then we should close up the pane
          if (n_children == 0) {
-            GtkWidget *pane = widget_from_builder("main_window_sequence_view_vs_graphics_pane");
-            gtk_paned_set_position(GTK_PANED(pane), 0);
+            GtkWidget *vbox = widget_from_builder("main_window_sequence_view_box");
+            gtk_widget_set_visible(vbox, FALSE);
          }
       };
       g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(close_button_callback), NULL);
@@ -7720,6 +7654,8 @@ void sequence_view(int imol) {
       GtkWidget *overlay = gtk_overlay_new();
       gtk_overlay_set_child(GTK_OVERLAY(overlay), GTK_WIDGET(scrolled_window));
       gtk_overlay_add_overlay(GTK_OVERLAY(overlay), button);
+      GtkWidget *vbox = widget_from_builder("main_window_sequence_view_box");
+      gtk_widget_set_visible(vbox, TRUE);
       g_object_set_data(G_OBJECT(button), "sequence_view_box", vbox);
       g_object_set_data(G_OBJECT(overlay), "imol", GINT_TO_POINTER(imol));
       // GTK_ALIGN_END works OK/as intended, except the main graphics widget (or window) is too narrow to see it.
@@ -7728,13 +7664,19 @@ void sequence_view(int imol) {
       gtk_widget_set_halign(GTK_WIDGET(button), GTK_ALIGN_END);
       gtk_widget_set_valign(GTK_WIDGET(button), GTK_ALIGN_START);
 
-      // GtkWidget *vbox = widget_from_builder("main_window_sequence_view_box");
       gtk_box_append(GTK_BOX(vbox), overlay);
 
       // int new_height;
       // gtk_widget_measure(GTK_WIDGET(sv), GTK_ORIENTATION_VERTICAL, 0, &new_height, nullptr, nullptr, nullptr);
       // gtk_widget_set_size_request(vbox, -1, new_height);
 
+      int minimum_size;
+      int natural_size;
+      gtk_widget_measure(GTK_WIDGET(sv), GTK_ORIENTATION_VERTICAL, 0, &minimum_size, &natural_size, nullptr, nullptr);
+      int current_height = gtk_widget_get_height(vbox);
+      if (current_height < natural_size) {
+         gtk_widget_set_size_request(vbox, -1, natural_size);
+      }
    }
 }
 
@@ -9518,3 +9460,28 @@ int probe_available_p_py() {
    return r;
 }
 #endif // USE_PYTHON
+
+
+/*! \brief set the state of showing chiral volume outlier markers - of a model molecule that is,
+   not the intermediate atoms (derived from restraints) */
+void set_show_chiral_volume_outliers(int imol, int state) {
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t::molecules[imol].draw_chiral_volume_outlier_markers_flag = state;
+      graphics_info_t::molecules[imol].fill_chiral_volume_outlier_marker_positions(state);
+      graphics_info_t::update_chiral_volume_outlier_marker_positions();
+      graphics_draw();
+   }
+
+}
+
+/*! \brief set the state of showing non-bonded contact markers - of a model molecule that is,
+   not the intermediate atoms (derived from restraints) */
+void set_show_non_bonded_contact_baddies_markers(int imol, int state) {
+
+   if (is_valid_model_molecule(imol)) {
+      // for the molecule, not the intermediate atoms.
+      graphics_info_t::molecules[imol].set_show_non_bonded_contact_baddies_markers(state);
+      graphics_draw();
+   }
+}

@@ -44,7 +44,11 @@
 #endif
 
 #include <iostream>
+#ifdef _MSC_VER
+#include "compat/dirent.h"
+#else
 #include <dirent.h>   // for refmac dictionary files
+#endif
 
 #include <sys/types.h> // for stating
 #include <sys/stat.h>
@@ -1748,10 +1752,7 @@ graphics_info_t::accept_moving_atoms() {
          update_validation(imol_moving_atoms);
       } else {
          if (moving_atoms_asc_type == coot::NEW_COORDS_REPLACE) {
-
             molecules[imol_moving_atoms].replace_coords(*moving_atoms_asc, 0, mzo);
-            // debug
-            // molecules[imol_moving_atoms].atom_sel.mol->WritePDBASCII("post-accept_moving_atoms.pdb");
             update_validation(imol_moving_atoms);
          } else {
             if (moving_atoms_asc_type == coot::NEW_COORDS_INSERT) {
@@ -2066,12 +2067,22 @@ graphics_info_t::run_post_set_rotation_centre_hook_py() {
 void
 graphics_info_t::pull_restraint_neighbour_displacement_change_max_radius(bool up_or_down) {
 
-   if (up_or_down)
-      pull_restraint_neighbour_displacement_max_radius -= 1.0;
-   else
-      pull_restraint_neighbour_displacement_max_radius += 1.0;
-
    if (last_restraints) {
+      if (up_or_down)
+         pull_restraint_neighbour_displacement_max_radius -= 1.0;
+      else
+         pull_restraint_neighbour_displacement_max_radius += 1.0;
+
+      if (pull_restraint_neighbour_displacement_max_radius < 0.0)
+         pull_restraint_neighbour_displacement_max_radius = 0.0;
+
+      // std::cout << "debug:: pull_restraint_neighbour_displacement_max_radius "
+      // << pull_restraint_neighbour_displacement_max_radius << std::endl;
+
+      float r = pull_restraint_neighbour_displacement_max_radius;
+      attach_buffers(); // because we touch some GL buffers
+      lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring.update_radius_ring_vertices(r);
+
       if (pull_restraint_neighbour_displacement_max_radius > 1.99) {
          last_restraints->set_use_proportional_editing(true);
          last_restraints->pull_restraint_neighbour_displacement_max_radius =
@@ -2181,7 +2192,7 @@ graphics_info_t::clear_up_moving_atoms() {
    dynamic_distances.clear();
 
 
-   std::cout << "------------------------ clear_up_moving_atoms(): setting moving_atoms_asc to null" << std::endl;
+   // std::cout << "------------------------ clear_up_moving_atoms(): setting moving_atoms_asc to null" << std::endl;
    // and now the signal that moving_atoms_asc has been cleared:
    //
    moving_atoms_asc = NULL; // 20200412-PE. Why was this not done years ago?
@@ -2209,10 +2220,6 @@ graphics_info_t::clear_up_moving_atoms() {
    // 20220220-PE I will comment this out (because I think the answer to the below question is "yes"
    // graphics_info_t::rebond_molecule_corresponding_to_moving_atoms(); // haven't we done this?
 
-#ifndef EMSCRIPTEN
-   draw_gl_ramachandran_plot_flag = false;
-#endif
-
    if (use_graphics_interface_flag) {
 
       draw_gl_ramachandran_plot_flag = false;
@@ -2221,8 +2228,9 @@ graphics_info_t::clear_up_moving_atoms() {
       update_hydrogen_bond_mesh("");
 
       // now the diegos
-      bad_nbc_atom_pair_marker_positions.clear();
+      bad_nbc_atom_pair_marker_positions.clear(); // this should be in the update function, surely?
       update_bad_nbc_atom_pair_marker_positions();
+      update_chiral_volume_outlier_marker_positions();
 
    }
 }
@@ -2327,6 +2335,7 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
 
    // --------------- also do the restraints -----------------------
    //
+
    make_moving_atoms_restraints_graphics_object();
 
    int do_disulphide_flag = 0;
@@ -2489,140 +2498,18 @@ graphics_info_t::make_moving_atoms_graphics_object(int imol,
                                                                  // radius adjustment in make_glsl_bonds_type_checked()
    moving_atoms_molecule.is_intermediate_atoms_molecule = true;
 
-#ifndef EMSCRIPTEN
    gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0])); // needed?
    shader_for_models.Use();
    moving_atoms_molecule.make_glsl_bonds_type_checked(__FUNCTION__);
 
    setup_atom_pull_restraints_glsl();
-#endif
 
-#ifndef EMSCRIPTEN
    { // put this somewhere
       std::vector<Instanced_Markup_Mesh_attrib_t> balls;
       update_rama_balls(&balls);
       rama_balls_mesh.update_instancing_buffers(balls);
    }
-#endif
 
-}
-
-#if 0
-void
-graphics_info_t::draw_moving_atoms_peptide_markup() {
-
-   if (regularize_object_bonds_box.n_cis_peptide_markups > 0) {
-      for (int i=0; i<regularize_object_bonds_box.n_cis_peptide_markups; i++) {
-         const graphical_bonds_cis_peptide_markup &m = regularize_object_bonds_box.cis_peptide_markups[i];
-
-         glColor3f(0.7, 0.7, 0.8);
-         coot::Cartesian fan_centre = m.pt_ca_1.mid_point(m.pt_ca_2);
-
-         coot::Cartesian v1 = fan_centre - m.pt_ca_1;
-         coot::Cartesian v2 = fan_centre - m.pt_c_1;
-         coot::Cartesian v3 = fan_centre - m.pt_n_2;
-         coot::Cartesian v4 = fan_centre - m.pt_ca_2;
-
-         coot::Cartesian pt_ca_1 = m.pt_ca_1 + v1 * 0.15;
-         coot::Cartesian pt_c_1  = m.pt_c_1  + v2 * 0.15;
-         coot::Cartesian pt_n_2  = m.pt_n_2  + v3 * 0.15;
-         coot::Cartesian pt_ca_2 = m.pt_ca_2 + v4 * 0.15;
-
-         glBegin(GL_TRIANGLE_FAN);
-
-         glVertex3f(fan_centre.x(), fan_centre.y(), fan_centre.z());
-         glVertex3f(pt_ca_1.x(), pt_ca_1.y(), pt_ca_1.z());
-         glVertex3f(pt_c_1.x(),  pt_c_1.y(),  pt_c_1.z());
-         glVertex3f(pt_n_2.x(),  pt_n_2.y(),  pt_n_2.z());
-         glVertex3f(pt_ca_2.x(), pt_ca_2.y(), pt_ca_2.z());
-
-         glEnd();
-      }
-   }
-}
-#endif
-
-
-// Display the graphical object of the regularization.
-// static
-void
-graphics_info_t::draw_ramachandran_goodness_spots() {
-
-#if 0
-   if (graphics_info_t::regularize_object_bonds_box.num_colours > 0) {
-      if (regularize_object_bonds_box.n_ramachandran_goodness_spots) {
-
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT1);
-    glEnable(GL_LIGHT0);
-    glEnable (GL_BLEND); // these 2 lines are needed to make the transparency work.
-    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // ------------------------------------------
-
-    coot::Cartesian top       = unproject_xyz(100, 100, 0.5);
-    coot::Cartesian bottom    = unproject_xyz(100,   0, 0.5);
-    coot::Cartesian screen_y = top - bottom;
-
-    // ------------------------------------------
-
-    float ball_scale_factor = 1.0; // 1.2;
-    for (int i=0; i<graphics_info_t::regularize_object_bonds_box.n_ramachandran_goodness_spots; i++) {
-
-       coot::Cartesian pos = graphics_info_t::regularize_object_bonds_box.ramachandran_goodness_spots_ptr[i].first;
-       const float &prob_raw      = graphics_info_t::regularize_object_bonds_box.ramachandran_goodness_spots_ptr[i].second;
-
-       // ------------------------------------------
-
-       pos -= screen_y * (float(7.5)/float(graphics_info_t::zoom));
-       double prob = prob_raw;
-       if (prob > 0.5) prob = 0.5; // 0.4 and 2.5 f(for q) might be better (not tested)
-       double q = (1 - 2.0 * prob);
-       q = pow(q, 25);
-       coot::colour_holder col = coot::colour_holder(q, 0.0, 1.0, std::string(""));
-       double radius = 0.5;
-
-       // ------------------------------------------
-
-       int slices = 20;
-       GLUquadric* quad = gluNewQuadric();
-
-       GLfloat  mat_specular[]  = {col.red, col.green, col.blue, 0.6};
-       GLfloat  mat_shininess[] = {25};
-       glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  mat_specular);
-       glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   mat_specular);
-       glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   mat_specular);
-       glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat_shininess);
-
-       glPushMatrix();
-       glTranslatef(pos.x(), pos.y(), pos.z());
-       // gluDisk(quad, 0, base, slices, 2);
-       gluSphere(quad, radius, 10, 10);
-       glPopMatrix();
-    }
-
-    glDisable(GL_LIGHTING); // maybe not needed.
-      }
-
-      // we don't want disks any more
-      if (false) {
-    if (regularize_object_bonds_box.n_ramachandran_goodness_spots) {
-       for (int i=0; i<graphics_info_t::regularize_object_bonds_box.n_ramachandran_goodness_spots; i++) {
-          const coot::Cartesian &pos = regularize_object_bonds_box.ramachandran_goodness_spots_ptr[i].first;
-          const float &size          = regularize_object_bonds_box.ramachandran_goodness_spots_ptr[i].second;
-
-          double base = size * 0.3;
-          int slices = 10;
-          GLUquadric* quad = gluNewQuadric();
-          glPushMatrix();
-          glTranslatef(pos.x(), pos.y(), pos.z());
-          gluDisk(quad, 0, base, slices, 2);
-          glPopMatrix();
-       }
-    }
-      }
-   }
-#endif
 }
 
 #include "utils/dodec.hh"
@@ -2678,7 +2565,6 @@ graphics_info_t::get_rotamer_dodecs() {
 // }
 
 
-#ifndef EMSCRIPTEN // 20220724-PE no pick info.  Hmm...
 mmdb::Atom *
 graphics_info_t::get_moving_atom(const pick_info &pi) const {
    mmdb::Atom *at = 0;
@@ -2689,7 +2575,6 @@ graphics_info_t::get_moving_atom(const pick_info &pi) const {
    }
    return at;
 }
-#endif
 
 
 // static
@@ -6708,7 +6593,7 @@ graphics_info_t::sfcalc_genmap(int imol_model,
                            molecules[imol_model].sfcalc_genmap(*fobs_data, *free_flag, xmap_p);
                            molecules[imol_updating_difference_map].set_mean_and_sigma(false, ignore_pseudo_zeros_for_map_stats);
                            molecules[imol_updating_difference_map].set_contour_level_by_sigma(cls); // does an update
-                           fill_difference_map_peaks_button_box(); // do nothing if widget not realized.
+                           fill_difference_map_peaks_button_box();
                         }
                         on_going_updating_map_lock = false;
                      } else {
@@ -6953,4 +6838,47 @@ graphics_info_t::rgba_to_symmetry_colour(GdkRGBA rgba) {
    symmetry_colour.b = rgba.blue;
    symmetry_colour.a = rgba.alpha;
 
+}
+
+void graphics_info_t::hide_vertical_validation_frame_if_appropriate() {
+
+   // Paul style:
+   auto get_n_children = [] (GtkWidget *box) {
+      int n_children = 0;
+      GtkWidget *item_widget = gtk_widget_get_first_child(box);
+      while (item_widget) {
+         n_children++;
+         item_widget = gtk_widget_get_next_sibling(item_widget);
+      }
+      return n_children;
+   };
+
+   GtkWidget *vbox = widget_from_builder("validation_boxes_vbox");
+   // Jakub style:  :-)
+   bool should_show_vbox = false;
+   for (GtkWidget *w = gtk_widget_get_first_child(vbox); w != nullptr; w = gtk_widget_get_next_sibling(w)) {
+      if (gtk_widget_get_visible(w)) {
+         should_show_vbox = true;
+      }
+   }
+
+   GtkWidget *scrolled        = widget_from_builder("ramachandran_plots_scrolled_window");
+   GtkWidget *rama_plots_vbox = widget_from_builder("ramachandran_plots_vbox");
+   int n_children = get_n_children(rama_plots_vbox);
+
+   // 20230910-PE I don't think that this is right
+   // bool rama_plot_shown = gtk_widget_get_visible(scrolled);
+   bool rama_plot_shown = false;
+   if (n_children > 0) rama_plot_shown = true;
+
+   bool should_hide = !rama_plot_shown && !should_show_vbox;
+
+   std::cout << "here in hide_vertical_validation_frame_if_appropriate rama_plot_shown : " << rama_plot_shown << std::endl;
+   std::cout << "here in hide_vertical_validation_frame_if_appropriate should_show_vbox : " << should_show_vbox << std::endl;
+   std::cout << "here in hide_vertical_validation_frame_if_appropriate should_hide: " << should_hide << std::endl;
+
+   if(should_hide) {
+      GtkWidget* pane = widget_from_builder("main_window_ramchandran_and_validation_pane");
+      gtk_widget_set_visible(pane, FALSE);
+   }
 }

@@ -310,6 +310,10 @@ namespace coot {
    int hetify_residues_as_needed(mmdb::Manager *mol);
    void put_amino_acid_residue_atom_in_standard_order(mmdb::Residue *residue_p);
 
+   std::vector<mmdb::Atom *> atoms_with_zero_occupancy(mmdb::Manager *mol);
+
+   std::vector<mmdb::Residue *> residues_with_alt_confs(mmdb::Manager *mol);
+
    // convert atoms in residue to HETATMs.  Return the number of HET
    // atoms.
    int hetify_residue_atoms(mmdb::Residue *res);
@@ -600,7 +604,6 @@ namespace coot {
       };
 
       class quaternion {
-	 void normalize();
       public:
 	 float q0, q1, q2, q3;
 	 quaternion(const float &q0in, const float &q1in,
@@ -616,7 +619,7 @@ namespace coot {
 	 friend std::ostream&  operator<<(std::ostream&  s, const quaternion &q);
 	 friend std::ofstream& operator<<(std::ofstream& s, const quaternion &q);
 
-	 static void test_quaternion(); // test yourself
+	 void normalize();
 	 static bool close_float_p (const float &f1, const float &f2) { //testing func
 	    float d = fabsf(f1-f2);
 	    if (d < 0.001)
@@ -624,6 +627,9 @@ namespace coot {
 	    else
 	       return 0;
 	 }
+         // angle in radians
+         quaternion rotate(double angle, const clipper::Coord_orth &vec) const;
+         quaternion inverse() const;
 	 bool is_similar_p(const quaternion &q) {
 	    bool r = 0;
 	    if (close_float_p(q.q0, q0) &&
@@ -634,6 +640,7 @@ namespace coot {
 	    }
 	    return r;
 	 }
+	 static void test_quaternion(); // test yourself
 
 	 clipper::RTop_orth centroid_rtop(const std::vector<std::pair<clipper::RTop_orth,float> > &rtops);
 	 clipper::RTop_orth centroid_rtop(const std::vector<std::pair<clipper::RTop_orth,float> > &rtops,
@@ -763,6 +770,7 @@ namespace coot {
 
       std::vector<std::string> chains_in_molecule(mmdb::Manager *mol);
       std::vector<mmdb::Residue *> residues_in_molecule(mmdb::Manager *mol);
+      std::vector<mmdb::Residue *> residues_in_molecule_of_type(mmdb::Manager *mol, const std::string &residue_type);
       std::vector<mmdb::Residue *> residues_in_chain(mmdb::Manager *mol, const std::string &chain_id_in);
       std::vector<mmdb::Residue *> residues_in_chain(mmdb::Chain *chain_p);
       int number_of_residues_in_molecule(mmdb::Manager *mol);
@@ -1331,19 +1339,6 @@ namespace coot {
       // more info on the real cis peptides derived from atom positions:
       std::vector<cis_peptide_info_t>
       cis_peptides_info_from_coords(mmdb::Manager *mol);
-
-      // where the atoms are in cis peptides
-      //
-      // mark up things that have omega > 210 or omega < 150. i.e, 180 +/- 30.
-      //
-      // strictly_cis_flag is false by default.
-      //
-      // if model_number == 0, make cis_peptides quads for all models.
-      //
-      std::vector<cis_peptide_quad_info_t>
-      cis_peptide_quads_from_coords(mmdb::Manager *mol,
-				    int model_number,
-				    bool strictly_cis_flag = false);
 
       // remove wrong cis_peptides from the header records
       void remove_wrong_cis_peptides(mmdb::Manager *mol);

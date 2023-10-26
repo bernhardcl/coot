@@ -26,7 +26,11 @@
 #include <string.h> // for strcmp
 
 #ifdef ANALYSE_REFINEMENT_TIMING
+#ifdef _MSC_VER
+#include <time.h>
+#else
 #include <sys/time.h>
+#endif
 #endif // ANALYSE_REFINEMENT_TIMING
 
 
@@ -1744,6 +1748,8 @@ coot::restraints_container_t::add_details_to_refinement_results(coot::refinement
    double nbc_distortion_score_sum = 0;
    double rama_distortion_score_sum = 0;
 
+   std::vector<refinement_results_for_chiral_t> chiral_baddies;
+
    if (! m_s) {
       std::cout << "m_s is null - returning early from add_details_to_refinement_results() " << std::endl;
       return;
@@ -1756,6 +1762,7 @@ coot::restraints_container_t::add_details_to_refinement_results(coot::refinement
    rr->nbc_baddies_atom_index_map.clear();
 
    unsigned int n_hydrogen_bond_restraints = 0;
+   unsigned int n_geman_mcclure_distance_restraints = 0;
    for (int i=0; i<n_restraints; i++) {
       const simple_restraint &restraint = restraints_vec[i];
 
@@ -1803,6 +1810,24 @@ coot::restraints_container_t::add_details_to_refinement_results(coot::refinement
                rr->hydrogen_bond_atom_index_vec.push_back(std::make_pair(restraint.atom_index_1, restraint.atom_index_2));
             }
          }
+      }
+
+      if (restraints_usage_flag & coot::CHIRAL_VOLUME_MASK) {
+         if (restraint.restraint_type == coot::CHIRAL_VOLUME_RESTRAINT) {
+            double dist = distortion_score_chiral_volume(restraint, v);
+            double chiral_volume_distortion_limit = 6.0; // c.f. limiit in dynamic-valiation.cc make_chiral_volume_buttons()
+            if (dist > chiral_volume_distortion_limit) {
+               mmdb:: Atom *at = atom[restraint.atom_index_centre];
+               clipper::Coord_orth pos(at->x, at->y, at->z);
+               refinement_results_for_chiral_t cb(atom_spec_t(at), pos, dist);
+               chiral_baddies.push_back(cb);
+            }
+         }
+      }
+
+      if (restraint.restraint_type == coot::GEMAN_MCCLURE_DISTANCE_RESTRAINT) {
+         if (restraints_usage_flag & coot::GEMAN_MCCLURE_DISTANCE_MASK)
+            n_geman_mcclure_distance_restraints++;
       }
 
       if (restraints_usage_flag & coot::RAMA_PLOT_MASK) {
@@ -1950,6 +1975,22 @@ coot::restraints_container_t::add_details_to_refinement_results(coot::refinement
       rr->sorted_rama_baddies = rama_baddies_with_spec_vec;
       rr->overall_rama_plot_score = rama_distortion_score_sum;
 
+   }
+
+   // --- chiral ---
+
+   auto chiral_sorter = [] (const refinement_results_for_chiral_t &r1,
+                            const refinement_results_for_chiral_t &r2) {
+      return (r2.distortion < r1.distortion);
+   };
+   std::sort(chiral_baddies.begin(), chiral_baddies.end(), chiral_sorter);
+   rr->sorted_chiral_volume_baddies = chiral_baddies;
+
+   if (false) {
+      for (unsigned int ii=0; ii<rr->sorted_chiral_volume_baddies.size(); ii++)
+         std::cout << "chiral-vol-baddie " << ii
+                   << " " << rr->sorted_chiral_volume_baddies[ii].atom_spec
+                   << " " << rr->sorted_chiral_volume_baddies[ii].distortion << std::endl;
    }
 
    // --- atom pulls ---

@@ -1,7 +1,19 @@
 
 #include "event-controller-callbacks.hh"
 #include "graphics-info.h"
+#include "sound.hh"
 
+void play_sound_left_click() {
+
+   // play_sound_file("538554_3725923-lq-Sjonas88-success.ogg");
+   // play_sound_file("325112_3246658-lq-fisch12345-success.ogg");
+   // play_sound_file("538546_3725923-lq-Sjonas_Rising.ogg");
+   // play_sound_file("538548_3725923-lq-Sjonas-Select-3.ogg"); // nice soft click
+   // play_sound_file("538549_3725923-lq-Sjonas-Select-2.ogg"); // "tink"
+   // play_sound_file("538550_3725923-lq-Sjonas88-Deep-tone.ogg"); // marimba?
+   // play_sound_file("538553_3725923-lq-Sjonas88-Stars.ogg"); // high pitch couple of notes
+
+}
 
 // ---------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------
@@ -30,6 +42,8 @@ graphics_info_t::on_glarea_drag_begin_primary(GtkGestureDrag *gesture, double x,
    if (! handled) {
       check_if_in_range_defines();
    }
+
+   play_sound_left_click();
 
 }
 
@@ -139,45 +153,55 @@ graphics_info_t::on_glarea_drag_update_secondary(GtkGestureDrag *gesture,
 
    if (false)
       std::cout << "on_glarea_drag_update_secondary shift is pressed " << shift_is_pressed
-                << " control_is_pressed " << control_is_pressed << std::endl;
+                << " control_is_pressed " << control_is_pressed << " "
+                << drag_delta_x << " " << drag_delta_y
+                << std::endl;
 
    if (shift_is_pressed) {
       do_view_zoom(drag_delta_x, drag_delta_y);
    } else {
       if (control_is_pressed) {
-         do_drag_pan_gtk3(gl_area, drag_delta_x, drag_delta_x);
+         do_drag_pan_gtk4(gl_area, drag_delta_x, drag_delta_y);
       } else {
+         // zoom with chording. Check both because currently
+         // APPLE has primary swapped.
+         if (modifier & GDK_BUTTON1_MASK) {
+            if (modifier & GDK_BUTTON3_MASK) {
+               do_view_zoom(drag_delta_x, drag_delta_y);
+            }
+         } else {
 
-         bool trackpad_drag = false;
+            bool trackpad_drag = false;
 #ifdef __APPLE__ // this is right-mouse on PC, trackpad on MacBook
-         trackpad_drag = true;
+            trackpad_drag = true;
 #endif
-         bool handled = false;
-         if (trackpad_drag) {
-            if (in_moving_atoms_drag_atom_mode_flag) {
-               if (last_restraints_size() > 0) {
-                  // move an already picked atom
-                  move_atom_pull_target_position(x, y);
-                  handled = true;
-               }
-            } else {
-               int x_as_int = static_cast<int>(x);
-               int y_as_int = static_cast<int>(y);
-               if (moving_atoms_asc) {
-                  if (moving_atoms_asc->n_selected_atoms > 0) {
-                     if (last_restraints_size() > 0) {
-                        // here we are refining atoms, but are trying to rotate
-                        // the view, and not dragging on an atom
-                     } else {
-                        rotate_chi(x_as_int, y_as_int);
-                        handled = true;
+            bool handled = false;
+            if (trackpad_drag) {
+               if (in_moving_atoms_drag_atom_mode_flag) {
+                  if (last_restraints_size() > 0) {
+                     // move an already picked atom
+                     move_atom_pull_target_position(x, y);
+                     handled = true;
+                  }
+               } else {
+                  int x_as_int = static_cast<int>(x);
+                  int y_as_int = static_cast<int>(y);
+                  if (moving_atoms_asc) {
+                     if (moving_atoms_asc->n_selected_atoms > 0) {
+                        if (last_restraints_size() > 0) {
+                           // here we are refining atoms, but are trying to rotate
+                           // the view, and not dragging on an atom
+                        } else {
+                           rotate_chi(x_as_int, y_as_int);
+                           handled = true;
+                        }
                      }
                   }
                }
             }
-         }
-         if (! handled) {
-            do_view_rotation(drag_delta_x, drag_delta_y);
+            if (! handled) {
+               do_view_rotation(drag_delta_x, drag_delta_y);
+            }
          }
       }
    }
@@ -353,26 +377,44 @@ graphics_info_t::on_glarea_click(GtkGestureClick *controller,
 
          } else { // not "option" modifier
 
-            // std::cout << "Here with in_range_define " << in_range_define << std::endl;
-            if (in_range_define == 1 || in_range_define == 2) {
+            GdkModifierType modifier = gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(controller));
+            std::cout << "debug:: on_glarea_click(); modifier: " << modifier << std::endl;
+
+            if (modifier == 17) { // shift
+
                bool intermediate_atoms_only_flag = false;
                pick_info naii = atom_pick_gtk3(intermediate_atoms_only_flag);
                if (naii.success) {
                   int imol = naii.imol;
                   mmdb::Atom *at = molecules[imol].atom_sel.atom_selection[naii.atom_index];
-                  if (in_range_define == 1) {
-                     in_range_first_picked_atom  = coot::atom_spec_t(at);
-                     in_range_first_picked_atom.int_user_data = imol;
-                     molecules[imol].add_to_labelled_atom_list(naii.atom_index);
+                  molecules[imol].add_to_labelled_atom_list(naii.atom_index);
+                  graphics_draw();
+                  handled = true;
+               }
+
+            } else {
+
+               // std::cout << "Here with in_range_define " << in_range_define << std::endl;
+               if (in_range_define == 1 || in_range_define == 2) {
+                  bool intermediate_atoms_only_flag = false;
+                  pick_info naii = atom_pick_gtk3(intermediate_atoms_only_flag);
+                  if (naii.success) {
+                     int imol = naii.imol;
+                     mmdb::Atom *at = molecules[imol].atom_sel.atom_selection[naii.atom_index];
+                     if (in_range_define == 1) {
+                        in_range_first_picked_atom  = coot::atom_spec_t(at);
+                        in_range_first_picked_atom.int_user_data = imol;
+                        molecules[imol].add_to_labelled_atom_list(naii.atom_index);
+                     }
+                     if (in_range_define == 2) {
+                        in_range_second_picked_atom = coot::atom_spec_t(at);
+                        in_range_second_picked_atom.int_user_data = imol;
+                        molecules[imol].add_to_labelled_atom_list(naii.atom_index);
+                     }
+                     in_range_define = 2;
+                     graphics_draw(); // make the label appear
+                     handled =  true;
                   }
-                  if (in_range_define == 2) {
-                     in_range_second_picked_atom = coot::atom_spec_t(at);
-                     in_range_second_picked_atom.int_user_data = imol;
-                     molecules[imol].add_to_labelled_atom_list(naii.atom_index);
-                  }
-                  in_range_define = 2;
-                  graphics_draw(); // make the label appear
-                  handled =  true;
                }
             }
 
@@ -389,7 +431,7 @@ graphics_info_t::on_glarea_click(GtkGestureClick *controller,
             if (! handled) {
 
                // does this ever run?
-               std::cout << "Symmetry atom pick here B - does this run? When? " << std::endl;
+               // std::cout << "Symmetry atom pick here B - does this run? When? " << std::endl;
                coot::Symm_Atom_Pick_Info_t sap = symmetry_atom_pick();
             }
          }
@@ -397,12 +439,80 @@ graphics_info_t::on_glarea_click(GtkGestureClick *controller,
    }
 }
 
+void
+graphics_info_t::do_drag_pan_gtk4(GtkWidget *widget, double drag_delta_x, double drag_delta_y) {
+
+   GtkAllocation allocation;
+   gtk_widget_get_allocation(widget, &allocation);
+   int w = allocation.width;
+   int h = allocation.height;
+
+   graphics_info_t g;
+   glm::mat4 mvp = g.get_molecule_mvp(); // modeglml matrix includes orientation with the quaternion
+
+   mouse_current_x = mouse_clicked_begin.first  + drag_delta_x;
+   mouse_current_y = mouse_clicked_begin.second + drag_delta_y;
+
+   float mouseX_1 = mouse_current_x / (w * 0.5f) - 1.0f;
+   float mouseY_1 = mouse_current_y / (h * 0.5f) - 1.0f;
+   float mouseX_2 = get_mouse_previous_position_x() / (w * 0.5f) - 1.0f;
+   float mouseY_2 = get_mouse_previous_position_y() / (h * 0.5f) - 1.0f;
+
+   glm::mat4 vp_inv = glm::inverse(mvp);
+   glm::vec4 screenPos_1 = glm::vec4(mouseX_1, -mouseY_1, 1.0f, 1.0f);
+   glm::vec4 screenPos_2 = glm::vec4(mouseX_2, -mouseY_2, 1.0f, 1.0f);
+   glm::vec4 worldPos_1 = vp_inv * screenPos_1;
+   glm::vec4 worldPos_2 = vp_inv * screenPos_2;
+
+   glm::vec4 delta(worldPos_1 / worldPos_1.w - worldPos_2 / worldPos_2.w);
+   glm::vec3 delta_v3(-delta);
+
+   // it was a typo in the caller of this function, not the static variables!
+
+   if (false)
+      std::cout << "mouse-clicked-begin " << mouse_clicked_begin.first << " " << mouse_clicked_begin.second
+                << std::endl;
+ 
+   if (false)
+      std::cout << "drag_delta_x " << drag_delta_x << " drag_delta_y " << drag_delta_y
+                << std::endl;
+ 
+   if (false)
+      std::cout << "mouse_current_x " << mouse_current_x << " mouse_current_y " << mouse_current_y
+                << std::endl;
+
+   if (false) {
+      std::cout << "screen pos delta "
+                << mouse_current_x - get_mouse_previous_position_x() << " "
+                << mouse_current_y - get_mouse_previous_position_y() << std::endl;
+   }
+   if (false) {
+      std::cout << "in do_drag_pan_gtk4() mouse-current: "
+                << mouse_current_x << " " << mouse_current_y << " "
+                << "mouse-prev: " << get_mouse_previous_position_x() << " " << get_mouse_previous_position_y()
+                << " mouse-1 " << mouseX_1 << " " << mouseY_1
+                << " mouse-2 " << mouseX_2 << " " << mouseY_2
+                << " delta " << glm::to_string(delta) << " delta_v3 " << glm::to_string(delta_v3) << std::endl;
+   }
+
+   g.add_to_rotation_centre(delta_v3);
+
+   // g.update_maps();
+   // if (graphics_info_t::glareas.size() > 0)
+   // int contour_idle_token = g_idle_add(idle_contour_function, g.glareas[0]);
+
+   g.update_things_on_move(); // 20211013-PE do I need the _and_redraw() version of this function?
+
+   set_mouse_previous_position(mouse_current_x, mouse_current_y); // for next round
+}
 
 
 void
 graphics_info_t::do_drag_pan_gtk3(GtkWidget *widget, double drag_delta_x, double drag_delta_y) {
 
-   std::cout << "do_drag_pan_gtk3() " << std::endl;
+   // who calls this function now?
+
+   // std::cout << "do_drag_pan_gtk3() " << std::endl;
 
    // This should be a graphics_info_t function
 
@@ -576,6 +686,14 @@ graphics_info_t::on_glarea_scrolled(GtkEventControllerScroll *controller,
             change_model_molecule_representation_mode(-1);
          else
             change_model_molecule_representation_mode(1);
+         graphics_draw();
+         handled = true;
+      } else {
+         // dy is either 1.0 or -1.0
+         // std::cout << "change the proportional editing " << dx << " " << dy << std::endl;
+         bool dir = false;
+         if (dy < 0.0) dir = true;
+         pull_restraint_neighbour_displacement_change_max_radius(dir);
          graphics_draw();
          handled = true;
       }

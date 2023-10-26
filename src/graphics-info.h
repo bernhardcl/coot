@@ -43,8 +43,6 @@
 #include <vector>
 #endif // HAVE_VECTOR
 
-// #include <utils/backward.hpp>
-
 #define GLM_ENABLE_EXPERIMENTAL // # for norm things
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -173,6 +171,24 @@ enum { N_ATOMS_MEANS_BIG_MOLECULE = 400 };
 #include "rail-points.hh"
 
 #include "extra-distance-restraint-markup.hh"
+
+#include "labelled-button-info.hh"
+
+#ifdef USE_BACKWARD
+#include <utils/backward.hpp>
+#endif
+
+// /usr/include/libintl.h:51:14: error: expected unqualified-id before ‘const’
+//    51 | extern char *dcgettext (const char *__domainname,
+//       |              ^~~~~~~~~
+// /usr/include/libintl.h:51:14: error: expected ‘)’ before ‘const’
+// ../../coot/src/support.h:39:42: note: to match this ‘(’
+//    39 | #  define dcgettext(Domain,Message,Type) (Message)
+//       |                                          ^
+// /usr/include/libintl.h:82:14: error: expected unqualified-id before ‘const’
+//   82 | extern char *textdomain (const char *__domainname) __THROW;
+//       |              ^~~~~~~~~~
+
 
 namespace coot {
    enum {NEW_COORDS_UNSET = 0,       // moving_atoms_asc_type values
@@ -958,6 +974,8 @@ public:
    void init();
    void setup_key_bindings();
 
+   static bool use_gemmi;
+   void set_use_gemmi(bool state) { use_gemmi = state; }
    logging log;
 
    static bool coot_is_a_python_module; //turned off in main()
@@ -1259,6 +1277,8 @@ public:
    static float zoom;
    static short int quanta_like_zoom_flag;
    static void mouse_zoom(double delta_x, double delta_y);
+   static void mouse_zoom_by_scale_factor(double sf);
+   static void mouse_zoom_by_scale_factor_inner(double sf);
    static void scroll_zoom(int direction);
    static void handle_delete_item_curor_change(GtkWidget *widget);
 
@@ -1326,6 +1346,9 @@ public:
    void change_model_molecule_representation_mode(int step);
 
    void do_drag_pan_gtk3(GtkWidget *widget, double drag_delta_x, double drag_delta_y);
+   // here drag_delta_y and drag_delta_y are the differences from
+   // drag_begin_x and drag_begin_y.
+   void do_drag_pan_gtk4(GtkWidget *widget, double drag_delta_x, double drag_delta_y);
 
    gboolean on_glarea_key_controller_key_pressed(GtkEventControllerKey *controller,
                                                  guint                  keyval,
@@ -1616,7 +1639,7 @@ public:
 
    static short int do_scroll_by_wheel_mouse_flag;
    //
-   void set_scrollable_map(int imol) { scroll_wheel_map = imol; }
+   void set_scrollable_map(int imol);
 
    // Transfered from molecule_class_info, because they are a parameter
    // of the *graphis* at the moment, not each molecule (there is no
@@ -1759,7 +1782,7 @@ public:
    static std::pair<std::string, std::string> split_resno_inscode(const std::string &atom_name);
 
    mmdb::Atom *get_atom(int imol, const coot::atom_spec_t &spec) const;
-   mmdb::Residue *get_residue(int imol, const coot::residue_spec_t &spec) const;
+   static mmdb::Residue *get_residue(int imol, const coot::residue_spec_t &spec);
 
    void set_go_to_atom_molecule(int pos);
 
@@ -2595,6 +2618,7 @@ public:
    void make_moving_atoms_restraints_graphics_object();
    static coot::extra_restraints_representation_t moving_atoms_extra_restraints_representation;
    static bool draw_it_for_moving_atoms_restraints_graphics_object;
+   static bool draw_it_for_moving_atoms_restraints_graphics_object_user_control;
    static bool draw_missing_loops_flag;
 
    //
@@ -3434,6 +3458,12 @@ public:
    static std::vector<glm::vec3> bad_nbc_atom_pair_marker_positions;
    const unsigned int draw_count_max_for_bad_nbc_atom_pair_markers = 100; // needed?
 
+   void setup_draw_for_chiral_volume_outlier_markers();
+   static void draw_chiral_volume_outlier_markers(unsigned int pass_type);
+   static void update_chiral_volume_outlier_marker_positions();
+   static Texture texture_for_chiral_volume_outlier_markers;
+   static TextureMesh tmesh_for_chiral_volume_outlier_markers;
+
    static void update_hydrogen_bond_positions(); // if the intermediate atoms had hydrogen bond restraints, we can have dynamic
                                                  // hydrogen bonds. c.f. update_bad_nbc_atom_pair_marker_positions()
 
@@ -3848,15 +3878,15 @@ public:
    coot::rotamer_graphs_info_t rotamer_graphs(int imol); // give results back to scripting layer
    void density_fit_graphs(int imol);
    static void diff_map_peaks_dialog_update_button_clicked_func(GtkButton *button, gpointer user_data); // called by below
-   static void fill_difference_map_peaks_button_box(bool force_fill=false);
+   static void fill_difference_map_peaks_button_box();
 
-   static GtkWidget *wrapped_create_diff_map_peaks_dialog(int imol_map, int imol_coords,
+   static void show_diff_map_peaks_vbox(int imol_map, int imol_coords,
                                                           const std::vector<std::pair<clipper::Coord_orth, float> > &centres,
                                                           float n_sigma,
                                                           bool do_positive_level_flag,
                                                           bool do_negative_level_flag,
-                                                          bool around_model_only_flag,
-                                                          const std::string &dialog_title);
+                                                          bool around_model_only_flag);
+   static void hide_vertical_validation_frame_if_appropriate();
    // the buttons callback for above:
    static void on_diff_map_peak_button_selection_toggled (GtkToggleButton *button,
 							  gpointer         user_data);
@@ -4021,8 +4051,8 @@ public:
    // -------- Meshes control (i.e. the Meshes of molecule_class_info)
    void set_show_molecular_representation(int imol, unsigned int mesh_idx, bool on_off);
 
-   void update_main_window_molecular_representation_widgets();
-   static void main_window_meshes_togglebutton_toggled(GtkToggleButton *button, gpointer *user_data);
+   void update_molecular_representation_widgets();
+   static void molecular_representation_meshes_checkbutton_toggled(GtkCheckButton *button, gpointer *user_data);
 
 
    int add_molecular_representation(int imol,
@@ -4419,10 +4449,13 @@ string   static std::string sessionid;
       if (refine_again_flag)
 	 if (last_restraints)
 	    drag_refine_refine_intermediate_atoms();
-
    }
+
    void clear_all_atom_pull_restraints(bool refine_again_flag);
    static bool auto_clear_atom_pull_restraint_flag;
+   static LinesMesh lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring;
+   static void draw_intermediate_atoms_pull_restraint_neighbour_displacement_max_radius_ring();
+   static void setup_lines_mesh_for_proportional_editing(); // called from gl widget realize function
 
    static bool continue_update_refinement_atoms_flag;
 
@@ -4610,6 +4643,7 @@ string   static std::string sessionid;
    static float fps_std_dev; // for on-screen FPS IQR (fps is not calculated every frame)
    static long frame_counter_at_last_display;
    static bool perspective_projection_flag;
+   static float perspective_fov;
    static float screen_z_near_perspective;
    static float screen_z_far_perspective;
    static float goodselliness;
@@ -4627,9 +4661,12 @@ string   static std::string sessionid;
    static framebuffer combine_textures_using_depth_framebuffer;
    static unsigned int framebuffer_scale;
 
+   void set_perspective_fov(float angle) { perspective_fov = angle; } // in degress (typically 30 or so)
+
    // ---------------------------------------------
    static bool shaders_have_been_compiled;
    bool init_shaders(); // return status (true = OK)
+   bool init_shader(const std::string &shader_file_name);
    void init_framebuffers(unsigned int width, unsigned int height);// 20220129-PE a crows thing
 
    // draw-2 functions
@@ -4799,6 +4836,7 @@ string   static std::string sessionid;
    // by setting actual user defined colours for give colour indices
    //
 
+   static bool draw_hud_colour_bar_flag;
    static std::vector<coot::colour_holder> user_defined_colours;
    // this function sets up the colour bar too and enables its drawing. It will need extra args for
    // the tick marks.
@@ -4985,9 +5023,12 @@ string   static std::string sessionid;
    static Shader shader_for_meshes_with_shadows;
    static Shader shader_for_tmeshes_for_ssao; // render to white, don't use texture (like ssao_geometry)
    static Shader shader_for_meshes_for_ssao;  // render to white
+   static Shader shader_for_instanced_meshes_for_ssao;
    static Shader shader_for_texture_meshes_shadow_map;
    static Shader shader_for_meshes_shadow_map;
+   static Shader shader_for_instanced_meshes_shadow_map;
    static Shader shader_for_shadow_map_image_texture_mesh;
+   static Shader shader_for_instanced_meshes_with_shadows;
    static Shader shader_for_effects; // colour balance or gamma ramp, say.
    static float shadow_box_size; // 20220402-PE needs to be big enough to cover the molecule. How big is that? I don't know how to
                                  // calculate it now, so let the user decide.
@@ -5096,6 +5137,11 @@ string   static std::string sessionid;
    static void add_model(const Model &model) {
       models.push_back(model);
    }
+   void scale_model(unsigned int idx, float scale_factor) {
+      attach_buffers(); // because the glbufferdata is changed
+      if (idx < models.size())
+         models[idx].scale(scale_factor);
+   }
 
 
    // static unsigned int gBufferFBO;
@@ -5145,15 +5191,31 @@ string   static std::string sessionid;
    void load_gltf_model(const std::string &gltf_file_name);
 
    static void attach_buffers(const char *s = __builtin_FUNCTION()) {
-      GLenum err = glGetError();
-      if (err) std::cout << "GL ERROR:: attach_buffers --- start ---\n";
       if (use_graphics_interface_flag) {
+         GLenum err = glGetError();
+         if (err) {
+            std::cout << "GL ERROR:: attach_buffers --- start ---\n";
+#ifdef USE_BACKWARD
+            backward::StackTrace st;
+            backward::Printer p;
+            st.load_here(32);
+            p.print(st);
+#endif
+         }
          auto gl_area = glareas[0];
          gtk_gl_area_attach_buffers(GTK_GL_AREA(gl_area));
          err = glGetError();
-         if (err) std::cout << "GL ERROR:: attach_buffers() --- post gtk_gl_area_attach_buffers() "
-                            << " with gl_area " << gl_area << " "
-                            << s << "() not much more insight \n";
+         if (err) {
+            std::cout << "GL ERROR:: attach_buffers() --- post gtk_gl_area_attach_buffers() "
+                      << " with gl_area " << gl_area << " calling function: "
+                      << s << "()\n";
+#ifdef USE_BACKWARD
+            backward::StackTrace st;
+            backward::Printer p;
+            st.load_here(32);
+            p.print(st);
+#endif
+         }
       }
    }
 
@@ -5187,6 +5249,10 @@ string   static std::string sessionid;
    // 20230417-PE functions to fill the validation information for the new valiadtionn graphs
    coot::validation_information_t get_validation_data_for_geometry_analysis(int imol);
 
+   // "Coot: " will be prepended to the dialog title before use
+   void fill_generic_validation_box_of_buttons(const std::string &dialog_title,
+                                               const std::vector<labelled_button_info_t> &v);
+
 
    // 20230419-PE ----- a holder for the OpenGL-based Ramachandran Plots
    // each rama plot is held in a GtkBox - and that box has a "Close" button
@@ -5214,6 +5280,9 @@ string   static std::string sessionid;
    static void rama_plot_boxes_handle_molecule_update(GtkWidget *box);
    static void rama_plot_boxes_handle_molecule_update(GtkWidget *box, const std::string &entry_string); // used in the residue selection
                                                                                                         // entry change callback
+
+   static void add_shortcuts_to_window(GtkWidget *shortcuts_window);
+
 };
 
 

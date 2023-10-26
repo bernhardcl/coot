@@ -21,10 +21,14 @@
 
 #include "clipper/core/rotation.h"
 #include "coords/mmdb-extras.h"
-#include "coords/mmdb.h"
+#include "coords/mmdb.hh"
 #include "coot-utils/coot-coord-utils.hh"
 #include "torsion-general.hh"
+#ifdef _MSC_VER
+#include "dirent.h"
+#else
 #include <dirent.h>
+#endif
 
 #include "rotamer.hh"
 
@@ -332,7 +336,7 @@ void rotamer_tables() {
 
 int test_torsion(const std::string &pdb_filename) {
 
-   atom_selection_container_t asc = get_atom_selection(pdb_filename, true, false, false);
+   atom_selection_container_t asc = get_atom_selection(pdb_filename, false, true, false);
    int retval = test_torsion_general(asc, pdb_filename);
    return retval;
 }
@@ -344,7 +348,7 @@ int test_spherical(const std::string &pdb_filename,
 
    int r = 0;
 
-   atom_selection_container_t asc = get_atom_selection(pdb_filename, true, false, false);
+   atom_selection_container_t asc = get_atom_selection(pdb_filename, false, true, false);
    clipper::Xmap<float> xmap;
    std::string f_col   = "FWT";
    std::string phi_col = "PHWT";

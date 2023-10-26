@@ -21,7 +21,7 @@ std::string molecules_container_t::restraints_locking_function_name; // I don't 
 std::vector<atom_pull_info_t> molecules_container_t::atom_pulls;
 // 20221018-PE not sure that this needs to be static.
 clipper::Xmap<float> *molecules_container_t::dummy_xmap = new clipper::Xmap<float>;
-bool molecules_container_t::make_backups_flag = true;
+//bool molecules_container_t::make_backups_flag = true;
 
 bool
 molecules_container_t::is_valid_model_molecule(int imol) const {
@@ -251,7 +251,7 @@ molecules_container_t::read_standard_residues() {
          // unresolved (linking related?) startup bug here:
          std::cout << "------------------ read_standard_residues() C map_sampling_rate " << map_sampling_rate << std::endl;
          std::cout << "------------------ read_standard_residues() C " << std::endl;
-         atom_selection_container_t t_asc = get_atom_selection(standard_file_name, true, false, false);
+         atom_selection_container_t t_asc = get_atom_selection(standard_file_name, false, true, false);
          std::cout << "------------------ read_standard_residues() D map_sampling_rate " << map_sampling_rate << std::endl;
          // std::cout << "------------------ read_standard_residues() D " << std::endl;
          // standard_residues_asc = t_asc; // Here's the problem
@@ -285,7 +285,7 @@ molecules_container_t::read_standard_residues() {
       }
    } else {
       std::cout << "------------------ read_standard_residues() F " << env_var_filename << std::endl;
-      standard_residues_asc = get_atom_selection(env_var_filename, true, false, false);
+      standard_residues_asc = get_atom_selection(env_var_filename, false, true, false);
    }
    // std::cout << "------------------ read_standard_residues() done " << std::endl;
 }
@@ -550,7 +550,8 @@ int
 molecules_container_t::read_pdb(const std::string &file_name) {
 
    int status = -1;
-   atom_selection_container_t asc = get_atom_selection(file_name, true, false, false);
+   bool use_gemmi = false;
+   atom_selection_container_t asc = get_atom_selection(file_name, use_gemmi, true, false);
    if (asc.read_success) {
 
       // 20221011-PE this constructor doesn't call make_bonds().
@@ -572,25 +573,24 @@ molecules_container_t::read_pdb(const std::string &file_name) {
 void
 molecules_container_t::replace_molecule_by_model_from_file(int imol, const std::string &pdb_file_name) {
 
-   int status = 0;
    if (is_valid_model_molecule(imol)) {
       molecules[imol].replace_molecule_by_model_from_file(pdb_file_name);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
-   // return status;
 }
 
 
 int
 molecules_container_t::import_cif_dictionary(const std::string &cif_file_name, int imol_enc) {
 
-   coot::read_refmac_mon_lib_info_t r = geom.init_refmac_mon_lib(cif_file_name, cif_dictionary_read_number, imol_enc);
+   coot::read_refmac_mon_lib_info_t r = geom.init_refmac_mon_lib(cif_file_name,
+                                                                 cif_dictionary_read_number, imol_enc);
    cif_dictionary_read_number++;
 
-   std::cout << "debug:: import_cif_dictionary() cif_file_name(): " << cif_file_name << " success " << r.success << " with "
-             << r.n_atoms << " atoms " << r.n_bonds << " bonds " << r.n_links << " links and momoner index "
-             << r.monomer_idx << std::endl;
+   std::cout << "debug:: import_cif_dictionary() cif_file_name(): " << cif_file_name
+             << " success " << r.success << " with " << r.n_atoms << " atoms " << r.n_bonds
+             << " bonds " << r.n_links << " links and momoner index " << r.monomer_idx << std::endl;
 
    return r.success;
 
@@ -865,10 +865,10 @@ molecules_container_t::valid_labels(const std::string &mtz_file_name, const std:
 
 //! Read the given mtz file.
 //! @return a vector of the maps created from reading the file
-std::vector<int>
+std::vector<molecules_container_t::auto_read_mtz_info_t>
 molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
 
-   std::vector<int> imols;
+   std::vector<molecules_container_t::auto_read_mtz_info_t> mol_infos;
 
    std::vector<coot::mtz_column_trials_info_t> auto_mtz_pairs;
 
@@ -887,16 +887,17 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
       if (valid_labels(mtz_file_name.c_str(), b.f_col.c_str(), b.phi_col.c_str(), "", 0)) {
          int imol = read_mtz(mtz_file_name, b.f_col, b.phi_col, "", 0, b.is_diff_map);
 	 if (is_valid_map_molecule(imol))
-	    imols.push_back(imol);
+	    mol_infos.push_back(auto_read_mtz_info_t(imol, b.f_col, b.phi_col));
       }
    }
 
    // 20221001-PE if there is one F and one PHI col, read that also (and it is not a difference map)
    coot::mtz_column_types_info_t r = coot::get_mtz_columns(mtz_file_name);
+
    if (r.f_cols.size() == 1) {
       if (r.phi_cols.size() == 1) {
          int imol = read_mtz(mtz_file_name, r.f_cols[0].column_label, r.phi_cols[0].column_label, "", false, false);
-         imols.push_back(imol);
+         mol_infos.push_back(auto_read_mtz_info_t(imol, r.f_cols[0].column_label, r.phi_cols[0].column_label));
       }
    }
 
@@ -912,13 +913,43 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
 	       std::string phi_col = r.phi_cols[j].column_label;
                int imol = read_mtz(mtz_file_name, f_col, phi_col, "", false, false);
                if (is_valid_map_molecule(imol))
-                  imols.push_back(imol);
+                  mol_infos.push_back(auto_read_mtz_info_t(imol, f_col, phi_col));
 	    }
 	 }
       }
    }
 
-   return imols;
+   auto add_r_free_column_label = [] (auto_read_mtz_info_t *a, const coot::mtz_column_types_info_t &r) {
+      for (unsigned int i=0; i<r.r_free_cols.size(); i++) {
+         const std::string &l = r.r_free_cols[i].column_label;
+         if (! l.empty()) {
+            a->Rfree = l;
+            break;
+         }
+      }
+   };
+
+   // and now the observed data, this relies on the column label being of the form
+   // /crystal/dataset/label
+   //
+   for (unsigned int i=0; i<r.f_cols.size(); i++) {
+      const std::string &f = r.f_cols[i].column_label;
+      // example f: "/2vtq/1/FP"
+      std::string  nd_f = coot::util::file_name_non_directory(f);
+      std::string dir_f = coot::util::file_name_directory(f);
+      for (unsigned int j=0; j<r.sigf_cols.size(); j++) {
+         const std::string &sf = r.sigf_cols[j].column_label;
+         std::string test_string = std::string(dir_f + std::string("SIG") + nd_f);
+         if (sf == test_string) {
+            auto_read_mtz_info_t armi;
+            armi.set_fobs_sigfobs(f, sf);
+            add_r_free_column_label(&armi, r); // modify armi possibly
+            mol_infos.push_back(armi);
+         }
+      }
+   }
+
+   return mol_infos;
 }
 
 
@@ -932,29 +963,43 @@ molecules_container_t::read_ccp4_map(const std::string &file_name, bool is_a_dif
    int imol_in_hope = molecules.size();
    bool done = false;
 
+   if (! coot::file_exists(file_name)) {
+      std::cout << "WARNING:: file does not exist " << file_name << std::endl;
+      return imol;
+   }
+
+   if (false) {
+      if (coot::util::is_basic_em_map_file(file_name)) {
+         std::cout << "::::: read_ccp4_map() returns true for is_basic_em_map_file() " << std::endl;
+      } else {
+         std::cout << "::::: read_ccp4_map() returns false for is_basic_em_map_file() " << std::endl;
+      }
+   }
+   
+
    if (coot::util::is_basic_em_map_file(file_name)) {
+
+      std::cout << ":::::: read_ccp4_map() returns true for is_basic_em_map_file() " << std::endl;
 
       // fill xmap
       bool check_only = false;
-      coot::molecule_t m(file_name, imol_in_hope);
+      short int is_em_map = 1; // this is the correct type - it can be -1.
+      coot::molecule_t m(file_name, imol_in_hope, is_em_map);
+      short int m_em_status = m.is_EM_map();
+      std::cout << "m_em_status " << m_em_status << std::endl;
       clipper::Xmap<float> &xmap = m.xmap;
       done = coot::util::slurp_fill_xmap_from_map_file(file_name, &xmap, check_only);
-      try {
-         // what's the point of this now?
-         clipper_map_file_wrapper file;
-         file.open_read(file_name);
-         // set_is_em_map(file); // sets is_em_map_cached_flag
-         // em = is_em_map_cached_flag;
-      }
-      catch (const clipper::Message_base &exc) {
-         std::cout << "WARNING:: failed to open " << file_name << std::endl;
-         // bad_read = true;
-      }
-
       if (done) {
          molecules.push_back(m);
          imol = imol_in_hope;
       }
+   }
+
+   short int em_status = molecules[imol].is_EM_map();
+   if (false) {
+      std::cout << "here with imol " << imol << " molecules size " << molecules.size() << std::endl;
+      std::cout << "here with imol " << imol << " done " << done << std::endl;
+      std::cout << "here with imol " << imol << " is_em_map:  " << em_status << std::endl;
    }
 
    if (! done) {
@@ -966,9 +1011,7 @@ molecules_container_t::read_ccp4_map(const std::string &file_name, bool is_a_dif
 
          // em = set_is_em_map(file);
 
-         bool use_xmap = true; // not an nxmap
          if (true) {
-            clipper::Grid_sampling fgs = w_file.grid_sampling();
             clipper::Cell fcell = w_file.cell();
             double vol = fcell.volume();
             if (vol < 1.0) {
@@ -1695,6 +1738,21 @@ molecules_container_t::get_bonds_mesh_for_selection_instanced(int imol, const st
    return im;
 }
 
+//! return the colour table (for testing)
+std::vector<glm::vec4>
+molecules_container_t::get_colour_table(int imol, bool against_a_dark_background) const {
+
+   std::vector<glm::vec4> v;
+   if (is_valid_model_molecule(imol)) {
+      v = molecules[imol].make_colour_table(against_a_dark_background);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return v;
+}
+
+
+
 //! user-defined colour-index to colour
 void
 molecules_container_t::set_user_defined_bond_colours(int imol, const std::map<unsigned int, std::array<float, 3> > &colour_map) {
@@ -1708,10 +1766,11 @@ molecules_container_t::set_user_defined_bond_colours(int imol, const std::map<un
 
 //! user-defined atom selection to colour index
 void
-molecules_container_t::set_user_defined_atom_colour_by_residue(int imol, const std::vector<std::pair<std::string, unsigned int> > &indexed_residues_cids) {
+molecules_container_t::set_user_defined_atom_colour_by_selection(int imol, const std::vector<std::pair<std::string, unsigned int> > &indexed_residues_cids, bool colour_applies_to_non_carbon_atoms_also) {
 
    if (is_valid_model_molecule(imol)) {
-      molecules[imol].set_user_defined_atom_colour_by_residue(indexed_residues_cids);
+      mmdb::Manager *mol = molecules[imol].atom_sel.mol; // mol in the following argument need not be this mol
+      molecules[imol].set_user_defined_atom_colour_by_selections(indexed_residues_cids, colour_applies_to_non_carbon_atoms_also, mol);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -1754,6 +1813,35 @@ molecules_container_t::get_map_contours_mesh(int imol, double position_x, double
    }
    return mesh;
 }
+
+//! get the mesh for the map contours using another map for colouring
+//!
+coot::simple_mesh_t
+molecules_container_t::get_map_contours_mesh_using_other_map_for_colours(int imol_ref, int imol_map_for_colouring,
+                                                                         double position_x, double position_y, double position_z,
+                                                                         float radius, float contour_level,
+                                                                         float other_map_for_colouring_min_value,
+                                                                         float other_map_for_colouring_max_value,
+                                                                         bool invert_colour_ramp) {
+   coot::simple_mesh_t mesh;
+   try {
+      if (is_valid_map_molecule(imol_ref)) {
+         if (is_valid_map_molecule(imol_map_for_colouring)) {
+            clipper::Coord_orth position(position_x, position_y, position_z);
+            molecules[imol_ref].set_other_map_for_colouring_min_max(other_map_for_colouring_min_value,
+                                                                    other_map_for_colouring_max_value);
+            molecules[imol_ref].set_other_map_for_colouring_invert_colour_ramp(invert_colour_ramp);
+            mesh = molecules[imol_ref].get_map_contours_mesh_using_other_map_for_colours(position, radius, contour_level,
+                                                                                         molecules[imol_map_for_colouring].xmap);
+         }
+      }
+   }
+   catch (...) {
+      std::cout << "An error occured in " << __FUNCTION__<< "() - this should not happen " << std::endl;
+   }
+   return mesh;
+}
+
 
 void
 molecules_container_t::set_map_colour(int imol, float r, float g, float b) {
@@ -3993,8 +4081,7 @@ molecules_container_t::generate_self_restraints(int imol, float local_dist_max) 
 void
 molecules_container_t::generate_chain_self_restraints(int imol,
                                                       float local_dist_max,
-                                                      const std::string &chain_id,
-                                                      const coot::protein_geometry &geom) {
+                                                      const std::string &chain_id) {
    if (is_valid_model_molecule(imol)) {
       molecules[imol].generate_chain_self_restraints(local_dist_max, chain_id, geom);
    } else {
@@ -4006,8 +4093,7 @@ molecules_container_t::generate_chain_self_restraints(int imol,
 //! `residue_cids" is a "||"-separated list of residues, e.g. "//A/12||//A/14||/B/56"
 void
 molecules_container_t::generate_local_self_restraints(int imol, float local_dist_max,
-                                                      const std::string & residue_cids,
-                                                      const coot::protein_geometry &geom) {
+                                                      const std::string & residue_cids) {
    if (is_valid_model_molecule(imol)) {
       std::vector<coot::residue_spec_t> residue_specs;
       std::vector<std::string> parts = coot::util::split_string(residue_cids, "||");
@@ -4156,6 +4242,19 @@ molecules_container_t::mask_map_by_atom_selection(int imol_coords, int imol_map,
                 << std::endl;
    }
    return imol_map_new;
+}
+
+//! @return the "EM" status of this molecule. Return false on not-a-map.
+bool
+molecules_container_t::is_EM_map(int imol) const {
+
+   bool status = false;
+   if (is_valid_map_molecule(imol)) {
+      status = molecules[imol].is_EM_map();
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return status;
 }
 
 
@@ -4409,6 +4508,19 @@ molecules_container_t::refine(int imol, int n_cycles) {
    return std::make_pair(status, im);
 }
 
+//! get the mesh for extra restraints (currently an empty object is returned)
+coot::instanced_mesh_t
+molecules_container_t::get_extra_restraints_mesh(int imol, int mode) {
+
+   coot::instanced_mesh_t m;
+   if (is_valid_model_molecule(imol)) {
+      m = molecules[imol].get_extra_restraints_mesh(mode);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   
+   return m;
+}
 
 //! flip the hand of the map.
 //! @return the molecule index of the new map, or -1 on failure.
@@ -4455,4 +4567,88 @@ molecules_container_t::get_mesh_for_ligand_validation_vs_dictionary(int imol, co
    }
    return m;
 
+}
+
+
+//! set the map saturation
+void
+molecules_container_t::set_map_colour_saturation(int imol, float s) {
+
+   if (is_valid_map_molecule(imol)) {
+      molecules[imol].set_map_colour_saturation(s);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid map molecule " << imol << std::endl;
+   }
+}
+
+
+//! @return the map histogram
+coot::molecule_t::histogram_info_t
+molecules_container_t::get_map_histogram(int imol, unsigned int n_bins, float zoom_factor) const {
+
+   coot::molecule_t::histogram_info_t hi;
+   if (is_valid_map_molecule(imol)) {
+      hi = molecules[imol].get_map_histogram(n_bins, zoom_factor);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a map model molecule " << imol << std::endl;
+   }
+   return hi;
+
+}
+
+
+//! read extra restraints (e.g. from ProSMART)
+void
+molecules_container_t::read_extra_restraints(int imol, const std::string &file_name) {
+
+   if (is_valid_model_molecule(imol)) {
+      molecules[imol].read_extra_restraints(file_name);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+  }
+}
+
+
+#include "coot-utils/find-water-baddies.hh"
+
+//! check waters, implicit OR
+//! return a vector of atom specifiers
+std::vector <coot::atom_spec_t>
+molecules_container_t::find_water_baddies(int imol_model, int imol_map,
+                                          float b_factor_lim,
+                                          float outlier_sigma_level,
+                                          float min_dist, float max_dist,
+                                          bool ignore_part_occ_contact_flag,
+                                          bool ignore_zero_occ_flag) {
+
+   std::vector <coot::atom_spec_t> v;
+   if (is_valid_model_molecule(imol_model)) {
+      if (is_valid_map_molecule(imol_map)) {
+
+         float map_sigma = molecules[imol_model].get_map_rmsd_approx();
+         v = coot::find_water_baddies_OR(molecules[imol_model].atom_sel,
+                                         b_factor_lim,
+                                         molecules[imol_map].xmap,
+                                         map_sigma,
+                                         outlier_sigma_level,
+                                         min_dist, max_dist,
+                                         ignore_part_occ_contact_flag,
+                                         ignore_zero_occ_flag);
+      } else {
+         std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid map molecule " << imol_model << std::endl;
+      }
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol_map << std::endl;
+   }
+   return v;
+
+}
+
+//! @return the dictionary read for the give residue type, return an empty string on failure
+//! to lookup the residue type
+std::string
+molecules_container_t::get_cif_file_name(const std::string &comp_id, int imol_enc) const {
+
+   std::string fn = geom.get_cif_file_name(comp_id, imol_enc);
+   return fn;
 }

@@ -42,6 +42,7 @@ bool graphics_info_t::prefer_python = 0; // no GUILE or PYTHON
 bool graphics_info_t::prefer_python = 1; // Default: yes in Windows
 #endif // windows test
 
+bool graphics_info_t::use_gemmi = false;
 short int graphics_info_t::python_at_prompt_flag = 0;
 
 GtkApplication *graphics_info_t::application = 0;
@@ -552,7 +553,7 @@ bool graphics_info_t::show_pointer_distances_flag = false;
 float graphics_info_t::extra_distance_restraint_penalty_cutoff = 0.01; // draw them all to start with
 bool graphics_info_t::show_extra_distance_restraints_flag = true;
 std::vector<extra_distance_restraint_markup_instancing_data_t> graphics_info_t::extra_distance_restraints_markup_data;
-Mesh graphics_info_t::mesh_for_extra_distance_restraints; // draw this with instancing
+Mesh graphics_info_t::mesh_for_extra_distance_restraints = Mesh("mesh_for_extra_distance_restraints"); // draw this with instancing
 
 
 // Go to Atom widget:
@@ -717,6 +718,7 @@ int graphics_info_t::imol_moving_atoms = 0;
 coot::extra_restraints_representation_t graphics_info_t::moving_atoms_extra_restraints_representation;
 
 bool graphics_info_t::draw_it_for_moving_atoms_restraints_graphics_object = false;
+bool graphics_info_t::draw_it_for_moving_atoms_restraints_graphics_object_user_control = false;
 int graphics_info_t::imol_refinement_map = -1; // magic initial value "None set"
                                                // checked in graphics_info_t::refine()
 
@@ -1428,6 +1430,7 @@ framebuffer graphics_info_t::blur_framebuffer; // 2020
 unsigned int graphics_info_t::framebuffer_scale = 1; // on supersampling by default.
 
 bool graphics_info_t::perspective_projection_flag = false;
+float graphics_info_t::perspective_fov = 26.0; // was 30.0
 
 
 // --------------------------------------------------------------------------------------------
@@ -1594,6 +1597,7 @@ LinesMesh graphics_info_t::lines_mesh_for_delete_item_pulse;
 std::vector<glm::vec3> graphics_info_t::delete_item_pulse_centres;
 
 LinesMesh graphics_info_t::lines_mesh_for_hud_lines;
+LinesMesh graphics_info_t::lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring;
 
 std::vector<atom_label_info_t> graphics_info_t::labels;
 TextureMesh graphics_info_t::tmesh_for_labels = TextureMesh("tmesh-for-labels");
@@ -1613,6 +1617,9 @@ TextureMesh graphics_info_t::tmesh_for_bad_nbc_atom_pair_markers = TextureMesh("
 Texture graphics_info_t::texture_for_bad_nbc_atom_pair_markers;
 std::vector<glm::vec3> graphics_info_t::bad_nbc_atom_pair_marker_positions;
 
+TextureMesh graphics_info_t::tmesh_for_chiral_volume_outlier_markers = TextureMesh("tmesh-chiral-volume-outliers");
+Texture graphics_info_t::texture_for_chiral_volume_outlier_markers;
+
 TextureMesh graphics_info_t::tmesh_for_anchored_atom_markers = TextureMesh("tmesh-for-anchored-atoms");
 Texture graphics_info_t::texture_for_anchored_atom_markers;
 std::vector<glm::vec3> graphics_info_t::anchored_atom_marker_texture_positions;
@@ -1629,7 +1636,7 @@ HUDTextureMesh graphics_info_t::tmesh_for_background_image = HUDTextureMesh("tme
 Shader         graphics_info_t::shader_for_background_image;
 bool           graphics_info_t::draw_background_image_flag = false; // uses "background-image.png"
 
-float graphics_info_t::pull_restraint_neighbour_displacement_max_radius = 1.0;
+float graphics_info_t::pull_restraint_neighbour_displacement_max_radius = 0.0; // we don't see it initially.
 
 coot::command_history_t graphics_info_t::command_history;
 
@@ -1661,6 +1668,7 @@ double graphics_info_t::torsion_restraints_weight = 1.0;
 
 bool graphics_info_t::use_harmonic_approximation_for_NBCs = false;
 
+bool graphics_info_t::draw_hud_colour_bar_flag = false;
 std::vector<coot::colour_holder> graphics_info_t::user_defined_colours; // initially empty
 
 unsigned int graphics_info_t::bond_smoothness_factor = 1; // changes num_subdivisions and n_slices
@@ -1693,6 +1701,7 @@ unsigned int graphics_info_t::ssao_blur_size = 1;
 Shader graphics_info_t::shader_for_meshes;
 Shader graphics_info_t::shader_for_tmeshes;
 Shader graphics_info_t::shader_for_meshes_shadow_map;
+Shader graphics_info_t::shader_for_instanced_meshes_shadow_map;
 Shader graphics_info_t::shader_for_texture_meshes_shadow_map;
 Shader graphics_info_t::shader_for_shadow_map_image_texture_mesh;
 float graphics_info_t::shadow_box_size = 120.0;
@@ -1709,6 +1718,7 @@ float graphics_info_t::effects_gamma = 1.0f;
 
 Shader graphics_info_t::shader_for_tmeshes_for_ssao;
 Shader graphics_info_t::shader_for_meshes_for_ssao;
+Shader graphics_info_t::shader_for_instanced_meshes_for_ssao;
 Shader graphics_info_t::shader_for_rotation_centre_cross_hairs_for_ssao;
 
 unsigned int graphics_info_t::rboDepth = 0;
@@ -1743,6 +1753,7 @@ GLuint graphics_info_t::screen_AO_quad_VBO = 0;
 
 Shader graphics_info_t::shader_for_tmeshes_with_shadows;
 Shader graphics_info_t::shader_for_meshes_with_shadows;
+Shader graphics_info_t::shader_for_instanced_meshes_with_shadows;
 HUDTextureMesh graphics_info_t::tmesh_for_shadow_map = HUDTextureMesh("tmesh-for-shadow-map");
 
 bool graphics_info_t::stereo_style_2010 = false;
@@ -1765,5 +1776,3 @@ int graphics_info_t::updating_maps_imol_map      = -1;
 int graphics_info_t::updating_maps_imol_diff_map = -1;
 std::vector<api::rail_points_t> graphics_info_t::rail_point_history;
 coot::util::sfcalc_genmap_stats_t graphics_info_t::latest_sfcalc_stats;
-
-

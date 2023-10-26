@@ -636,8 +636,6 @@ void clear_all_atom_pull_restraints() {
 void set_auto_clear_atom_pull_restraint(int state) {
    graphics_info_t g;
    g.auto_clear_atom_pull_restraint_flag = state;
-   std::cout << "------------------ set_auto_clear_atom_pull_restraint_state ";
-   std::cout << "------------------ update the accept_reject_refinement_dialog here. " << std::endl;
 } 
 
 int  get_auto_clear_atom_pull_restraint_state() {
@@ -648,6 +646,20 @@ int  get_auto_clear_atom_pull_restraint_state() {
 void set_show_extra_distance_restraints(short int state) {
    graphics_info_t::show_extra_distance_restraints_flag = state;
    graphics_info_t::graphics_draw();
+}
+
+void increase_proportional_editing_radius() {
+   graphics_info_t g;
+   bool dir = false;
+   g.pull_restraint_neighbour_displacement_change_max_radius(dir);
+   graphics_draw();
+}
+
+void decrease_proportional_editing_radius() {
+   graphics_info_t g;
+   bool dir = true;
+   g.pull_restraint_neighbour_displacement_change_max_radius(dir);
+   graphics_draw();
 }
 
 void set_show_extra_restraints(int imol, int state) {
@@ -1202,6 +1214,9 @@ delete_all_extra_restraints(int imol) {
    // c.f. clear_extra_restraints()
    if (is_valid_model_molecule(imol)) {
       graphics_info_t::molecules[imol].clear_extra_restraints();
+      graphics_info_t g;
+      g.extra_distance_restraints_markup_data.clear();
+      g.mesh_for_extra_distance_restraints.update_instancing_buffer_data_for_extra_distance_restraints(g.extra_distance_restraints_markup_data);
    }
    graphics_draw();
 }
@@ -1285,6 +1300,17 @@ remove_initial_position_restraints(int imol, const std::vector<coot::residue_spe
 }
 
 
+//! set display of rotamer markup during interactive real space refinement
+void set_draw_moving_atoms_rota_markup(short int state) {
+   graphics_info_t::do_intermediate_atoms_rota_markup = state;
+
+}
+
+//! set display of ramachandran markup during interactive real space refinement
+void set_draw_moving_atoms_rama_markup(short int state) {
+   graphics_info_t::do_intermediate_atoms_rama_markup = state;
+
+}
 
 void set_show_intermediate_atoms_rota_markup(short int state) {
    graphics_info_t::do_intermediate_atoms_rota_markup = state;
@@ -1296,12 +1322,33 @@ void set_show_intermediate_atoms_rama_markup(short int state) {
 
 }
 
+int get_show_intermediate_atoms_rota_markup() {
+   return graphics_info_t::do_intermediate_atoms_rota_markup;
+}
+
+int get_show_intermediate_atoms_rama_markup() {
+   return graphics_info_t::do_intermediate_atoms_rama_markup;
+}
+
+//! the geters for the rota markup
+int get_draw_moving_atoms_rota_markup_state() {
+   return graphics_info_t::do_intermediate_atoms_rota_markup;
+}
+
+//! the geters for the rota markup
+int get_draw_moving_atoms_rama_markup_state() {
+   return graphics_info_t::do_intermediate_atoms_rama_markup;
+}
+
+
+
+
+
 #ifdef USE_PYTHON
 void register_post_intermediate_atoms_moved_hook(PyObject *function) {
 
    graphics_info_t g;
    g.register_post_intermediate_atoms_moved_hook(function);
-
 }
 #endif
 

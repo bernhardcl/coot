@@ -195,9 +195,9 @@ add_python_scripting_entry_completion(GtkWidget *entry) {
    // it's because you've messed up the Python startup.
    // Perhaps by calling a function that no longer exists.
 
-   // Get the module object for the `sys` module.
+   // Get the module object for the `coot` module.
    PyObject *module = PyImport_ImportModule("coot");
-   // Get the dictionary object for the `sys` module.
+   // Get the dictionary object for the `coot` module.
    PyObject *dict = PyModule_GetDict(module);
    // Iterate over the keys and values in the dictionary.
    while (PyDict_Next(dict, &pos, &key, &value)) {
@@ -206,7 +206,8 @@ add_python_scripting_entry_completion(GtkWidget *entry) {
       std::string key_c = std::string("coot.") +  (PyUnicode_AsUTF8AndSize(key, NULL));
       module_coot_completions.push_back(key_c);
    }
-   // Get the module object for the `coot_utils` module.
+   Py_DECREF(module);
+   // Get the module object for the `sys` module.
    module = PyImport_ImportModule("coot_utils");
 
    if (module) {
@@ -218,11 +219,9 @@ add_python_scripting_entry_completion(GtkWidget *entry) {
          PyErr_PrintEx(0);
       return;
    }
-   // Get the dictionary object for the `coot_utils` module.
+
+   // Get the dictionary object for the `sys` module.
    dict = PyModule_GetDict(module);
-   if (dict == NULL || PyErr_Occurred()) {
-      PyErr_Print();
-   }
   // Iterate over the keys and values in the dictionary.
    while (PyDict_Next(dict, &pos, &key, &value)) {
       // Do something interesting with the key and value.
@@ -365,7 +364,7 @@ void setup_python_scripting_entry() {
    // for executing Python commands
    g_signal_connect(entry, "activate", G_CALLBACK(on_python_scripting_entry_activated), entry);
 
-   // PE adds history and completions (in coot-setup-python.cc)
+   // PE adds history and completions
    add_python_scripting_entry_completion(entry);
 }
 

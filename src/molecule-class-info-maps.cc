@@ -174,11 +174,14 @@ molecule_class_info_t::draw_map_molecule( bool draw_transparent_maps,
 
       // --- lights ----
 
+      auto rc = graphics_info_t::RotationCentre();
+      glm::vec3 rotation_centre(rc.x(), rc.y(), rc.z());
+      shader.setup_eye_position(eye_position, rotation_centre, view_rotation);
       std::map<unsigned int, lights_info_t>::const_iterator it; // iterate over the lights map
       for (it=lights.begin(); it!=lights.end(); ++it) {
          unsigned int light_idx = it->first;
          const lights_info_t &light = it->second;
-         shader.setup_light(light_idx, light, view_rotation, eye_position);
+         shader.setup_light(light_idx, light, view_rotation);
       }
 
       // --- material ---
@@ -222,7 +225,7 @@ molecule_class_info_t::draw_map_molecule( bool draw_transparent_maps,
          bool show_just_shadows = false;
          bool do_depth_fog = graphics_info_t::shader_do_depth_fog_flag;
          bool wireframe_mode = true; // aka "standard lines" / chickenwire
-         map_as_mesh_gl_lines_version.draw(&shader, mvp, view_rotation, lights, eye_position, opacity, bgc,
+         map_as_mesh_gl_lines_version.draw(&shader, mvp, view_rotation, lights, eye_position, rotation_centre, opacity, bgc,
                                            wireframe_mode, do_depth_fog, show_just_shadows);
       }
 
@@ -232,7 +235,7 @@ molecule_class_info_t::draw_map_molecule( bool draw_transparent_maps,
          bool wireframe_mode = false; // aka "standard lines" / chickenwire
          if (opacity < 1.0)
             map_as_mesh.sort_map_triangles(eye_position);
-         map_as_mesh.draw(&shader, mvp, view_rotation, lights, eye_position, opacity, bgc,
+         map_as_mesh.draw(&shader, mvp, view_rotation, lights, eye_position, rotation_centre, opacity, bgc,
                           wireframe_mode, do_depth_fog, show_just_shadows);
       }
    }
@@ -245,7 +248,6 @@ molecule_class_info_t::draw_map_molecule_for_ssao(Shader *shader_p,
                                                   const glm::mat4 &view_matrix,
                                                   const glm::mat4 &proj_matrix) {
 
-   // std::cout << "debug:: start Mesh::draw_for_ao() this mesh: " << name << std::endl;
    if (! shader_p) return; // if we don't want this mesh to be drawn a null shader is passed
 
    if (draw_it_for_map) {
@@ -1103,6 +1105,10 @@ molecule_class_info_t::setup_glsl_map_rendering(const clipper::Coord_orth &centr
 
    // This is called from update_map_triangles().
 
+   auto gdk_col_to_glm = [] (const GdkRGBA &rgba) {
+      return glm::vec4(rgba.red, rgba.green, rgba.blue, rgba.alpha);
+   };
+
    if (false)
       std::cout << "#### setup_glsl_map_rendering() start: map_colour " << imol_no << " "
                 << map_colour.red << " "  << map_colour.green << " " << map_colour.blue << std::endl;
@@ -1116,35 +1122,75 @@ molecule_class_info_t::setup_glsl_map_rendering(const clipper::Coord_orth &centr
    auto &triangles = vertices_and_triangles.second;
    std::vector<std::pair<int, map_triangle_t> > map_triangle_centres; // for sorting
 
-   std::vector<coot::density_contour_triangles_container_t>::const_iterator it;
-   glm::vec4 col(map_colour.red, map_colour.green, map_colour.blue, 1.0f);
    auto tp_0 = std::chrono::high_resolution_clock::now();
-   for (it=draw_vector_sets.begin(); it!=draw_vector_sets.end(); ++it) {
-      const coot::density_contour_triangles_container_t &tri_con(*it);
-      unsigned int idx_base = vertices.size();
-      for (unsigned int i=0; i<tri_con.points.size(); i++) {
-         glm::vec3 pos    = coord_orth_to_glm(tri_con.points[i]);
-         glm::vec3 normal = coord_orth_to_glm(tri_con.normals[i]);
-         s_generic_vertex vert(pos, normal, col);
-         vertices.push_back(vert);
+
+   if (colour_map_using_other_map_flag) {
+
+      std::vector<coot::density_contour_triangles_container_t>::const_iterator it;
+      for (it=draw_vector_sets.begin(); it!=draw_vector_sets.end(); ++it) {
+         const coot::density_contour_triangles_container_t &tri_con(*it);
+         unsigned int idx_base = vertices.size();
+         for (unsigned int i=0; i<tri_con.points.size(); i++) {
+            glm::vec3 pos    = coord_orth_to_glm(tri_con.points[i]);
+            glm::vec3 normal = coord_orth_to_glm(tri_con.normals[i]);
+            clipper::Coord_orth clipper_pos(pos.x, pos.y, pos.z);
+            GdkRGBA gdk_col = position_to_colour_using_other_map(clipper_pos);
+            glm::vec4 col = gdk_col_to_glm(gdk_col);
+            s_generic_vertex vert(pos, normal, col);
+            vertices.push_back(vert);
+         }
+         for (unsigned int i=0; i<tri_con.point_indices.size(); i++) {
+            g_triangle tri(tri_con.point_indices[i].pointID[0],
+                           tri_con.point_indices[i].pointID[1],
+                           tri_con.point_indices[i].pointID[2]);
+            tri.rebase(idx_base);
+            triangles.push_back(tri);
+
+            glm::vec3 sum(0.0f,0.0f,0.0f);
+            sum += vertices[tri_con.point_indices[i].pointID[0]].pos;
+            sum += vertices[tri_con.point_indices[i].pointID[1]].pos;
+            sum += vertices[tri_con.point_indices[i].pointID[2]].pos;
+            glm::vec3 mid_point = 0.333333 * sum;
+
+            // now map triangles (used for sorting)
+            int idx = map_triangle_centres.size();
+            map_triangle_t map_tri(tri, mid_point);
+            map_triangle_centres.push_back(std::make_pair(idx, map_tri));
+         }
       }
-      for (unsigned int i=0; i<tri_con.point_indices.size(); i++) {
-         g_triangle tri(tri_con.point_indices[i].pointID[0],
-                        tri_con.point_indices[i].pointID[1],
-                        tri_con.point_indices[i].pointID[2]);
-         tri.rebase(idx_base);
-         triangles.push_back(tri);
 
-         glm::vec3 sum(0.0f,0.0f,0.0f);
-         sum += vertices[tri_con.point_indices[i].pointID[0]].pos;
-         sum += vertices[tri_con.point_indices[i].pointID[1]].pos;
-         sum += vertices[tri_con.point_indices[i].pointID[2]].pos;
-         glm::vec3 mid_point = 0.333333 * sum;
+   } else {
 
-         // now map triangles (used for sorting)
-         int idx = map_triangle_centres.size();
-         map_triangle_t map_tri(tri, mid_point);
-         map_triangle_centres.push_back(std::make_pair(idx, map_tri));
+      // 20230924-PE as it was before today
+      std::vector<coot::density_contour_triangles_container_t>::const_iterator it;
+      glm::vec4 col(map_colour.red, map_colour.green, map_colour.blue, 1.0f);
+      for (it=draw_vector_sets.begin(); it!=draw_vector_sets.end(); ++it) {
+         const coot::density_contour_triangles_container_t &tri_con(*it);
+         unsigned int idx_base = vertices.size();
+         for (unsigned int i=0; i<tri_con.points.size(); i++) {
+            glm::vec3 pos    = coord_orth_to_glm(tri_con.points[i]);
+            glm::vec3 normal = coord_orth_to_glm(tri_con.normals[i]);
+            s_generic_vertex vert(pos, normal, col);
+            vertices.push_back(vert);
+         }
+         for (unsigned int i=0; i<tri_con.point_indices.size(); i++) {
+            g_triangle tri(tri_con.point_indices[i].pointID[0],
+                           tri_con.point_indices[i].pointID[1],
+                           tri_con.point_indices[i].pointID[2]);
+            tri.rebase(idx_base);
+            triangles.push_back(tri);
+
+            glm::vec3 sum(0.0f,0.0f,0.0f);
+            sum += vertices[tri_con.point_indices[i].pointID[0]].pos;
+            sum += vertices[tri_con.point_indices[i].pointID[1]].pos;
+            sum += vertices[tri_con.point_indices[i].pointID[2]].pos;
+            glm::vec3 mid_point = 0.333333 * sum;
+
+            // now map triangles (used for sorting)
+            int idx = map_triangle_centres.size();
+            map_triangle_t map_tri(tri, mid_point);
+            map_triangle_centres.push_back(std::make_pair(idx, map_tri));
+         }
       }
    }
    auto tp_1 = std::chrono::high_resolution_clock::now();
@@ -1155,6 +1201,7 @@ molecule_class_info_t::setup_glsl_map_rendering(const clipper::Coord_orth &centr
 
    if (xmap_is_diff_map) {
       glm::vec4 diff_map_col(map_colour_negative_level.red, map_colour_negative_level.green, map_colour_negative_level.blue, 1.0f);
+      std::vector<coot::density_contour_triangles_container_t>::const_iterator it;
       for (it=draw_diff_map_vector_sets.begin(); it!=draw_diff_map_vector_sets.end(); ++it) {
          const coot::density_contour_triangles_container_t &tri_con(*it);
          unsigned int idx_base = vertices.size();
@@ -2116,14 +2163,20 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
    for (unsigned int iextension=0; iextension<acceptable_extensions.size(); iextension++) {
       std::string::size_type imap = tstring.rfind(acceptable_extensions[iextension]);
       if (imap != std::string::npos) {
-	 good_extension_flag = 1;
+	 good_extension_flag = true;
 	 break;
       }
    }
 
+   // 20231006-PE now allow .gz files
+   if (filename.find(".map.gz") != std::string::npos) good_extension_flag = true;
+   if (filename.find(".mrc.gz") != std::string::npos) good_extension_flag = true;
+   std::string extension = coot::util::file_name_extension(filename);
+   bool is_gzip = (extension == ".gz");
+
    // not really extension checking, just that it has it in the
    // filename:
-   if (good_extension_flag == 0) {
+   if (good_extension_flag == false) {
 
       std::cout << "Filename for a CCP4 map must end in .map or .ext "
 		<< "or some other approved extension - sorry\n";
@@ -2152,6 +2205,9 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
      else           map_file_type = CNS;
    }
 
+   if (filename.find(".map.gz") != std::string::npos) map_file_type = CCP4;
+   if (filename.find(".mrc.gz") != std::string::npos) map_file_type = CCP4;
+
    if (map_file_type == CCP4)
       std::cout << "INFO:: map file type was determined to be CCP4 type\n";
    if (map_file_type == CNS)
@@ -2172,87 +2228,95 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
          auto tp_2 = std::chrono::high_resolution_clock::now();
          auto d21 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_2 - tp_1).count();
          std::cout << "INFO:: map read " << d21 << " milliseconds" << std::endl;
-         try {
-            clipper_map_file_wrapper file;
-            file.open_read(filename);
-            set_is_em_map(file); // sets is_em_map_cached_flag
-            em = is_em_map_cached_flag;
-            if (imol_no == 0) {
-               clipper::Cell c = file.cell();
-               coot::Cartesian m(0.5*c.descr().a(), 0.5*c.descr().b(), 0.5*c.descr().c());
-               graphics_info_t g;
-               g.setRotationCentre(m);
-            }
 
-         }
-         catch (const clipper::Message_base &exc) {
-            std::cout << "WARNING:: failed to open " << filename << std::endl;
-            bad_read = true;
+         // Now set is_em_map_cached_flag and set the rotation centres.
+         // I think that we only need set the is_em_map_cached_flag.
+         //
+         if (done) {
+            try {
+               clipper_map_file_wrapper file;
+               file.open_read(filename);
+               set_is_em_map(file); // sets is_em_map_cached_flag
+               em = is_em_map_cached_flag;
+               if (imol_no == 0) {
+                  clipper::Cell c = file.cell();
+                  coot::Cartesian m(0.5*c.descr().a(), 0.5*c.descr().b(), 0.5*c.descr().c());
+                  graphics_info_t g;
+                  g.setRotationCentre(m);
+               }
+            }
+            catch (const clipper::Message_base &exc) {
+               std::cout << "WARNING:: failed to open " << filename << std::endl;
+               bad_read = true;
+            }
          }
       }
 
-      if (! done) {
-         std::cout << "INFO:: attempting to read CCP4 map: " << filename << std::endl;
-         // clipper::CCP4MAPfile file;
-         clipper_map_file_wrapper file;
-         try {
-            file.open_read(filename);
+      if (! is_gzip) {
 
-            em = set_is_em_map(file);
+         if (! done) {
+            std::cout << "INFO:: attempting to read CCP4 map: " << filename << std::endl;
+            // clipper::CCP4MAPfile file;
+            clipper_map_file_wrapper file;
+            try {
+               file.open_read(filename);
 
-            bool use_xmap = true; // not an nxmap
-            if (true) {
+               em = set_is_em_map(file);
 
-               clipper::Grid_sampling fgs = file.grid_sampling();
+               bool use_xmap = true; // not an nxmap
+               if (true) {
 
-               clipper::Cell fcell = file.cell();
-               double vol = fcell.volume();
-               if (vol < 1.0) {
-                  std::cout << "WARNING:: non-sane unit cell volume " << vol << " - skip read"
-                            << std::endl;
-                  bad_read = true;
-               } else {
-                  try {
-                     file.import_xmap(xmap);
-                  }
-                  catch (const clipper::Message_generic &exc) {
-                     std::cout << "WARNING:: failed to read " << filename
-                               << " Bad ASU (inconsistant gridding?)." << std::endl;
+                  clipper::Grid_sampling fgs = file.grid_sampling();
+
+                  clipper::Cell fcell = file.cell();
+                  double vol = fcell.volume();
+                  if (vol < 1.0) {
+                     std::cout << "WARNING:: non-sane unit cell volume " << vol << " - skip read"
+                               << std::endl;
                      bad_read = true;
+                  } else {
+                     try {
+                        file.import_xmap(xmap);
+                     }
+                     catch (const clipper::Message_generic &exc) {
+                        std::cout << "WARNING:: failed to read " << filename
+                                  << " Bad ASU (inconsistant gridding?)." << std::endl;
+                        bad_read = true;
+                     }
                   }
+               } else {
+
+                  // Should never happen.  Not yet.
+                  //
+                  std::cout << "=================== EM Map NXmap =================== " << std::endl;
+                  file.import_nxmap(nxmap);
+                  std::cout << "INFO:: created NX Map with grid " << nxmap.grid().format() << std::endl;
                }
-            } else {
+            } catch (const clipper::Message_base &exc) {
+               std::cout << "WARNING:: failed to open " << filename << std::endl;
+               bad_read = true;
+            }
 
-               // Should never happen.  Not yet.
+            std::pair<bool, coot::Cartesian> new_centre(false, coot::Cartesian(0,0,0)); // used only for first EM map
+
+            if (em) {
+
+               // If this was the first map, recentre to the middle of the cell
                //
-               std::cout << "=================== EM Map NXmap =================== " << std::endl;
-               file.import_nxmap(nxmap);
-               std::cout << "INFO:: created NX Map with grid " << nxmap.grid().format() << std::endl;
-            }
-         } catch (const clipper::Message_base &exc) {
-            std::cout << "WARNING:: failed to open " << filename << std::endl;
-            bad_read = true;
-         }
+               if (imol_no == 0) {
+                  clipper::Cell c = file.cell();
+                  coot::Cartesian m(0.5*c.descr().a(), 0.5*c.descr().b(), 0.5*c.descr().c());
+                  new_centre.first = true;
+                  new_centre.second = m;
+                  std::cout << "INFO:: map appears to be EM map."<< std::endl;
+               }
+               std::cout << "INFO:: closing CCP4 map: " << filename << std::endl;
+               file.close_read();
 
-         std::pair<bool, coot::Cartesian> new_centre(false, coot::Cartesian(0,0,0)); // used only for first EM map
-
-         if (em) {
-
-            // If this was the first map, recentre to the middle of the cell
-            //
-            if (imol_no == 0) {
-               clipper::Cell c = file.cell();
-               coot::Cartesian m(0.5*c.descr().a(), 0.5*c.descr().b(), 0.5*c.descr().c());
-               new_centre.first = true;
-               new_centre.second = m;
-               std::cout << "INFO:: map appears to be EM map."<< std::endl;
-            }
-            std::cout << "INFO:: closing CCP4 map: " << filename << std::endl;
-            file.close_read();
-
-            if (new_centre.first) {
-               graphics_info_t g;
-               g.setRotationCentre(new_centre.second);
+               if (new_centre.first) {
+                  graphics_info_t g;
+                  g.setRotationCentre(new_centre.second);
+               }
             }
          }
       }
@@ -2435,7 +2499,7 @@ molecule_class_info_t::make_map_from_phs(std::string pdb_filename,
    std::cout << "INFO:: Make a map from " << phs_filename << " using "
 	     << pdb_filename << " for the cell and symmetry information " << std::endl;
 
-   atom_selection_container_t SelAtom = get_atom_selection(pdb_filename, true, false, false);
+   atom_selection_container_t SelAtom = get_atom_selection(pdb_filename, false, true, false);
 
    if (SelAtom.read_success == 1) { // success
       try {
@@ -3766,15 +3830,21 @@ molecule_class_info_t::fit_chain_to_map_by_random_jiggle(const std::string &chai
 
    atom_sel.mol->GetSelIndex(SelHnd, atom_selection, n_atoms);
 
-   if (n_atoms) {
+   if (n_atoms > 0) {
       bool use_biased_density_scoring = false; // not for all-molecule
       std::vector<mmdb::Chain *> chains;
       chains.push_back(chain_p);
-      r = fit_to_map_by_random_jiggle(atom_selection, n_atoms,
-                                      xmap, map_sigma,
-                                      n_trials, jiggle_scale_factor,
-                                      use_biased_density_scoring,
-                                      chains);
+      // 20231017-PE give it 4 rounds like api fit_to_map_by_random_jiggle_with_blur_using_cid().
+      // The fact that this needs 4 rounds is worrying. It suggests that there is a bug
+      // in the fitting function.
+      // This improves the success rate and is a cheap improvement that will do for now.
+      for (unsigned int i=0; i<4; i++) {
+         r = fit_to_map_by_random_jiggle(atom_selection, n_atoms,
+                                         xmap, map_sigma,
+                                         n_trials, jiggle_scale_factor,
+                                         use_biased_density_scoring,
+                                         chains);
+      }
    }
    atom_sel.mol->DeleteSelection(SelHnd);
    return r;
@@ -4806,7 +4876,7 @@ molecule_class_info_t::export_vertices_and_triangles_func(const std::vector<coot
    // write to export_vertices_and_triangles_file_name_for_func, which is set below
    // in export_model_molecule_as_obj().
 
-   Mesh mesh;
+   Mesh mesh("export_vertices_and_triangles_file_name_for_func()");
    std::vector<s_generic_vertex> vertices(vertices_in.size());
    for (unsigned int i=0; i<vertices_in.size(); i++) {
       s_generic_vertex gv;
@@ -4948,7 +5018,11 @@ molecule_class_info_t::export_model_molecule_as_gltf(const std::string &file_nam
       const Mesh &mesh = meshes[0];
       mesh.export_to_glTF(file_name, use_binary);
    } else {
-      molecule_as_mesh.export_to_glTF(file_name, use_binary);
+      // 20230826-PE now that the model molecule is an api instancing object
+      // this needs to be completey reworked
+      // molecule_as_mesh.export_to_glTF(file_name, use_binary);
+      // FIXME
+      std::cout << "export_model_molecule_as_gltf() FIXME" << std::endl;
    }
    return status;
 }

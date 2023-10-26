@@ -14,7 +14,7 @@
 void
 Mesh::make_graphical_bonds(const graphical_bonds_container &gbc,
                            int bonds_box_type,
-                           unsigned int representation_type, // BALL_AND_STICK or BALLS_NOT_BONDS
+                           Mesh::representation_mode_t representation_type, // BALL_AND_STICK or BALLS_NOT_BONDS
                            int udd_handle_bonded_type,
                            bool draw_cis_peptides,
                            float atom_radius,
@@ -46,13 +46,13 @@ Mesh::make_graphical_bonds(const graphical_bonds_container &gbc,
    vertices.reserve(allocation_for_vertices);
    triangles.reserve(allocation_for_triangles);
 
-   if (representation_type == BALL_AND_STICK || representation_type == BALLS_NOT_BONDS) {
+   if (representation_type == Mesh::representation_mode_t::BALL_AND_STICK || representation_type == Mesh::representation_mode_t::BALLS_NOT_BONDS) {
       make_graphical_bonds_spherical_atoms(gbc, bonds_box_type, udd_handle_bonded_type, atom_radius, bond_radius, num_subdivisions, colour_table);
       make_graphical_bonds_hemispherical_atoms(gbc, bonds_box_type, udd_handle_bonded_type, atom_radius, bond_radius, num_subdivisions, colour_table);
    }
-   if (representation_type == BALL_AND_STICK)
+   if (representation_type == Mesh::representation_mode_t::BALL_AND_STICK)
          make_graphical_bonds_bonds(gbc, bond_radius, n_slices, n_stacks, colour_table);
-   if (representation_type == VDW_BALLS) {
+   if (representation_type == Mesh::representation_mode_t::VDW_BALLS) {
       make_graphical_bonds_spherical_atoms_with_vdw_radii(gbc, num_subdivisions, colour_table, geom);
    }
 
@@ -63,7 +63,7 @@ Mesh::make_graphical_bonds(const graphical_bonds_container &gbc,
    // (at the moment unused) layout and shader.
    //
    glm::vec3 screen_up_dir(0,1,0); // for now
-   make_graphical_bonds_rama_balls(gbc, screen_up_dir);
+   make_graphical_bonds_rama_balls(gbc);
 
    make_graphical_bonds_rotamer_dodecs(gbc, screen_up_dir);
 
@@ -522,8 +522,7 @@ Mesh::make_graphical_bonds_bonds(const graphical_bonds_container &gbc,
 
 
 void
-Mesh::make_graphical_bonds_rama_balls(const graphical_bonds_container &gbc,
-                                      const glm::vec3 &screen_up_dir) {
+Mesh::make_graphical_bonds_rama_balls(const graphical_bonds_container &gbc) {
 
    auto cartesian_to_glm = [] (const coot::Cartesian &c) {
                               return glm::vec3(c.x(), c.y(), c.z());
@@ -544,6 +543,7 @@ Mesh::make_graphical_bonds_rama_balls(const graphical_bonds_container &gbc,
       glm::vec3 origin(0,0,0);
       float rama_ball_pos_offset_scale = 0.6;
       float rama_ball_radius = 0.5;
+      glm::vec3 screen_up_dir(0,0,1);
 
       std::pair<std::vector<glm::vec3>, std::vector<g_triangle> > octaball = tessellate_octasphere(num_subdivisions);
 
@@ -654,7 +654,7 @@ Mesh::make_graphical_bonds_rotamer_dodecs(const graphical_bonds_container &gbc,
 
       for (int i=0; i<gbc.n_rotamer_markups; i++) {
          const rotamer_markup_container_t &rm = gbc.rotamer_markups[i];
-         glm::vec3 atom_pos = cartesian_to_glm(rm.pos);
+         glm::vec3 atom_pos = clipper_to_glm(rm.pos);
 
          std::vector<s_generic_vertex> this_dodec_vertices = dodec_vertices; // at the origin to start
          // now move it.

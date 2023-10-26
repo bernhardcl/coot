@@ -56,7 +56,7 @@ class Mesh {
 #endif
 
 public:
-   enum { BALL_AND_STICK, BALLS_NOT_BONDS, VDW_BALLS };
+   enum class representation_mode_t { BALL_AND_STICK, BALLS_NOT_BONDS, VDW_BALLS };
    GLuint vao;
    GLuint buffer_id;
    GLuint index_buffer_id;
@@ -81,21 +81,26 @@ public:
    std::chrono::time_point<std::chrono::system_clock>  time_constructed;
    bool is_headless; // i.e. don't try to use OpenGL calls because we've been imported into python, blender or jupyter.
 
-   Mesh() { init(); }
-   Mesh(const coot::simple_mesh_t& mesh);
+   // Mesh() { init(); }
+   Mesh(const std::string &name_in, const coot::simple_mesh_t& mesh);
    // import from somewhere else
-   explicit Mesh(const std::pair<std::vector<s_generic_vertex>, std::vector<g_triangle> > &indexed_vertices);
+   explicit Mesh(const std::pair<std::vector<s_generic_vertex>, const std::vector<g_triangle> > &indexed_vertices);
+   explicit Mesh(const std::vector<s_generic_vertex> &vertices, const std::vector<g_triangle> &triangles);
    explicit Mesh(const std::string &name_in) : name(name_in) { init(); }
    explicit Mesh(const molecular_triangles_mesh_t &mtm);
+   ~Mesh();
    // If this mesh will become part of another mesh, then we don't want to setup buffers for this one
    // (return the success status 1 is good)
    bool load_from_glTF(const std::string &file_name, bool include_call_to_setup_buffers=true);
    void export_to_glTF(const std::string &file_name, bool use_binary_format) const; // 20210927-PE I'd rather not include tiny_gltf.h in Mesh.hh
 
+   bool debug_mode; // setable from the outside, rather than me editing the draw() function
    void debug() const;
    void debug_to_file() const;
-   void clear() {
-      // delete some gl buffers here
+   void delete_gl_buffers();
+   void clear(bool delete_gl_buffers_also = false) {
+      if (delete_gl_buffers_also)
+         delete_gl_buffers();
       is_instanced = false;
       is_instanced_colours = false;
       is_instanced_with_rts_matrix = false;
@@ -144,6 +149,7 @@ public:
              const glm::mat4 &view_rotation_matrix,
              const std::map<unsigned int, lights_info_t> &lights,
              const glm::vec3 &eye_position, // eye position in view space (not molecule space)
+             const glm::vec3 &rotation_centre,
              float opacity,
              const glm::vec4 &background_colour,
              bool gl_lines_mode, // i.e. as chickenwire
@@ -188,7 +194,8 @@ public:
    // 5 instance rot-trans-2
    // 6 instance rot-trans-3
    // 7 instance rot-trans-4
-   void draw_instanced(Shader *shader,
+   void draw_instanced(int pass_type,
+                       Shader *shader,
                        const glm::mat4 &mvp,
                        const glm::mat4 &view_rotation_matrix,
                        const std::map<unsigned int, lights_info_t> &lights,
@@ -259,7 +266,7 @@ public:
    // a wrapper for the following functions
    void make_graphical_bonds(const graphical_bonds_container &gbc,
                              int bonds_box_type,
-                             unsigned int representation_type, // BALL_AND_STICK or BALLS_NOT_BONDS
+                             representation_mode_t representation_type, // BALL_AND_STICK or BALLS_NOT_BONDS
                              int udd_handle_bonded_type,
                              bool draw_cis_peptides,
                              float atom_radius,
@@ -294,10 +301,9 @@ public:
                                    float bond_radius,
                                    unsigned int n_slices,
                                    unsigned int n_stacks,
-                                   const std::vector<glm::vec4> &colour_table);
+                                   const std::vector<glm::vec4> &colour_table); // add bool add_start_end_cap, bool add_end_end_cap);
 
-   void make_graphical_bonds_rama_balls(const graphical_bonds_container &gbc,
-                                        const glm::vec3 &screen_up_dir); // normalized
+   void make_graphical_bonds_rama_balls(const graphical_bonds_container &gbc);
 
    void make_graphical_bonds_rotamer_dodecs(const graphical_bonds_container &gbc,
                                             const glm::vec3 &screen_up_dir);
@@ -317,21 +323,22 @@ public:
                                                                float atom_radius,
                                                                float bond_radius,
                                                                unsigned int num_subdivisions,
-                                                               glm::vec4 (*get_glm_colour_for_bonds) (int, int));
+                                                               const std::vector<glm::vec4> &colour_table);
    void make_graphical_bonds_hemispherical_atoms_instanced_version(Shader *shader_p,
                                                                    const Material &material,
                                                                    const graphical_bonds_container &gbc, int udd_handle_bonded_type,
                                                                    float atom_radius,
                                                                    float bond_radius,
                                                                    unsigned int num_subdivisions,
-                                                                   glm::vec4 (*get_glm_colour_for_bonds) (int, int));
+                                                                   const std::vector<glm::vec4> &colour_table);
    void make_graphical_bonds_bonds_instanced_version(Shader *shader_p,
                                                      const Material &material,
                                                      const graphical_bonds_container &gbc,
                                                      float bond_radius,
                                                      unsigned int n_slices,
                                                      unsigned int n_stacks,
-                                                     glm::vec4 (*get_glm_colour_for_bonds) (int, int));
+                                                     const std::vector<glm::vec4> &colour_table,
+                                                     bool add_start_end_cap, bool add_end_end_cap);
 
    void make_symmetry_atoms_bond_lines(const std::vector<std::pair<graphical_bonds_container, std::pair<symm_trans_t, Cell_Translation> > > &symmetry_bonds_boxes,
                                        const glm::vec4 &symmetry_colour, double symmetry_colour_weight);
@@ -387,8 +394,7 @@ public:
                                 const glm::mat4 &projection);
 
    // make space
-   void setup_instancing_buffer_data(Shader *shader_p,
-                                     const Material &mat,
+   void setup_instancing_buffer_data(const Material &mat,
                                      const std::vector<glm::mat4> &instanced_matrices,
                                      const std::vector<glm::vec4> &instanced_colours);
 

@@ -9,15 +9,16 @@
 #include "coot-utils/oct.hh"
 #include "coot-utils/cylinder.hh"
 
+// Atom radii are limited to 2.0
 void
 make_instanced_graphical_bonds_spherical_atoms(coot::instanced_mesh_t &m, // add to this
-                                     const graphical_bonds_container &gbc,
-                                     int bonds_box_type,
-                                     int udd_handle_bonded_type,
-                                     float base_atom_radius,
-                                     float base_bond_radius,
-                                     unsigned int num_subdivisions,
-                                     const std::vector<glm::vec4> &colour_table) {
+                                               const graphical_bonds_container &gbc,
+                                               coot::api_bond_colour_t bonds_box_type, // remove these one day
+                                               int udd_handle_bonded_type,
+                                               float base_atom_radius,
+                                               float base_bond_radius,
+                                               unsigned int num_subdivisions,
+                                               const std::vector<glm::vec4> &colour_table) {
 
    // 20230114-PE
    // copied and edited from from src/Mesh-from-graphical-bonds-instanced.cc
@@ -66,7 +67,7 @@ make_instanced_graphical_bonds_spherical_atoms(coot::instanced_mesh_t &m, // add
          if (do_it) {
             float scale = at_info.radius_scale;
             float sar = scale * base_atom_radius;
-            if (sar > 5.5) sar = 5.5;
+            if (sar > 2.0f) sar = 2.0f;
             glm::vec3 sc(sar, sar, sar);
             glm::vec3 t(at->x, at->y, at->z);
             coot::instancing_data_type_A_t idA(t, col, sc);
@@ -82,13 +83,13 @@ make_instanced_graphical_bonds_spherical_atoms(coot::instanced_mesh_t &m, // add
 
 void
 make_instanced_graphical_bonds_hemispherical_atoms(coot::instanced_mesh_t &m, // add to this
-                                     const graphical_bonds_container &gbc,
-                                     int bonds_box_type,
-                                     int udd_handle_bonded_type,
-                                     float atom_radius,
-                                     float bond_radius,
-                                     unsigned int num_subdivisions,
-                                     const std::vector<glm::vec4> &colour_table) {
+                                                   const graphical_bonds_container &gbc,
+                                                   coot::api_bond_colour_t bonds_box_type,
+                                                   int udd_handle_bonded_type,
+                                                   float atom_radius,
+                                                   float bond_radius,
+                                                   unsigned int num_subdivisions,
+                                                   const std::vector<glm::vec4> &colour_table) {
 
    return; // 20230224-PE every atom is spherical for the moment.
 
@@ -280,6 +281,9 @@ make_instanced_graphical_bonds_bonds(coot::instanced_mesh_t &m,
       if (icol<cts) // it will be of course!
          col = colour_table[icol];
       graphical_bonds_lines_list<graphics_line_t> &ll = gbc.bonds_[icol];
+
+      // std::cout << "_bonds_bonds icol " << icol << " has n_lines " << ll.num_lines << std::endl;
+
       for (int j=0; j<ll.num_lines; j++) {
          const coot::Cartesian &start  = ll.pair_list[j].positions.getStart();
          const coot::Cartesian &finish = ll.pair_list[j].positions.getFinish();
@@ -362,7 +366,7 @@ coot::molecule_t::get_bonds_mesh_instanced(const std::string &mode, coot::protei
    }
 
 
-   bonds_box_type = coot::COLOUR_BY_CHAIN_BONDS;
+   bonds_box_type = coot::api_bond_colour_t::COLOUR_BY_CHAIN_BONDS;
 
    std::set<int> no_bonds_to_these_atoms = no_bonds_to_these_atom_indices; // weird that this is not passed.
 
@@ -395,6 +399,8 @@ coot::molecule_t::get_bonds_mesh_instanced(const std::string &mode, coot::protei
       }
 
       std::vector<glm::vec4> colour_table = make_colour_table(against_a_dark_background);
+
+      // print_colour_table("from get_bonds_mesh_instanced()");
       if (colour_table.empty()) {
          std::cout << "ERROR:: you need to make the bonds before getting the bonds mesh" << std::endl;
       }
@@ -423,7 +429,7 @@ coot::molecule_t::get_bonds_mesh_instanced(const std::string &mode, coot::protei
 
    if (mode == "USER-DEFINED-COLOURS") {
 
-      std::cout << "---------------  in get_bonds_mesh_instanced() C mode is " << mode << " bonds_box_type is " << bonds_box_type << std::endl;
+      std::cout << "---------------  in get_bonds_mesh_instanced() C mode is " << mode << " bonds_box_type is " << int(bonds_box_type) << std::endl;
       bool force_rebond = true;
       bool do_rotamer_markup = false; // pass this
       // don't do rotamer dodecs
@@ -433,11 +439,11 @@ coot::molecule_t::get_bonds_mesh_instanced(const std::string &mode, coot::protei
          std::cout << "ERROR:: in get_bonds_mesh() wrong udd data type " << udd_handle_bonded_type << std::endl;
          return m;
       }
-      std::cout << "---------------  in get_bonds_mesh_instanced() D mode is " << mode << " bonds_box_type is " << bonds_box_type << std::endl;
+      std::cout << "---------------  in get_bonds_mesh_instanced() D mode is " << mode << " bonds_box_type is " << int(bonds_box_type) << std::endl;
       make_colour_by_chain_bonds(geom, no_bonds_to_these_atoms, true, false, draw_hydrogen_atoms_flag,
                                  draw_missing_residue_loops_flag, do_rotamer_markup, nullptr, force_rebond);
-      bonds_box_type = coot::COLOUR_BY_USER_DEFINED_COLOURS____BONDS;
-      std::cout << "---------------  in get_bonds_mesh_instanced() E mode is " << mode << " bonds_box_type is " << bonds_box_type << std::endl;
+      bonds_box_type = coot::api_bond_colour_t::COLOUR_BY_USER_DEFINED_COLOURS____BONDS;
+      std::cout << "---------------  in get_bonds_mesh_instanced() E mode is " << mode << " bonds_box_type is " << int(bonds_box_type) << std::endl;
       std::vector<glm::vec4> colour_table = make_colour_table(against_a_dark_background);
       make_instanced_graphical_bonds_spherical_atoms(m, bonds_box, bonds_box_type, udd_handle_bonded_type,
                                                      atom_radius, bond_radius, num_subdivisions, colour_table);
@@ -454,8 +460,8 @@ coot::molecule_t::get_bonds_mesh_instanced(const std::string &mode, coot::protei
 
 coot::instanced_mesh_t
 coot::molecule_t::get_bonds_mesh_for_selection_instanced(const std::string &mode, const std::string &atom_selection_cid,
-                                                         coot::protein_geometry *geom,
-                                                         bool against_a_dark_background, float bond_radius, float atom_radius_to_bond_width_ratio,
+                                                         coot::protein_geometry *geom, bool against_a_dark_background,
+                                                         float bond_radius, float atom_radius_to_bond_width_ratio,
                                                          int  num_subdivisions,
                                                          bool draw_hydrogen_atoms_flag,
                                                          bool draw_missing_residue_loops) {
@@ -499,10 +505,9 @@ coot::molecule_t::get_bonds_mesh_for_selection_instanced(const std::string &mode
       std::cout << "debug:: there are " << n_atoms << " in the atom selection: " << atom_selection_cid << std::endl;
    }
 
-   // atom_sel_ligand.SelectionHandle = atom_sel_ligand.mol->NewSelection();
-   // atom_sel_ligand.mol->Select(atom_sel_ligand.SelectionHandle, mmdb::STYPE_ATOM, atom_selection_cid.c_str(), mmdb::SKEY_NEW);
-   // atom_sel_ligand.mol->GetSelIndex(atom_sel_ligand.SelectionHandle, atom_sel_ligand.atom_selection, atom_sel_ligand.n_selected_atoms);
-   // atom_sel_ligand.read_success = 1;
+   apply_user_defined_atom_colour_selections(indexed_user_defined_colour_selection_cids,
+                                             indexed_user_defined_colour_selection_cids_apply_to_non_carbon_atoms_also,
+                                             atom_sel_ligand.mol);
 
    float atom_radius = bond_radius * atom_radius_to_bond_width_ratio;
 
@@ -517,34 +522,208 @@ coot::molecule_t::get_bonds_mesh_for_selection_instanced(const std::string &mode
       n_slices = 32;
    }
 
-   std::set<int> no_bonds_to_these_atoms; // empty
-   bool change_c_only_flag =  true;
-   bool goodsell_mode = false;
-   bool do_rota_markup = false;
+   const std::set<int> &no_bonds_to_these_atoms = no_bonds_to_these_atom_indices;
    int udd_handle_bonded_type = atom_sel_ligand.mol->GetUDDHandle(mmdb::UDR_ATOM, "found bond");
    if (udd_handle_bonded_type == mmdb::UDDATA_WrongUDRType) {
       std::cout << "ERROR:: in get_bonds_mesh() wrong udd data type " << udd_handle_bonded_type << std::endl;
       return m;
    }
 
-   Bond_lines_container bonds(geom, no_bonds_to_these_atoms, draw_hydrogen_atoms_flag);
-   bonds.do_colour_by_chain_bonds(atom_sel_ligand, false, imol_no, draw_hydrogen_atoms_flag,
-                                  draw_missing_residue_loops, change_c_only_flag, goodsell_mode, do_rota_markup);
+   bool change_c_only_flag =  true;
+   bool goodsell_mode = false;
+   bool do_rota_markup = false;
+   
+   if (mode == "COLOUR-BY-CHAIN-AND-DICTIONARY") {
+      Bond_lines_container bonds(geom, no_bonds_to_these_atoms, draw_hydrogen_atoms_flag);
+      bonds.do_colour_by_chain_bonds(atom_sel_ligand, false, imol_no, draw_hydrogen_atoms_flag,
+                                     draw_missing_residue_loops, change_c_only_flag, goodsell_mode, do_rota_markup);
 
-   auto gbc = bonds.make_graphical_bonds();
+      std::vector<glm::vec4> colour_table = make_colour_table(against_a_dark_background);
 
-   std::vector<glm::vec4> colour_table = make_colour_table(against_a_dark_background);
+      // print_colour_table("from get_bonds_mesh_for_selection_instanced()");
 
-   make_instanced_graphical_bonds_spherical_atoms(m, gbc, bonds_box_type, udd_handle_bonded_type,
-                                                  atom_radius, bond_radius, num_subdivisions, colour_table);
-   make_instanced_graphical_bonds_hemispherical_atoms(m, gbc, bonds_box_type, udd_handle_bonded_type, atom_radius,
-                                            bond_radius, num_subdivisions, colour_table);
+      auto gbc = bonds.make_graphical_bonds();
 
-   make_instanced_graphical_bonds_bonds(m, gbc, bond_radius, n_slices, n_stacks, colour_table);
+      make_instanced_graphical_bonds_spherical_atoms(m, gbc, bonds_box_type, udd_handle_bonded_type,
+                                                     atom_radius, bond_radius, num_subdivisions, colour_table);
+      make_instanced_graphical_bonds_hemispherical_atoms(m, gbc, bonds_box_type, udd_handle_bonded_type, atom_radius,
+                                                         bond_radius, num_subdivisions, colour_table);
 
-   make_graphical_bonds_cis_peptides(m.markup, gbc);
+      make_instanced_graphical_bonds_bonds(m, gbc, bond_radius, n_slices, n_stacks, colour_table);
 
-   atom_sel_ligand.clear_up();
+      make_graphical_bonds_cis_peptides(m.markup, gbc);
+
+      atom_sel_ligand.clear_up();
+   }
+
+   if (mode == "CA+LIGANDS") {
+
+      Bond_lines_container bonds(geom);
+      float min_dist = 2.4;
+      float max_dist = 4.7;
+      bool draw_missing_residue_loops_flag = true;
+      bonds.do_Ca_plus_ligands_bonds(atom_sel_ligand, imol_no, geom, min_dist, max_dist, draw_hydrogen_atoms_flag,
+                                     draw_missing_residue_loops_flag);
+      bonds_box.clear_up();
+      bonds_box = bonds.make_graphical_bonds_no_thinning();
+      std::vector<glm::vec4> colour_table = make_colour_table(against_a_dark_background);
+      make_instanced_graphical_bonds_bonds(m, bonds_box, bond_radius, n_slices, n_stacks, colour_table);
+      bonds_box.clear_up();
+   }
+
+   if (mode == "VDW-BALLS") {
+
+      Bond_lines_container bonds(geom, no_bonds_to_these_atoms, draw_hydrogen_atoms_flag);
+      bonds.do_colour_by_chain_bonds(atom_sel_ligand, false, imol_no, draw_hydrogen_atoms_flag,
+                                     draw_missing_residue_loops, change_c_only_flag, goodsell_mode, do_rota_markup);
+      bonds_box.clear_up();
+      bonds_box = bonds.make_graphical_bonds();
+
+      std::vector<glm::vec4> colour_table = make_colour_table(against_a_dark_background); // uses bonds_box
+      make_graphical_bonds_spherical_atoms_with_vdw_radii_instanced(m, bonds_box, num_subdivisions, colour_table, *geom);
+      bonds_box.clear_up();
+   }
 
    return m;
+}
+
+
+coot::instanced_mesh_t
+coot::molecule_t::get_extra_restraints_mesh(int mode) const {
+
+   auto  distortion_score_harmonic = [] (const double &bl, const double &target_dist,
+                                   const double &sigma) {
+      double bit = bl - target_dist;
+      double z = bit/sigma;
+      double distortion = z*z;
+      return distortion;
+   };
+
+   auto  distortion_score_GM = [] (const double &bl, const double &target_dist,
+                                   const double &sigma, const double &alpha) {
+      double bit = bl - target_dist;
+      double z = bit/sigma;
+      double distortion = z*z/(1+alpha*z*z);
+      return distortion;
+   };
+
+   auto convert_vertices = [] (const std::vector<coot::api::vnc_vertex> &v_in) {
+      std::vector<coot::api::vn_vertex> v_out(v_in.size());
+      for (unsigned int i=0; i<v_in.size(); i++) {
+         const auto &v = v_in[i];
+         v_out[i] = coot::api::vn_vertex(v.pos, v.normal);
+      }
+      return v_out;
+   };
+
+   auto clipper_to_glm = [] (const clipper::Coord_orth &co) {
+                            return glm::vec3(co.x(), co.y(), co.z());
+                         };
+
+   // type is 1 for harmonic and 2 for GM.
+   auto make_instancing_data = [this, distortion_score_GM, distortion_score_harmonic, clipper_to_glm] (int atom_index_udd_handle, mmdb::Atom *at_1, mmdb::Atom *at_2,
+                                                 double target_bond_dist, double target_sigma, double geman_mcclure_alpha,
+                                                 int type) {
+
+                  glm::vec3 z0(0,0,0);
+                  glm::vec3 z1(0,0,1);
+                  glm::vec4 col_base(0.5, 0.5, 0.5, 1.0);
+                  clipper::Coord_orth p_1 = coot::co(at_1);
+                  clipper::Coord_orth p_2 = coot::co(at_2);
+                  clipper::Coord_orth delta = p_2 - p_1;
+                  clipper::Coord_orth delta_uv = clipper::Coord_orth(delta.unit());
+                  double bl = std::sqrt(delta.lengthsq());
+                  glm::vec3 delta_uv_glm = clipper_to_glm(delta_uv);
+                  glm::mat4 ori = glm::orientation(delta_uv_glm, z1);
+                  glm::vec3 p = clipper_to_glm(p_2);
+                  double delta_length = target_bond_dist - bl;
+                  if (delta_length >  1.0) delta_length =  1.0;
+                  if (delta_length < -1.0) delta_length = -1.0;
+
+                  double penalty = 0;
+                  if (type == 1) penalty = distortion_score_harmonic(bl, target_bond_dist, target_sigma);
+                  if (type == 2) penalty = distortion_score_GM(bl, target_bond_dist, target_sigma, geman_mcclure_alpha);
+                  double width = 0.23 * penalty;
+                  if (width < 0.01) width = 0.01;
+                  if (width > 0.08) width = 0.08;
+
+		  width *= 2.5;
+
+                  glm::vec3 s(width, width, bl); // a function of delta_length?
+                  glm::vec4 col = col_base + delta_length * glm::vec4(-0.8f, 0.8f, -0.8, 0.0f);
+                  col = 0.8 * col; // calm down
+		  col.a = 1.0;
+                  return instancing_data_type_B_t(p, col, s, ori);
+   };
+
+
+   double geman_mcclure_alpha = 1.0;
+
+   instanced_mesh_t im;
+   if (mode > -999) { // check the mode here
+
+      coot::instanced_geometry_t igeom;
+      unsigned int n_slices = 6;
+      unsigned int n_stacks = 6;
+      glm::vec3 z0(0,0,0);
+      glm::vec3 z1(0,0,1);
+      std::pair<glm::vec3, glm::vec3> pp(z0, z1);
+      cylinder c_00(pp, 1.0, 1.0, 1.0, n_slices, n_stacks);
+      c_00.add_flat_end_cap();
+      c_00.add_flat_start_cap();
+      igeom.vertices = convert_vertices(c_00.vertices);
+      igeom.triangles = c_00.triangles;
+      int atom_index_udd_handle = atom_sel.UDDAtomIndexHandle;
+
+      if (! extra_restraints.bond_restraints.empty()) {
+         for (unsigned int i=0; i<extra_restraints.bond_restraints.size(); i++) {
+            const auto &r = extra_restraints.bond_restraints[i];
+            mmdb::Atom *at_1 = get_atom(r.atom_1);
+            mmdb::Atom *at_2 = get_atom(r.atom_2);
+            if (at_1) {
+               if (at_2) {
+                  int idx_1;
+                  int idx_2;
+                  at_1->GetUDData(atom_index_udd_handle, idx_1);
+                  at_2->GetUDData(atom_index_udd_handle, idx_2);
+                  if (no_bonds_to_these_atom_indices.find(idx_1) != no_bonds_to_these_atom_indices.end()) continue;
+                  if (no_bonds_to_these_atom_indices.find(idx_2) != no_bonds_to_these_atom_indices.end()) continue;
+                  auto idB = make_instancing_data(atom_index_udd_handle, at_1, at_2, r.bond_dist, r.esd, geman_mcclure_alpha, 1);
+                  igeom.instancing_data_B.push_back(idB);
+               } else {
+                  std::cout << "WARNING:: no atom found " << r.atom_2 << std::endl;
+               }
+            } else {
+               std::cout << "WARNING:: no atom found " << r.atom_1 << std::endl;
+            }
+         }
+         im.add(igeom);
+      }
+
+      if (! extra_restraints.geman_mcclure_restraints.empty()) {
+         for (unsigned int i=0; i<extra_restraints.geman_mcclure_restraints.size(); i++) {
+            const auto &r = extra_restraints.geman_mcclure_restraints[i];
+            mmdb::Atom *at_1 = get_atom(r.atom_1);
+            mmdb::Atom *at_2 = get_atom(r.atom_2);
+            if (at_1) {
+               if (at_2) {
+                  int idx_1;
+                  int idx_2;
+                  at_1->GetUDData(atom_index_udd_handle, idx_1);
+                  at_2->GetUDData(atom_index_udd_handle, idx_2);
+                  if (no_bonds_to_these_atom_indices.find(idx_1) != no_bonds_to_these_atom_indices.end()) continue;
+                  if (no_bonds_to_these_atom_indices.find(idx_2) != no_bonds_to_these_atom_indices.end()) continue;
+                  auto idB = make_instancing_data(atom_index_udd_handle, at_1, at_2, r.bond_dist, r.esd, geman_mcclure_alpha, 2);
+                  igeom.instancing_data_B.push_back(idB);
+               } else {
+                  std::cout << "WARNING:: no atom found " << r.atom_2 << std::endl;
+               }
+            } else {
+               std::cout << "WARNING:: no atom found " << r.atom_1 << std::endl;
+            }
+         }
+         im.add(igeom);
+      }
+   }
+   return im;
 }

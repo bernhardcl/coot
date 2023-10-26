@@ -8,9 +8,98 @@
 
  - Check QED is now part of RDKit.
 
+C++ 17 and git for CCP4i2
+
 ----
 
-2 items
+8 items
+
+Moorhen: Request: electrostatic surface.
+
+Moorhen: Check/Delete waters function for the api
+
+Moorhen: test robustness of jiggle-fitting. Move the molecule around a bit and
+         see if you get solutions.
+         Use the nanobody in 7vvl.
+         Use one of the WD40 domains in 6eoj
+
+Moorhen: Read gziped maps in libcootapi, so moorhen can get maps from emdb.
+
+Moorhen: auto-read-mtz needs to return the Fobs and sigFobs also (if possible, of course)
+  add std::string F_obs and sigF_obs to auto_read_mtz_info_t
+  They were not set if F_obs is empty.
+
+Apply Charles patches.
+* Done.
+
+Make the CMakefile install chapi
+
+Rebuild RDKit, check that Eigen is pulled in correctly.
+
+Reading cif file with --pdb ~/Desktop/ejd/thing.cif seems borked (no file in file browser)
+
+Cryo-EM -> Mask Map by Chain for 7vvl.
+
+Quick save as should save the shader settings
+
+Try Quick save as on a mac and restore settings - the graphics window size is wrong.
+
+No sound api.
+
+Jakub: sugar representation in RDKit and layla? (add it?)
+
+Rigid-body refine the tutorial A chain. It used to display an intermediate atoms
+representation. What happens now and is that what you want?
+
+Outliers only in Rama plots
+
+Renumber residue range on a molecule that is not the first molecule ::: 0.6
+
+Fix the undo molecule chooser (have 2 molecules with edits)
+
+When I Open Coords I have a option to choose c oordinate files.
+When I Auto-open MTZ I dont have a option to choose mtz files.
+
+Add a Cryo-EM menu item for solidify maps (currently in coot_gui.py). Don't use python.
+
+Rotate/Translate <fragment> doesn't work.
+
+---- older issues ---
+
+Typical example of "what to do?"
+  - Filo has been trying the Coot EM tutorial in Moorhen and finds some problem with
+    "jiggle fit" - this is an interesting scientific problem - how far can you be away
+  - Bogged down in tracking events and model coordinates and mesh and drawing updates
+    for rotation/translation
+  - Chatting with Jakub about Shortcuts but making no progress
+
+Ribbons don't cast shadows.
+
+No reaction to Aligment vs PIR (no PIR was loaded)
+
+Size and user-defined "screen axis" displacement of atom labels, e.g. [0,0,5] to bring
+the label towards the camera.
+
+Issue 67:
+On reflection, I will add a function that allows the user to override Coot's attempt to determine the EM-state of the map.
+
+Layla: make python setup be available for Coot and Layla - put it in its own directory. So that layla
+is not linked with src files.
+
+Rob's problematic links
+* Need details.
+
+startup with default map opacity.
+
+Where is Make Link? ::: 1.5
+* Needs user-defined click click. Just do it in C++?
+* Not that Make Link via Acedrg also needs user-defined click click (or a rewrite).
+
+Colour rules (like Moorhen) need to be added to the Coot API.
+
+Pyrogen needs to work ::: 2
+
+Greg Crichlow cifs
 
 Full-fat render path - i.e. framebuffer need to be set up correctly (at the right time?) ::: 2
 set_framebuffer_scale_factor().
@@ -18,15 +107,61 @@ Well this works just like gtk3 version does. No effect on the framebuffer using 
 shows a quadrant in "Plane" mode. The output tga file is full-resolution though, which is nice.
 Don't confuse the scaling of the framebuffer for screenshot (in "Plain" mode) and
 the scaling of the framebuffers for super-sampling (in "Fancy" mode).
+OK, so the framebuffer scaling works in simple mode.
+Make it work in "fancy" mode and I will call it done.
+
+Missing Bernie cherries
+
+Fix build for St Judes Walid
+
+2koc: do a Coot contact dots analysis on it.
 
 Try using the instanced bonds using the api. Fix the specular lighting.
 
-Test the conversion of glm quaternion to coot quaternion and back again.
+Test the conversion of glm quaternion to coot quaternion and back again. OK, done.
+Test are in place. Now try again with the ligand orientation.
 
-Pyrogen needs to work ::: 2
+What about coot --no-graphics?
 
+What about coot --version?
+
+Fix crash on coot.coot_real_exit(0)
+OK, so framebuffers are being deconstructed after call to exit().
+It seem that framebuffers need to be deconstructed while the GL context is valid.
+So it seems to me that they should be deconstructed as graphics_info_t is deconstructed. So add
+their teardown() functions to ~graphics_info_t(). That prevents the crash I think.
+However, the init_joey_ssao_stuff() are not initializing SSAO-gBuffer-framebuffer and effects-framebuffer
+it seems. Yet they are being bound somewhere. Investigate further later by turning on fancy mode.
+See partial-patch-for-framebuffer-teardown.patch.
+Now I will revert.
+
+Put the gtk version in the build_type? Currently Linux-x86_64-ubuntu-21.10-gtk4
+
+I want to be able use "Fancy" shader path, but not use SSAO.
+
+Rotation in Proportional Editing
+
+Do we get Diegos for bad backbone neightbours O3' bumping int 05'? We
+would need them for validating RNA backbone torsions.
+
+Colour by chain (and dict?) but not by atom - i.e. how colour-by-chain used to work. This gives us
+a nicer representation of ribosomes.
+
+Use a state script for 2 model molecules - the first of which is undisplayed. The display manager
+doesn't show that it's undisplayed ::: 0.6
+
+Restore the draw() function in draw_ghost_bonds() in molecule-class-info.cc - needs a new class to do so.
+
+In Moorhen, it's nice to work with the contact dots on. When I improve the fit and remove a clash, I want
+to see something like the Moorhen points (but for the clash score, of course).
+
+Make auto_read_mtz return the column labels - for Moorhen.
+
+Updatating difference map for cryo-EM using ServalCat.
 
 ---- "Do they need to work?"/"Nice to have one day" items -----
+
+Find 3-10 helices and make restraints. Max Perutz wrote the first paper.
 
 Nice to have:
 "Resample map (say 11337 to 2.2) It takes a long time. There should be a progress bar.
@@ -36,6 +171,8 @@ Rework the namespace of the python modules to be more cannonical :::- 4
 What does it mean to
 import coot
 import coot.utils?
+
+User-defined sf for distances.
 
 NCS Jumping should use the correct matrix :::- 0.5
 l28. Tried and failed. Test the conversion of glm quaternion to coot quaternion and back again.
@@ -761,3 +898,119 @@ I want distance in the button label.
 I want the results box to be docked.
 It needs an extra distance criterion for distance to a hydrogen atom. ::: 2
 
+
+Make the run-script dialog be transient ::: 0.2
+* Done.
+
+add a "Grab focus" before going in to fullscreen! ::: 0.5
+* Done.
+
+Turn on Intermediate atom All-atom contact dots, refine and accept. The contact dots
+ should disappear but they don't ::: 1
+* Done.
+
+Tweak down the perspective a notch.
+* Done.
+
+Is the em radius saved to the state file? :: 0.2
+It is now.
+
+Are the cis-peptides markers being generated and displayed? ::: 1
+They are non-instanced geometry. Should I just use api/instancing.hh?
+* Yes. A slog, but a Good Thing in the end.
+
+Make the OK button in the single map parameters dialog bigger ::: 0.5
+
+Add a graphics_draw() at the end of the calculation of map after contour level change (in the callback, I guess). :: 0.
+* Done.
+
+Clean up "store_window_position()" usage ::: 0.2
+* Done.
+
+Save Coordinates dialog is not working ::: 0.6
+* Done.
+
+Fresnel mode for maps in "Plain" mode ::: 1
+* Done.
+
+Bring the script that shows the SSOA buffer to GTK4 and try to fix the aniostropy. ::: 1
+  The SSAO for model is not anisotropic now that we use the new instanced code (if it ever was).
+  The SSAO for map is though. Compare and constrast with the model shaders.
+* Done. Yay.
+
+Proportional editing ::: 1
+* Done. Nice.
+
+Make Local distances restraints 5 ::: 1
+* Done. Nice.
+
+The Restraints menu needs a "Delete Extra Restraints" button. ::: 0.5
+* Done. Nice.
+
+Go into CA mode and try to middle-mouse over an atom that is not displayed. The recentering works.
+The atom picker needs to know about the representation type (or act on it) ::: 0.1
+* Can't reproduce (thankfully?)
+
+Make sure that set_scroll_wheel_map and set_scrollable_map() (how are they different?) change the scroll indicator
+in the Display Manager. ::: 0.5
+* Done.
+
+Don't draw cis-peptide markup for an MDO ::: 0.8
+* Done. Pretty tricky.
+
+Blog tutorial: why do we change the default B-factor? ::: 0.2
+* Done.
+
+Fetch EMDB map doesn't check the cache/coot-download.
+* It does now.
+
+No reaction to Validate -> Atoms with Zero Occs (there were some) ::: 0.5
+* Done.
+
+Fix this: ::: 1
+"widget main_window_meshes_frame was not found"
+* Done. Mow there is a ribbons dialog
+
+Missing difference map peaks in 1bl8 from Oliver Clarke. ::: 1
+* Done
+
+a7956aa695f8c19e52622447ca292434812d4e62. ::: 0.1
+How about deleting the timeout altogether?
+* OK, done.
+
+Moorhen: Fourier filter jiggle fit:
+* Done.
+
+Moorhen: read_ccp4_map() with the wrong file name
+* Done.
+
+Moorhen: map histogram - user chooses number of bins, I guess 50?
+* Done.
+
+Moorhen: libcootapi neeeds to return the columns that it has read in auto-read.
+* Done.
+
+Fix the R/RC combo-box changed handlers.
+* Done.
+
+Colour by B-factor CA is wrong: test with tutorial and 8oie.
+          B-factor all doesn't work at all.
+* Done.
+
+Missing validation items: Some currently under Draw -> Molecule
+   "Residues with Alt Confs" and
+   "Residues with Missing Atoms"
+   "Residue with cis-peptide" action needs to be filled
+   "Residue type selection" action needs to be filled  <- This one remains to be done.
+* Done. A bit of a fudge and what a grind - boring.
+
+Clicking the switch Refine -> GM Restraints doesn't undisplay the GM restraints.
+* Done. Easy.
+
+Put 7vvl in CA mode. You can label atoms that are not displayed. Bad.
+* Can't reproduce.
+
+Moorhen: carbon bonds are too light on white background. Looking at the code, it seems
+         to do the right thing, but needs testing. Print the colour table.
+* Colour table seems fine. Needs a look.
+* Done. Not a libcootapi problem.

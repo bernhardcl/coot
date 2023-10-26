@@ -47,6 +47,7 @@
 #include <sys/stat.h>
 #if !defined _MSC_VER
 #include <unistd.h>
+#include <dirent.h>   // for extra scheme dir
 #else
 #define S_IRUSR S_IREAD
 #define S_IWUSR S_IWRITE
@@ -54,9 +55,8 @@
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #include <windows.h>
 #include <direct.h>
+#include "compat/dirent.h"   // for extra scheme dir
 #endif // _MSC_VER
-
-#include <dirent.h>   // for extra scheme dir
 
 
 #include "guile-fixups.h"
@@ -94,21 +94,31 @@ void show_preferences() {
 
    // 20230627-PE put this in setup-gui-components - it should only happen once.
    {
-     // fill the bond combobox
-     GtkComboBoxText *combobox = GTK_COMBO_BOX_TEXT(widget_from_preferences_builder("preferences_bond_width_combobox"));
-     for (int j = 1; j < 21; j++) {
-       std::string s = graphics_info_t::int_to_string(j);
-       gtk_combo_box_text_append_text(combobox, s.c_str());
-     }
-     // fill the font combobox
-     combobox = GTK_COMBO_BOX_TEXT(widget_from_preferences_builder("preferences_font_size_combobox"));
-     std::vector<std::string> fonts;
-     // fonts.push_back("Times Roman 10");
-     // fonts.push_back("Times Roman 24");
-     fonts.push_back("Fixed 8/13");
-     fonts.push_back("Fixed 9/15");
-     for (unsigned int j = 0; j < fonts.size(); j++)
-       gtk_combo_box_text_append_text(combobox, fonts[j].c_str());
+      // fill the bond combobox
+      GtkComboBoxText *combobox = GTK_COMBO_BOX_TEXT(widget_from_preferences_builder("preferences_bond_width_combobox"));
+      if (combobox) {
+         for (int j = 1; j < 21; j++) {
+            std::string s = graphics_info_t::int_to_string(j);
+            gtk_combo_box_text_append_text(combobox, s.c_str());
+         }
+      } else {
+         std::cout << "ERROR:: failed to find preferences_bond_width_combobox " << std::endl;
+      }
+      // fill the font combobox
+      combobox = GTK_COMBO_BOX_TEXT(widget_from_preferences_builder("preferences_font_size_combobox"));
+      // 20230926-PE there was a crash here - maybe combobox was not looked up correctly.
+      // Needs investigation, but add protection for now
+      if (combobox) {
+         std::vector<std::string> fonts;
+         // fonts.push_back("Times Roman 10");
+         // fonts.push_back("Times Roman 24");
+         fonts.push_back("Fixed 8/13");
+         fonts.push_back("Fixed 9/15");
+         for (unsigned int j = 0; j < fonts.size(); j++)
+            gtk_combo_box_text_append_text(combobox, fonts[j].c_str());
+      } else {
+         std::cout << "ERROR:: failed to find preferences_font_size_combobox" << std::endl;
+      }
    }
 
    set_transient_for_main_window(w);
@@ -609,6 +619,7 @@ void update_preference_gui() {
       break;
 
     case PREFERENCES_FONT_SIZE:
+#if 0 // font size is no longer a thing.
       ivalue = g.preferences_internal[i].ivalue1;
       if (ivalue < 2) {
 	w = widget_from_preferences_builder("preferences_font_size_small_radiobutton");
@@ -626,6 +637,7 @@ void update_preference_gui() {
 	GtkComboBox *combobox = GTK_COMBO_BOX(widget_from_preferences_builder("preferences_font_size_combobox"));
 	gtk_combo_box_set_active(combobox, ivalue);
       }
+#endif
       break;
 
     case PREFERENCES_FONT_COLOUR:
@@ -662,6 +674,7 @@ void update_preference_gui() {
       else
          std::cout << "about to gtk_color_button_set_color() null colour_button: "
                    << " font_colour " << font_colour.red << " " << font_colour.green << " " << font_colour.blue << std::endl;
+
 
 #if (GTK_MAJOR_VERSION == 3 && GTK_MINOR_VERSION == 94) || (GTK_MAJOR_VERSION == 4)
           // 20220528-PE FIXME color
@@ -1032,6 +1045,11 @@ short int do_probe_dots_post_refine_state() {
 /* state is 1 for on and 0 for off */
 void set_do_coot_probe_dots_during_refine(short int state) {
    graphics_info_t::do_coot_probe_dots_during_refine_flag = state;
+}
+
+/* state is 1 for on and 0 for off */
+short int get_do_coot_probe_dots_during_refine() {
+   return graphics_info_t::do_coot_probe_dots_during_refine_flag;
 }
 
 

@@ -12,6 +12,80 @@
 #define ENABLE_NLS // 20220606-PE fixes weird dcgettext() compiler errors
 #include "graphics-info.h"
 
+std::vector<std::reference_wrapper<Shader> > get_shader_refs() {
+
+   return std::vector<std::reference_wrapper<Shader> > { graphics_info_t::shader_for_maps,
+                                                        graphics_info_t::shader_for_map_caps,
+                                                        graphics_info_t::shader_for_models,
+                                                        graphics_info_t::shader_for_outline_of_active_residue,
+                                                        graphics_info_t::shader_for_model_as_meshes,
+                                                        graphics_info_t::shader_for_symmetry_atoms_bond_lines,
+                                                        graphics_info_t::shader_for_central_cube,
+                                                        graphics_info_t::shader_for_origin_cube,
+                                                        graphics_info_t::shader_for_hud_text,
+                                                        graphics_info_t::shader_for_hud_geometry_bars,
+                                                        graphics_info_t::shader_for_hud_geometry_labels,
+                                                        graphics_info_t::shader_for_hud_geometry_tooltip_text,
+                                                        graphics_info_t::shader_for_hud_buttons,
+                                                        graphics_info_t::shader_for_hud_image_texture,
+                                                        graphics_info_t::shader_for_atom_labels,
+                                                        graphics_info_t::shader_for_moleculestotriangles,
+                                                        graphics_info_t::shader_for_hud_lines,
+                                                        graphics_info_t::shader_for_lines,
+                                                        graphics_info_t::shader_for_lines_pulse,
+                                                        graphics_info_t::shader_for_rama_balls,
+                                                        graphics_info_t::shader_for_particles,
+                                                        graphics_info_t::shader_for_instanced_objects,
+                                                        graphics_info_t::shader_for_extra_distance_restraints,
+                                                        graphics_info_t::shader_for_happy_face_residue_markers,
+                                                        graphics_info_t::shader_for_happy_face_residue_markers_for_ssao,
+                                                        graphics_info_t::shader_for_rama_plot_phi_phis_markers,
+                                                        graphics_info_t::shader_for_rama_plot_axes_and_ticks,
+                                                        graphics_info_t::shader_for_ligand_view,
+                                                        graphics_info_t::shader_for_x_blur,
+                                                        graphics_info_t::shader_for_y_blur,
+                                                        graphics_info_t::shader_for_dof_blur_by_texture_combination,
+                                                        graphics_info_t::shader_for_texture_meshes,
+                                                        graphics_info_t::shader_for_meshes,
+                                                        graphics_info_t::shader_for_background_image,
+                                                        graphics_info_t::shader_for_meshes_with_shadows,
+                                                        graphics_info_t::shader_for_meshes_shadow_map,
+                                                        graphics_info_t::shader_for_instanced_meshes_shadow_map,
+                                                        graphics_info_t::shader_for_meshes_for_ssao,
+                                                        graphics_info_t::shader_for_instanced_meshes_with_shadows,
+                                                        graphics_info_t::shader_for_tmeshes_for_ssao,
+                                                        graphics_info_t::shader_for_tmeshes_with_shadows,
+                                                        graphics_info_t::shader_for_texture_meshes_shadow_map,
+                                                        graphics_info_t::shader_for_rotation_centre_cross_hairs_for_ssao,
+                                                        graphics_info_t::shader_for_tmeshes,
+                                                        graphics_info_t::shader_for_tmeshes_for_ssao,
+                                                        graphics_info_t::shader_for_shadow_map_image_texture_mesh,
+                                                        graphics_info_t::shader_for_effects,
+                                                        graphics_info_t::shaderGeometryPass,
+                                                        graphics_info_t::shaderSSAO,
+                                                        graphics_info_t::shaderSSAOBlur};
+}
+
+
+bool
+graphics_info_t::init_shader(const std::string &shader_file_name) {
+
+   bool status = false;
+   std::vector<std::reference_wrapper<Shader> > shader_refs = get_shader_refs();
+   std::vector<std::reference_wrapper<Shader> >::iterator it;
+   for (it=shader_refs.begin(); it!=shader_refs.end(); ++it) {
+      if (it->get().name == shader_file_name) {
+         Shader &shader(it->get());
+         std::cout << "init_shader(): found the shader " << shader.name << std::endl;
+         shader.init(shader_file_name, Shader::Entity_t::NONE);
+         status = true;
+      }
+   }
+   std::cout << "--- done init_shader() ---" << std::endl;
+   return status;
+}
+
+
 
 bool
 graphics_info_t::init_shaders() {
@@ -55,7 +129,10 @@ graphics_info_t::init_shaders() {
                                                            // from crows
                                                            shader_for_meshes_with_shadows,
                                                            shader_for_meshes_shadow_map,
+                                                           shader_for_instanced_meshes_shadow_map,
                                                            shader_for_meshes_for_ssao,
+                                                           shader_for_instanced_meshes_for_ssao,
+                                                           shader_for_instanced_meshes_with_shadows,
                                                            shader_for_tmeshes_for_ssao,
                                                            shader_for_tmeshes_with_shadows,
                                                            shader_for_texture_meshes_shadow_map,
@@ -81,8 +158,10 @@ graphics_info_t::init_shaders() {
 
    // crows
    shader_for_meshes_with_shadows.init("meshes-with-shadows.shader",                Shader::Entity_t::MAP);
-   shader_for_meshes_shadow_map.init("meshes-shadow-map.shader",                    Shader::Entity_t::MAP);
+   shader_for_meshes_shadow_map.init("meshes-for-shadow-map.shader",                Shader::Entity_t::MAP);
+   shader_for_instanced_meshes_shadow_map.init("instanced-meshes-for-shadow-map.shader", Shader::Entity_t::MAP);
    shader_for_meshes_for_ssao.init("meshes-for-ssao.shader",                        Shader::Entity_t::MAP);
+   shader_for_instanced_meshes_for_ssao.init("instanced-meshes-for-ssao.shader",    Shader::Entity_t::MAP);
    shader_for_tmeshes_for_ssao.init("texture-meshes-for-ssao.shader",               Shader::Entity_t::MAP);
    shader_for_tmeshes_with_shadows.init("texture-meshes-with-shadows.shader",       Shader::Entity_t::MAP);
    shader_for_texture_meshes_shadow_map.init("texture-meshes-shadow-map.shader",    Shader::Entity_t::MAP);
@@ -91,6 +170,7 @@ graphics_info_t::init_shaders() {
    shaderGeometryPass.init("9.ssao_geometry.shader", Shader::Entity_t::NONE);
    shaderSSAO.init(        "9.ssao.shader",          Shader::Entity_t::NONE);
    shaderSSAOBlur.init(    "9.ssao_blur.shader",     Shader::Entity_t::NONE);
+   shader_for_instanced_meshes_with_shadows.init("instanced-meshes-with-shadows.shader", Shader::Entity_t::MAP);
 
    shader_for_outline_of_active_residue.init("outline-of-active-residue.shader", Shader::Entity_t::MODEL);
    shader_for_maps.init("map.shader", Shader::Entity_t::MAP);
@@ -748,17 +828,20 @@ graphics_info_t::coot_all_atom_contact_dots_are_begin_displayed_for(int imol) co
 
    bool status = false;
    for (unsigned int i=0; i<generic_display_objects.size(); i++) {
-      const std::string &mesh_name = generic_display_objects[i].mesh.name;
-      unsigned int n_instances = generic_display_objects[i].mesh.get_n_instances();
-      std::cout << "debug mesh " << i << " has name " << mesh_name
-                << " and " << n_instances << " instances" << std::endl;
-      if (mesh_name.find("Contact Dots for Molecule") != std::string::npos) {
-         status = true;
-         break;
-      }
-      if (mesh_name.find("insta-mesh") != std::string::npos) {
-         status = true;
-         break;
+      const auto &gdo = generic_display_objects[i];
+      if (gdo.imol == imol) {
+         const std::string &mesh_name = gdo.mesh.name;
+         unsigned int n_instances = generic_display_objects[i].mesh.get_n_instances();
+         std::cout << "debug mesh " << i << " has name " << mesh_name
+                   << " and " << n_instances << " instances" << std::endl;
+         if (mesh_name.find("Contact Dots for Molecule") != std::string::npos) {
+            status = true;
+            break;
+         }
+         if (mesh_name.find("insta-mesh") != std::string::npos) {
+            status = true;
+            break;
+         }
       }
    }
    return status;
@@ -767,7 +850,7 @@ graphics_info_t::coot_all_atom_contact_dots_are_begin_displayed_for(int imol) co
 
 // probably not the right place for this function
 //
-// This sould be called with imol = -1 for intermediate atoms.
+// This should be called with imol = -1 for intermediate atoms.
 void
 graphics_info_t::coot_all_atom_contact_dots_instanced(mmdb::Manager *mol, int imol) {
 
@@ -1382,13 +1465,17 @@ graphics_info_t::load_gltf_model(const std::string &gltf_file_name) {
    Mesh e("some name"); // extract/replace this from the gltf data
    e.load_from_glTF(gltf_file_name);
    // e.invert_normals(); // it is shiny on the inside either way around - hmm.
-   Material mat;
-   mat.shininess = 64.0;
-   mat.specular_strength = 1.0;
-   mat.ambient  = glm::vec4(0.9, 0.9, 0.9, 1.0);
-   mat.diffuse  = glm::vec4(0.9, 0.9, 0.9, 1.0);
-   mat.turn_specularity_on(true);
-   e.set_material(mat); // override the material extracted from the gltf
+
+   // why do this?
+   if (false) {
+      Material mat;
+      mat.shininess = 64.0;
+      mat.specular_strength = 1.0;
+      mat.ambient  = glm::vec4(0.7, 0.7, 0.7, 1.0);
+      mat.diffuse  = glm::vec4(0.7, 0.7, 0.7, 1.0);
+      mat.turn_specularity_on(true);
+      e.set_material(mat); // override the material extracted from the gltf
+   }
    Model e_model;
    e_model.add_mesh(e);
    add_model(e_model);

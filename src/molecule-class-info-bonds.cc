@@ -25,39 +25,11 @@
 
 
 void
-molecule_class_info_t::set_user_defined_colour_indices_by_residues(const std::vector<std::pair<coot::residue_spec_t, int> > &cis) {
+molecule_class_info_t::set_user_defined_colour_indices_by_selections(const std::vector<std::pair<std::string, unsigned int> > &cis) {
 
-   if (atom_sel.mol) {
-      int udd_handle = atom_sel.mol->GetUDDHandle(mmdb::UDR_ATOM, "user-defined-atom-colour-index");
-      // std::cout << "got udd_handle: " << udd_handle << " " << cis.size() << " specs " << std::endl;
-      if (udd_handle == 0)
-	 udd_handle = atom_sel.mol->RegisterUDInteger(mmdb::UDR_ATOM, "user-defined-atom-colour-index");
-
-      // std::cout << "::::::::: in set_user_defined_colour_indices_by_residues() got udd_handle: " << udd_handle
-      // << " specs size: " << cis.size() << " specs " << std::endl;
-
-      for (unsigned int i=0; i<cis.size(); i++) {
-	 const coot::residue_spec_t &spec = cis[i].first;
-	 mmdb::Residue *residue_p = get_residue(spec);
-	 if (residue_p) {
-	    mmdb::Atom **residue_atoms = 0;
-	    int n_residue_atoms;
-	    residue_p->GetAtomTable(residue_atoms, n_residue_atoms);
-	    for (int iat=0; iat<n_residue_atoms; iat++) {
-	       mmdb::Atom *at = residue_atoms[iat];
-	       int ierr = at->PutUDData(udd_handle, cis[i].second);
-               if (false)
-                  std::cout << "debug:: in set_user_defined_colour_indices_by_residues() residue: "
-                            << coot::residue_spec_t(residue_p) << " " << cis[i].second << std::endl;
-	       if (ierr != mmdb::UDDATA_Ok) {
-		  std::cout << "WARNING:: problem setting udd on atom " << coot::atom_spec_t(at) << std::endl;
-	       }
-	    }
-	 } else {
-	    std::cout << "WARNING:: No residue for " << spec << std::endl;
-	 }
-      }
-   }
+   // two functions doing the same thing
+   bool apply_colour_to_non_carbon_atoms_also = true;
+   set_user_defined_atom_colour_by_selection(cis, apply_colour_to_non_carbon_atoms_also);
 }
 
 
@@ -91,13 +63,10 @@ molecule_class_info_t::user_defined_colours_representation(coot::protein_geometr
 							   bool all_atoms_mode,
                                                            bool draw_missing_loops_flag) {
 
-   // std::cout << "::::::::::::::::::::::::::::: in user_defined_colours_representation() " << std::endl;
-
    bonds_box.clear_up();
    if (all_atoms_mode) {
 
-      // std::cout << "::::::::::::::::::::::::::::: in user_defined_colours_representation() Path A " << std::endl;
-      Bond_lines_container bonds(atom_sel, imol_no, Bond_lines_container::COLOUR_BY_USER_DEFINED_COLOURS);
+      Bond_lines_container bonds(atom_sel, imol_no, geom_p, Bond_lines_container::COLOUR_BY_USER_DEFINED_COLOURS);
       bonds_box = bonds.make_graphical_bonds_no_thinning();
       bonds_box_type = coot::COLOUR_BY_USER_DEFINED_COLOURS____BONDS;
 
@@ -113,7 +82,9 @@ molecule_class_info_t::user_defined_colours_representation(coot::protein_geometr
       bonds_box_type = coot::COLOUR_BY_USER_DEFINED_COLOURS_CA_BONDS;
    }
    graphics_info_t::attach_buffers();
-   make_mesh_from_bonds_box();
+   // make_mesh_from_bonds_box();
+   make_meshes_from_bonds_box_instanced_version();
+
 }
 
 

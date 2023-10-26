@@ -115,6 +115,7 @@ graphics_info_t::init() {
       geom_p = new coot::protein_geometry;
       geom_p->set_verbose(true); // was false
 
+      use_gemmi = false;
       cif_dictionary_read_number = geom_p->init_standard();
 
       geom_p->add_planar_peptide_restraint();
@@ -266,6 +267,8 @@ graphics_info_t::init() {
 
       map_glob_extensions->push_back(".map");
       map_glob_extensions->push_back(".mrc");
+      map_glob_extensions->push_back(".map.gz");
+      map_glob_extensions->push_back(".mrc.gz");
       map_glob_extensions->push_back(".ext");
       map_glob_extensions->push_back(".msk");
       map_glob_extensions->push_back(".ccp4");

@@ -987,17 +987,11 @@ fi
 # the sub-shell log?  (testing)
 
 if [ -n "$TEE_STDOUT" ]; then
-   echo INFO:: std output will be both printed here and written to $LOGS/build.log
-   exec > >(tee $LOGS/build.log)
+   echo INFO:: std output will be both printed here and written to $LOGS/build-gtk4.log
+   exec > >(tee $LOGS/build-gtk4.log)
 else
-   echo INFO:: redirecting std output to $LOGS/build.log
-   exec > $LOGS/build.log
-fi
-
-# local tinkering because our sgi runs out of room on /tmp on compiling
-if [ $HOST = batman ] ; then
-   TMPDIR=$HOME/tmp
-   export TMPDIR
+   echo INFO:: redirecting std output to $LOGS/build-gtk4.log
+   exec > $LOGS/build-gtk4.log
 fi
 
 date
@@ -1147,18 +1141,23 @@ case $dist_name in
        m4
        g++
        git
+       libtool
+       cmake
+       swig
+       flex
+       bison
+       gfortran
+       autoconf
+       automake
+       libglfw3-dev
        libssl-dev
-       libxext-dev
-       libxmu-dev
-       libxt-dev
+       libblas-dev
+       liblapack-dev
        libc6-dev
        libncurses5-dev
-       libglu1-mesa-dev
        libjpeg-dev
-       mesa-common-dev
-       libgtk-3-dev'
-       # converted from libgtk2.0-dev - not tested
-       # not libgtk-3-dev
+       libgtk-4-dev'
+       # gfortran is for numpy
 
       for dep in $dep_list
       do
@@ -1213,6 +1212,8 @@ case $dist_name in
       ;;
 
    # centos7 needs package gtk3-devel to be installed(!)
+
+   # fedora needs automake
 
 esac
 
@@ -2120,6 +2121,7 @@ else
    needed_gsl_version=1.12
    needed_gsl_version=1.15
    needed_gsl_version=1.16
+   needed_gsl_version=2.7
 
    # tmp value.  This uses awk.  It need not do.
    # You can do the comparison with test.
@@ -2530,7 +2532,7 @@ fi
 ###############################################################################
 
 if true ; then
-      echo BUILDING gemmi \(installing GEMMI\)
+      echo BUILDING gemmi from git repo \(and installing GEMMI\)
       (
           save_dir=$(pwd)
           cd $start_dir
@@ -2547,8 +2549,14 @@ if true ; then
           # cp -a -r gemmi $install_top_dir/include
           # cd -
           # cd $save_dir
-          mkdir build-gemmi
+	  if [ -d build-gemmi ] ; then
+ 	      :
+	  else
+              mkdir build-gemmi
+	  fi
           cd build-gemmi
+	  pwd
+          # add -DUSE_PYTHON=1 here at some stage.
           cmake -DCMAKE_INSTALL_PREFIX=$install_top_dir -DBUILD_SHARED_LIBS=ON ../gemmi
           if $MAKE ; then
               make install
@@ -2609,7 +2617,7 @@ fi
 
 test_for_already_installed_dependencies=true
 
-# So that python is found when it is installed:
+# So that python3 is found when it is installed:
 #
 #this should not be needed
 export PATH=$install_top_dir/bin:$PATH
@@ -2619,6 +2627,7 @@ export PATH=$install_top_dir/bin:$PATH
 # meson needs libffi to be intalled before python, so that meson can find ctypes modules
 
 libffi_version=3.2.1
+# libffi_version=3.4.3 is available now 20231021-PE
 skip_build=false
 if [ $test_for_already_installed_dependencies = true ] ; then
       echo ffi build - testing existance $install_top_dir/lib/libffi-$libffi_version/include/fffi.h
@@ -2792,7 +2801,7 @@ if [ $build_ninja = true ] ; then
    ${WGET} https://github.com/ninja-build/ninja/archive/refs/tags/v$ninja_version.tar.gz
    tar xf ${AUTOBUILD_SOURCES}/v$ninja_version.tar.gz
    cd ninja-$ninja_version
-   ./configure.py --bootstrap # builds ninja, requires python
+   python3 ./configure.py --bootstrap # builds ninja, requires python
    if [ -e ninja ] ; then
       cp ninja $install_top_dir/bin
    else
@@ -2828,7 +2837,8 @@ if [ "$build_glib" = true ] ; then
     echo meson --version
     meson --version
     glib_version=2.64.3
-    glib_version=2.72.3
+    glib_version=2.72.3 # doesn't have g_idle_add_once, it seems.
+    glib_version=2.74.4
     echo the following is the result of: /bin/pkg-config --modversion libffi
     /bin/pkg-config --modversion libffi
 
@@ -2872,7 +2882,7 @@ if test "$build_gobject_introspection" = true ; then
    (
    # just for gobject-introspection - depends on our glib installation
    export PKG_CONFIG_PATH=$install_top_dir/lib64/pkgconfig:$install_top_dir/lib/pkgconfig
-   export LD_LIBRARY_PATH=$install_top_dir/lib64
+   export LD_LIBRARY_PATH=$install_top_dir/lib64:$install_top_dir/lib
    date
    echo BUILDING gobject-introspection:
 
@@ -3013,7 +3023,7 @@ if [ $skip_build = false ] ; then
          which python3
          echo ld_library_path $LD_LIBRARY_PATH
          x=$LD_LIBRARY_PATH
-         unset LD_LIBRARY_PATH
+         # unset LD_LIBRARY_PATH # I want LD_LIBRARY_PATH so that libffi.so is found
          echo :::: in directory $(pwd)
          echo :::: building using meson -Dprefix=$install_top_dir build
          if meson -Dprefix=$install_top_dir build ; then
@@ -3175,8 +3185,8 @@ if test -n "$build_curl" ; then
    # on Ubuntu: install it like this:
    # apt-get install libssl-dev
    #
-   echo ./configure  $generic_prefix --with-libidn2=$install_top_dir LDFLAGS=-L$install_top_dir/lib
-   ./configure  $generic_prefix --with-libidn2=$install_top_dir LDFLAGS=-L$install_top_dir/lib
+   echo ./configure  $generic_prefix --enable-versioned-symbols --with-libidn2=$install_top_dir LDFLAGS=-L$install_top_dir/lib
+   ./configure  $generic_prefix --enable-versioned-symbols --with-libidn2=$install_top_dir LDFLAGS=-L$install_top_dir/lib
    if $MAKE ; then
       if [ -n $post_process_libcurl ] ; then
          fixup_libcurl
@@ -3292,9 +3302,9 @@ if [ "$build_boost" = true ] ; then
 
       address_model=64
       pwd
-      echo ./bootstrap.sh --prefix=$install_top_dir --with-python=python3 --with-python-root=$install_top_dir --with-libraries=system,python,regex,thread,serialization,iostreams --without-icu
-      echo ./bootstrap.sh --prefix=$install_top_dir --with-python=python3 --with-python-root=$install_top_dir --with-libraries=system,python,regex,thread,serialization,iostreams --without-icu > bootstrap-command-save
-      ./bootstrap.sh --prefix=$install_top_dir --with-python=python3 --with-python-root=$install_top_dir --with-libraries=system,python,regex,thread,serialization,iostreams --without-icu
+      echo ./bootstrap.sh --prefix=$install_top_dir --with-python=python3 --with-python-root=$install_top_dir --with-libraries=system,python,regex,thread,serialization,iostreams,program_options --without-icu
+      echo ./bootstrap.sh --prefix=$install_top_dir --with-python=python3 --with-python-root=$install_top_dir --with-libraries=system,python,regex,thread,serialization,iostreams,program_options --without-icu > bootstrap-command-save
+      ./bootstrap.sh --prefix=$install_top_dir --with-python=python3 --with-python-root=$install_top_dir --with-libraries=system,python,regex,thread,serialization,iostreams,program_options --without-icu
 
       # now edit the project-config.jam file using python line
 
@@ -3490,6 +3500,8 @@ echo pip3 install --upgrade pip
 pip3 install --upgrade pip
 echo pip3 install cython
 pip3 install cython
+echo pip3 install nanobind
+pip3 install nanobind
 
 if [ true = true ] ; then
    skip_this=false
@@ -3531,6 +3543,9 @@ if [ true = true ] ; then
         exit 2
       fi
       which python3
+      # let's just try to install it using pip! Maybe that will do good things?
+      python3 -m pip install numpy
+      # OK, back to compiling...
       python3 setup.py build --fcompiler=gfortran
       python3 setup.py install
       if [ ! $? ] ; then
@@ -3544,6 +3559,26 @@ fi
 
 # this is a hack for charybdis   - we need cmake version 3.1 or later
 export PATH=$HOME/cmake/bin:$PATH
+
+############################### eigen ##########################################
+eigen_version=3.3.9
+if [ -e $install_top_dir/include/eigen3 ] ; then
+   echo eigen3 is installed
+else
+   (
+   ${WGET} https://gitlab.com/libeigen/eigen/-/archive/$eigen_version/eigen-$eigen_version.tar.gz
+   tar xf $AUTOBUILD_SOURCES/eigen-$eigen_version.tar.gz
+
+   mkdir -p build-eigen
+   cd build-eigen
+   cmake -DCMAKE_INSTALL_PREFIX=$AUTOBUILD_INSTALLED ../eigen-$eigen_version
+   make install
+   cd -
+   ) > $HOSTLOGDIR/17-b-eigen.txt 2>&1
+fi
+
+
+############################### rdkit ##########################################
 
 # we need to set rdkit_tar_size because the WGET doesn't skip the download if the
 # file exists. Amazon.
@@ -3777,6 +3812,7 @@ if [ "$build_rdkit" = true ] ; then
    fi
 fi
 
+python3 -m pip install requests
 
 
 # silicos-it's biscu-it (QED) is now part of RDKit main.
@@ -4086,8 +4122,9 @@ if [ "$build_guile_cairo" = true ] ; then
       if [ -e $AUTOBUILD_SOURCES/guile-cairo-$guile_cairo_version.tar.gz ] ; then
          tar xf $AUTOBUILD_SOURCES/guile-cairo-$guile_cairo_version.tar.gz
       else
-         echo no file $AUTOBUILD_SOURCES/guile-cairo-$guile_cairo_version.tar.gz
-         exit
+         echo fetching file $AUTOBUILD_SOURCES/guile-cairo-$guile_cairo_version.tar.gz
+         ${WGET} http://download.savannah.gnu.org/releases/guile-cairo/guile-cairo-$guile_cairo_version.tar.gz
+         tar xf $AUTOBUILD_SOURCES/guile-cairo-$guile_cairo_version.tar.gz
       fi
       if [ ! -e $install_top_dir/bin/guile ] ; then
          echo no guile
@@ -4179,7 +4216,8 @@ if [ "$build_guile_gnome_platform" = true ] ; then
          tar xf $AUTOBUILD_SOURCES/guile-gnome-platform-$guile_gnome_platform_version.tar.gz
       else
          echo no file $AUTOBUILD_SOURCES/guile-gnome-platform-$guile_gnome_platform_version.tar.gz
-         exit
+         ${WGET} http://ftp.gnu.org/pub/gnu/guile-gnome/guile-gnome-platform/guile-gnome-platform-$guile_gnome_platform_version.tar.gz
+         tar xf $AUTOBUILD_SOURCES/guile-gnome-platform-$guile_gnome_platform_version.tar.gz
       fi
       cd guile-gnome-platform-$guile_gnome_platform_version
       if ./configure --prefix=$install_top_dir ; then
@@ -4235,12 +4273,12 @@ else
    save_dir=$(pwd)
    echo :::: $(pwd)
    echo cloning coot...
-   echo :::: git clone https://github.com/pemsley/coot.git -b gtk4
+   echo :::: git clone https://github.com/pemsley/coot.git -b main
    echo save_ld_library_path=$LD_LIBRARY_PATH
    # reset LD_LIBRARY_PATH for now. Do we need it set from now on actually?
    export LD_LIBRARY_PATH=
-   if git clone https://github.com/pemsley/coot.git -b gtk4 --depth 2 ; then
-      echo git clone https://github.com/pemsley/coot.git -b gtk4 without error status
+   if git clone https://github.com/pemsley/coot.git -b main --depth 2 ; then
+      echo git clone https://github.com/pemsley/coot.git -b main without error status
       echo done clone
       cd coot
       rm -rf autom4te.cache
@@ -4249,7 +4287,7 @@ else
       if [ -e config.sub   ] ; then rm config.sub   ; fi
       bash autogen.sh
    else
-      echo git clone https://github.com/pemsley/coot.git -b gtk4 failed
+      echo git clone https://github.com/pemsley/coot.git -b main failed
       echo done clone
       cd coot
    fi
@@ -4326,8 +4364,8 @@ echo 33333
 export LD_LIBRARY_PATH=$install_top_dir/lib
 
 # add this when then are compiling and RDKIT is compiling
-#      --with-enhanced-ligand-tools
-#      ---with-rdkit-prefix=$prfx
+
+# if compiling with sound on ubuntu libvorbis-dev libasound2-dev
 
 echo bash ../coot/configure $coot_prefix \
       --with-fftw-prefix=$install_top_dir  \
@@ -4336,6 +4374,8 @@ echo bash ../coot/configure $coot_prefix \
       PYTHON=python3 \
       --with-boost=$install_top_dir  \
       --with-boost-libdir=$install_top_dir/lib  \
+      --with-enhanced-ligand-tools \
+      --with-rdkit-prefix=$install_top_dir \
       --with-guile \
       $sqlite_config_args \
       $shared_static_flag \
@@ -4350,6 +4390,8 @@ echo bash ../coot/configure $coot_prefix \
       COOT_BUILD_INFO_STRING="$coot_build_info_string" \
       --with-boost=$install_top_dir  \
       --with-boost-libdir=$install_top_dir/lib  \
+      --with-enhanced-ligand-tools \
+      --with-rdkit-prefix=$install_top_dir \
       --with-guile \
       $sqlite_config_args \
       $shared_static_flag \

@@ -57,6 +57,7 @@ coot::util::residue_types_in_molecule(mmdb::Manager *mol) {
       for (int imod=1; imod<=n_models; imod++) { 
       
          mmdb::Model *model_p = mol->GetModel(imod);
+         if (! model_p) continue;
    
          mmdb::Chain *chain;
          // run over chains of the existing mol
@@ -193,6 +194,7 @@ coot::util::translate_close_to_origin(mmdb::Manager *mol) {
       clipper::Coord_orth co = cf.coord_orth(csp.first);
       for(int imod = 1; imod<=mol->GetNumberOfModels(); imod++) {
          mmdb::Model *model_p = mol->GetModel(imod);
+         if (! model_p) continue;
          mmdb::Chain *chain_p;
          int nchains = model_p->GetNumberOfChains();
          for (int ichain=0; ichain<nchains; ichain++) {
@@ -223,6 +225,7 @@ coot::util::shift(mmdb::Manager *mol, clipper::Coord_orth pt) {
 
    for(int imod = 1; imod<=mol->GetNumberOfModels(); imod++) {
       mmdb::Model *model_p = mol->GetModel(imod);
+      if (! model_p) continue;
       mmdb::Chain *chain_p;
       int nchains = model_p->GetNumberOfChains();
       for (int ichain=0; ichain<nchains; ichain++) {
@@ -252,6 +255,7 @@ coot::sort_chains(mmdb::Manager *mol) {
    if (mol) { 
       for (int imod=1; imod<=mol->GetNumberOfModels(); imod++) {
          mmdb::Model *model_p = mol->GetModel(imod);
+         if (! model_p) continue;
          model_p->SortChains(mmdb::SORT_CHAIN_ChainID_Asc); // "B" comes after "A"
       }
       mol->PDBCleanup(mmdb::PDBCLEAN_SERIAL|mmdb::PDBCLEAN_INDEX);
@@ -644,6 +648,7 @@ coot::residues_near_position(const clipper::Coord_orth &pt,
    std::vector<mmdb::Residue *> v;
    int imod = 1;
    mmdb::Model *model_p = mol->GetModel(imod);
+   if (! model_p) return v;
    mmdb::Chain *chain_p;
    int nchains = model_p->GetNumberOfChains();
    for (int ichain=0; ichain<nchains; ichain++) {
@@ -1044,7 +1049,7 @@ coot::util::qq_plot_t::qq_norm() {
 #ifdef HAVE_GSL   
    std::sort(data.begin(), data.end());
    size_t stride = 1;
-   double sorted_data[data.size()];
+   std::vector<double> sorted_data(data.size());
    for (unsigned int i=0; i<data.size(); i++) { 
       sorted_data[i] = data[i];
    }
@@ -1059,7 +1064,7 @@ coot::util::qq_plot_t::qq_norm() {
    for (double frac=0.01; frac<1; frac+= 0.01) {
 
       double g = gsl_cdf_gaussian_Pinv(frac, sd.sd);
-      double q = gsl_stats_quantile_from_sorted_data(sorted_data, stride,
+      double q = gsl_stats_quantile_from_sorted_data(sorted_data.data(), stride,
                                                      data.size(), frac);
 
       // mean correction (gs would otherwise have mean 0)
@@ -1155,6 +1160,24 @@ coot::util::quaternion::normalize() {
       q3 *= f;
    }
 } 
+
+
+coot::util::quaternion
+coot::util::quaternion::rotate(double angle, const clipper::Coord_orth &vec) const {
+
+   coot::util::quaternion q(0,0,0,1);
+
+   std::cout << "rotate() just a stub - fill me later!" << std::endl;
+
+   return q;
+}
+
+coot::util::quaternion
+coot::util::quaternion::inverse() const {
+
+   coot::util::quaternion q(q0, q1, q2, -q3);
+   return q;
+}
 
 
 clipper::RTop_orth
@@ -1516,6 +1539,7 @@ coot::util::max_number_of_residues_in_chain(mmdb::Manager *mol) {
       for (int imod=1; imod<=n_models; imod++) { 
       
          mmdb::Model *model_p = mol->GetModel(imod);
+         if (! model_p) continue;
    
          mmdb::Chain *chain;
          // run over chains of the existing mol
@@ -1579,8 +1603,8 @@ coot::util::max_min_max_residue_range(mmdb::Manager *mol) {
       for (int imod=1; imod<=n_models; imod++) { 
       
          mmdb::Model *model_p = mol->GetModel(imod);
+         if (! model_p) continue;
    
-         mmdb::Chain *chain;
          // run over chains of the existing mol
          int nchains = model_p->GetNumberOfChains();
          if (nchains <= 0) { 
@@ -1588,12 +1612,12 @@ coot::util::max_min_max_residue_range(mmdb::Manager *mol) {
                       << nchains << std::endl;
          } else { 
             for (int ichain=0; ichain<nchains; ichain++) {
-               chain = model_p->GetChain(ichain);
+               mmdb::Chain *chain = model_p->GetChain(ichain);
                if (chain == NULL) {  
                   // This should not be necessary. It seem to be a
                   // result of mmdb corruption elsewhere - possibly
                   // DeleteChain in update_molecule_to().
-                  std::cout << "NULL chain in max_min_max_residue_range: "
+                  std::cout << "NULL chain in max_min_max_residue_range(): "
                             << std::endl;
                } else { 
                   int nres = chain->GetNumberOfResidues();
@@ -1757,6 +1781,7 @@ coot::util::number_of_chains(mmdb::Manager *mol) {
       for (int imod=1; imod<=n_models; imod++) { 
       
          mmdb::Model *model_p = mol->GetModel(imod);
+         if (! model_p) continue;
    
          // run over chains of the existing mol
          nchains = model_p->GetNumberOfChains();
@@ -1882,6 +1907,7 @@ coot::util::get_fragment_from_atom_spec(const coot::atom_spec_t &atom_spec,
    int imod = 1;
 
    mmdb::Model *model_p = mol_in->GetModel(imod);
+   if (! model_p) return std::make_pair(nullptr, v);
    // run over chains of the existing mol
    int nchains = model_p->GetNumberOfChains();
    for (int ichain=0; ichain<nchains; ichain++) {
@@ -2226,6 +2252,7 @@ coot::util::max_resno_in_molecule(mmdb::Manager *mol) {
    for (int imod=1; imod<=n_models; imod++) { 
       
       mmdb::Model *model_p = mol->GetModel(imod);
+      if (! model_p) continue;
       mmdb::Chain *chain_p;
       // run over chains of the existing mol
       int nchains = model_p->GetNumberOfChains();
@@ -2255,6 +2282,7 @@ coot::util::number_of_residues_in_molecule(mmdb::Manager *mol) {
       for (int imod=1; imod<=n_models; imod++) { 
       
          mmdb::Model *model_p = mol->GetModel(imod);
+         if (! model_p) continue;
    
          mmdb::Chain *chain_p;
          mmdb::Residue *residue_p;
@@ -2287,6 +2315,33 @@ coot::util::number_of_residues_in_molecule(mmdb::Manager *mol) {
    }
    return number_of_residues;
 }
+
+std::vector<mmdb::Residue *>
+coot::util::residues_in_molecule_of_type(mmdb::Manager *mol, const std::string &residue_type) {
+
+   std::vector<mmdb::Residue *> v;
+   for(int imod = 1; imod<=mol->GetNumberOfModels(); imod++) {
+      mmdb::Model *model_p = mol->GetModel(imod);
+      if (model_p) {
+         int n_chains = model_p->GetNumberOfChains();
+         for (int ichain=0; ichain<n_chains; ichain++) {
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
+            int n_res = chain_p->GetNumberOfResidues();
+            for (int ires=0; ires<n_res; ires++) {
+               mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+               if (residue_p) {
+                  std::string res_name = residue_p->GetResName();
+                  if (res_name == residue_type) {
+                     v.push_back(residue_p);
+                  }
+               }
+            }
+         }
+      }
+   }
+   return v;
+}
+
 
 std::vector<mmdb::Chain *>
 coot::util::chains_in_atom_selection(mmdb::Manager *mol, int model_number, const std::string &atom_selection) {
@@ -3046,6 +3101,7 @@ coot::util::get_following_residue(const residue_spec_t &rs,
    mmdb::Residue *res = NULL;
    if (mol) {
       mmdb::Model *model_p = mol->GetModel(1);
+      if (! model_p) return res;
       mmdb::Chain *chain_p;
       mmdb::Chain *chain_this_res = NULL;
       bool found_this_res = false;
@@ -3094,6 +3150,7 @@ coot::util::get_previous_residue(const residue_spec_t &rs,
       mmdb::Chain *chain_p;
       mmdb::Chain *chain_this_res = NULL;
       bool found_this_res = 0;
+      if (! model_p) return res;
 
       int n_chains = model_p->GetNumberOfChains();
       for (int i_chain=0; i_chain<n_chains; i_chain++) {
@@ -3580,28 +3637,29 @@ coot::util::create_mmdbmanager_from_res_selection(mmdb::Manager *orig_mol,
       int imod = 1;
       
       mmdb::Model *model_p = residues_mol->GetModel(imod);
-      mmdb::Chain *chain_p;
-      // run over chains of the existing mol
-      int nchains = model_p->GetNumberOfChains();
-      for (int ichain=0; ichain<nchains; ichain++) {
-         chain_p = model_p->GetChain(ichain);
-         int nres = chain_p->GetNumberOfResidues();
-         mmdb::PResidue residue_p;
-         for (int ires=0; ires<nres; ires++) { 
-            residue_p = chain_p->GetResidue(ires);
-            //             int n_atoms = residue_p->GetNumberOfAtoms();
+      if (model_p) {
+         mmdb::Chain *chain_p;
+         // run over chains of the existing mol
+         int nchains = model_p->GetNumberOfChains();
+         for (int ichain=0; ichain<nchains; ichain++) {
+            chain_p = model_p->GetChain(ichain);
+            int nres = chain_p->GetNumberOfResidues();
+            for (int ires=0; ires<nres; ires++) { 
+               mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+               //             int n_atoms = residue_p->GetNumberOfAtoms();
             
-//             for (int iat=0; iat<n_atoms; iat++) {
-//                at = residue_p->GetAtom(iat);
-//                int check_afix_number;
-//                if (at->GetUDData(afix_handle_new_mol, check_afix_number) == mmdb::UDDATA_Ok) {
-//                   std::cout << "atom " << at << " has afix handle " << check_afix_number
-//                             << std::endl;
-//                } else {
-//                   std::cout << "Failed to get afix number right after set! "
-//                             << at << std::endl;
-//               }
-//          }
+               //             for (int iat=0; iat<n_atoms; iat++) {
+               //                at = residue_p->GetAtom(iat);
+               //                int check_afix_number;
+               //                if (at->GetUDData(afix_handle_new_mol, check_afix_number) == mmdb::UDDATA_Ok) {
+               //                   std::cout << "atom " << at << " has afix handle " << check_afix_number
+               //                             << std::endl;
+               //                } else {
+               //                   std::cout << "Failed to get afix number right after set! "
+               //                             << at << std::endl;
+               //               }
+               //          }
+            }
          }
       }
    }
@@ -4069,6 +4127,8 @@ coot::mol_is_anisotropic(mmdb::Manager *mol) {
 
    int imod = 1;
    mmdb::Model *model_p = mol->GetModel(imod);
+   if (! model_p) return false;
+
    mmdb::Chain *chain_p;
    int n_chains = model_p->GetNumberOfChains();
    for (int ichain=0; ichain<n_chains; ichain++) {
@@ -4115,6 +4175,7 @@ coot::util::create_mmdbmanager_from_mmdbmanager(mmdb::Manager *mol_in) {
 
    for(int imod = 1; imod<=mol_in->GetNumberOfModels(); imod++) {
       mmdb::Model *model_p = mol_in->GetModel(imod);
+      if (! model_p) continue;
       mmdb::Model *new_model_p = new mmdb::Model;
       int nchains = model_p->GetNumberOfChains();
       for (int ichain=0; ichain<nchains; ichain++) {
@@ -4787,6 +4848,7 @@ coot::util::transform_mol(mmdb::Manager *mol, const clipper::RTop_orth &rtop) {
    for (int imod=1; imod<=n_models; imod++) { 
       
       mmdb::Model *model_p = mol->GetModel(imod);
+      if (! model_p) continue;
       mmdb::Chain *chain_p;
       // run over chains of the existing mol
       int nchains = model_p->GetNumberOfChains();
@@ -5393,6 +5455,7 @@ coot::util::residues_with_insertion_codes(mmdb::Manager *mol) {
    int imod = 1;
       
    mmdb::Model *model_p = mol->GetModel(imod);
+   if (! model_p) return v;
    mmdb::Chain *chain_p;
    // run over chains of the existing mol
    int nchains = model_p->GetNumberOfChains();
@@ -6399,6 +6462,7 @@ coot::util::gln_asn_b_factor_outliers(mmdb::Manager *mol) {
    int imod = 1;
       
    mmdb::Model *model_p = mol->GetModel(imod);
+   if (! model_p) return v;
    mmdb::Chain *chain_p;
 
    int nchains = model_p->GetNumberOfChains();
@@ -6792,7 +6856,6 @@ coot::util::cis_peptides_info_from_coords(mmdb::Manager *mol) {
    
    int imod = 1;
    mmdb::Model *model_p = mol->GetModel(imod);
-
    if (! model_p)
       return v;
    
@@ -6874,169 +6937,6 @@ coot::util::cis_peptides_info_from_coords(mmdb::Manager *mol) {
                }
             }
          } 
-      }
-   }
-   return v;
-}
-
-
-// mark up things that have omega > 210 or omega < 150. i.e, 180 +/- 30.
-//
-// strictly_cis_flag is false by default.  If strictly_cis_flag we catch twisted trans too (where twisted
-// means that (delta omega) is more than 30 degrees from 180 trans).
-// 
-std::vector<coot::util::cis_peptide_quad_info_t>
-coot::util::cis_peptide_quads_from_coords(mmdb::Manager *mol,
-                                          int model_number,
-                                          bool strictly_cis_flag) {
-
-   std::vector<cis_peptide_quad_info_t> v;
-
-   if (!mol) {
-      std::cout << "ERROR:: in cis_peptide_quads_from_coords() null mol " << std::endl;
-      return v;
-   }
-
-   int mol_atom_index_handle = mol->GetUDDHandle(mmdb::UDR_ATOM, "atom index");
-
-   int n_models = mol->GetNumberOfModels();
-   if (n_models == 0)
-      return v;
-
-   for (int imod=1; imod<=n_models; imod++) {
-      if (model_number == 0 || model_number == imod) {
-         mmdb::Model *model_p = mol->GetModel(imod);
-         if (model_p) {
-            mmdb::Chain *chain_p;
-            int nchains = model_p->GetNumberOfChains();
-            for (int ichain=0; ichain<nchains; ichain++) {
-               chain_p = model_p->GetChain(ichain);
-               if (chain_p) {
-                  int nres = chain_p->GetNumberOfResidues();
-                  mmdb::Residue *residue_p_1 = 0;
-                  mmdb::Residue *residue_p_2 = 0;
-                  mmdb::Atom *at_1 = 0;
-                  mmdb::Atom *at_2 = 0;
-                  for (int ires=0; ires<(nres-1); ires++) {
-
-                     mmdb::Atom *ca_first = NULL, *c_first = NULL, *n_next = NULL, *ca_next = NULL;
-                     residue_p_1 = chain_p->GetResidue(ires);
-                     int n_atoms_1 = residue_p_1->GetNumberOfAtoms();
-                     residue_p_2 = chain_p->GetResidue(ires+1);
-                     int n_atoms_2 = residue_p_2->GetNumberOfAtoms();
-
-                     bool is_pre_pro = false;
-
-                     // if (residue_p_2->GetSeqNum() == (residue_p_1->GetSeqNum() + 1)) {
-                     if (residue_p_1 && residue_p_2) {
-
-                        std::string rn=residue_p_2->GetResName();
-                        if (rn == "PRO")
-                           is_pre_pro = true;
-
-                        for (int iat=0; iat<n_atoms_1; iat++) {
-                           at_1 = residue_p_1->GetAtom(iat);
-                           if (std::string(at_1->GetAtomName()) == " CA ")
-                              ca_first = at_1;
-                           if (std::string(at_1->GetAtomName()) == " C  ")
-                              c_first = at_1;
-                        }
-
-                        for (int iat=0; iat<n_atoms_2; iat++) {
-                           at_2 = residue_p_2->GetAtom(iat);
-                           if (std::string(at_2->GetAtomName()) == " CA ")
-                              ca_next = at_2;
-                           if (std::string(at_2->GetAtomName()) == " N  ")
-                              n_next = at_2;
-                        }
-                     }
-
-                     if (ca_first && c_first && n_next && ca_next) {
-
-                        // Don't have peptide planes with mixed alt-confs.
-                        std::set<std::string> alt_confs;
-                        std::string ac[4];
-                        ac[0] = ca_first->altLoc;
-                        ac[1] = c_first->altLoc;
-                        ac[2] = n_next->altLoc;
-                        ac[3] = ca_next->altLoc;
-                        for (int i=0; i<4; i++)
-                           if (!ac[i].empty())
-                              alt_confs.insert(ac[i]);
-                        if (alt_confs.size() < 2) {
-
-                           // we don't want to include CISPEPs for residues that
-                           // have a TER card between them.
-                           //
-                           bool is_ter = false;
-                           for (int iat=0; iat<n_atoms_1; iat++) {
-                              mmdb::Atom *at = residue_p_1->GetAtom(iat);
-                              if (at->isTer()) {
-                                 is_ter = true;
-                                 break;
-                              }
-                           }
-                           if (! is_ter) {
-                              clipper::Coord_orth caf(ca_first->x, ca_first->y, ca_first->z);
-                              clipper::Coord_orth  cf( c_first->x,  c_first->y,  c_first->z);
-                              clipper::Coord_orth can( ca_next->x,  ca_next->y,  ca_next->z);
-                              clipper::Coord_orth  nn(  n_next->x,   n_next->y,   n_next->z);
-                              double tors = clipper::Coord_orth::torsion(caf, cf, nn, can);
-                              double torsion = clipper::Util::rad2d(tors);
-
-                              // no flags for C-N distances that are more than 2A apart:
-
-                              double dist = clipper::Coord_orth::length(nn, cf);
-
-                              if (dist <= 2.0) {
-
-                                 // put torsion in the range -180 -> + 180
-                                 //
-                                 if (torsion > 180.0) torsion -= 360.0;
-                                 double d = sqrt((cf - nn).lengthsq());
-                                 if (d<3.0) { // the residues were close in space, not just close in sequence
-
-                                    cis_peptide_quad_info_t::type_t type = cis_peptide_quad_info_t::UNSET_TYPE;
-
-                                    double tors_crit = 90.0;
-                                    // cis baddies: -90 to +90
-                                    if ( (torsion > -tors_crit) && (torsion < tors_crit)) {
-                                       if (is_pre_pro)
-                                          type = cis_peptide_quad_info_t::PRE_PRO_CIS;
-                                       else
-                                          type = cis_peptide_quad_info_t::CIS;
-                                    } else {
-
-                                       if (! strictly_cis_flag) {
-
-                                          double tors_twist_delta_max = 30.0; // degrees
-                                          // baddies: -150 to +150
-                                          if ((torsion > (-180+tors_twist_delta_max)) && (torsion < (180-tors_twist_delta_max)))
-                                             type = cis_peptide_quad_info_t::TWISTED_TRANS;
-
-                                       }
-                                    }
-
-                                    if (type != cis_peptide_quad_info_t::UNSET_TYPE) {
-                                       atom_quad q(ca_first, c_first, n_next, ca_next);
-                                       int i1 = -1, i2 = -1, i3 = -1, i4 = -1;
-                                       ca_first->GetUDData(mol_atom_index_handle, i1);
-                                       c_first->GetUDData( mol_atom_index_handle, i2);
-                                       n_next->GetUDData(  mol_atom_index_handle, i3);
-                                       ca_next->GetUDData( mol_atom_index_handle, i4);
-                                       atom_index_quad iq(i1, i2, i3, i4);
-                                       cis_peptide_quad_info_t qi(q, iq, type);
-                                       v.push_back(qi);
-                                    }
-                                 }
-                              }
-                           }
-                        }
-                     }
-                  }
-               }
-            }
-         }
       }
    }
    return v;
@@ -7558,6 +7458,7 @@ coot::util::correct_link_distances(mmdb::Manager *mol) {
       int n_models = mol->GetNumberOfModels();
       for (int imod=1; imod<=n_models; imod++) {
          mmdb::Model *model_p = mol->GetModel(imod);
+         if (! model_p) continue;
          int n_links = model_p->GetNumberOfLinks();
          if (n_links > 0) { 
             for (int i_link=1; i_link<=n_links; i_link++) {
@@ -7708,6 +7609,7 @@ coot::mol_by_symmetry(mmdb::Manager *mol,
    clipper::RTop_orth rtop = rtop_frac.rtop_orth(cell);
    for(int imod = 1; imod<=mol2->GetNumberOfModels(); imod++) {
       mmdb::Model *model_p = mol2->GetModel(imod);
+      if (! model_p) continue;
       mmdb::Chain *chain_p;
       int nchains = model_p->GetNumberOfChains();
       for (int ichain=0; ichain<nchains; ichain++) {
@@ -7804,10 +7706,10 @@ coot::hetify_residues_as_needed(mmdb::Manager *mol) {
    if (mol) {
       for(int imod = 1; imod<=mol->GetNumberOfModels(); imod++) {
          mmdb::Model *model_p = mol->GetModel(imod);
-         mmdb::Chain *chain_p;
+         if (! model_p) continue;
          int n_chains = model_p->GetNumberOfChains();
          for (int ichain=0; ichain<n_chains; ichain++) {
-            chain_p = model_p->GetChain(ichain);
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
             int nres = chain_p->GetNumberOfResidues();
             mmdb::Residue *residue_p;
             for (int ires=0; ires<nres; ires++) { 
@@ -8115,6 +8017,7 @@ coot::util::move_hetgroups_around_protein(mmdb::Manager *mol) {
                   // first find the protein coords
                   std::vector<clipper::Coord_orth> protein_coords;
                   mmdb::Model *model_p = mol->GetModel(imod);
+                  if (! model_p) continue;
                   mmdb::Chain *chain_p;
                   // run over chains of the existing mol
                   int nchains = model_p->GetNumberOfChains();
@@ -8582,6 +8485,10 @@ coot::util::median_position(mmdb::Manager *mol) {
    // for(int imod = 1; imod<=asc.mol->GetNumberOfModels(); imod++) {
    int imod = 1;
    mmdb::Model *model_p = mol->GetModel(imod);
+   if (! model_p) {
+      std::string message = "No Model 1";
+      throw std::runtime_error(message);
+   }
    mmdb::Chain *chain_p;
    // run over chains of the existing mol
    int nchains = model_p->GetNumberOfChains();
@@ -8725,10 +8632,10 @@ coot::centre_of_molecule(mmdb::Manager *mol) {
 
       for(int imod=1; imod<=mol->GetNumberOfModels(); imod++) {
          mmdb::Model *model_p = mol->GetModel(imod);
-         mmdb::Chain *chain_p;
+         if (! model_p) continue;
          int nchains = model_p->GetNumberOfChains();
          for (int ichain=0; ichain<nchains; ichain++) {
-            chain_p = model_p->GetChain(ichain);
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
             int nres = chain_p->GetNumberOfResidues();
             mmdb::Residue *residue_p;
             mmdb::Atom *at;
@@ -8799,10 +8706,10 @@ coot::nearest_residue_by_sequence(mmdb::Manager *mol,
    if (mol) {
       int imod = 1;
       mmdb::Model *model_p = mol->GetModel(imod);
-      mmdb::Chain *chain_p;
+      if (! model_p) return nullptr;
       int nchains = model_p->GetNumberOfChains();
       for (int ichain=0; ichain<nchains; ichain++) {
-         chain_p = model_p->GetChain(ichain);
+         mmdb::Chain *chain_p = model_p->GetChain(ichain);
          std::string chain_id = chain_p->GetChainID();
          if (chain_id == spec.chain_id) { 
             int nres = chain_p->GetNumberOfResidues();
@@ -9456,3 +9363,71 @@ coot::get_position_hash(mmdb::Manager *mol) {
 
    return h;
 }
+
+std::vector<mmdb::Atom *>
+coot::atoms_with_zero_occupancy(mmdb::Manager *mol) {
+
+   std::vector<mmdb::Atom *> v;
+   int imod = 1;
+   mmdb::Model *model_p = mol->GetModel(imod);
+   if (model_p) {
+      int n_chains = model_p->GetNumberOfChains();
+      for (int ichain=0; ichain<n_chains; ichain++) {
+         mmdb::Chain *chain_p = model_p->GetChain(ichain);
+         int n_res = chain_p->GetNumberOfResidues();
+         for (int ires=0; ires<n_res; ires++) {
+            mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+            if (residue_p) {
+               int n_atoms = residue_p->GetNumberOfAtoms();
+               for (int iat=0; iat<n_atoms; iat++) {
+                  mmdb::Atom *at = residue_p->GetAtom(iat);
+                  if (! at->isTer()) {
+                     if (at->occupancy < 0.01) {
+                        v.push_back(at);
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+   return v;
+}
+
+
+std::vector<mmdb::Residue *>
+coot::residues_with_alt_confs(mmdb::Manager *mol) {
+
+   std::vector<mmdb::Residue *> v;
+   int imod = 1;
+   mmdb::Model *model_p = mol->GetModel(imod);
+   if (model_p) {
+      int n_chains = model_p->GetNumberOfChains();
+      for (int ichain=0; ichain<n_chains; ichain++) {
+         mmdb::Chain *chain_p = model_p->GetChain(ichain);
+         int n_res = chain_p->GetNumberOfResidues();
+         for (int ires=0; ires<n_res; ires++) {
+            mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+            if (residue_p) {
+               int n_atoms = residue_p->GetNumberOfAtoms();
+               bool found = false;
+               for (int iat=0; iat<n_atoms; iat++) {
+                  mmdb::Atom *at = residue_p->GetAtom(iat);
+                  if (! at->isTer()) {
+                     std::string a(at->altLoc);
+                     if (a.length() > 0) {
+                        found = true;
+                        break;
+                     }
+                  }
+               }
+               if (found) {
+                  v.push_back(residue_p);
+               }
+            }
+         }
+      }
+   }
+   return v;
+}
+

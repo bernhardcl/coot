@@ -2,6 +2,7 @@
 #include <iostream>
 #include <gtk/gtk.h>
 
+#include "coot-utils/coot-coord-utils.hh"
 #include "graphics-info.h"
 #include "c-interface.h"
 #include "c-interface-gtk-widgets.h"
@@ -13,10 +14,12 @@
 #include "fit-loop-gui.hh"
 #include "read-molecule.hh" // 20230621-PE now with std::string args
 
-#include "support.h" // for internationalizations.
 #include "c-interface-preferences.h"
 #include "c-interface-ligands-swig.hh"
 #include "curlew-gtk4.hh"
+#include "c-interface-ligands.hh" // 20230920-PE new layla interface functions
+#include "labelled-button-info.hh"
+#include "cc-interface.hh" // for fullscreen()
 
 extern "C" { void load_tutorial_model_and_data(); }
 
@@ -126,9 +129,9 @@ void open_coordinates_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkWidget *dialog = gtk_file_chooser_dialog_new("Open File",
                                                    parent_window,
                                                    action,
-                                                   _("_Cancel"),
-                                                  GTK_RESPONSE_CANCEL,
-                                                   _("_Open"),
+                                                   ("_Cancel"),
+                                                   GTK_RESPONSE_CANCEL,
+                                                   ("_Open"),
                                                    GTK_RESPONSE_ACCEPT,
                                                    NULL);
 
@@ -174,8 +177,8 @@ void open_dataset_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkWindow *parent_window = GTK_WINDOW(user_data);
    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
    GtkWidget *dialog = gtk_file_chooser_dialog_new("Open File", parent_window, action,
-                                                   _("_Cancel"), GTK_RESPONSE_CANCEL,
-                                                   _("_Open"), GTK_RESPONSE_ACCEPT,
+                                                   ("_Cancel"), GTK_RESPONSE_CANCEL,
+                                                   ("_Open"), GTK_RESPONSE_ACCEPT,
                                                    NULL);
    g_signal_connect(dialog, "response", G_CALLBACK(on_dataset_filechooser_dialog_response_gtk4), NULL);
    g_object_set_data(G_OBJECT(dialog), "auto_read_flag", GINT_TO_POINTER(FALSE));
@@ -200,6 +203,8 @@ void auto_open_mtz_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    gtk_widget_set_visible(dataset_chooser, TRUE);
 #endif
 
+   graphics_info_t g;
+
    // How were is the user-data set?
    GtkWindow *parent_window = GTK_WINDOW(user_data);
    if (user_data) {
@@ -207,14 +212,23 @@ void auto_open_mtz_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    }
    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
    GtkWidget *dialog = gtk_file_chooser_dialog_new("Open File", parent_window, action,
-                                                   _("_Cancel"), GTK_RESPONSE_CANCEL,
-                                                   _("_Open"), GTK_RESPONSE_ACCEPT,
+                                                   ("_Cancel"), GTK_RESPONSE_CANCEL,
+                                                   ("_Open"), GTK_RESPONSE_ACCEPT,
                                                    NULL);
+
+   GError *error = NULL;
+   std::string dir = g.get_directory_for_filechooser();
+   if (coot::is_directory_p(dir)) {
+      GFile *f_dir = g_file_new_for_path(dir.c_str());
+      gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), f_dir, &error);
+   }
+
    g_signal_connect(dialog, "response", G_CALLBACK(on_dataset_filechooser_dialog_response_gtk4), NULL);
    g_object_set_data(G_OBJECT(dialog), "auto_read_flag", GINT_TO_POINTER(TRUE));
    GtkFileFilter *filterselect = gtk_file_filter_new();
    gtk_file_filter_add_pattern(filterselect, "*.mtz");
    gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filterselect);
+   add_filename_filter_button(dialog, COOT_DATASET_FILE_SELECTION);
    gtk_widget_set_visible(dialog, TRUE);
 }
 
@@ -235,9 +249,9 @@ void open_map_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkWidget *dialog = gtk_file_chooser_dialog_new("Open File",
                                                    parent_window,
                                                    action,
-                                                   _("_Cancel"),
+                                                   ("_Cancel"),
                                                    GTK_RESPONSE_CANCEL,
-                                                   _("_Open"),
+                                                   ("_Open"),
                                                    GTK_RESPONSE_ACCEPT,
                                                    NULL);
 
@@ -246,8 +260,11 @@ void open_map_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkFileFilter *filterselect = gtk_file_filter_new();
    gtk_file_filter_add_pattern(filterselect, "*.map");
    gtk_file_filter_add_pattern(filterselect, "*.mrc");
+   gtk_file_filter_add_pattern(filterselect, "*.mrc.gz");
+   gtk_file_filter_add_pattern(filterselect, "*.map.gz");
    gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filterselect);
    gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filterselect);
+   set_transient_for_main_window(dialog);
    gtk_widget_set_visible(dialog, TRUE);
 }
 
@@ -333,8 +350,8 @@ void import_cif_dictionary_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkWindow *parent_window = GTK_WINDOW(user_data);
    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
    GtkWidget *dialog = gtk_file_chooser_dialog_new("Open File", parent_window, action,
-                                                   _("_Cancel"), GTK_RESPONSE_CANCEL,
-                                                   _("_Open"), GTK_RESPONSE_ACCEPT,
+                                                   ("_Cancel"), GTK_RESPONSE_CANCEL,
+                                                   ("_Open"), GTK_RESPONSE_ACCEPT,
                                                    NULL);
 
    const gchar *labels[]  = {"No Instance", "Create New Instance", NULL};
@@ -354,10 +371,10 @@ void toggle_display_frames_per_second_action(G_GNUC_UNUSED GSimpleAction *simple
                                              G_GNUC_UNUSED GVariant *parameter,
                                              G_GNUC_UNUSED gpointer user_data) {
 
-int state = get_fps_flag();
-if (state == 1)
-   set_show_fps(0);
-else
+   int state = get_fps_flag();
+   if (state == 1)
+      set_show_fps(0);
+   else
    set_show_fps(1);
 }
 
@@ -372,18 +389,24 @@ search_monomer_library_action(G_GNUC_UNUSED GSimpleAction *simple_action,
 void show_accession_code_fetch_frame(G_GNUC_UNUSED GSimpleAction *simple_action,
                                      G_GNUC_UNUSED GVariant *parameter,
                                      G_GNUC_UNUSED gpointer user_data) {
+
+   // 20230923-PE now does COD too
+
    gchar* mode_name_cstr;
    g_variant_get(parameter,"s",&mode_name_cstr);
    std::string mode_name(mode_name_cstr);
-   auto mode_num_from_name = [](const std::string& mode_name){
-      if(mode_name == "oca") {
+   auto mode_num_from_name = [](const std::string& mode_name) {
+      std::cout << ":::::::::::::::::::::: mode_name \"" << mode_name << "\"" << std::endl;
+      if (mode_name == "oca") {
          return COOT_ACCESSION_CODE_WINDOW_OCA;
-      } else if(mode_name == "eds") {
+      } else if (mode_name == "eds") {
          return COOT_ACCESSION_CODE_WINDOW_EDS;
       } else if (mode_name == "pdb-redo"){
          return COOT_ACCESSION_CODE_WINDOW_PDB_REDO;
-      } else if(mode_name == "uniprot-id") {
+      } else if (mode_name == "uniprot-id") {
          return COOT_UNIPROT_ID;
+      } else if (mode_name == "cod") {
+         return COOT_COD_CODE;
       } else {
          g_error("Unrecognized mode name for the accession code frame: %s",mode_name.c_str());
          // fallback
@@ -391,11 +414,11 @@ void show_accession_code_fetch_frame(G_GNUC_UNUSED GSimpleAction *simple_action,
       }
    };
    int mode_num = mode_num_from_name(mode_name);
-   g_debug("Accession code fetch frame mode number: %i",mode_num);
+   g_debug("Accession code fetch frame mode number: %i", mode_num);
    GtkWidget *frame = widget_from_builder("accession_code_frame");
    g_object_set_data(G_OBJECT(frame), "mode", GINT_TO_POINTER(mode_num));
    GtkWidget *label = widget_from_builder("accession_code_label");
-   switch(mode_num) {
+   switch (mode_num) {
       case COOT_ACCESSION_CODE_WINDOW_EDS:
       case COOT_ACCESSION_CODE_WINDOW_OCA:
       case COOT_ACCESSION_CODE_WINDOW_PDB_REDO:
@@ -403,8 +426,12 @@ void show_accession_code_fetch_frame(G_GNUC_UNUSED GSimpleAction *simple_action,
          gtk_label_set_text(GTK_LABEL(label), "PDB Accession Code: ");
          break;
       }
-      case COOT_UNIPROT_ID:{
+      case COOT_UNIPROT_ID: {
          gtk_label_set_text(GTK_LABEL(label), "UniProt ID: ");
+         break;
+      }
+      case COOT_COD_CODE: {
+         gtk_label_set_text(GTK_LABEL(label), "COD Entry ID: ");
          break;
       }
       default: {
@@ -472,6 +499,19 @@ save_coordinates_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                         G_GNUC_UNUSED GVariant *parameter,
                         G_GNUC_UNUSED gpointer user_data) {
 
+   auto get_model_molecule_vector = [] () {
+                                       graphics_info_t g;
+                                       std::vector<int> vec;
+                                       int n_mol = g.n_molecules();
+                                       for (int i=0; i<n_mol; i++)
+                                          if (g.is_valid_model_molecule(i))
+                                             vec.push_back(i);
+                                       return vec;
+                                    };
+
+   // 20230910-PE Who cares? What matters is what the combobox says when the "Save" button
+   // save_coords_dialog_save_button is pressed.
+   // See on_save_coords_dialog_save_button_clicked().
    GCallback callback_func = G_CALLBACK(save_molecule_coords_combobox_changed);
    int imol = first_coords_imol();
    int imol_unsaved = first_unsaved_coords_imol();
@@ -487,7 +527,10 @@ save_coordinates_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkWidget *combobox = widget_from_builder("save_coordinates_combobox");
 
    if (combobox) {
-      fill_combobox_with_coordinates_options(combobox, callback_func, imol);
+      graphics_info_t g;
+      int imol_active = imol;
+      auto mol_vec = get_model_molecule_vector();
+      g.fill_combobox_with_molecule_options(combobox, callback_func, imol_active, mol_vec);
       set_transient_and_position(COOT_UNDEFINED_WINDOW, widget);
       gtk_widget_set_visible(widget, TRUE);
       gtk_window_present(GTK_WINDOW(widget));
@@ -534,9 +577,9 @@ save_state_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkWidget *dialog = gtk_file_chooser_dialog_new("Save State",
                                                    parent_window,
                                                    action,
-                                                   _("Cancel"),
+                                                   ("Cancel"),
                                                    GTK_RESPONSE_CANCEL,
-                                                   _("Save"),
+                                                   ("Save"),
                                                    GTK_RESPONSE_ACCEPT,
                                                    NULL);
    GtkFileFilter *filterselect = gtk_file_filter_new();
@@ -570,9 +613,9 @@ on_save_views_clicked(GtkButton *button, gpointer user_data) {
    GtkWidget *dialog = gtk_file_chooser_dialog_new("Save Views",
                                                    parent_window,
                                                    action,
-                                                   _("Cancel"),
+                                                   ("Cancel"),
                                                    GTK_RESPONSE_CANCEL,
-                                                   _("Save"),
+                                                   ("Save"),
                                                    GTK_RESPONSE_ACCEPT,
                                                    NULL);
    GtkFileFilter *filterselect = gtk_file_filter_new();
@@ -627,16 +670,55 @@ change_chain_ids_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    gtk_widget_set_visible(w, TRUE);
 }
 
+// make link uses the same API setup as refine_range()
 void
 make_link_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                  G_GNUC_UNUSED GVariant *parameter,
                  G_GNUC_UNUSED gpointer user_data) {
 
-   std::cout << "make_link_action(): coot user_defined click 2" << std::endl;
-   // 20220828-PE needs check_if_in_range_define
+   graphics_info_t g;
+   const std::string &alt_conf_1 = g.in_range_first_picked_atom.alt_conf;
+   const std::string &alt_conf_2 = g.in_range_second_picked_atom.alt_conf;
+
+   if (alt_conf_1 == alt_conf_2) {
+
+      int imol_1 = g.in_range_first_picked_atom.int_user_data;
+      int imol_2 = g.in_range_second_picked_atom.int_user_data;
+
+      if (imol_1 == imol_2) {
+         if (g.is_valid_model_molecule(imol_1)) {
+            auto &m = g.molecules[imol_1];
+            mmdb:: Atom *at_1 = m.get_atom(g.in_range_first_picked_atom);
+            mmdb:: Atom *at_2 = m.get_atom(g.in_range_second_picked_atom);
+
+            if (at_1) {
+               if (at_2) {
+                  clipper::Coord_orth p1 = coot::co(at_1);
+                  clipper::Coord_orth p2 = coot::co(at_2);
+                  double d2 = (p1-p2).lengthsq();
+                  double dist = std::sqrt(d2);
+                  std::string link_name;
+                  m.make_link(g.in_range_first_picked_atom,
+                              g.in_range_second_picked_atom,
+                              link_name, dist, *g.Geom_p());
+                  g.graphics_draw();
+               } else {
+                  std::cout << "ERROR:: Missing atom " << std::endl;
+               }
+            } else {
+               std::cout << "ERROR:: Missing atom " << std::endl;
+            }
+         }
+      } else {
+         add_status_bar_text("Can't link residues in different molecules - doing nothing");
+      }
+   } else {
+      add_status_bar_text("Mismatched alt-confs - doing nothing");
+   }
 }
 
-#include "cc-interface.hh" // for fullscreen()
+
+
 
 void
 fix_nomenclature_errors_action(G_GNUC_UNUSED GSimpleAction *simple_action,
@@ -965,11 +1047,28 @@ ligand_builder_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                       G_GNUC_UNUSED GVariant *parameter,
                       G_GNUC_UNUSED gpointer user_data) {
 
-#if (GTK_MAJOR_VERSION >= 4)
-   std::cout << "FIXME:: start_ligand_builder_gui_internal() " << std::endl;
-#else
-   start_ligand_builder_gui_internal(menuitem, user_data);
-#endif
+   // No ligand specified
+   start_ligand_builder_gui();
+}
+
+
+
+void
+ligand_builder_residue_to_2d_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                                    G_GNUC_UNUSED GVariant *parameter,
+                                    G_GNUC_UNUSED gpointer user_data) {
+
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+   if (pp.first) {
+      int imol = pp.second.first;
+      const coot::atom_spec_t atom_spec(pp.second.second);
+      graphics_info_t g;
+      float weight_for_3d_distances = 0.01; // or something
+      residue_to_ligand_builder(imol, atom_spec.chain_id, atom_spec.res_no, atom_spec.ins_code,
+                                weight_for_3d_distances);
+   } else {
+      add_status_bar_text("No active residue found");
+   }
 }
 
 
@@ -1005,14 +1104,15 @@ run_script_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkWidget *dialog = gtk_file_chooser_dialog_new("Run Script File",
                                                    parent_window,
                                                    action,
-                                                   _("_Cancel"),
+                                                   ("_Cancel"),
                                                    GTK_RESPONSE_CANCEL,
-                                                   _("_Open"),
+                                                   ("_Open"),
                                                    GTK_RESPONSE_ACCEPT,
                                                    NULL);
 
    g_signal_connect(dialog, "response", G_CALLBACK(on_run_script_filechooser_dialog_response_gtk4), NULL);
    add_filename_filter_button(dialog, COOT_SCRIPTS_FILE_SELECTION);
+   set_transient_for_main_window(dialog);
    gtk_widget_set_visible(dialog, TRUE);
 
 }
@@ -1409,6 +1509,7 @@ void
 whats_this_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                   G_GNUC_UNUSED GVariant *parameter,
                   G_GNUC_UNUSED gpointer user_data) {
+
 
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
    if (pp.first) {
@@ -2254,6 +2355,30 @@ void atoms_with_zero_occupancies_action(G_GNUC_UNUSED GSimpleAction *simple_acti
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
    if (pp.first) {
       int imol = pp.second.first;
+      if (is_valid_model_molecule(imol)) {
+         mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
+         std::vector<mmdb::Atom *> v = coot::atoms_with_zero_occupancy(mol);
+         if (v.empty()) {
+            info_dialog("No atoms with zero occupancy");
+            add_status_bar_text("No atoms with zero occupancy");
+         } else {
+            std::vector<labelled_button_info_t> lbv;
+            for (unsigned int i=0; i<v.size(); i++) {
+               mmdb::Atom *at = v[i];
+               clipper::Coord_orth position(at->x, at->y, at->z);
+               std::string label = std::string(at->GetChainID());
+               label += std::string(" ");
+               label += std::to_string(at->GetSeqNum());
+               label += std::string(" ");
+               label += std::string(at->GetAtomName());
+               lbv.push_back(labelled_button_info_t(label, position));
+            }
+            g.fill_generic_validation_box_of_buttons("Zero Occupancy Atoms", lbv);
+         }
+      }
+   } else {
+      add_status_bar_text("No active molecule found!");
+      info_dialog("No active molecule found!");
    }
 }
 
@@ -2394,7 +2519,6 @@ remarks_browser_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    gtk_widget_set_visible(w, TRUE);
 }
 
-
 void
 about_coot_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                   G_GNUC_UNUSED GVariant *parameter,
@@ -2408,6 +2532,21 @@ about_coot_action(G_GNUC_UNUSED GSimpleAction *simple_action,
       gtk_widget_set_visible(dialog, TRUE);
    }
 }
+
+void
+coot_shortcuts_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                      G_GNUC_UNUSED GVariant *parameter,
+                      G_GNUC_UNUSED gpointer user_data) {
+
+   GtkWidget *window = widget_from_builder("coot_shortcuts_window");
+   if (window) {
+      graphics_info_t g;
+      g.add_shortcuts_to_window(window);
+      set_transient_for_main_window(window);
+      gtk_widget_set_visible(window, TRUE);
+   }
+}
+
 
 void
 orthographic_view_action(G_GNUC_UNUSED GSimpleAction *simple_action,
@@ -2424,23 +2563,131 @@ perspective_view_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    set_use_perspective_projection(1);
 }
 
+
+// gui helper function
+std::vector<labelled_button_info_t>
+residues_vec_to_labelled_buttons_vec(const std::vector<mmdb::Residue *> &rv) {
+
+   std::vector<labelled_button_info_t> lbv;
+   for (unsigned int i=0; i<rv.size(); i++) {
+      mmdb::Residue *residue_p = rv[i];
+      std::pair<bool, clipper::Coord_orth> rc = coot::util::get_residue_centre(residue_p);
+      if (rc.first) {
+         std::string label = residue_p->GetChainID();
+         label += " ";
+         label += std::to_string(residue_p->GetSeqNum());
+         if (residue_p->GetInsCode()) {
+            label += " ";
+            label += residue_p->GetInsCode();
+         }
+         labelled_button_info_t lbi(label, rc.second);
+         lbv.push_back(lbi);
+      }
+   }
+   return lbv;
+}
+
 void residue_type_selection_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                                    G_GNUC_UNUSED GVariant *parameter,
                                    G_GNUC_UNUSED gpointer user_data) {
 
    std::cout << "residue_type_selection action" << std::endl;
 
+   auto callback = +[] (int imol, const std::string &entry_text) {
+      if (is_valid_model_molecule(imol)) {
+         mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;
+         std::vector<mmdb::Residue *> rv = coot::util::residues_in_molecule_of_type(mol, entry_text);
+         if (rv.empty()) {
+            add_status_bar_text("No residues of that type in this molecule");
+         } else {
+            new_molecule_by_atom_selection(imol, entry_text.c_str()); // make this a c++ function one day
+            std::vector<labelled_button_info_t> lbv = residues_vec_to_labelled_buttons_vec(rv);
+            graphics_info_t g;
+            std::string title = "Residues of type " + entry_text;
+            g.fill_generic_validation_box_of_buttons(title, lbv);
+         }
+      }
+   };
+
+   auto get_model_molecule_vector = [] () {
+                                       graphics_info_t g;
+                                       std::vector<int> vec;
+                                       int n_mol = g.n_molecules();
+                                       for (int i=0; i<n_mol; i++)
+                                          if (g.is_valid_model_molecule(i))
+                                             vec.push_back(i);
+                                       return vec;
+                                    };
+
+   GtkWidget *molecule_chooser_combobox      = widget_from_builder("molecule_chooser_comboboxtext");
+   GtkWidget *molecule_chooser_ok_button     = widget_from_builder("molecule_chooser_ok_button");
+   GtkWidget *molecule_chooser_cancel_button = widget_from_builder("molecule_chooser_cancel_button");
+   GtkWidget *dialog                         = widget_from_builder("molecule_chooser_dialog");
+
+   auto mol_vec = get_model_molecule_vector();
+   int imol_active = 0;
+   graphics_info_t g;
+   // we don't need a callback for when the combobox changes
+   g.fill_combobox_with_molecule_options(molecule_chooser_combobox, nullptr, imol_active, mol_vec);
+   set_transient_for_main_window(dialog);
+   gtk_widget_set_visible(dialog, TRUE);
+
+   auto cancel_callback = +[] (G_GNUC_UNUSED GtkButton *button, G_GNUC_UNUSED gpointer user_data) {
+      GtkWidget *dialog = widget_from_builder("molecule_chooser_dialog");
+      gtk_widget_set_visible(dialog, FALSE);
+   };
+   g_signal_connect(G_OBJECT(molecule_chooser_cancel_button), "clicked", G_CALLBACK(cancel_callback), nullptr);
+
+   auto ok_callback = +[] (GtkButton *button, gpointer user_data) {
+      GtkWidget *dialog = widget_from_builder("molecule_chooser_dialog");
+      GtkWidget *molecule_chooser_combobox = widget_from_builder("molecule_chooser_comboboxtext");
+      GtkWidget *molecule_chooser_entry    = widget_from_builder("molecule_chooser_entry");
+
+      int imol = my_combobox_get_imol(GTK_COMBO_BOX(molecule_chooser_combobox));
+      std::string entry_text = gtk_editable_get_text(GTK_EDITABLE(molecule_chooser_entry));
+
+      if (is_valid_model_molecule(imol)) {
+         mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;
+         std::vector<mmdb::Residue *> rv = coot::util::residues_in_molecule_of_type(mol, entry_text);
+         if (rv.empty()) {
+            add_status_bar_text("No residues of that type in this molecule");
+         } else {
+            std::string atom_selection = std::string("(") +  entry_text + std::string(")");
+            new_molecule_by_atom_selection(imol, atom_selection.c_str()); // make this a c++ function one day
+            std::vector<labelled_button_info_t> lbv = residues_vec_to_labelled_buttons_vec(rv);
+            graphics_info_t g;
+            std::string title = "Residues of type " + entry_text;
+            g.fill_generic_validation_box_of_buttons(title, lbv);
+         }
+      }
+      gtk_widget_set_visible(dialog, FALSE);
+   };
+   // I should disconnect all existing connected signals here.
+   // see g_signal_handler_disconnect()
+   // Or perhaps it's easier to create an "OK" button every time? rather than look it up
+   // from the builder?
+   g_signal_connect(G_OBJECT(molecule_chooser_ok_button), "clicked", G_CALLBACK(ok_callback), nullptr);
 }
 
 void residues_with_alt_confs_action(G_GNUC_UNUSED GSimpleAction *simple_action,
-                                   G_GNUC_UNUSED GVariant *parameter,
-                                   G_GNUC_UNUSED gpointer user_data) {
+                                    G_GNUC_UNUSED GVariant *parameter,
+                                    G_GNUC_UNUSED gpointer user_data) {
 
-   std::cout << "residues with alt confs action" << std::endl;
+   std::cout << "debug:: residues with alt confs action" << std::endl;
    graphics_info_t g;
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
    if (pp.first) {
       int imol = pp.second.first;
+      if (is_valid_model_molecule(imol)) {
+         mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
+         std::vector<mmdb::Residue *> rv = coot::residues_with_alt_confs(mol);
+         if (rv.empty()) {
+            add_status_bar_text("No residues with Alt confs in this molecule");
+         } else {
+            std::vector<labelled_button_info_t> lbv = residues_vec_to_labelled_buttons_vec(rv);
+            g.fill_generic_validation_box_of_buttons("Residues with AltConfs", lbv);
+         }
+      }
    }
 }
 
@@ -2453,6 +2700,43 @@ void residues_with_cis_peptides_action(G_GNUC_UNUSED GSimpleAction *simple_actio
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
    if (pp.first) {
       int imol = pp.second.first;
+      if (is_valid_model_molecule(imol)) {
+
+         mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
+         int model_number = 1;
+         std::vector<coot::util::cis_peptide_quad_info_t> quads =
+            coot::cis_peptide_quads_from_coords(mol, model_number, g.Geom_p());
+
+         if (quads.empty()) {
+            info_dialog("No cis-peptides found in this molecule");
+         } else {
+            std::vector<labelled_button_info_t> lbv;
+            for (unsigned int i=0; i<quads.size(); i++) {
+               const coot::util::cis_peptide_quad_info_t &quad = quads[i];
+               if (quad.quad.atom_1 && quad.quad.atom_2 && quad.quad.atom_3 && quad.quad.atom_4) {
+                  clipper::Coord_orth sum(0,0,0);
+                  sum += coot::co(quad.quad.atom_1);
+                  sum += coot::co(quad.quad.atom_2);
+                  sum += coot::co(quad.quad.atom_3);
+                  sum += coot::co(quad.quad.atom_4);
+                  clipper::Coord_orth pos = 0.25 * sum;
+                  std::string label = "cis-peptide ";
+                  if (quad.type == coot::util::cis_peptide_quad_info_t::TWISTED_TRANS)
+                     label = "Twisted trans ";
+                  if (quad.type == coot::util::cis_peptide_quad_info_t::PRE_PRO_CIS)
+                     label = "Pre-PRO cis ";
+                  label += quad.quad.atom_1->GetChainID();
+                  label += " ";
+                  label += std::to_string(quad.quad.atom_1->GetSeqNum());
+                  label += "-";
+                  label += std::to_string(quad.quad.atom_4->GetSeqNum());
+                  labelled_button_info_t lbi(label, pos);
+                  lbv.push_back(lbi);
+               }
+            }
+            g.fill_generic_validation_box_of_buttons("Residues with cis-peptides", lbv);
+         }
+      }
    }
 }
 
@@ -2460,11 +2744,53 @@ void residues_with_missing_atoms_action(G_GNUC_UNUSED GSimpleAction *simple_acti
                                         G_GNUC_UNUSED GVariant *parameter,
                                         G_GNUC_UNUSED gpointer user_data) {
 
-   std::cout << "residues with missing atoms action" << std::endl;
+   auto residue_to_label = [] (mmdb::Residue *residue_p ) {
+      std::string label = residue_p->GetChainID();
+      label += " ";
+      label += std::to_string(residue_p->GetSeqNum());
+      if (residue_p->GetInsCode()) {
+         label += " ";
+         label += residue_p->GetInsCode();
+      }
+      return label;
+   };
+
    graphics_info_t g;
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
    if (pp.first) {
       int imol = pp.second.first;
+      if (is_valid_model_molecule(imol)) {
+         bool missing_hydrogens_flag = false;
+         coot::util::missing_atom_info m_i_info =
+            g.molecules[imol].missing_atoms(missing_hydrogens_flag, g.Geom_p());
+         if (m_i_info.residues_with_missing_atoms.empty()) {
+            add_status_bar_text("No residues with missing atoms");
+         } else {
+            std::vector<labelled_button_info_t> lbv;
+            for (unsigned int i=0; i<m_i_info.residues_with_missing_atoms.size(); i++) {
+               mmdb::Residue *residue_p = m_i_info.residues_with_missing_atoms[i];
+               std::map<mmdb::Residue *, std::vector<std::string> >::const_iterator it;
+               it = m_i_info.residue_missing_atom_names_map.find(residue_p);
+
+               std::string label = residue_to_label(residue_p);
+               label += " missing";
+
+               if (it != m_i_info.residue_missing_atom_names_map.end()) {
+                  const auto &atom_name_vec = it->second;
+                  for (unsigned int j=0; j<atom_name_vec.size(); j++) {
+                     label += " ";
+                     label += atom_name_vec[j];
+                  }
+               }
+               std::pair<bool, clipper::Coord_orth> rc = coot::util::get_residue_centre(residue_p);
+               if (rc.first) {
+                  labelled_button_info_t lbi(label, rc.second);
+                  lbv.push_back(lbi);
+               }
+            }
+            g.fill_generic_validation_box_of_buttons("Residues with Missing Atoms", lbv);
+         }
+      }
    }
 }
 
@@ -2529,6 +2855,14 @@ refine_all_atoms(G_GNUC_UNUSED GSimpleAction *simple_action,
 }
 
 void
+refine_fragment(G_GNUC_UNUSED GSimpleAction *simple_action,
+                G_GNUC_UNUSED GVariant *parameter,
+                G_GNUC_UNUSED gpointer user_data) {
+
+   rsr_refine_fragment_active_residue();
+}
+
+void
 refine_with_range_picked_atoms() {
 
    graphics_info_t g;
@@ -2582,6 +2916,8 @@ refine_range(G_GNUC_UNUSED GSimpleAction *simple_action,
    }
 }
 
+
+
 void
 repeat_refine_range(G_GNUC_UNUSED GSimpleAction *simple_action,
                     G_GNUC_UNUSED GVariant *parameter,
@@ -2614,6 +2950,23 @@ refine_regularize_single_residue(G_GNUC_UNUSED GSimpleAction *simple_action,
 
    regularize_residue();
 }
+
+void
+refine_regularize_chain(G_GNUC_UNUSED GSimpleAction *simple_action,
+                        G_GNUC_UNUSED GVariant *parameter,
+                         G_GNUC_UNUSED gpointer user_data) {
+
+   regularize_chain();
+}
+
+void
+refine_regularize_fragment(G_GNUC_UNUSED GSimpleAction *simple_action,
+                           G_GNUC_UNUSED GVariant *parameter,
+                           G_GNUC_UNUSED gpointer user_data) {
+
+   regularize_fragment_active_atom();
+}
+
 
 
 void
@@ -2892,7 +3245,7 @@ delete_item(GSimpleAction *simple_action,
          if (par == "hydrogen-atoms-in-residue") {
             auto &m = g.molecules[imol];
             // change this signature to use an residue spec.
-            std::cout << "callign delete_residue_hydrogens()!!!! " << res_spec << std::endl;
+            std::cout << "DEBUG:: calling delete_residue_hydrogens() with " << res_spec << std::endl;
             m.delete_residue_hydrogens(res_spec.chain_id, res_spec.res_no, res_spec.ins_code, atom_spec.alt_conf);
             graphics_draw();
          }
@@ -2964,8 +3317,8 @@ create_actions(GtkApplication *application) {
    add_action(     "curlew_action",      curlew_action);
    add_action(       "exit_action",        exit_action);
 
-   add_action(             "search_monomer_library_action",           search_monomer_library_action);
-   add_action_with_param("show_accession_code_fetch_frame",         show_accession_code_fetch_frame);
+   add_action_with_param("show_accession_code_fetch_frame",       show_accession_code_fetch_frame);
+   add_action(           "search_monomer_library_action",           search_monomer_library_action);
    add_action(    "fetch_pdbe_ligand_description_action",    fetch_pdbe_ligand_description_action);
    add_action( "fetch_and_superpose_alphafold_models_action", fetch_and_superpose_alphafold_models_action);
    add_action(              "fetch_map_from_emdb_action",              fetch_map_from_emdb_action);
@@ -2974,7 +3327,7 @@ create_actions(GtkApplication *application) {
    add_action(                       "save_state_action",                       save_state_action);
    add_action(                  "recover_session_action",                  recover_session_action);
    add_action(                  "file_export_map_action",                  file_export_map_action);
-   add_action(         "file_export_map_fragment_action",                  file_export_map_action);
+   add_action(         "file_export_map_fragment_action",                  file_export_map_fragment_action);
    add_action(                   "close_molecule_action",                   close_molecule_action);
 
    // Edit
@@ -3013,6 +3366,7 @@ create_actions(GtkApplication *application) {
    add_action(  "sharpen_blur_for_xray_action",   sharpen_blur_for_xray_action);
    add_action(       "scripting_python_action",        scripting_python_action);
    add_action(       "scripting_scheme_action",        scripting_scheme_action);
+   add_action("ligand_builder_residue_to_2d_action", ligand_builder_residue_to_2d_action);
 
    add_action("calculate_hydrogen_bonds_action", calculate_hydrogen_bonds_action);
    add_action(          "load_tutorial_model_and_data_action",           load_tutorial_model_and_data_action);
@@ -3156,6 +3510,7 @@ create_actions(GtkApplication *application) {
 
    add_action("remarks_browser_action", remarks_browser_action);
    add_action("about_coot_action", about_coot_action);
+   add_action("coot_shortcuts_action", coot_shortcuts_action);
 
    // Refine menu
 
@@ -3166,8 +3521,11 @@ create_actions(GtkApplication *application) {
    add_action("refine_single_residue",            refine_single_residue);
    add_action("refine_chain",                     refine_chain);
    add_action("refine_all_atoms",                 refine_all_atoms);
+   add_action("refine_fragment",                  refine_fragment);
    add_action("refine_range",                     refine_range);
    add_action("repeat_refine_range",              repeat_refine_range);
+   add_action("refine_regularize_chain",          refine_regularize_chain);
+   add_action("refine_regularize_fragment",       refine_regularize_fragment);
    add_action("refine_regularize_sphere",         refine_regularize_sphere);
    add_action("refine_regularize_tandem_3",       refine_regularize_tandem_3);
    add_action("refine_regularize_single_residue", refine_regularize_single_residue);

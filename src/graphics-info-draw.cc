@@ -290,43 +290,41 @@ graphics_info_t::handle_delete_item_curor_change(GtkWidget *widget) {
    }
 }
 
+// Called by pinch zoom gesture
+// static
+void
+graphics_info_t::mouse_zoom_by_scale_factor(double sf) {
+
+   // with a "long" pinch gesture, sf can be 0.4
+   // so using sf directly is not what we want.
+
+   // So try adding a fixed zoom depending on which size
+   // of 1.0 sf is
+   float zf = 1.0;
+   if (sf > 1.0) zf = 1.05;
+   if (sf < 1.0) zf = 0.95;
+
+   zoom /= zf;
+   // sensible limits for looking at proteins
+   if (zoom <    0.2) zoom = 0.2;
+   if (zoom > 2000.0) zoom = 2000.0;
+   // std::cout << "debug:: mouse_zoom_by_scale_factor() sf " << sf << " zoom " << zoom << std::endl;
+   //  mouse_zoom_by_scale_factor_inner(sf);
+   graphics_draw();
+
+}
+
 
 // static
 void
-graphics_info_t::mouse_zoom(double delta_x_drag, double delta_y_drag) {
+graphics_info_t::mouse_zoom_by_scale_factor_inner(double sf) {
 
-   double current_mouse_x = drag_begin_x + delta_x_drag;
-   double current_mouse_y = drag_begin_y + delta_y_drag;
-
-   double delta_x = current_mouse_x - get_mouse_previous_position_x();
-   double delta_y = current_mouse_y - get_mouse_previous_position_y();
-
-   // std::cout << "mouse_zoom() delta_x " << delta_x << " delta_y " << delta_y << std::endl;
-
-   // Zooming
-   double fx = 1.0 + delta_x/300.0;
-   double fy = 1.0 + delta_y/300.0;
-   if (fx > 0.0) graphics_info_t::zoom /= fx;
-   if (fy > 0.0) graphics_info_t::zoom /= fy;
-   if (false)
-      std::cout << "zooming with perspective_projection_flag "
-                << graphics_info_t::perspective_projection_flag
-                << " " << graphics_info_t::zoom << std::endl;
-   if (! graphics_info_t::perspective_projection_flag) {
-      // std::cout << "now zoom: " << g.zoom << std::endl;
-   } else {
-      // Move the eye towards the rotation centre (don't move the rotation centre)
-      if (fabs(delta_y) > fabs(delta_x))
-         delta_x = delta_y;
-      float sf = 1.0 - delta_x * 0.003;
-
-      // stabilize sf:
-      if (sf < 0.1) sf = 0.1;
-      if (sf > 2.0) sf = 2.0;
-      // std::cout << "mouse_zoom(): delta_x " << delta_x << " sf " << sf << std::endl;
-      graphics_info_t::eye_position.z *= sf;
+   if (perspective_projection_flag) {
 
       { // own graphics_info_t function - c.f. adjust clipping
+
+         eye_position.z *= sf;
+
          double  l = graphics_info_t::eye_position.z;
          double zf = graphics_info_t::screen_z_far_perspective;
          double zn = graphics_info_t::screen_z_near_perspective;
@@ -346,10 +344,56 @@ graphics_info_t::mouse_zoom(double delta_x_drag, double delta_y_drag) {
          if (graphics_info_t::screen_z_far_perspective < screen_z_far_perspective_limit)
             graphics_info_t::screen_z_far_perspective = screen_z_far_perspective_limit;
          if (false)
-            std::cout << "on_glarea_motion_notify(): debug l: " << l << " post-manip: "
+            std::cout << "mouse_zoom_by_scale_factor_inner(): debug l: " << l << " post-manip: "
                       << graphics_info_t::screen_z_near_perspective << " "
                       << graphics_info_t::screen_z_far_perspective << std::endl;
       }
+
+   } else {
+
+      // stabilize the scale factor
+      if (sf < 0.1) sf = 0.1;
+      if (sf > 2.0) sf = 2.0;
+      graphics_info_t::eye_position.z *= sf;
+
+   }
+}
+
+// static
+void
+graphics_info_t::mouse_zoom(double delta_x_drag, double delta_y_drag) {
+
+   double current_mouse_x = drag_begin_x + delta_x_drag;
+   double current_mouse_y = drag_begin_y + delta_y_drag;
+
+   double delta_x = current_mouse_x - get_mouse_previous_position_x();
+   double delta_y = current_mouse_y - get_mouse_previous_position_y();
+
+   // Zooming
+   double fx = 1.0 + delta_x/300.0;
+   double fy = 1.0 + delta_y/300.0;
+   if (fx > 0.0) graphics_info_t::zoom /= fx;
+   if (fy > 0.0) graphics_info_t::zoom /= fy;
+   if (false)
+      std::cout << "zooming with perspective_projection_flag "
+                << graphics_info_t::perspective_projection_flag
+                << " " << graphics_info_t::zoom << std::endl;
+
+   if (perspective_projection_flag) {
+
+      // std::cout << "now zoom: " << screen_z_near_perspective << " " << screen_z_far_perspective << std::endl;
+      if (fabs(delta_y) > fabs(delta_x))
+         delta_x = delta_y;
+      float sf = 1.0 - delta_x * 0.003;
+      mouse_zoom_by_scale_factor_inner(sf);
+
+   } else {
+
+      // Move the eye towards the rotation centre (don't move the rotation centre)
+      if (fabs(delta_y) > fabs(delta_x))
+         delta_x = delta_y;
+      float sf = 1.0 - delta_x * 0.003;
+      mouse_zoom_by_scale_factor_inner(sf);
    }
    graphics_draw(); // or should this be called by the function that calls this function?
 }
@@ -467,8 +511,8 @@ graphics_info_t::get_projection_matrix(bool do_orthographic_projection,
       // std::cout << "projection matrix ortho " << glm::to_string(projection_matrix) << std::endl;
       return projection_matrix;
    } else {
-      float fov = 30.0; // put this in graphics_info_t and add setters and getters to the API.
-      glm::mat4 projection_matrix_persp = glm::perspective(glm::radians(fov),
+      // perspective_fov is in degrees
+      glm::mat4 projection_matrix_persp = glm::perspective(glm::radians(perspective_fov),
                                                            screen_ratio,
                                                            screen_z_near_perspective,
                                                            screen_z_far_perspective);
@@ -796,6 +840,11 @@ graphics_info_t::draw_map_molecules(bool draw_transparent_maps) {
 void
 graphics_info_t::draw_model_molecules() {
 
+   // std::cout << "draw_model_molecules() --- start ---" << std::endl;
+
+   // This is only called in "Plain" mode - i.e. it is not used in "Fancy" mode.
+   // This function is called by draw_molecules(), which in turn is called by render_3d_scene()
+
    glm::mat4 mvp = get_molecule_mvp();
 
    // std::cout << "debug:: mvp in draw_model_molecules() is     " << glm::to_string(mvp) << std::endl;
@@ -805,12 +854,20 @@ graphics_info_t::draw_model_molecules() {
 
    for (int ii=n_molecules()-1; ii>=0; ii--) {
       if (! is_valid_model_molecule(ii)) continue;
+
       molecule_class_info_t &m = molecules[ii];
+      // std::cout << "draw_model_mqolecules() A " << ii << " m.draw_it " << m.draw_it << std::endl;
+
       if (! m.draw_it) continue;
 
-      // I think that this is for the instanced meshes.
-      // Shader &shader_p = shader_for_model_as_meshes; // is this actually instanced meshes?
-      // m.draw_molecule_as_meshes(&shader_p, mvp, model_rotation, lights, eye_position, bgc, shader_do_depth_fog_flag);
+      // 20230827-PE this is for the new/consolidated api-based instanced meshes.
+      //
+      Shader &shader_instances_p = shader_for_instanced_objects;
+      float opacity = 1.0f;
+      bool gl_lines_mode = false;
+      bool show_just_shadows = false;
+      m.model_molecule_meshes.draw(&shader_for_meshes, &shader_instances_p, mvp, model_rotation, lights, eye_position,
+                                   opacity, bgc, gl_lines_mode, shader_do_depth_fog_flag, show_just_shadows);
 
       if (show_symmetry) {
          Shader &symm_shader_p = shader_for_symmetry_atoms_bond_lines;
@@ -827,19 +884,19 @@ graphics_info_t::draw_model_molecules() {
       if (! graphics_info_t::is_valid_model_molecule(ii)) continue;
       if (! m.draw_it) continue;
 
-      bool show_just_shadows = false;
-      bool wireframe_mode = false;
-      float opacity = 1.0f;
-      Shader *shader_p = &shader_for_meshes;
       if (m.draw_model_molecule_as_lines) {
          float lw = m.get_bond_thickness(); // returns an int.
-         m.molecule_as_mesh.draw_simple_bond_lines(&shader_for_symmetry_atoms_bond_lines, mvp, bgc, lw, shader_do_depth_fog_flag);
+         m.model_molecule_meshes.draw_simple_bond_lines(&shader_for_symmetry_atoms_bond_lines, mvp, bgc, lw, shader_do_depth_fog_flag);
       } else {
-         // std::cout << "drawing model " << ii << std::endl;
+#if 0 // the molecule_as_mesh is not filled at the moment, because the bond generation is now on the instanced path.
+         bool show_just_shadows = false;
+         bool wireframe_mode = false;
+         float opacity = 1.0f;
+         Shader *shader_p = &shader_for_meshes;
          m.molecule_as_mesh.draw(shader_p, mvp, model_rotation, lights, eye_position, opacity, bgc,
-                                 wireframe_mode, shader_do_depth_fog_flag, show_just_shadows);
+                                  wireframe_mode, shader_do_depth_fog_flag, show_just_shadows);
+#endif
       }
-
       m.draw_dots(&shader_for_rama_balls, mvp, model_rotation, lights, eye_position,
                      bgc, shader_do_depth_fog_flag);
 
@@ -921,6 +978,12 @@ graphics_info_t::draw_molecule_atom_labels(molecule_class_info_t &m,
 void
 graphics_info_t::draw_intermediate_atoms(unsigned int pass_type) { // draw_moving_atoms()
 
+   // std::cout << "draw_intermediate_atoms() --- start --- " << std::endl;
+
+   // ----------------------------------------
+   // move this function into graphics-info-draw-model-molecules.cc
+   // ----------------------------------------
+
    // this function gets called from draw_with_shadows() - but doesn't yet
    // use the shodows meshes shader.
 
@@ -930,25 +993,21 @@ graphics_info_t::draw_intermediate_atoms(unsigned int pass_type) { // draw_movin
    glm::mat4 mvp = get_molecule_mvp();
    glm::mat4 model_rotation = get_model_rotation();
 
-
    molecule_class_info_t &m = graphics_info_t::moving_atoms_molecule;
    glm::vec4 bgc(background_colour, 1.0);
    bool show_just_shadows = false; // make this a member data item.
-   if (false)
-      std::cout << "----------------- draw_intermediate_atoms() intermediate atoms mesh has "
-                << m.molecule_as_mesh.vertices.size() << " vertices and " << m.molecule_as_mesh.triangles.size()
-                << " triangles" << std::endl;
+
    float opacity = 1.0f;
 
    if (pass_type == PASS_TYPE_STANDARD) {
-      Shader &shader = shader_for_meshes_with_shadows;
-      bool wireframe_mode = false;
-      m.molecule_as_mesh.draw(&shader, mvp, model_rotation, lights, eye_position, opacity, bgc,
-                              wireframe_mode, shader_do_depth_fog_flag, show_just_shadows);
+
+      // instanced:
+      Shader &shader_p = shader_for_instanced_objects;
+      // m.model_molecule_meshes.set_debug_mode(true);
+      m.draw_molecule_as_meshes(&shader_p, mvp, model_rotation, lights, eye_position, bgc, shader_do_depth_fog_flag);
    }
 
    if (pass_type == PASS_TYPE_SSAO) {
-      Shader &shader = shader_for_meshes_for_ssao;
       bool do_orthographic_projection = ! perspective_projection_flag;
       GtkAllocation allocation;
       gtk_widget_get_allocation(GTK_WIDGET(glareas[0]), &allocation);
@@ -957,10 +1016,14 @@ graphics_info_t::draw_intermediate_atoms(unsigned int pass_type) { // draw_movin
       auto model_matrix = get_model_matrix();
       auto view_matrix = get_view_matrix();
       auto projection_matrix = get_projection_matrix(do_orthographic_projection, w, h);
-      m.molecule_as_mesh.draw_for_ssao(&shader, model_matrix, view_matrix, projection_matrix);
+      m.model_molecule_meshes.draw_for_ssao(&shader_for_meshes_for_ssao,
+                                            &shader_for_instanced_meshes_for_ssao,
+                                            model_matrix, view_matrix, projection_matrix);
    }
 
    if (pass_type == PASS_TYPE_FOR_SHADOWS) { // generating, not using - PASS_TYPE_GEN_SHADOW_MAP is a clearer name.
+
+      // 20231011-PE have I used the right shader here?
       Shader &shader = shader_for_meshes_shadow_map;
       glm::vec3 dummy_eye_position;
       bool gl_lines_mode = false;
@@ -974,8 +1037,9 @@ graphics_info_t::draw_intermediate_atoms(unsigned int pass_type) { // draw_movin
       }
       bool do_depth_fog = true;
       glm::vec4 bg_col(background_colour, 1.0);
-      m.molecule_as_mesh.draw(&shader, mvp_orthogonal, model_rotation, lights, dummy_eye_position,
-                              opacity, bg_col, gl_lines_mode, do_depth_fog, show_just_shadows);
+      m.model_molecule_meshes.draw(&shader_for_models, &shader_for_instanced_objects,
+                                   mvp_orthogonal, model_rotation, lights, dummy_eye_position,
+                                   opacity, bg_col, gl_lines_mode, do_depth_fog, show_just_shadows);
    }
 
 }
@@ -1315,11 +1379,11 @@ graphics_info_t::draw_atom_pull_restraints() {
             unsigned int light_idx = 0;
             it = lights.find(light_idx);
             if (it != lights.end())
-               shader.setup_light(light_idx, it->second, model_rotation, eye_position);
+               shader.setup_light(light_idx, it->second, model_rotation);
             light_idx = 1;
             it = lights.find(light_idx);
             if (it != lights.end())
-               shader.setup_light(light_idx, it->second, model_rotation, eye_position);
+               shader.setup_light(light_idx, it->second, model_rotation);
 
             glm::vec4 bg_col(background_colour, 1.0f);
             shader.set_vec4_for_uniform("background_colour", bg_col);
@@ -1345,6 +1409,35 @@ graphics_info_t::draw_atom_pull_restraints() {
       }
    }
 }
+
+// static
+void // draw_proportional_editing_neighbour_displacement_max_radius
+graphics_info_t::draw_intermediate_atoms_pull_restraint_neighbour_displacement_max_radius_ring() {
+
+   if (! regularize_object_bonds_box.empty()) {
+      if (!moving_atoms_asc) return;
+      if (moving_atoms_asc->n_selected_atoms > 0) {
+         auto rcc = RotationCentre();
+         glm::vec3 rc(rcc.x(), rcc.y(), rcc.z());
+         rc = glm::vec3(0,0,0);
+         glm::mat4 unit(1.0);
+         glm::mat4 trans = glm::translate(unit, -rc);
+         glm::mat4 view = get_view_matrix();
+         int w = graphics_x_size;
+         int h = graphics_y_size;
+         bool ortho_flag = true;
+         glm::mat4 proj = get_projection_matrix(ortho_flag, w, h);
+         glm::mat4 mvp = proj * view * trans;
+         glm::mat4 model_rotation = get_model_rotation();
+         bool use_model_rotation = false;
+         lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring.draw(&shader_for_lines,
+                                                                                   rc, mvp,
+                                                                                   model_rotation,
+                                                                                   use_model_rotation);
+      }
+   }
+}
+
 
 void
 graphics_info_t::draw_molecular_triangles() {
@@ -1534,6 +1627,14 @@ graphics_info_t::draw_hud_refinement_dialog_arrow_tab() {
 void
 graphics_info_t::draw_hud_colour_bar() {
 
+   // 20230919-PE draw_hud_colour_bar_flag needs to be turned on somewhere when alphafold is used. It isn't.
+   // Previously I had used user_defined_colours.empty(), which is the wrong test when we have
+   // user defined colours and not alphafold (probably most of the time this is the case).
+   //
+   if (! draw_hud_colour_bar_flag) return;
+
+   if (user_defined_colours.empty()) return;
+
    // this is the colour bar for Alphafold pLDDTs and the like
 
    // I think that all the draw_hud_*() functions should be passed h, w.
@@ -1577,8 +1678,6 @@ graphics_info_t::draw_hud_colour_bar() {
       return std::pair<glm::vec2, glm::vec2>(offset_rel, scales_new);
    };
 
-
-   if (user_defined_colours.empty()) return;
 
    glDisable(GL_DEPTH_TEST);
    texture_for_hud_colour_bar.Bind(0);
@@ -1643,6 +1742,8 @@ graphics_info_t::draw_molecules() {
 
    draw_intermediate_atoms_rama_balls(PASS_TYPE_STANDARD);
 
+   draw_intermediate_atoms_pull_restraint_neighbour_displacement_max_radius_ring(); // proportional editing
+
    draw_atom_pull_restraints();
 
    draw_meshed_generic_display_object_meshes(PASS_TYPE_STANDARD);
@@ -1668,6 +1769,8 @@ graphics_info_t::draw_molecules() {
    draw_happy_face_residue_markers();
 
    draw_bad_nbc_atom_pair_markers(PASS_TYPE_STANDARD);
+
+   draw_chiral_volume_outlier_markers(PASS_TYPE_STANDARD);
 
    draw_anchored_atom_markers();
 
@@ -1705,16 +1808,26 @@ graphics_info_t::draw_molecules_with_shadows() {
             if (m.draw_model_molecule_as_lines) {
 
                float lw = m.get_bond_thickness(); // returns an int.
-               m.molecule_as_mesh.draw_simple_bond_lines(&shader_for_symmetry_atoms_bond_lines, mvp, bg_col_v4, lw, shader_do_depth_fog_flag);
+               m.model_molecule_meshes.draw_simple_bond_lines(&shader_for_symmetry_atoms_bond_lines, mvp, bg_col_v4, lw, shader_do_depth_fog_flag);
 
             } else {
 
                float opacity = 1.0;
-               shader_for_meshes_with_shadows.Use();
-               shader_for_meshes_with_shadows.set_bool_for_uniform("do_fresnel", false); // models should not fresnel
+               shader_for_instanced_meshes_with_shadows.Use();
+#if 0 // before model molecules were instanced
                m.molecule_as_mesh.draw_with_shadows(&shader_for_meshes_with_shadows, mvp, model_rotation_matrix, lights,
                                                     eye_position, opacity, bg_col_v4, shader_do_depth_fog_flag, light_view_mvp,
                                                     shadow_depthMap_texture, shadow_strength, shadow_softness, show_just_shadows);
+               m.draw_molecule_as_meshes_with_shadows(&shader_for_instanced_meshes_with_shadows, mvp, model_rotation_matrix, lights,
+                                                      eye_position, opacity, bg_col_v4, shader_do_depth_fog_flag, light_view_mvp,
+                                                      shadow_depthMap_texture, shadow_strength, shadow_softness, show_just_shadows);
+#endif
+
+               // shader_for_instanced_meshes_with_shadows.set_bool_for_uniform("do_fresnel", false); // models should not fresnel
+               // 20230904-PE Let's try using the new model_molecule_as_meshes class
+               m.model_molecule_meshes.draw_molecule_with_shadows(&shader_for_instanced_meshes_with_shadows, mvp, model_rotation_matrix, lights,
+                                                                  eye_position, opacity, bg_col_v4, shader_do_depth_fog_flag, light_view_mvp,
+                                                                  shadow_depthMap_texture, shadow_strength, shadow_softness, show_just_shadows);
             }
 
             // this has not been shadowified:
@@ -1898,9 +2011,11 @@ graphics_info_t::draw_environment_graphics_object() {
             bool show_just_shadows = false;
             bool wireframe_mode = false;
             float opacity = 1.0f;
+            auto ccrc = RotationCentre();
+            glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
             mesh_for_environment_distances.mesh.draw(&shader_for_moleculestotriangles,
                                                      mvp, model_rotation,
-                                                     lights, eye_position, opacity, bg_col,
+                                                     lights, eye_position, rc, opacity, bg_col,
                                                      wireframe_mode, do_depth_fog, show_just_shadows);
 
             Shader *shader_p = &shader_for_atom_labels;
@@ -1971,8 +2086,10 @@ graphics_info_t::draw_outlined_active_residue() {
       bool show_just_shadows = false;
       bool wireframe_mode = false;
       float opacity = 1.0f;
-      mesh_for_outline_of_active_residue.draw(&shader, mvp, model_rotation, dummy_lights, eye_position, opacity,
-                                              bg_col, wireframe_mode, false, show_just_shadows);
+      auto ccrc = RotationCentre();
+      glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
+      mesh_for_outline_of_active_residue.draw(&shader, mvp, model_rotation, dummy_lights, eye_position, rc,
+                                              opacity, bg_col, wireframe_mode, false, show_just_shadows);
    }
 };
 
@@ -2006,9 +2123,11 @@ graphics_info_t::draw_meshed_generic_display_object_meshes(unsigned int pass_typ
          glm::vec4 bg_col(background_colour, 1.0);
          bool wireframe_mode = false;
          float opacity = 1.0f;
+         auto ccrc = RotationCentre();
+         glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
          for (unsigned int i=0; i<generic_display_objects.size(); i++) {
             generic_display_objects[i].mesh.draw(&shader_for_moleculestotriangles,
-                                                 mvp, model_rotation, lights, eye_position, opacity,
+                                                 mvp, model_rotation, lights, eye_position, rc, opacity,
                                                  bg_col, wireframe_mode, false, show_just_shadows);
          }
       }
@@ -2038,6 +2157,8 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
    glm::mat4 mvp_orthogonal = glm::mat4(1.0f); // placeholder
    glm::mat4 model_rotation = get_model_rotation();
    glm::vec4 bg_col(background_colour, 1.0);
+   auto ccrc = RotationCentre();
+   glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
    bool do_depth_fog = shader_do_depth_fog_flag;
 
    unsigned int light_index = 0;
@@ -2074,8 +2195,8 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
          for (int ii=n_molecules()-1; ii>=0; ii--) {
             // std::cout << "Here B in draw_meshed_generic_display_object_meshes() " << ii  << std::endl;
             molecule_class_info_t &m = molecules[ii]; // not const because the shader changes
+            if (! is_valid_model_molecule(ii)) continue;
             for (unsigned int jj=0; jj<m.meshes.size(); jj++) {
-               if (! is_valid_model_molecule(jj)) continue;
 
                Mesh &mesh = m.meshes[jj];
 
@@ -2086,7 +2207,8 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
                if (mesh.is_instanced) {
 
                   bool transferred_colour_is_instanced = false;
-                  mesh.draw_instanced(&shader_for_moleculestotriangles, mvp,
+                  mesh.draw_instanced(pass_type,
+                                      &shader_for_moleculestotriangles, mvp,
                                       model_rotation, lights, eye_position,
                                       bg_col, do_depth_fog, transferred_colour_is_instanced);
                } else {
@@ -2095,7 +2217,7 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
                      bool wireframe_mode = false;
                      float opacity = 1.0f;
                      m.meshes[jj].draw(&shader_for_meshes_with_shadows, mvp,
-                                       model_rotation, lights, eye_position, opacity, bg_col,
+                                       model_rotation, lights, eye_position, rc, opacity, bg_col,
                                        wireframe_mode, do_depth_fog, show_just_shadows);
                   }
                   if (pass_type == PASS_TYPE_SSAO) {
@@ -2123,7 +2245,7 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
                                mvp_orthogonal,
                                model_rotation,
                                lights,
-                               dummy_eye_position,
+                               dummy_eye_position, rc,
                                opacity,
                                bg_col,
                                gl_lines_mode,
@@ -2684,10 +2806,12 @@ graphics_info_t::draw_measure_distance_and_angles() {
       bool show_just_shadows = false;
       bool wireframe_mode = false;
       float opacity = 1.0f;
-      mesh_for_measure_distance_object_vec.draw(&shader, mvp, model_rotation_matrix, lights, eye_position,
+      auto ccrc = RotationCentre();
+      glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
+      mesh_for_measure_distance_object_vec.draw(&shader, mvp, model_rotation_matrix, lights, eye_position, rc,
                                                 opacity, bg_col, wireframe_mode, shader_do_depth_fog_flag, show_just_shadows);
 
-      mesh_for_measure_angle_object_vec.draw(&shader, mvp, model_rotation_matrix, lights, eye_position,
+      mesh_for_measure_angle_object_vec.draw(&shader, mvp, model_rotation_matrix, lights, eye_position, rc,
                                              opacity, bg_col, wireframe_mode, shader_do_depth_fog_flag, show_just_shadows);
 
       if (! labels_for_measure_distances_and_angles.empty()) {
@@ -2775,6 +2899,8 @@ graphics_info_t::setup_hud_geometry_bars() {
    //texture_for_hud_geometry_labels_map["Rota"].init("rama-plot-other-normal.png");
    texture_for_hud_geometry_labels_map["Pull"].init("hud-label-pull-small.png");
    // texture_for_hud_geometry_labels_map["Pull"].init("rama-plot-other-normal.png");
+
+   texture_for_hud_geometry_labels_map["Chiral"].init("hud-label-chiral-small.png");
 
    // texture_for_hud_tooltip_background.set_default_directory(coot::package_data_dir());
    texture_for_hud_tooltip_background.init("hud-tooltip.png"); // 94x47
@@ -3272,7 +3398,6 @@ graphics_info_t::show_accept_reject_hud_buttons() {
                    };
 
    auto button_2_func = [] () {
-                           std::cout << "------------------- HUD button Cancel callback start " << std::endl;
                            graphics_info_t g;
                            g.stop_refinement_internal();
                            g.clear_up_moving_atoms();
@@ -3282,7 +3407,6 @@ graphics_info_t::show_accept_reject_hud_buttons() {
                            g.graphics_draw();
                            g.hide_atom_pull_toolbar_buttons();
                            g.clear_gl_rama_plot();
-                           std::cout << "------------------- HUD button Cancel callback done " << std::endl;
                            return true;
                         };
    auto button_3_func = [] () {
@@ -3406,10 +3530,11 @@ graphics_info_t::draw_hud_geometry_bars() {
       hud_label_info_t(const std::string &n, unsigned int i) : name(n), bar_index(i) { label_relative_width = 1.0; }
    };
    std::vector<hud_label_info_t> hud_label_info;
-   hud_label_info.push_back(hud_label_info_t("Pull", 0, 0.7));
-   hud_label_info.push_back(hud_label_info_t("Rama", 2));
-   hud_label_info.push_back(hud_label_info_t("Rota", 3, 0.9));
-   hud_label_info.push_back(hud_label_info_t("NBC",  1, 0.9));
+   hud_label_info.push_back(hud_label_info_t("Pull",   0, 0.7));
+   hud_label_info.push_back(hud_label_info_t("Rama",   2, 1.0));
+   hud_label_info.push_back(hud_label_info_t("Rota",   3, 0.9));
+   hud_label_info.push_back(hud_label_info_t("NBC",    1, 0.9));
+   hud_label_info.push_back(hud_label_info_t("Chiral", 4, 1.0));
    float x_base = get_x_base_for_hud_geometry_bars();
 
    // Note that the x-positions are are not the left-most edge of the label (hmm)
@@ -3451,6 +3576,21 @@ graphics_info_t::draw_hud_geometry_bars() {
                                                if (rotation_amount < 0.68) rotation_amount = 0.68;
                                                return rotation_amount;
                                             };
+
+   auto chiral_volume_distortion_to_rotation_amount = [] (float distortion) {
+                                               float fac = 0.05;
+                                               float rotation_amount = 1.0 - fac * distortion;
+                                               if (rotation_amount < 0.68) rotation_amount = 0.68;
+                                               return rotation_amount;
+   };
+
+
+   // Other hud_geometry_distortion_to_x function are class members
+   // So make this function match the function of the same name in check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked()
+   //
+   auto hud_geometry_distortion_to_bar_size_chiral = +[] (float distortion) {
+      return distortion * 0.01f; // the f is needed
+   };
 
    auto add_bars = [] (const std::vector<std::pair<coot::atom_spec_t, float> > &baddies,
                        unsigned int bar_index,
@@ -3634,8 +3774,13 @@ graphics_info_t::draw_hud_geometry_bars() {
          const auto &bip = rr.sorted_nbc_baddies[i];
          std::pair<coot::atom_spec_t, float> p_1(bip.atom_spec_1, bip.score);
          std::pair<coot::atom_spec_t, float> p_2(bip.atom_spec_2, bip.score);
-         converted_baddies[2*i  ] = p_1;
-         converted_baddies[2*i+1] = p_2;
+         // 20230813-PE fixes a crash, I hope.
+         if ((2*i+1) < converted_baddies.size()) {
+            converted_baddies[2*i  ] = p_1;
+            converted_baddies[2*i+1] = p_2;
+         } else {
+            std::cout << "ERROR:: out of range in converted_baddies  " << 2*i << " " << converted_baddies.size() << std::endl;
+         }
       }
       add_bars(converted_baddies, 1, &new_bars, moving_atoms_active_residue,
                x_base_for_hud_geometry_bars, distortion_to_rotation_amount_nbc,
@@ -3646,6 +3791,16 @@ graphics_info_t::draw_hud_geometry_bars() {
       // std::cout << "add_bars() for rama with " << rr.sorted_rama_baddies.size() << " sorted baddies" << std::endl;
       add_bars(rr.sorted_rama_baddies, 2, &new_bars, moving_atoms_active_residue, x_base_for_hud_geometry_bars,
                hud_geometry_distortion_to_rotation_amount_rama, hud_geometry_distortion_to_bar_size_rama);
+   }
+
+   if (! rr.sorted_chiral_volume_baddies.empty()) {
+      std::vector<std::pair<coot::atom_spec_t, float> > converted_baddies(rr.sorted_chiral_volume_baddies.size());
+      for (unsigned int ii=0; ii<rr.sorted_chiral_volume_baddies.size(); ii++) {
+         converted_baddies[ii] = std::make_pair(rr.sorted_chiral_volume_baddies[ii].atom_spec,
+                                                rr.sorted_chiral_volume_baddies[ii].distortion);
+      }
+      add_bars(converted_baddies, 4, &new_bars, moving_atoms_active_residue, x_base_for_hud_geometry_bars,
+               chiral_volume_distortion_to_rotation_amount, hud_geometry_distortion_to_bar_size_chiral);
    }
 
    // add rotas to new_bars
@@ -3873,14 +4028,17 @@ graphics_info_t::check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(double m
          // but now rr.sorted_nbc_baddies is std::vector<refinement_results_nbc_baddie_t>
          // so now I need to convert
 
-         std::vector<std::pair<coot::atom_spec_t, float> > converted_baddies(rr.sorted_nbc_baddies.size());
+         std::vector<std::pair<coot::atom_spec_t, float> > converted_baddies(rr.sorted_nbc_baddies.size() * 2); // 20230519-PE both ways
          for (unsigned int i=0; i<rr.sorted_nbc_baddies.size(); i++) {
-            if (i < converted_baddies.size()) {
-               const auto &bip = rr.sorted_nbc_baddies[i];
-               std::pair<coot::atom_spec_t, float> p(bip.atom_spec_1, bip.score);
-               converted_baddies[i] = p;
+            const auto &bip = rr.sorted_nbc_baddies[i];
+            std::pair<coot::atom_spec_t, float> p_1(bip.atom_spec_1, bip.score);
+            std::pair<coot::atom_spec_t, float> p_2(bip.atom_spec_2, bip.score);
+            // 20230813-PE fixes a crash, I hope.
+            if ((2*i+1) < converted_baddies.size()) {
+               converted_baddies[2*i  ] = p_1;
+               converted_baddies[2*i+1] = p_2;
             } else {
-               std::cout << "ERROR:: bad converted_baddies index " << i << " " << converted_baddies.size() << std::endl;
+               std::cout << "ERROR:: out of range in converted_baddies  " << 2*i << " " << converted_baddies.size() << std::endl;
             }
          }
 
@@ -3906,6 +4064,27 @@ graphics_info_t::check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(double m
       }
    }
 
+   if (!status_pair.first) {
+      if (! rr.sorted_chiral_volume_baddies.empty()) {
+         if (moving_atoms_asc) {
+            if (moving_atoms_asc->mol) {
+
+               auto hud_geometry_distortion_to_bar_size_chiral = +[] (float distortion) {
+                  return distortion * 0.01f; // the f is needed - match lambda function of the same name
+                                             // in draw_hud_geometry_bars().
+               };
+
+               std::vector<std::pair<coot::atom_spec_t, float> > converted_baddies(rr.sorted_chiral_volume_baddies.size());
+               for (unsigned int ii=0; ii<rr.sorted_chiral_volume_baddies.size(); ii++) {
+                  converted_baddies[ii] = std::make_pair(rr.sorted_chiral_volume_baddies[ii].atom_spec,
+                                                         rr.sorted_chiral_volume_baddies[ii].distortion);
+               }
+               status_pair = check_blocks(converted_baddies, 4, x_base_for_hud_geometry_bars,
+                                          hud_geometry_distortion_to_bar_size_chiral, act_on_hit);
+            }
+         }
+      }
+   }
 
    if (act_on_hit) {
       if (status_pair.first) {
@@ -3943,6 +4122,9 @@ graphics_info_t::check_if_hud_bar_clicked(double mouse_x, double mouse_y) {
    if (! moving_atoms_asc->mol) return false;
    bool act_on_hit = true;
    std::pair<bool, mmdb::Atom *> r = check_if_hud_bar_moused_over_or_act_on_hud_bar_clicked(mouse_x, mouse_y, act_on_hit);
+   if (false)
+      std::cout << ":::::::::: debug:: check_if_hud_bar_clicked() returns "
+                << r.first << " " << r.second << std::endl;
    return  r.first;
 }
 
@@ -4123,6 +4305,8 @@ void
 graphics_info_t::render_3d_scene(GtkGLArea *gl_area) {
 
    // note: this function is called from render_scene_sans_depth_blur()
+   // 20230814-PE Is it?
+   //             It is not used by the "Fancy" frame-buffer path
 
    //  ------------------- render scene ----------------------------
 
@@ -4162,6 +4346,8 @@ graphics_info_t::render_3d_scene(GtkGLArea *gl_area) {
 
 void
 graphics_info_t::render_3d_scene_with_shadows() {
+
+   // std::cout << "render_3d_scene_with_shadows() --- start ---" << std::endl;
 
    // note: this function is called from render_scene_sans_depth_blur()
 
@@ -4262,32 +4448,10 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
                                    }
                                 };
 
-   unsigned int frame_time_history_list_max_n_elements = 500;
-   GtkWidget *glarea = glareas[0];
-   if (glarea) {
-      auto tp_now = std::chrono::high_resolution_clock::now();
-      frame_time_history_list.push_back(tp_now);
-      if (frame_time_history_list.size() >= (frame_time_history_list_max_n_elements+1))
-         frame_time_history_list.pop_front();
-   }
-
-   // std::cout << "DEBUG:: graphics_info_t::render()!" << std::endl;
-
-   if (! to_screendump_framebuffer_flag) {
-
-      gboolean state = render_scene();
-      draw_hud_elements();
-#ifdef __APPLE__
-      glFinish();
-#else
-      glFlush();
-#endif
-      update_fps_statistics();
-      return state;
-
-   } else {
-
+   auto screendump_image = [update_fps_statistics] (const std::string &output_file_name) {
       // this works! Nice framebuffer scaling with screendump_tga().
+
+      std::cout << "debug:: in screendump_image() with use_framebuffers " << use_framebuffers << std::endl;
 
       GtkGLArea *gl_area = GTK_GL_AREA(glareas[0]);
       GtkAllocation allocation;
@@ -4318,14 +4482,17 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
          unsigned int index_offset = 0;
          screendump_framebuffer.init(sf * w, sf * h, index_offset, "screendump");
          screendump_framebuffer.bind();
-         render_3d_scene(gl_area);
+
+         // render_3d_scene(gl_area);
          // render_scene_with_screen_ao_shader();
+
+         render_scene();
+
          gtk_gl_area_attach_buffers(gl_area);
          screendump_tga_internal(output_file_name, w, h, sf, screendump_framebuffer.get_fbo());
 
       } else {
 
-         // simple/direct - for debugging framebuffers
          gtk_gl_area_attach_buffers(gl_area);
          render_3d_scene(gl_area);
          draw_hud_elements();
@@ -4346,6 +4513,37 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
       update_fps_statistics();
 
       return FALSE;
+
+   };
+
+   auto update_frame_time_history = [] () {
+      unsigned int frame_time_history_list_max_n_elements = 500;
+      GtkWidget *glarea = glareas[0];
+      if (glarea) {
+         auto tp_now = std::chrono::high_resolution_clock::now();
+         frame_time_history_list.push_back(tp_now);
+         if (frame_time_history_list.size() >= (frame_time_history_list_max_n_elements+1))
+            frame_time_history_list.pop_front();
+      }
+   };
+
+
+   // ################################## main line #############################################
+
+   update_frame_time_history();
+
+   if (to_screendump_framebuffer_flag) {
+      return screendump_image(output_file_name);
+   } else {
+      gboolean state = render_scene();
+      draw_hud_elements();
+#ifdef __APPLE__
+      glFinish();
+#else
+      glFlush();
+#endif
+      update_fps_statistics();
+      return state;
    }
 }
 
@@ -4620,8 +4818,6 @@ graphics_info_t::get_particle_centre_positions() {
 
 void
 graphics_info_t::setup_draw_for_particles() {
-
-   std::cout << "------------------ setup_draw_for_particles()!!!!!!!!!!!!!!!!! ---------" << std::endl;
 
    if (false) // from the days when particle drawing was a problem!
       std::cout << "setup_draw_for_particles(): -- start -- n_particles " << particles.size()
@@ -5010,6 +5206,86 @@ graphics_info_t::draw_bad_nbc_atom_pair_markers(unsigned int pass_type) {
    }
 }
 
+ void
+    graphics_info_t::setup_draw_for_chiral_volume_outlier_markers() {
+
+    texture_for_chiral_volume_outlier_markers.init("chiral-volume-outlier-marker.png");
+    float ts = 0.7; // relative texture size
+    tmesh_for_chiral_volume_outlier_markers.setup_camera_facing_quad(ts, ts, 0.0, 0.7);
+    tmesh_for_chiral_volume_outlier_markers.setup_instancing_buffers(200);
+    tmesh_for_chiral_volume_outlier_markers.draw_this_mesh = true;
+
+}
+
+ // static
+ void
+    graphics_info_t::draw_chiral_volume_outlier_markers(unsigned int pass_type) {
+
+    // unlike NBC markers, each molecule can have it's own chiral volume outlier markers
+    for (unsigned int imol=0; imol<molecules.size(); imol++) {
+       if (is_valid_model_molecule(imol)) {
+          if (molecules[imol].draw_it) {
+             if (molecules[imol].draw_chiral_volume_outlier_markers_flag) {
+                if (! molecules[imol].chiral_volume_outlier_marker_positions.empty()) {
+
+                   unsigned int n = graphics_info_t::molecules[imol].chiral_volume_outlier_marker_positions.size();
+
+                   glm::mat4 mvp = get_molecule_mvp();
+                   glm::mat4 model_rotation = get_model_rotation();
+                   glm::vec4 bg_col(background_colour, 1.0);
+                   texture_for_chiral_volume_outlier_markers.Bind(0);
+
+                   if (pass_type == PASS_TYPE_STANDARD) {
+                      tmesh_for_chiral_volume_outlier_markers.draw_instances(&shader_for_happy_face_residue_markers,
+                                                                             mvp, model_rotation, bg_col, perspective_projection_flag);
+                   }
+
+                   if (pass_type == PASS_TYPE_SSAO) {
+                      GtkAllocation allocation;
+                      gtk_widget_get_allocation(GTK_WIDGET(glareas[0]), &allocation);
+                      int w = allocation.width;
+                      int h = allocation.height;
+                      bool do_orthographic_projection = ! perspective_projection_flag;
+                      auto model_matrix = get_model_matrix();
+                      auto view_matrix = get_view_matrix();
+                      auto projection_matrix = get_projection_matrix(do_orthographic_projection, w, h);
+                      tmesh_for_chiral_volume_outlier_markers.draw_instances_for_ssao(&shader_for_happy_face_residue_markers_for_ssao,
+                                                                                      model_matrix, view_matrix, projection_matrix);
+                   }
+                }
+             }
+          }
+       }
+    }
+ }
+
+ #include "sound.hh"
+
+ //static
+ void
+    graphics_info_t::update_chiral_volume_outlier_marker_positions() {
+
+    for (unsigned int imol=0; imol<molecules.size(); imol++) {
+       if (is_valid_model_molecule(imol)) {
+          if (molecules[imol].draw_chiral_volume_outlier_markers_flag) {
+             unsigned int n_prev = molecules[imol].chiral_volume_outlier_marker_positions.size();
+             molecules[imol].fill_chiral_volume_outlier_marker_positions(1);
+             const auto &positions = molecules[imol].chiral_volume_outlier_marker_positions;
+             if (positions.size() < n_prev) {
+                play_sound("STARS");
+             }
+             if (! positions.empty()) {
+                // update the instancing mesh
+                attach_buffers();
+                tmesh_for_chiral_volume_outlier_markers.draw_this_mesh = true;
+                tmesh_for_chiral_volume_outlier_markers.update_instancing_buffer_data(positions);
+                molecules[imol].draw_chiral_volume_outlier_markers_flag = true;
+             }
+          }
+       }
+    }
+ }
+
 
 // static
 void
@@ -5192,8 +5468,10 @@ graphics_info_t::draw_boids() {
       bool show_just_shadows = false;
       bool wireframe_mode = false;
       float opacity = 1.0f;
+      auto ccrc = RotationCentre();
+      glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
       mesh_for_boids.draw(&shader_for_instanced_objects,
-                          mvp, model_rotation_matrix, lights, eye_position, opacity, bg_col,
+                          mvp, model_rotation_matrix, lights, eye_position, rc, opacity, bg_col,
                           wireframe_mode, shader_do_depth_fog_flag, show_just_shadows);
 
       lines_mesh_for_boids_box.draw(&shader_for_lines, mvp, model_rotation_matrix);
@@ -5202,6 +5480,9 @@ graphics_info_t::draw_boids() {
 
 void
 graphics_info_t::update_hydrogen_bond_mesh(const std::string &label) {
+
+   return; // 20230823-PE for now we don't want hydrogen-bond mesh, I don't want
+           // to debug while the tick function is active.
 
    // caller fills static std::vector<std::pair<glm::vec3, glm::vec3> > hydrogen_bonds_atom_position_pairs
    // before this function
@@ -5245,7 +5526,9 @@ graphics_info_t::draw_hydrogen_bonds_mesh() {
       glm::mat4 model_rotation_matrix = get_model_rotation();
       glm::vec4 bg_col(background_colour, 1.0);
 
-      mesh_for_hydrogen_bonds.draw_instanced(&shader_for_instanced_objects,
+      int pass_type = PASS_TYPE_STANDARD;
+      mesh_for_hydrogen_bonds.draw_instanced(pass_type,
+                                             &shader_for_instanced_objects,
                                              mvp, model_rotation_matrix, lights, eye_position, bg_col,
                                              shader_do_depth_fog_flag, false, false, true, 0, 0, 0, 0.2);
    }
@@ -5453,14 +5736,16 @@ graphics_info_t::draw_pointer_distances_objects() {
          bool show_just_shadows = false;
          bool wireframe_mode = false;
          float opacity = 1.0f;
-         mesh_for_pointer_distances.mesh.draw(&shader, mvp, model_rotation_matrix, lights, eye_position, opacity,
+         auto ccrc = RotationCentre();
+         glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
+         mesh_for_pointer_distances.mesh.draw(&shader, mvp, model_rotation_matrix, lights, eye_position, rc, opacity,
                                               bg_col, wireframe_mode, shader_do_depth_fog_flag, show_just_shadows);
 
          if (! labels_for_pointer_distances.empty()) {
-            Shader &shader = shader_for_atom_labels;
+            Shader &shader_labels = shader_for_atom_labels;
             for (unsigned int i=0; i<labels_for_pointer_distances.size(); i++) {
                const auto &label = labels_for_pointer_distances[i];
-               tmesh_for_labels.draw_atom_label(label.label, label.position, label.colour, &shader,
+               tmesh_for_labels.draw_atom_label(label.label, label.position, label.colour, &shader_labels,
                                                 mvp, model_rotation_matrix, bg_col,
                                                 shader_do_depth_fog_flag, perspective_projection_flag);
             }
@@ -5474,10 +5759,8 @@ graphics_info_t::make_extra_distance_restraints_objects() {
 
    // c.f. update_hydrogen_bond_mesh().
 
-   // std::cout << "here in make_extra_distance_restraints_objects() " << std::endl;
-
-   double penalty_min = 0.1; // only restraints that have more than this "distortion" are considered for drawing.
-                             // Make this user-setable.
+   double penalty_min = 0.05; // only restraints that have more than this "distortion" are considered for drawing.
+                               // Make this user-setable.
 
    // the model has been updated, we need to update the positions and orientations using in the instancing
 
@@ -5490,8 +5773,6 @@ graphics_info_t::make_extra_distance_restraints_objects() {
 
    unsigned int maerrb_size = moving_atoms_extra_restraints_representation.bonds.size();
    attach_buffers();
-   Material material;
-   mesh_for_extra_distance_restraints.setup_extra_distance_restraint_cylinder(material); // init
    mesh_for_extra_distance_restraints.setup_instancing_buffer_data_for_extra_distance_restraints(maerrb_size);
    // now fill extra_distance_restraints_markup_data
 
@@ -5508,7 +5789,7 @@ graphics_info_t::make_extra_distance_restraints_objects() {
       double sigma = 0.1; // what is this actually?
       double penalty = ebrr.distortion_score_GM(sigma, geman_mcclure_alpha);
       if (penalty < penalty_min) continue;
-      double width = 0.3 * penalty;
+      double width = 0.2 * penalty; // 20230823-PE was 0.3
       if (width < 0.01) width = 0.01;
       if (width > 0.10) width = 0.10;
       edrmid.width = width;
@@ -5552,9 +5833,29 @@ graphics_info_t::make_extra_distance_restraints_objects() {
 void
 graphics_info_t::draw_extra_distance_restraints(int pass_type) {
 
+   // 20230825-PE we don't want to see these if there are no intermediate atoms being displayed
+   // Maybe they should be cleared up on "clear_moving_atoms()" (or whatever the function is called).
+
+   if (!moving_atoms_asc)
+      return;
+   if (!moving_atoms_asc->mol)
+      return;
+
+   if (! draw_it_for_moving_atoms_restraints_graphics_object_user_control) return;
+
+   // std::cout << "draw_extra_distance_restraints() pass_type: " << pass_type << std::endl;
+   // std::cout << "draw_extra_distance_restraints() mesh_for_extra_distance_restraints " << std::endl;;
+   // mesh_for_extra_distance_restraints.debug();
+
    // it used to be called draw_it_for_moving_atoms_restraints_graphics_object - why not use that varible?
    //
+   // what about draw_it_for_moving_atoms_restraints_graphics_object?
+   //
    if (pass_type == PASS_TYPE_STANDARD) {
+      if (false)
+         std::cout << "in draw_extra_distance_restraints() with show_extra_distance_restraints_flag "
+                   << show_extra_distance_restraints_flag << " " << extra_distance_restraints_markup_data.size()
+                   << std::endl;
       if (show_extra_distance_restraints_flag) {
          if (! extra_distance_restraints_markup_data.empty()) {
             glm::mat4 mvp = get_molecule_mvp();
@@ -5586,6 +5887,37 @@ graphics_info_t::draw_extra_distance_restraints(int pass_type) {
    }
 
 }
+
+// called from gl widget realize function
+// static
+ void
+    graphics_info_t::setup_lines_mesh_for_proportional_editing() {
+
+    unsigned int n_points = 100;
+    std::vector<s_generic_vertex> vertices(n_points);
+    glm::vec3 n(0,0,1);
+    glm::vec4 c(0.7,0.7,0.7,1.0);
+    double r = 0.001;
+    for (unsigned int i=0; i<n_points; i++) {
+       double theta = 2.0 * M_PI * static_cast<double>(i) / 100.0;
+       glm::vec3 pt(r * cos(theta), r * sin(theta), 0.0);
+       vertices[i] = s_generic_vertex(pt, n, c);
+    }
+
+    std::vector<unsigned int> indices;
+    for (unsigned int i=0; i<n_points; i++) {
+       unsigned int i_next = i+1;
+       if (i_next == n_points) i_next = 0;
+       indices.push_back(i);
+       indices.push_back(i_next);
+    }
+
+    lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring = LinesMesh(vertices, indices);
+    std::string name = "lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring";
+    lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring.set_name(name);
+    lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring.setup();
+ }
+
 
 
 void
@@ -5666,11 +5998,10 @@ graphics_info_t::idle_contour_function(gpointer data) {
          }
       }
    }
-   // std::cout << "Here with something_changed: " << something_changed << std::endl;
 
-   // is this needed?
-   // if (something_changed)
-   //    graphics_draw();
+   if (something_changed)
+      graphics_draw();
+
    // std::cout << "--- debug:: idle_contour_function() done " << continue_status << std::endl;
    return continue_status;
 }
@@ -6075,6 +6406,28 @@ graphics_info_t::setup_key_bindings() {
       return gboolean(TRUE);
    };
 
+   auto l43 = [] () {
+      bool done = false;
+      for (int ii=0; ii<n_molecules(); ii++) {
+         if (is_valid_map_molecule(ii)) {
+            if (ii > scroll_wheel_map) {
+               scroll_wheel_map = ii;
+               done = true;
+               break;
+            }
+         }
+      }
+      if (! done) {
+         for (int ii=0; ii<n_molecules(); ii++) {
+            if (is_valid_map_molecule(ii)) {
+               scroll_wheel_map = ii;
+               break;
+            }
+         }
+      }
+      return gboolean(TRUE);
+   };
+
    // Note to self, Space and Shift Space are key *Release* functions
 
    std::vector<std::pair<keyboard_key_t, key_bindings_t> > kb_vec;
@@ -6121,6 +6474,9 @@ graphics_info_t::setup_key_bindings() {
    // map radius
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_bracketleft,  key_bindings_t(l41, "Decrease Map Radius")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_bracketright, key_bindings_t(l42, "Increase Map Radius")));
+
+   // scroll-wheel map change
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_W, key_bindings_t(l43, "Change Scroll-wheel map")));
 
    // control
    // meh - ugly and almost useless. Try again.
@@ -6308,58 +6664,28 @@ graphics_info_t::fullscreen() {
 
    if (GTK_IS_WINDOW(window)) {
 
-      GtkWidget *vbox       = widget_from_builder("main_window_vbox");
       // GtkWidget *overlay    = widget_from_builder("main_window_graphics_overlay");
       GtkWidget *status_bar = widget_from_builder("main_window_statusbar");
       GtkWidget *tool_bar   = widget_from_builder("main_window_toolbar_hbox_outer");
 
-      // // GtkWidget *tool_bar_frame   = widget_from_builder("main_window_model_fit_dialog_frame");
       GtkWidget* sidebar = widget_from_builder("main_window_vbox_inner");
 
       gtk_widget_set_visible(tool_bar, FALSE);
       gtk_widget_set_visible(sidebar, FALSE);
       gtk_widget_set_visible(status_bar, FALSE);
 
-
-      std::cout << "calling gtk_window_fullscreen() " << window << std::endl;
       gtk_window_fullscreen(GTK_WINDOW(window));
-      gtk_application_window_set_show_menubar(GTK_APPLICATION_WINDOW(window),FALSE);
+      gtk_application_window_set_show_menubar(GTK_APPLICATION_WINDOW(window), FALSE);
 
+      // gtk_box_remove(GTK_BOX(vbox), status_bar);
+      // gtk_box_remove(GTK_BOX(vbox), tool_bar);
 
-#if (GTK_MAJOR_VERSION >= 4)
-      // std::cout << "in fullscreen(): no gtk_container_remove()" << std::endl;
-      // instead use:
-      gtk_box_remove(GTK_BOX(vbox), status_bar);
-      gtk_box_remove(GTK_BOX(vbox), tool_bar);
-
-#else
-
-      gtk_container_remove(GTK_CONTAINER(vbox), status_bar);
-      gtk_overlay_add_overlay(GTK_OVERLAY(overlay), status_bar);
-      // gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(overlay), status_bar, TRUE);
-      gtk_widget_set_halign(status_bar, GTK_ALIGN_START);
-      gtk_widget_set_valign(status_bar, GTK_ALIGN_END);
-      gtk_widget_grab_focus(glareas[0]); // in fullscreen()
-
-
-      if (false) {
-         gtk_container_remove(GTK_CONTAINER(vbox), tool_bar);
-         gtk_overlay_add_overlay(GTK_OVERLAY(overlay), tool_bar);
-         gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(overlay), tool_bar, TRUE);
-         gtk_widget_set_halign(tool_bar, GTK_ALIGN_START);
-         gtk_widget_set_valign(tool_bar, GTK_ALIGN_START);
-      }
-
-      if (false) {
-         gtk_container_remove(GTK_CONTAINER(vbox), menu_bar_frame);
-         gtk_overlay_add_overlay(GTK_OVERLAY(overlay), menu_bar_frame);
-         gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(overlay), menu_bar_frame, TRUE);
-         gtk_widget_set_halign(menu_bar_frame, GTK_ALIGN_START);
-         gtk_widget_set_valign(menu_bar_frame, GTK_ALIGN_START);
-      }
-#endif
+      gtk_widget_set_visible(status_bar, FALSE);
+      gtk_widget_set_visible(tool_bar,   FALSE);
 
       graphics_info_t::add_status_bar_text(""); // clear it
+
+      graphics_grab_focus();
 
    } else {
       g_error("%p is not a Gtk.Window !", window);
@@ -6378,9 +6704,9 @@ graphics_info_t::unfullscreen() {
       GtkWidget* sidebar    = widget_from_builder("main_window_vbox_inner");
       GtkWidget* tool_bar   = widget_from_builder("main_window_toolbar_hbox_outer");
       GtkWidget* status_bar = widget_from_builder("main_window_statusbar");
-      // That likely requires porting:
-      
-      //GtkWidget *tool_bar_frame   = widget_from_builder("main_window_model_fit_dialog_frame");
+
+      gtk_widget_set_visible(status_bar, TRUE);
+      gtk_widget_set_visible(tool_bar,   TRUE);
 
       if(false) {
          GtkWidget *vbox       = widget_from_builder("main_window_vbox");
@@ -6393,12 +6719,12 @@ graphics_info_t::unfullscreen() {
          gtk_box_append(GTK_BOX(vbox), status_bar);
       }
 
-      
       //gtk_widget_set_visible(tool_bar_frame, TRUE);
       gtk_widget_set_visible(tool_bar, TRUE);
       gtk_widget_set_visible(sidebar, TRUE);
       gtk_widget_set_visible(status_bar, TRUE);
-} else {
+
+   } else {
       g_error("%p is not a Gtk.Window !", window);
    }
 }

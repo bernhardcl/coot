@@ -50,16 +50,6 @@
 // #ifdef DATADIR
 // #endif // DATADIR
 
-// #include <GL/glut.h> // for glutInit()
-
-// #include "lbg/lbg.hh"
-
-#include "interface.h"
-#ifndef HAVE_SUPPORT_H
-#define HAVE_SUPPORT_H
-#include "support.h"
-#endif /* HAVE_SUPPORT_H */
-
 
 #include <sys/types.h> // for stating
 #include <sys/stat.h>
@@ -99,10 +89,8 @@
 //
 #if defined (WINDOWS_MINGW)
 #include <locale.h>
-#ifdef DATADIR
-#undef DATADIR
-#endif // DATADIR
 #endif
+
 #include "compat/sleep-fixups.h"
 
 #include "c-interface.h"
@@ -134,7 +122,6 @@
 #include "scm-boot-guile.hh"
 
 #include "widget-headers.hh" // put these somewhere else? better name? -------- GTK-FIME
-#include "sound.hh"
 
 #include "draw.hh" // for test_gtk3_adjustment_changed() - maybe that should go elsewhere?
 #include "draw-2.hh"

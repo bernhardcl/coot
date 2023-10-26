@@ -23,7 +23,7 @@ add-terminal-residue.hh  interfaces.hh              moorhen-h-bonds.hh          
 atom-pull.hh             rigid-body-fit.hh          svg-store-key.hh                       \
 phi-psi-prob.hh          saved-strand-info.hh       simple-molecule.hh                     \
 generic-3d-lines.hh      cell.hh                    coot-simple-molecule.hh                \
-api-cell.hh
+api-cell.hh              bond-colour.hh             make-instanced-graphical-bonds.hh
 
 lib_LTLIBRARIES=libcoot-api.la
 
@@ -62,12 +62,13 @@ libcoot_api_la_LDFLAGS = $(SHARED_LDFLAGS)            \
 
 check_PROGRAMS = test-molecules-container
 
-test_molecules_container_SOURCES = test_molecules_container.cc
+test_molecules_container_SOURCES = test_molecules_container.cc filo-tests.cc
 
 test_molecules_container_LDFLAGS = ./libcoot-api.la \
    $(top_builddir)/MoleculesToTriangles/CXXClasses/libMoleculesToTrianglesCXXClasses.la \
    $(top_builddir)/MoleculesToTriangles/CXXSurface/libMoleculesToTrianglesCXXSurface.la \
    $(top_builddir)/ligand/libcoot-ligand.la           \
+   $(top_builddir)/ideal/libcoot-ideal.la             \
    $(top_builddir)/pli/libcoot-pli.la                 \
    $(top_builddir)/density-contour/libcoot-isosurface.la \
    $(top_builddir)/coot-utils/libcoot-map-utils.la    \

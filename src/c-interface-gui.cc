@@ -67,6 +67,7 @@
 #include "coot-references.h"
 #include "coot-preferences.h"
 #include "rotate-translate-modes.hh"
+#include "curl-utils.hh"
 
 #include "graphics-info.h"
 #include "interface.h"
@@ -87,11 +88,7 @@
 #include "c-interface-widgets.hh"
 
 #include "widget-from-builder.hh"
-#include "support.h" // for internationalizations.
-
-// I think this test is wrong. New gtk doesn't have get active text.
-// Use a gtkcomboboxtext for that.
-
+#include "utils/coot-utils.hh"
 
 void set_show_paths_in_display_manager(int i) {
    std::string cmd = "set-show-paths-in-display-manager";
@@ -819,7 +816,7 @@ void fill_about_window(GtkWidget *widget) {
   gtk_text_view_set_editable (GTK_TEXT_VIEW (text_widget), FALSE);
   gtk_text_view_set_wrap_mode (GTK_TEXT_VIEW (text_widget), GTK_WRAP_WORD);
   gtk_text_buffer_set_text (gtk_text_view_get_buffer (GTK_TEXT_VIEW (text_widget)),
-			    _(widget_text.c_str()), -1);
+			    widget_text.c_str(), -1);
 
 }
 
@@ -1249,105 +1246,6 @@ void set_graphics_window_position(int x_pos, int y_pos) {
    add_to_history_typed(cmd, args);
 }
 
-/* a general purpose version of the above, where we pass a widget flag */
-void
-store_window_position(int window_type, GtkWidget *widget) {
-
-   // Note that we can't call this function on xxx_dialog_destroy
-   // because we only have an gtkobject there, and if we cast there:
-   // GTK_WIDGET(object) to get the 'widget' of this function, then
-   // widget->window is NULL, and gdk_window_get_root_origin fails.
-
-   gint upositionx = 0, upositiony = 0;
-
-   GtkAllocation allocation;
-   gtk_widget_get_allocation(widget, &allocation);
-   graphics_info_t::file_chooser_dialog_x_size = allocation.width;
-   graphics_info_t::file_chooser_dialog_y_size = allocation.height;
-
-#if (GTK_MAJOR_VERSION >= 4)
-   std::cout << "in store_window_position() FIXME GtkWindows no longer know about position" << std::endl;
-#else
-   if (window_type != COOT_DISPLAY_CONTROL_MAPS_VBOX)
-      if (window_type != COOT_DISPLAY_CONTROL_MOLECULES_VBOX)
-         if (window_type != COOT_DISPLAY_CONTROL_PANE)
-            gtk_window_get_position(GTK_WINDOW(widget), &upositionx, &upositiony);
-#endif
-
-   if (window_type == COOT_MODEL_REFINE_DIALOG) {
-      graphics_info_t::model_fit_refine_x_position = upositionx;
-      graphics_info_t::model_fit_refine_y_position = upositiony;
-   }
-
-   if (window_type == COOT_DELETE_WINDOW) {
-      // notice that for delete item, this does not get called from
-      // the destroy callback, because we can't get to widget (the
-      // dialog) that has a window
-      graphics_info_t::delete_item_widget_x_position = upositionx;
-      graphics_info_t::delete_item_widget_y_position = upositiony;
-   }
-
-   if (window_type == COOT_GO_TO_ATOM_WINDOW) {
-      graphics_info_t::go_to_atom_window_x_position = upositionx;
-      graphics_info_t::go_to_atom_window_y_position = upositiony;
-   }
-
-   if (window_type == COOT_ACCEPT_REJECT_WINDOW) {
-      graphics_info_t::accept_reject_dialog_x_position = upositionx;
-      graphics_info_t::accept_reject_dialog_y_position = upositiony;
-   }
-
-   if (window_type == COOT_ROTATE_TRANSLATE_DIALOG) {
-      graphics_info_t::rotate_translate_x_position = upositionx;
-      graphics_info_t::rotate_translate_y_position = upositiony;
-   }
-
-   if (window_type == COOT_DISPLAY_CONTROL_WINDOW) {
-      graphics_info_t::display_manager_x_position = upositionx;
-      graphics_info_t::display_manager_y_position = upositiony;
-      GtkAllocation allocation;
-      gtk_widget_get_allocation(widget, &allocation);
-      graphics_info_t::display_manager_x_size = allocation.width;
-      graphics_info_t::display_manager_y_size = allocation.height;
-   }
-
-   if (window_type == COOT_DISPLAY_CONTROL_MAPS_VBOX) {
-      GtkAllocation allocation;
-      gtk_widget_get_allocation(widget, &allocation);
-      graphics_info_t::display_manager_maps_vbox_x_size = allocation.width;
-      graphics_info_t::display_manager_maps_vbox_y_size = allocation.height;
-   }
-   if (window_type == COOT_DISPLAY_CONTROL_MOLECULES_VBOX) {
-      GtkAllocation allocation;
-      gtk_widget_get_allocation(widget, &allocation);
-      graphics_info_t::display_manager_molecules_vbox_x_size = allocation.width;
-      graphics_info_t::display_manager_molecules_vbox_y_size = allocation.height;
-   }
-   if (window_type == COOT_DISPLAY_CONTROL_PANE) {
-      // This is a kludge because this version of gtk doesn't seem to
-      // have a nice accessor such as gtk_pane_get_position()
-      GtkPaned *paned = GTK_PANED(widget);
-
-      // graphics_info_t::display_manager_paned_position = paned->child1_size;
-   }
-
-   if (window_type == COOT_EDIT_CHI_DIALOG) {
-      graphics_info_t::edit_chi_angles_dialog_x_position = upositionx;
-      graphics_info_t::edit_chi_angles_dialog_y_position = upositiony;
-   }
-
-   if (window_type == COOT_ROTAMER_SELECTION_DIALOG) {
-      graphics_info_t::rotamer_selection_dialog_x_position = upositionx;
-      graphics_info_t::rotamer_selection_dialog_y_position = upositiony;
-   }
-
-   if (window_type == COOT_RAMACHANDRAN_PLOT_WINDOW) {
-      graphics_info_t::ramachandran_plot_x_position = upositionx;
-      graphics_info_t::ramachandran_plot_y_position = upositiony;
-   }
-}
-
-#include "utils/coot-utils.hh"
 
 
 /*! \brief store the graphics window position and size to zenops-graphics-window-size-and-postion.scm in
@@ -2184,7 +2082,11 @@ void handle_get_accession_code(GtkWidget *frame, GtkWidget *entry) {
       if (n == COOT_EMDB_CODE) {
          fetch_emdb_map(text);
       } else {
-         python_network_get(text_c, n);
+         if (n == COOT_COD_CODE) {
+            fetch_cod_entry(text);
+         } else {
+            python_network_get(text_c, n);
+         }
       }
    }
 
@@ -2196,33 +2098,22 @@ void handle_get_accession_code(GtkWidget *frame, GtkWidget *entry) {
 
 // Set the internal state of the torsion restraints
 // (hang-over from old interface)
-void do_torsions_toggle(GtkWidget *togglebutton) {
+void do_torsions_toggle(GtkWidget *checkbutton) {
 
    graphics_info_t g;
-   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton)))
+   if (gtk_check_button_get_active(GTK_CHECK_BUTTON(checkbutton)))
       g.do_torsion_restraints = 1;
    else
       g.do_torsion_restraints = 0;
-
 }
 
-GtkWidget *wrapped_create_refine_params_dialog() {
-
-   //    What is this?
-   // GtkWidget *w = create_refine_params_dialog();
-   GtkWidget *w = widget_from_builder("refine_params_dialog");
-   set_refine_params_toggle_buttons(w);
-   set_refine_params_comboboxes(w);
-   return w;
-}
-
-void set_refine_params_comboboxes(GtkWidget *button) {
+void set_refine_params_comboboxes() {
 
    graphics_info_t g;
    GtkWidget *cb1 = widget_from_builder("refine_params_geman_mcclure_alpha_combobox");
-   GtkWidget *cb2 = widget_from_builder("refine_params_rama_restraints_weight_combobox");
+   GtkWidget *cb2 = widget_from_builder("refine_params_rama_restraints_combobox");
    GtkWidget *cb3 = widget_from_builder("refine_params_lennard_jones_epsilon_combobox");
-   GtkWidget *cb4 = widget_from_builder("refine_params_torsions_weight_combobox");
+   GtkWidget *cb4 = widget_from_builder("refine_params_torsion_weight_combobox");
    GtkWidget *cb5 = widget_from_builder("refine_params_overall_weight_combobox");
    GtkWidget *tb  = widget_from_builder("refine_params_more_control_togglebutton");
 
@@ -2231,16 +2122,6 @@ void set_refine_params_comboboxes(GtkWidget *button) {
    if (cb3) gtk_combo_box_set_active(GTK_COMBO_BOX(cb3), g.refine_params_dialog_lennard_jones_epsilon_combobox_position);
    if (cb4) gtk_combo_box_set_active(GTK_COMBO_BOX(cb4), g.refine_params_dialog_torsions_weight_combox_position);
 
-   // put items into the refinement overall weight combobox
-   if (cb5) {
-      std::vector<float> mv = {0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 4.0, 10.0, 20.0};
-      float w = g.geometry_vs_map_weight;
-      for (auto m : mv) {
-         std::string t = coot::util::float_to_string_using_dec_pl(w * m, 2);
-         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(cb5), t.c_str());
-      }
-      gtk_combo_box_set_active(GTK_COMBO_BOX(cb5), 4);
-   }
 
    if (tb) {
       if (g.refine_params_dialog_extra_control_frame_is_visible) {
@@ -2250,79 +2131,6 @@ void set_refine_params_comboboxes(GtkWidget *button) {
       }
    }
 
-}
-
-void set_refine_params_toggle_buttons(GtkWidget *button) {
-
-   // initiallly buttons are inactive and sensitive
-
-   graphics_info_t g;
-   // GtkWidget *checkbutton = lookup_widget(button, "refine_params_use_torsions_checkbutton");
-   // GtkWidget *planar_peptide_restraints_checkbutton = lookup_widget(button, "refine_params_use_planar_peptides_checkbutton");
-   // GtkWidget *trans_peptide_restraints_checkbutton = lookup_widget(button, "refine_params_use_trans_peptide_restraints_checkbutton");
-   // GtkWidget *phi_psi_peptide_checkbutton = lookup_widget(button, "refine_params_use_peptide_torsions_checkbutton");
-   // GtkWidget *link_torsion_type_vbox = lookup_widget(button, "peptide_torsions_restraints_vbox");
-   GtkWidget *checkbutton = widget_from_builder("refine_params_use_torsions_checkbutton");
-   GtkWidget *planar_peptide_restraints_checkbutton = widget_from_builder("refine_params_use_planar_peptides_checkbutton");
-   GtkWidget *trans_peptide_restraints_checkbutton = widget_from_builder("refine_params_use_trans_peptide_restraints_checkbutton");
-   GtkWidget *phi_psi_peptide_checkbutton = widget_from_builder("refine_params_use_peptide_torsions_checkbutton");
-   GtkWidget *link_torsion_type_vbox = widget_from_builder("peptide_torsions_restraints_vbox");
-
-   // refine_params_use_ramachandran_goodness_torsions_checkbutton
-   // GtkWidget *rama_button = lookup_widget(button, "refine_params_use_ramachandran_goodness_torsions_checkbutton");
-   GtkWidget *rama_button = widget_from_builder("refine_params_use_ramachandran_goodness_torsions_checkbutton");
-
-   if (g.do_torsion_restraints) {
-      g.do_torsion_restraints = 0;
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton), TRUE);
-   } else {
-      gtk_widget_set_sensitive(GTK_WIDGET(phi_psi_peptide_checkbutton), FALSE);
-   }
-
-   if (trans_peptide_restraints_checkbutton) {
-      if (g.do_trans_peptide_restraints) {
-	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(trans_peptide_restraints_checkbutton), TRUE);
-      } else {
-	 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(trans_peptide_restraints_checkbutton), FALSE);
-      }
-   }
-
-   // planar peptide restraints:
-   int pps = planar_peptide_restraints_state();
-   if (pps) {
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(planar_peptide_restraints_checkbutton), TRUE);
-   } else {
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(planar_peptide_restraints_checkbutton), FALSE);
-   }
-
-   // refine_params_use_helix_peptide_torsions_radiobutton
-   // refine_params_use_beta_strand_peptide_torsions_radiobutton
-   // refine_params_use_ramachandran_goodness_torsions_radiobutton
-
-   // GtkWidget *sec_str_rest_no_rest_radiobutton = lookup_widget(button, "sec_str_rest_no_rest_radiobutton");
-   // GtkWidget *sec_str_rest_helix_rest_radiobutton = lookup_widget(button, "sec_str_rest_helix_rest_radiobutton");
-   // GtkWidget *sec_str_rest_strand_rest_radiobutton = lookup_widget(button, "sec_str_rest_strand_rest_radiobutton");
-   GtkWidget *sec_str_rest_no_rest_radiobutton = widget_from_builder("sec_str_rest_no_rest_radiobutton");
-   GtkWidget *sec_str_rest_helix_rest_radiobutton = widget_from_builder("sec_str_rest_helix_rest_radiobutton");
-   GtkWidget *sec_str_rest_strand_rest_radiobutton = widget_from_builder("sec_str_rest_strand_rest_radiobutton");
-
-#ifdef HAVE_GSL
-   if (graphics_info_t::pseudo_bonds_type == coot::NO_PSEUDO_BONDS)
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sec_str_rest_no_rest_radiobutton), TRUE);
-   if (graphics_info_t::pseudo_bonds_type == coot::HELIX_PSEUDO_BONDS)
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sec_str_rest_helix_rest_radiobutton), TRUE);
-   if (graphics_info_t::pseudo_bonds_type == coot::STRAND_PSEUDO_BONDS)
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(sec_str_rest_strand_rest_radiobutton), TRUE);
-   if (graphics_info_t::do_rama_restraints)
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rama_button), TRUE);
-#endif // HAVE_GSL
-
-   // GtkWidget *refinement_weight_entry = lookup_widget(button, "refine_params_weight_matrix_entry");
-   GtkWidget *refinement_weight_entry = widget_from_builder("refine_params_weight_matrix_entry");
-   if (refinement_weight_entry) {
-      gtk_editable_set_text(GTK_EDITABLE(refinement_weight_entry),
-                            coot::util::float_to_string(g.geometry_vs_map_weight).c_str());
-   }
 }
 
 // void fill_chiral_volume_molecule_option_menu(GtkWidget *w) {
@@ -3195,136 +3003,6 @@ GtkWidget *close_model_fit_dialog(GtkWidget *dialog_hbox) {
    return w;
 }
 
-
-GtkWidget *wrapped_create_model_fit_refine_dialog() {
-
-   GtkWidget *widget = graphics_info_t::model_fit_refine_dialog;
-   if (widget) {
-
-      std::cout << "GTK-FIXME Raise the model/fit/refine dialog " << std::endl;
-
-      // raise/uniconify (or whatever) what we have:
-      //
-      /*
-      if (!GTK_WIDGET_MAPPED(widget))
-	 gtk_widget_set_visible(widget, TRUE);
-      else
-      gdk_window_raise(widget->window);
-      */
-
-   } else {
-
-      // create (then store) a new one.
-
-      // widget = create_model_refine_dialog();
-      widget = widget_from_builder("model_refine_dialog");
-      graphics_info_t::model_fit_refine_dialog = widget;
-      if (graphics_info_t::model_fit_refine_dialog_was_sucked) {
-	 suck_model_fit_dialog();
-      } else {
-	 if (graphics_info_t::model_fit_refine_dialog_stays_on_top_flag == 1) {
-	    gtk_window_set_transient_for(GTK_WINDOW(widget),
-					 GTK_WINDOW(graphics_info_t::get_main_window()));
-
-	    if (graphics_info_t::model_fit_refine_x_position > -1) {
-
-	       std::cout << "GTK-FIXME no gtk_widget_set_uposition G" << std::endl;
-
-// 	       gtk_widget_set_uposition(widget,
-// 					graphics_info_t::model_fit_refine_x_position,
-// 					graphics_info_t::model_fit_refine_y_position);
-	    }
-	 }
-      }
-   }
-
-   GtkWidget *button;
-
-   button = widget_from_builder("model_refine_dialog_pointer_atom_button");
-   if (button) {
-      if (graphics_info_t::model_fit_refine_place_atom_at_pointer_string  != "") {
-	 std::cout << "GTK-FIXME no button child" << std::endl;
-         // 	 gtk_label_set_text(GTK_LABEL(GTK_BIN(button)->child),
-         // 			    graphics_info_t::model_fit_refine_place_atom_at_pointer_string.c_str());
-      }
-   }
-
-   update_model_fit_refine_dialog_menu(widget);
-   update_model_fit_refine_dialog_buttons(widget);
-
-   graphics_info_t::set_model_fit_refine_button_names(widget);
-
-   // Refmac button
-   GtkWidget *refmac_button = widget_from_builder("model_refine_dialog_refmac_button");
-   if (refmac_button) {
-      if (graphics_info_t::external_refinement_program_button_label != "*-*") {
-	 std::cout << "GTK-FIXME no button child" << std::endl;
-	 // gtk_label_set_text(GTK_LABEL(GTK_BIN(refmac_button)->child),
-	 // graphics_info_t::external_refinement_program_button_label.c_str());
-      }
-   }
-
-   return widget;
-}
-
-// function to update selected menu items (currently rot/trans only
-void
-update_model_fit_refine_dialog_menu(GtkWidget *dialog) {
-
-   GtkWidget *menu_item;
-   // update the menu for the rot/trans menu
-   if (graphics_info_t::rot_trans_object_type == ROT_TRANS_TYPE_CHAIN) {
-      //  menu_item = lookup_widget(dialog, "model_refine_dialog_rot_trans_by_chain");
-     menu_item = widget_from_builder("model_refine_dialog_rot_trans_by_chain");
-#if (GTK_MAJOR_VERSION >= 4)
-#else
-     gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), TRUE);
-#endif
-   } else {
-     if (graphics_info_t::rot_trans_object_type == ROT_TRANS_TYPE_MOLECULE) {
-        // menu_item = lookup_widget(dialog, "model_refine_dialog_rot_trans_by_molecule");
-       menu_item = widget_from_builder("model_refine_dialog_rot_trans_by_molecule");
-#if (GTK_MAJOR_VERSION >= 4)
-#else
-       gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), TRUE);
-#endif
-     } else {
-        // menu_item = lookup_widget(dialog, "model_refine_dialog_rot_trans_by_residue_range");
-       menu_item = widget_from_builder("model_refine_dialog_rot_trans_by_residue_range");
-#if (GTK_MAJOR_VERSION >= 4)
-#else
-       gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item), TRUE);
-#endif
-     }
-   }
-}
-
-// function to update button labels (currently rot/trans only)
-void
-update_model_fit_refine_dialog_buttons(GtkWidget *dialog) {
-
-  GList *children;
-
-  //   GtkWidget *button = lookup_widget(dialog, "model_refine_dialog_rot_trans_togglebutton");
-  GtkWidget *button = widget_from_builder("model_refine_dialog_rot_trans_togglebutton");
-
-  if (button) {
-    if (graphics_info_t::model_fit_refine_rotate_translate_zone_string != "") {
-	//	 gtk_label_set_text(GTK_LABEL(GTK_BIN(button)->child),
-
-   std::cout << "GTK-FIXME no button child" << std::endl;
-
-//       children = gtk_container_get_children(GTK_CONTAINER(GTK_BIN(button)->child));
-
-//       children = children->next;
-//       gtk_label_set_text(GTK_LABEL(children->data),
-// 			 graphics_info_t::model_fit_refine_rotate_translate_zone_string.c_str());
-    }
-
-  }
-  graphics_info_t::set_model_fit_refine_button_names(dialog);
-
-}
 
 /*  ------------------------------------------------------------------------ */
 //            main_toolbar things
@@ -4304,7 +3982,8 @@ int scroll_wheel_map() {
 void set_scroll_wheel_map(int imap) {
 
    if (is_valid_map_molecule(imap)) {
-      graphics_info_t::scroll_wheel_map = imap;
+      graphics_info_t g;
+      g.set_scrollable_map(imap);
    }
 }
 
@@ -4796,13 +4475,10 @@ void export_map_gui(short int export_map_fragment) {
 
    // this is the widget that chooses the map molecule, not the file chooser.
    //
-   GtkWidget *w = widget_from_builder("export_map_dialog");
+   GtkWidget *w = widget_from_builder("export_map_frame");
 
-   if (! export_map_fragment) {
-      // GtkWidget *hbox = lookup_widget(w, "export_map_fragment_hbox");
-      GtkWidget *hbox = widget_from_builder("export_map_fragment_hbox");
-      gtk_widget_set_visible(hbox, FALSE);
-   }
+   GtkWidget *hbox = widget_from_builder("export_map_fragment_hbox");
+   gtk_widget_set_visible(hbox, export_map_fragment == 0 ? FALSE : TRUE);
 
    // GtkWidget *combobox = lookup_widget(w, "export_map_map_combobox");
    GtkWidget *combobox = widget_from_builder("export_map_map_combobox");
@@ -4840,7 +4516,7 @@ void on_export_map_dialog_ok_button_clicked_cc(GtkButton *button) {
    if (true) {
 
       // GtkWidget *file_chooser_dialog = create_export_map_filechooserdialog();
-      GtkWidget *file_chooser_dialog = widget_from_builder("export_map_filechooser_dialog");
+      GtkWidget *file_chooser_dialog = widget_from_builder("export_map_file_chooser_dialog");
       unsigned int l = std::string(entry_text).length();
       char *c = new char [l + 1];
       strncpy(c, entry_text, l+1);
@@ -5811,7 +5487,7 @@ generic_objects_dialog_grid_add_object_internal(const meshed_generic_display_obj
                                                 int io) {
 
    if (! gdo.mesh.is_closed()) {
-      GtkWidget *checkbutton = gtk_check_button_new_with_mnemonic (_("Display"));
+      GtkWidget *checkbutton = gtk_check_button_new_with_mnemonic (("Display"));
       std::string label_str = gdo.mesh.name;
       GtkWidget *label = gtk_label_new(label_str.c_str());
 
@@ -5852,7 +5528,7 @@ generic_objects_dialog_grid_add_object_for_molecule_internal(int imol,
                                                              GtkWidget *grid) {
 
    if (! imm.is_closed()) {
-      GtkWidget *checkbutton = gtk_check_button_new_with_mnemonic (_("Display"));
+      GtkWidget *checkbutton = gtk_check_button_new_with_mnemonic (("Display"));
       std::string label_str = imm.get_name();
       // label_str = "NMO: "  + label_str;
       GtkWidget *label = gtk_label_new(label_str.c_str());
@@ -6217,3 +5893,5 @@ void curlew_dialog_install_extensions(GtkWidget *curlew_dialog, int n_extensions
       }
    }
 }
+
+

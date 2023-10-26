@@ -38,8 +38,8 @@
 #if !defined _MSC_VER
 #include <unistd.h>
 #else
-#define DATADIR "C:/coot/share"
-#define PKGDATADIR DATADIR
+#define XDATADIR "C:/coot/share"
+#define PKGDATADIR XDATADIR
 // stop using these, use win-compat functions
 // #define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
 // #define S_ISREG(m)  (((m) & S_IFMT) == S_IFREG)
@@ -1901,12 +1901,12 @@ coot::protein_geometry::init_standard() {
    if (! s)
       s = getenv("COOT_CCP4_LIB_DIR");
    if (s) {
-      if (! is_dir_or_link(s)) {
-              env_dir_fails = 1;
-              std::cout << "WARNING:: Coot REFMAC dictionary override COOT_REFMAC_LIB_DIR"
-                             << "failed to find a dictionary " << s << std::endl;
+      if (is_dir_or_link(s)) {
+          mon_lib_dir = s;
       } else {
-              mon_lib_dir = s;
+          env_dir_fails = 1;
+          std::cout << "WARNING:: Coot REFMAC dictionary override COOT_REFMAC_LIB_DIR "
+                    << s << " " << "failed to find the monomer library " << std::endl;
       }
    }
 

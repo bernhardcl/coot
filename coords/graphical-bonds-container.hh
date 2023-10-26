@@ -182,6 +182,14 @@ public:
    } 
 };
 
+class graphical_ramachandran_goodness_t {
+public:
+   coot::Cartesian position; // centre of the ball
+   coot::Cartesian HA_unit_vector;
+   float score;
+   graphical_ramachandran_goodness_t(const coot::Cartesian &pos, float s) : position(pos), score(s) {}
+};
+
 // Uses graphical_bonds_lines_list
 // 
 // a graphical_bonds_container is used by draw_molecule() and are
@@ -190,7 +198,7 @@ public:
 class graphical_bonds_container { 
 
  public:
-   
+
    enum { NO_BOND,
 	  BONDED_WITH_STANDARD_ATOM_BOND,
 	  BONDED_WITH_BOND_TO_HYDROGEN,
@@ -325,7 +333,8 @@ class graphical_bonds_container {
       n_rotamer_markups = 0;
       rotamer_markups = NULL;
    }
-      
+
+   void debug() const;
    void add_colour(const std::vector<graphics_line_t> &a);
    void add_zero_occ_spots(const std::vector<coot::Cartesian> &spots);
    void add_bad_CA_CA_dist_spots(const std::vector<coot::Cartesian> &spots);

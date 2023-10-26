@@ -5,6 +5,8 @@
 
 #version 330 core
 
+// This is instanced-objects.shader
+
 // keep these because they are s_generic_vertex:
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
@@ -32,6 +34,7 @@ out vec3 normal_transfer;
 out vec4 frag_pos_transfer;
 
 void main() {
+
    mat4 model_rotation_translation_scale = mat4(model_rotation_translation_scale_0,
                                                 model_rotation_translation_scale_1,
                                                 model_rotation_translation_scale_2,
@@ -40,18 +43,14 @@ void main() {
                               model_rotation_translation_scale_1.xyz,
                               model_rotation_translation_scale_2.xyz);
 
-   // vec3 t_pos = position + vec3(0,0, 0.5 * sin(0.01 * time));
-   // vec3 t_pos = position + vec3(0,0, 0.2 * sin(0.003 * time + 0.2 * gl_InstanceID));
-   // vec3 t_pos = position + vec3(0,0, 0.2 * sin(0.3 * gl_InstanceID));
-
    vec3 t_pos = position;
    vec3 n_dir = normal;
    // the normal doesn't change for translation along z (pulsing)
    if (do_pulse)
       t_pos = position + vec3(0,0, pulsing_amplitude * sin(0.001 * pulsing_frequency * time + pulsing_phase_distribution * gl_InstanceID));
-   float cos_theta = cos(time * 0.014 * z_rotation_angle);
-   float sin_theta = sin(time * 0.014 * z_rotation_angle);
    if (do_rotate_z) {
+      float cos_theta = cos(time * 0.014 * z_rotation_angle);
+      float sin_theta = sin(time * 0.014 * z_rotation_angle);
       t_pos = vec3(position.x * cos_theta - position.y * sin_theta, position.x * sin_theta + position.y * cos_theta, position.z);
       n_dir = vec3(  normal.x * cos_theta -   normal.y * sin_theta,   normal.x * sin_theta +   normal.y * cos_theta, normal.z);
    }
@@ -74,27 +73,29 @@ void main() {
 #version 330 core
 
 struct LightSource {
-    bool is_on;
-    bool directional;
-    vec4 position;
-    vec3 direction_in_molecule_coordinates_space;
-    vec4 ambient;
-    vec4 diffuse;
-    vec4 specular;
-    vec4 halfVector;
-    vec3 spotDirection;
-    float spotExponent;
-    float spotCutoff;
-    float spotCosCutoff;
-    float constantAttenuation;
-    float linearAttenuation;
-    float quadraticAttenuation;
+   bool is_on;
+   bool directional;
+   vec4 position;
+   vec3 direction_in_molecule_coordinates_space;
+   vec4 ambient;
+   vec4 diffuse;
+   vec4 specular;
+   vec4 halfVector;
+   vec3 spotDirection;
+   float spotExponent;
+   float spotCutoff;
+   float spotCosCutoff;
+   float constantAttenuation;
+   float linearAttenuation;
+   float quadraticAttenuation;
 };
 struct Material {
    float shininess;
    float specular_strength;
    vec4 specular;
 };
+
+uniform mat4 view_rotation;
 uniform LightSource light_sources[2];
 uniform vec3 eye_position;
 uniform Material material;
@@ -149,8 +150,9 @@ void main() {
          float specular_strength = material.specular_strength;
          if (dp_raw < 0.0)
             specular_strength = 0.0; // no shiny interiors
-         vec3 eye_pos = eye_position;
-         vec3 view_dir = normalize(eye_pos - frag_pos_transfer.xyz);
+         //
+         vec3 eye_pos_in_view = vec3(vec4(eye_position, 1.0) * view_rotation);
+         vec3 view_dir = normalize(eye_pos_in_view - frag_pos_transfer.xyz);
          vec3 light_dir_v3 = light_dir.xyz;
          vec3 reflect_dir = reflect(light_dir_v3, norm_2);
          reflect_dir = normalize(reflect_dir); // belt and braces
@@ -160,7 +162,7 @@ void main() {
 
          float spec = specular_strength * pow(dp_view_reflect, shininess);
          // spec = 0;
-         vec4 specular = spec * light_sources[i].specular;
+         vec4 specular = 3.0 * spec * light_sources[i].specular;
 
          // final
          running_col += ambient + diffuse + specular;
@@ -182,6 +184,5 @@ void main() {
    outputColor = mix(running_col, background_colour, fog_amount);
 
    // outputColor = vec4(0.8, 0.2, 0.8, 1.0);
-
 
 }

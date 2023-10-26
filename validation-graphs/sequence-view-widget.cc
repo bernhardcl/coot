@@ -11,7 +11,13 @@ const float X_OFFSET_PER_RESIDUE = 12.0;
 const float TICK_LINE_WIDTH  = 2.0;
 const float TICK_LINE_LENGTH = 8.0;
 const float X_OFFSET_BASE = 30.0;
+#ifdef __APPLE__
+const float Y_OFFSET_BASE = 26.0;
+const float TICK_TEXT_BOTTOM_EXTRA_OFFSET = -6.0;
+#else
+const float TICK_TEXT_BOTTOM_EXTRA_OFFSET = -6.0;
 const float Y_OFFSET_BASE = 20.0;
+#endif
 
 struct _CootSequenceView {
    GtkWidget parent;
@@ -146,7 +152,7 @@ void coot_sequence_view_snapshot(GtkWidget *widget, GtkSnapshot *snapshot) {
             pango_cairo_show_layout(cairo_canvas, pango_layout);
 
             // below the bottom line
-            pos_y = Y_OFFSET_BASE - 6.0 + TICK_LINE_LENGTH + Y_OFFSET_PER_CHAIN * n_chains;
+            pos_y = Y_OFFSET_BASE - TICK_TEXT_BOTTOM_EXTRA_OFFSET + TICK_LINE_LENGTH + Y_OFFSET_PER_CHAIN * n_chains;
             cairo_move_to(cairo_canvas, pos_x, pos_y);
             pango_layout_set_markup(pango_layout, text.c_str(), -1);
             pango_cairo_show_layout(cairo_canvas, pango_layout);
@@ -357,9 +363,11 @@ void coot_sequence_view_measure(GtkWidget      *widget,
       }
    case GTK_ORIENTATION_VERTICAL:
       {
-         float h_pixels_rect = 100 + n_res_and_n_chains.second * Y_OFFSET_PER_CHAIN + Y_OFFSET_BASE;
-         *minimum_size = h_pixels_rect + 40.0f;
-         *natural_size = h_pixels_rect + 40.0f;
+         int n_chains = n_res_and_n_chains.second;
+         if (n_chains > 10) n_chains = 10;
+         float h_pixels = n_chains * Y_OFFSET_PER_CHAIN + Y_OFFSET_BASE + 60;
+         *minimum_size = 100;
+         *natural_size = h_pixels;
          break;
       }
    default:
@@ -383,7 +391,7 @@ static void coot_sequence_view_class_init(CootSequenceViewClass* klass) {
         G_TYPE_POINTER
     );
     GTK_WIDGET_CLASS(klass)->snapshot = coot_sequence_view_snapshot;
-    GTK_WIDGET_CLASS(klass)->measure = coot_sequence_view_measure;
+    GTK_WIDGET_CLASS(klass)->measure  = coot_sequence_view_measure;
     G_OBJECT_CLASS(klass)->dispose    = coot_sequence_view_dispose;
 
 }
@@ -431,7 +439,7 @@ void coot_sequence_view_set_structure(CootSequenceView* self, int imol, mmdb::Ma
          for (int ichain=0; ichain<n_chains; ichain++) {
             mmdb::Chain *chain_p = model_p->GetChain(ichain);
             std::string chain_id = chain_p->GetChainID();
-            std::cout << "------ " << chain_id << " ----" << std::endl;
+            // std::cout << "------ " << chain_id << " ----" << std::endl;
             int n_res = chain_p->GetNumberOfResidues();
             for (int ires=0; ires<n_res; ires++) {
                mmdb::Residue *residue_p = chain_p->GetResidue(ires);
@@ -441,7 +449,7 @@ void coot_sequence_view_set_structure(CootSequenceView* self, int imol, mmdb::Ma
                   std::cout << slc;
                }
             }
-            std::cout << "\n";
+            // std::cout << "\n";
          }
       }
    }

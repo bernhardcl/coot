@@ -45,8 +45,12 @@ coot::molecule_t::is_EM_map() const {
 
    bool ret_is_em = false;
 
+   std::cout << "in coot::molecule::is_EM_map() A " << std::endl;
+
    if (has_xmap()) {
+      std::cout << "in coot::molecule_t::is_EM_map() B " << is_em_map_cached_flag << std::endl;
       if (is_em_map_cached_flag == 1) { // -1 means unset
+         std::cout << "in coot::molecule_t::is_EM_map() C " << std::endl;
          ret_is_em = true;
       }
    }
@@ -316,7 +320,6 @@ coot::molecule_t::clear_diff_map_draw_vecs() {
 
 }
 
-
 coot::simple_mesh_t
 coot::molecule_t::get_map_contours_mesh(clipper::Coord_orth position, float radius, float contour_level) {
 
@@ -328,11 +331,8 @@ coot::molecule_t::get_map_contours_mesh(clipper::Coord_orth position, float radi
 
    coot::simple_mesh_t m; // initially status is good (1).
 
-   clipper::Coord_orth p(position.x(), position.y(), position.z());
+   coot::Cartesian p(position.x(), position.y(), position.z());
    update_map_triangles(radius, p, contour_level);
-
-   auto &vertices  = m.vertices;
-   auto &triangles = m.triangles;
 
    // now convert the contents of the draw-vector sets to a simple_mesh_t.
 
@@ -341,6 +341,9 @@ coot::molecule_t::get_map_contours_mesh(clipper::Coord_orth position, float radi
       map_colour = coot::colour_holder(0.4, 0.8, 0.4);
 
    try {
+
+      auto &vertices  = m.vertices;
+      auto &triangles = m.triangles;
 
       std::vector<coot::density_contour_triangles_container_t>::const_iterator it;
       glm::vec4 col(map_colour.red, map_colour.green, map_colour.blue, 1.0f);
@@ -387,7 +390,6 @@ coot::molecule_t::get_map_contours_mesh(clipper::Coord_orth position, float radi
 
             }
          }
-
       }
    }
 
@@ -405,6 +407,90 @@ coot::molecule_t::get_map_contours_mesh(clipper::Coord_orth position, float radi
    }
    return m;
 }
+
+coot::simple_mesh_t
+coot::molecule_t::get_map_contours_mesh_using_other_map_for_colours(const clipper::Coord_orth &position, float radius, float contour_level,
+                                                                    const clipper::Xmap<float> &other_map) {
+
+   auto coord_orth_to_glm = [] (const clipper::Coord_orth &co) {
+      return glm::vec3(co.x(), co.y(), co.z());
+   };
+
+   auto clipper_to_cartesian = [] (const clipper::Coord_orth &c) {
+      return Cartesian(c.x(), c.y(), c.z()); };
+
+   auto cpos = clipper_to_cartesian(position);
+   update_map_triangles(radius, cpos, contour_level);
+
+   coot::simple_mesh_t m; // initially status is good (1).
+   auto &vertices  = m.vertices;
+   auto &triangles = m.triangles;
+   std::vector<coot::density_contour_triangles_container_t>::const_iterator it;
+   for (it=draw_vector_sets.begin(); it!=draw_vector_sets.end(); ++it) {
+      const coot::density_contour_triangles_container_t &tri_con(*it);
+      unsigned int idx_base = vertices.size();
+      for (unsigned int i=0; i<tri_con.points.size(); i++) {
+         glm::vec3 pos    = coord_orth_to_glm(tri_con.points[i]);
+         glm::vec3 normal = coord_orth_to_glm(tri_con.normals[i]);
+         clipper::Coord_orth clipper_pos(pos.x, pos.y, pos.z);
+         glm::vec4 col = position_to_colour_using_other_map(clipper_pos, other_map);
+         api::vnc_vertex vert(pos, normal, col);
+         vertices.push_back(vert);
+      }
+      for (unsigned int i=0; i<tri_con.point_indices.size(); i++) {
+         g_triangle tri(tri_con.point_indices[i].pointID[0],
+                        tri_con.point_indices[i].pointID[1],
+                        tri_con.point_indices[i].pointID[2]);
+         tri.rebase(idx_base);
+         triangles.push_back(tri);
+      }
+   }
+   return m;
+}
+
+void
+coot::molecule_t::set_other_map_for_colouring_min_max(float min_v, float max_v) {
+   other_map_for_colouring_min_value = min_v;
+   other_map_for_colouring_max_value = max_v;
+}
+
+
+glm::vec4
+coot::molecule_t::position_to_colour_using_other_map(const clipper::Coord_orth &position,
+                                                     const clipper::Xmap<float> &other_map_for_colouring) const {
+
+   float dv = coot::util::density_at_point(other_map_for_colouring, position);
+   float f = 0.0;
+   const float &min_value = other_map_for_colouring_min_value;
+   const float &max_value = other_map_for_colouring_max_value;
+   if (dv < min_value) {
+      f = 0.0;
+   } else {
+      if (dv > max_value) {
+         f = 1.0;
+      } else {
+         // in the range
+         float range = max_value - min_value;
+         float m = dv - min_value;
+         f = m/range;
+      }
+   }
+
+   glm::vec4 col = fraction_to_colour(f);
+   return col;
+}
+
+glm::vec4
+coot::molecule_t::fraction_to_colour(float fraction) const {
+
+   float sat = radial_map_colour_saturation;
+   coot::colour_t cc(0.6+0.4*sat, 0.6-0.6*sat, 0.6-0.6*sat);
+   // cc.rotate(1.05 * fraction); // blue end is a bit purple/indigo
+   cc.rotate(0.66 * fraction);
+   glm::vec4 col(cc.col[0], cc.col[1], cc.col[1], 1.0);
+   return col;
+}
+
 
 #include "coot-utils/peak-search.hh"
 
@@ -851,6 +937,7 @@ coot::molecule_t::fit_to_map_by_random_jiggle(mmdb::PPAtom atom_selection,
    // float initial_score = coot::util::z_weighted_density_score(direct_mol, atom_numbers, xmap);
    // initial_score = coot::util::biased_z_weighted_density_score(direct_mol, atom_numbers, xmap);
 
+   v = initial_score;
    float best_score = initial_score;
 
    std::cout << "---------------- initial_score " << initial_score << " ---------------" << std::endl;
@@ -1146,7 +1233,7 @@ coot::molecule_t::fit_to_map_by_random_jiggle(mmdb::PPAtom atom_selection,
 
                atom_selection_container_t asc_ligand = make_asc(mol);
                replace_coords(asc_ligand, false, true);
-               asc_ligand.mol->WritePDBASCII("asc_ligand.pdb");
+               // asc_ligand.mol->WritePDBASCII("asc_ligand.pdb");
             }
 
             // have_unsaved_changes_flag = 1;
@@ -1194,4 +1281,46 @@ coot::molecule_t::get_map_molecule_centre() const {
 
    util::map_molecule_centre_info_t mc = util::map_molecule_centre(xmap);
    return mc;
+}
+
+
+//! @return the map histogram
+coot::molecule_t::histogram_info_t
+coot::molecule_t::get_map_histogram(unsigned int n_bins_in, float zoom_factor) const {
+
+   float n_bins_fl = static_cast<float>(n_bins_in) * zoom_factor;
+   int n_bins = static_cast<int>(n_bins_fl);
+   mean_and_variance<float> mv = map_density_distribution(xmap, n_bins, false, false);
+   float mean = mv.mean;
+   float prev_range = mean - mv.min_density;
+   float new_range = prev_range/zoom_factor;
+   float new_min_density = mean - new_range;
+
+   // how many bins are there between mv.min_density and new_min_density?
+   unsigned int count = 0;
+   float level = mv.min_density;
+   while (level < new_min_density) {
+      level += mv.bin_width;
+      count++;
+      // sanity
+      if (count > 9999) break; // 20231023-PE needed a bigger limit for large zoom
+   }
+
+   // std::cout << "n_bins_in " << n_bins_in << " zoom_factor " << zoom_factor << " n_bins " << n_bins << std::endl;
+   // std::cout << "Now create new_bins by removing the first " << count << " entries from mv.bins "
+   // << "and limiting number of bins" << std::endl;
+
+   std::vector<int> new_bins(n_bins_in, 0);
+   for (unsigned int ibin=0; ibin<mv.bins.size(); ibin++) {
+      int new_index = ibin - count; 
+      if (new_index >= 0) {
+         if (new_index < static_cast<int>(n_bins_in))
+            new_bins[new_index] = mv.bins[ibin];
+      }
+   }
+
+   coot::molecule_t::histogram_info_t hi(new_min_density, mv.bin_width, new_bins);
+   hi.mean = mean;
+   hi.variance = mv.variance;
+   return hi;
 }

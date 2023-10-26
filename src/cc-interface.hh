@@ -28,6 +28,7 @@
 #endif
 
 #include <gtk/gtk.h>
+#include <optional>
 
 #ifdef USE_GUILE
 #include <libguile.h>
@@ -47,6 +48,7 @@
 #include "named-rotamer-score.hh"
 
 #include "coords/phenix-geo.hh"
+#include "gtk-utils.hh"
 
 /*! \file
   \brief Coot Scripting Interface - General (C++ functions)
@@ -268,6 +270,9 @@ int sharpen_blur_map(int imol_map, float b_factor);
 //!        to the given map. Return -1 on failure.
 int sharpen_blur_map_with_resampling(int imol_map, float b_factor, float resample_factor);
 
+// This (gui function) allows a progress bar, and should not be part of the documented API
+void sharpen_blur_map_with_resampling_threaded_version(int imol_map, float b_factor, float resample_factor);
+
 #ifdef USE_GUILE
 //! \brief make many sharpened or blurred maps
 //!
@@ -344,6 +349,7 @@ int read_ccp4_map(const std::string &filename, int is_diff_map_flag);
 /*! \brief same function as above - old name for the function. Deleted from the API at some stage */
 int handle_read_ccp4_map(const std::string &filename, int is_diff_map_flag);
 
+/*! \brief this reads a EMDB bundle - I don't think they exist any more */
 int handle_read_emdb_data(const std::string &dir_name);
 //! \}
 
@@ -1072,8 +1078,27 @@ PyObject *refine_zone_with_full_residue_spec_py(int imol, const char *chain_id,
                                            const char *altconf);
 #endif // USE_PYTHON
 
+//! set display of rotamer markup during interactive real space refinement
+void set_draw_moving_atoms_rota_markup(short int state);
+//! set display of ramachandran markup during interactive real space refinement
+void set_draw_moving_atoms_rama_markup(short int state);
+
+//! the old names for the above functions:
 void set_show_intermediate_atoms_rota_markup(short int state);
+//! the old names for the above functions:
 void set_show_intermediate_atoms_rama_markup(short int state);
+
+//! the geters for the rota markup
+int get_draw_moving_atoms_rota_markup_state();
+
+//! the geters for the rama markup
+int get_draw_moving_atoms_rama_markup_state();
+
+//! the old names for the above functions:
+int get_show_intermediate_atoms_rota_markup();
+
+//! the old names for the above functions:
+int get_show_intermediate_atoms_rama_markup();
 
 void set_cryo_em_refinement(bool mode);
 bool get_cryo_em_refinement();
@@ -1450,33 +1475,11 @@ mmdb::Manager *new_molecule_by_symmetry_matrix_from_molecule(mmdb::Manager *mol,
 
 (no return value because get-url-str does not return one).
  */
-   void get_coords_for_accession_code(const std::string &code);
+void get_coords_for_accession_code(const std::string &code);
 
-#ifdef USE_LIBCURL
-// return 0 on success.
-int coot_get_url(const std::string &url, const std::string &file_name);
-int coot_get_url_and_activate_curl_hook(const std::string &url, const std::string &file_name, short int do_hook_flag);
-#ifdef USE_GUILE
-// this handles URLs that are strings, not binaries.
-SCM coot_get_url_as_string(const char *url);
-// for the callback of the update binary progress bar.  How much done
-// is the file that I am downloading?
-SCM curl_progress_info(const char *file_name);
-#endif /* USE_GUILE */
-#ifdef USE_PYTHON
-// this handles URLs that are strings, not binaries.
-PyObject *coot_get_url_as_string_py(const char *url);
-// for the callback of the update binary progress bar.  How much done
-// is the file that I am downloading? Not absolutely required for python
-PyObject *curl_progress_info_py(const char *file_name);
-#endif /* USE_PYTHON */
-// internal use
-size_t write_coot_curl_data(void *buffer, size_t size, size_t nmemb, void *userp);
-// internal use
-size_t write_coot_curl_data_to_file(void *buffer, size_t size, size_t nmemb, void *userp);
 // internal use (strings, not binaries).
 std::string coot_get_url_as_string_internal(const char *url);
-void *wrapped_curl_easy_perform(void *data);
+
 void stop_curl_download(const char *file_name); // stop curling the to file_name;
 
 std::string get_drug_mdl_via_wikipedia_and_drugbank(std::string drugname);
@@ -1489,9 +1492,11 @@ void fetch_and_superpose_alphafold_models(int imol);
 //! \brief return the model number
 int fetch_alphafold_model_for_uniprot_id(const std::string &uniprot_id);
 
-int fetch_emdb_map(const std::string &emd_accession_code);
+//! \brief Loads up map frmo emdb
+void fetch_emdb_map(const std::string &emd_accession_code);
 
-#endif /* USE_LIBCURL */
+//! \brief return the COD entry, return a molecule index
+int fetch_cod_entry(const std::string &cod_entry_id);
 
 
 /*  ----------------------------------------------------------------------- */
@@ -1524,6 +1529,9 @@ void set_use_perspective_projection(short int state);
 
 //! \brief query if perspective mode is being used
 int use_perspective_projection_state();
+
+//! \brief set the perspective fov. Default 20 degrees.
+void set_perspective_fov(float degrees);
 
 //! \brief set use ambient occlusion
 void set_use_ambient_occlusion(short int state);
@@ -1667,6 +1675,9 @@ void read_test_gltf_models();
 
 //! \brief load a gltf model
 void load_gltf_model(const std::string &gltf_file_name);
+
+//! \brief load a gltf model
+void scale_model(unsigned int model_index, float scale_factor);
 
 //! \brief reset the frame buffers
 void reset_framebuffers();
@@ -2146,6 +2157,8 @@ SCM molecule_atom_overlaps_scm(int imol);
 /* ------------------------------------------------------------------------- */
 /*                      prodrg import function                               */
 /* ------------------------------------------------------------------------- */
+
+// 20230916-PE Kill this
 //
 //! \brief import given mdl file into prodrg or other 3d generation program
 //!
@@ -2160,6 +2173,8 @@ void prodrg_import_function(std::string file_name, std::string comp_id);
 /* ------------------------------------------------------------------------- */
 /*                       SBase import function                               */
 /* ------------------------------------------------------------------------- */
+
+// 20230916-PE Kill this
 //
 //! \brief import molecule from CCP4 SRS (or SBase, as it used to be called).
 //!

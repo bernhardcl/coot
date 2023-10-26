@@ -1047,12 +1047,7 @@ void set_pick_cursor_index(int icursor_index);
 /* section Model/Fit/Refine Functions  */
 /*! \name Model/Fit/Refine Functions  */
 /*! \{ */
-/*! \brief display the Model/Fit/Refine dialog */
-void post_model_fit_refine_dialog();
-/*! \brief unset model/fit/refine dialog */
-void unset_model_fit_refine_dialog();
-/*! \brief unset refine params dialog */
-void unset_refine_params_dialog();
+
 /*! \brief display the Display Manager dialog */
 void show_select_map_dialog();
 /*! \brief Allow the changing of Model/Fit/Refine button label from
@@ -1062,9 +1057,6 @@ void set_model_fit_refine_rotate_translate_zone_label(const char *txt);
   "Place Atom at Pointer" */
 void set_model_fit_refine_place_atom_at_pointer_label(const char *txt);
 
-
-/*! \brief display the Other Modelling Tools dialog */
-void post_other_modelling_tools_dialog();
 
 /*! \brief shall atoms with zero occupancy be moved when refining? (default 1, yes) */
 void set_refinement_move_atoms_with_zero_occupancy(int state);
@@ -3777,8 +3769,18 @@ void set_use_only_extra_torsion_restraints_for_torsions(short int state);
 int use_only_extra_torsion_restraints_for_torsions_state();
 
 void clear_all_atom_pull_restraints();
+
+/*! \brief set auto-clear atom pull restraint */
 void set_auto_clear_atom_pull_restraint(int state);
+
+/*! \brief get auto-clear atom pull restraint state */
 int  get_auto_clear_atom_pull_restraint_state();
+
+/*! \brief iscrease the proportional editing radius*/
+void increase_proportional_editing_radius();
+
+/*! \brief descrease the proportional editing radius*/
+void decrease_proportional_editing_radius();
 
 
 /*  ----------------------------------------------------------------------- */
@@ -4185,8 +4187,17 @@ void set_multi_residue_torsion_reverse_mode(short int mode);
 void show_multi_residue_torsion_dialog(); /* show the rotatable bonds dialog */
 void setup_multi_residue_torsion();  /* show the pick dialog */
 
-
+/*! \brief return the atom overlap score */
 float atom_overlap_score(int imol);
+
+
+/*! \brief set the state of showing chiral volume outlier markers - of a model molecule that is,
+   not the intermediate atoms (derived from restraints) */
+void set_show_chiral_volume_outliers(int imol, int state);
+
+/*! \brief set the state of showing non-bonded contact markers - of a model molecule that is,
+   not the intermediate atoms (derived from restraints) */
+void set_show_chiral_volume_outliers(int imol, int state);
 
 /* \} */
 
@@ -4842,6 +4853,9 @@ void set_grey_carbon_colour(int imol, float r, float g, float b);
 
 /* undocumented feature for development. */
 void set_draw_moving_atoms_restraints(int state);
+
+/* undocumented feature for development. */
+short int get_draw_moving_atoms_restraints();
 
 /*! \brief make a ball and stick representation of imol given atom selection
 
@@ -6081,6 +6095,10 @@ void copy_residue_range_from_ncs_master_to_others(int imol, const char *master_c
 						  int residue_range_start, int residue_range_end);
 #ifdef __cplusplus
 #ifdef USE_GUILE
+
+/*! \brief Copy chain from master to specified related NCS chains */
+void copy_from_ncs_master_to_specific_other_chains_scm(int imol, const char *chain_id, SCM other_chain_id_list_scm);
+
 /*! \brief Copy residue range to selected NCS chains
 
    If the target residues do not exist in the peer chains, then create
@@ -6096,6 +6114,9 @@ void copy_from_ncs_master_to_chains_scm(int imol, const char *master_chain_id,
 					SCM chain_id_list);
 #endif
 #ifdef USE_PYTHON
+/*! \brief Copy chain from master to specified other NCS chains */
+void copy_from_ncs_master_to_specific_other_chains_py(int imol, const char *chain_id, PyObject *other_chain_id_list_py);
+
 PyObject *ncs_master_chains_py(int imol);
 void copy_residue_range_from_ncs_master_to_chains_py(int imol, const char *master_chain_id,
 						     int residue_range_start, int residue_range_end,
@@ -6623,6 +6644,10 @@ short int do_probe_dots_post_refine_state();
 
 /* state is 1 for on and 0 for off */
 void set_do_coot_probe_dots_during_refine(short int state);
+
+/* get state: 1 for on and 0 for off */
+short int get_do_coot_probe_dots_during_refine();
+
 
 /*! \brief make an attempt to convert pdb hydrogen name to the name
   used in Coot (and the refmac dictionary, perhaps). */

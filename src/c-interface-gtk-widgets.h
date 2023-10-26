@@ -530,12 +530,9 @@ handle_make_monomer_search(const char *text, GtkWidget *viewport);
 /* now we use */
 void fill_option_menu_with_refine_options(GtkWidget *option_menu);
 
-GtkWidget *wrapped_create_refine_params_dialog();
-
 void do_torsions_toggle(GtkWidget *button);
 
-void set_refine_params_toggle_buttons(GtkWidget *button);
-void set_refine_params_comboboxes(GtkWidget *button);
+void set_refine_params_comboboxes();
 
 
 /* Now the refinement weight can be set from an entry in the refine_params_dialog. */
@@ -601,7 +598,7 @@ void my_delete_validaton_graph_mol_option(GtkWidget *widget, void *);
 /* void create_initial_validation_graph_geometry_submenu(GtkWidget *window1); */
 /* void create_initial_validation_graph_omega_submenu(GtkWidget *window1); */
 
-void difference_map_peaks_by_widget(GtkWidget *dialog);
+void difference_map_peaks_from_dialog();
 void set_difference_map_peaks_widget(GtkWidget *w);
 
 GtkWidget *wrapped_create_generate_diff_map_peaks_dialog();
@@ -819,12 +816,6 @@ void calc_and_set_optimal_b_factor ( GtkWidget *w ) ;
 
 void store_fixed_atom_dialog(GtkWidget *w);
 GtkWidget *wrapped_create_fixed_atom_dialog();
-
-#if (GTK_MAJOR_VERSION >= 4)
-#else
-void start_ligand_builder_gui_internal(GtkMenuItem     *menuitem,
-				       gpointer         user_data);
-#endif
 
 void set_file_selection_dialog_size(GtkWidget *w);
 

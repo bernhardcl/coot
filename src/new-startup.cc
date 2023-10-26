@@ -11,6 +11,8 @@
 #include "utils/coot-utils.hh"
 #include "command-line.hh"
 #include "c-interface-preferences.h"
+#include "src/boot-python.hh"
+#include "layla/layla_embedded.hpp"
 
 void print_opengl_info();
 
@@ -105,7 +107,9 @@ new_startup_realize(GtkWidget *gl_area) {
    // and allow it to be set in the API
    g.setup_draw_for_happy_face_residue_markers_init();
    g.setup_draw_for_bad_nbc_atom_pair_markers();
+   g.setup_draw_for_chiral_volume_outlier_markers();
    g.setup_draw_for_anchored_atom_markers_init();
+   g.setup_lines_mesh_for_proportional_editing();
    g.lines_mesh_for_hud_lines.set_name("lines mesh for fps graph");
    unsigned int frame_time_history_list_max_n_elements = 500;
    // +40 for base and grid lines
@@ -121,6 +125,10 @@ new_startup_realize(GtkWidget *gl_area) {
    g.texture_for_hud_refinement_dialog_arrow_highlighted = Texture("refinement-dialog-arrrow-highlighted.png", Texture::DIFFUSE);
 
    g.tmesh_for_shadow_map.setup_quad();
+
+   g.attach_buffers();
+   Material material;
+   g.mesh_for_extra_distance_restraints.setup_extra_distance_restraint_cylinder(material); // init
 
    g.setup_key_bindings();
 
@@ -209,9 +217,10 @@ void on_glarea_scale_changed(GtkGestureZoom* self,
                              gdouble scale,
                              gpointer user_data) {
    graphics_info_t g;
-   double s = pow(scale, 1.02);
-   std::cout << "on_glarea_scale_changed " << scale << " " << s << std::endl;
-   g.mouse_zoom(s, 0.0);
+   std::cout << "on_glarea_scale_changed " << scale << std::endl;
+   // mouse_zoom() expects args (delta-x, delta-y)
+   // we need to convert scale into something like that.
+   g.mouse_zoom_by_scale_factor(scale);
 }
 
 void on_glarea_drag_begin_primary(GtkGestureDrag *gesture,
@@ -256,6 +265,7 @@ void on_glarea_drag_begin_secondary(GtkGestureDrag *gesture,
                                     double          x,
                                     double          y,
                                     GtkWidget      *area) {
+   // std::cout << "begin secondary" << std::endl;
    graphics_info_t g;
    g.on_glarea_drag_begin_secondary(gesture, x, y, area);
 }
@@ -265,6 +275,7 @@ void on_glarea_drag_update_secondary(GtkGestureDrag *gesture,
                                      double          delta_y,
                                      GtkWidget      *area) {
 
+   // std::cout << "update secondary" << std::endl;
    graphics_info_t g;
    g.on_glarea_drag_update_secondary(gesture, delta_x, delta_y, area);
 }
@@ -273,6 +284,7 @@ void on_glarea_drag_end_secondary(GtkGestureDrag *gesture,
                                   double          x,
                                   double          y,
                                   GtkWidget      *area) {
+   // std::cout << "end secondary" << std::endl;
    graphics_info_t g;
    g.on_glarea_drag_end_secondary(gesture, x, y, area);
 }
@@ -360,6 +372,22 @@ on_glarea_scrolled(GtkEventControllerScroll *controller,
 }
 
 void
+on_glarea_swipe(GtkEventControllerScroll *controller,
+                double                    dx,
+                double                    dy,
+                gpointer                  user_data) {
+
+   graphics_info_t g;
+   std::cout << "swipe " << dx << " " << dy << std::endl;
+
+   GtkGestureSwipe *swipe_gesture; // how to get this?
+   double vel_x;
+   double vel_y;
+   // gboolean state = gtk_gesture_get_velocity(swipe_gesture, &vel_x, &vel_y);
+
+}
+
+void
 on_glarea_motion(GtkEventControllerMotion *controller,
                  gdouble x,
                  gdouble y,
@@ -403,6 +431,7 @@ void setup_gestures_for_opengl_widget_in_main_window(GtkWidget *glarea) {
    GtkGesture *drag_controller_primary   = gtk_gesture_drag_new();
    GtkGesture *drag_controller_middle    = gtk_gesture_drag_new();
    GtkGesture *click_controller          = gtk_gesture_click_new();
+   GtkGesture *swipe_controller          = gtk_gesture_swipe_new();
 
    GtkEventControllerScrollFlags scroll_flags = GTK_EVENT_CONTROLLER_SCROLL_VERTICAL;
    GtkEventController *scroll_controller = gtk_event_controller_scroll_new(scroll_flags);
@@ -438,6 +467,9 @@ void setup_gestures_for_opengl_widget_in_main_window(GtkWidget *glarea) {
 
    gtk_widget_add_controller(GTK_WIDGET(glarea), GTK_EVENT_CONTROLLER(scroll_controller));
    g_signal_connect(scroll_controller, "scroll",  G_CALLBACK(on_glarea_scrolled),  glarea);
+
+   gtk_widget_add_controller(GTK_WIDGET(glarea), GTK_EVENT_CONTROLLER(swipe_controller));
+   g_signal_connect(swipe_controller, "swipe",  G_CALLBACK(on_glarea_swipe),  glarea);
 
    GtkEventController *motion_controller = gtk_event_controller_motion_new();
    gtk_event_controller_set_propagation_phase(motion_controller, GTK_PHASE_CAPTURE);
@@ -559,6 +591,8 @@ create_local_picture(const std::string &local_filename) {
    if (picture) {
 #if GTK_MAJOR_VERSION == 4 && GTK_MINOR_VERSION >= 8
       gtk_picture_set_content_fit(GTK_PICTURE(picture), GTK_CONTENT_FIT_FILL);
+#else
+      g_warning("gtk_picture_set_content_fit() not available in your version of GTK.");
 #endif
    }
    return picture;
@@ -593,13 +627,15 @@ struct application_activate_data {
    GtkWidget* splash_screen;
    GtkApplication* application;
    GtkWidget* app_window;
+   command_line_data cld;
 
-   application_activate_data(int _argc, char** _argv) {
+   application_activate_data(int _argc, char** _argv, command_line_data&& cld) {
       argc = _argc;
       argv = _argv;
       splash_screen = nullptr;
       application = nullptr;
       app_window = nullptr;
+      this->cld = std::move(cld);
    }
 };
 
@@ -620,7 +656,7 @@ new_startup_application_activate(GtkApplication *application,
    GtkWidget *app_window = gtk_application_window_new(application);
    gtk_window_set_application(GTK_WINDOW(app_window), application);
    gtk_window_set_title(GTK_WINDOW(app_window), window_name.c_str());
-  
+
    graphics_info_t::set_main_window(app_window);
 
    activate_data->app_window = app_window;
@@ -649,11 +685,16 @@ new_startup_application_activate(GtkApplication *application,
 
       graphics_info_t graphics_info;
 
+      // use this to look up things - and it is used to attach the lidia
+      // application window
       graphics_info.application = application;
 
-      // 20230526-PE this now happens i init_coot_as_python_module()
-      // Let's not do it (including geom.init_standard()) twice.
+      // 20230526-PE this now happens in init_coot_as_python_module()
+      // Let's not do it (calling geom.init_standard()) twice.
       // graphics_info.init();
+
+      // but let's do it once at least!
+      graphics_info.init();
 
       GtkBuilder *builder = gtk_builder_new();
       if (GTK_IS_BUILDER(builder)) {
@@ -668,8 +709,8 @@ new_startup_application_activate(GtkApplication *application,
 
       // the main application builder
 
-      // change "glade" to "ui" one day.
       std::string dir = coot::package_data_dir();
+      // change "glade" to "ui" one day.
       std::string dir_glade = coot::util::append_dir_dir(dir, "glade");
       std::string ui_file_name = "coot-gtk4.ui";
       std::string ui_file_full = coot::util::append_dir_file(dir_glade, ui_file_name);
@@ -702,8 +743,12 @@ new_startup_application_activate(GtkApplication *application,
 
       python_init();
 
-      // set this by parsing the command line arguments
-      graphics_info.use_graphics_interface_flag = true;
+      handle_command_line_data(activate_data->cld);
+      if (activate_data->cld.do_graphics)
+         graphics_info.use_graphics_interface_flag = true;
+
+      // create the preference defaults
+      make_preferences_internal();
 
       guint id = gtk_application_window_get_id(GTK_APPLICATION_WINDOW(app_window));
       // std::cout << "debug:: new_startup_application_activate(): Window id: " << id << std::endl;
@@ -722,6 +767,14 @@ new_startup_application_activate(GtkApplication *application,
       gtk_window_set_child(GTK_WINDOW(app_window), graphics_vbox);
 
       gtk_window_present(GTK_WINDOW(app_window));
+
+      g_signal_connect(app_window, "destroy", G_CALLBACK(+[](GtkWidget *w, gpointer user_data){
+         if(coot::is_layla_initialized()) {
+            g_info("De-initializing Layla so that GtkApplication can exit...");
+            coot::deinitialize_layla();
+         }
+      }), nullptr);
+
       // gtk_widget_set_visible(window, TRUE);
 
       GtkWidget *gl_area = new_startup_create_glarea_widget();
@@ -729,7 +782,14 @@ new_startup_application_activate(GtkApplication *application,
       gtk_widget_set_visible(gl_area, TRUE);
       gtk_box_prepend(GTK_BOX(graphics_hbox), gl_area);
       gtk_window_set_application(GTK_WINDOW(app_window), application);
-      // 20230729-PE 
+#ifdef __APPLE__
+      gtk_widget_set_size_request(gl_area, 600, 600); // Hmm
+      gtk_window_set_default_size(GTK_WINDOW(app_window), 900, 900);
+      gtk_window_set_default_widget(GTK_WINDOW(app_window), gl_area);
+      gtk_widget_set_visible(app_window, TRUE);
+      gtk_window_set_focus_visible(GTK_WINDOW(app_window), TRUE);
+#else
+      // 20230729-PE
       // gtk_widget_set_size_request() does't seem to work on the gl_area.
       // So expand the gl_area by setting thw window size just so. This makes the
       // gl_area 900x900 on my desktop. Maybe there is a better way.
@@ -742,6 +802,7 @@ new_startup_application_activate(GtkApplication *application,
       gtk_window_set_default_widget(GTK_WINDOW(app_window), gl_area);
       gtk_widget_set_visible(app_window, TRUE);
       gtk_window_set_focus_visible(GTK_WINDOW(app_window), TRUE);
+#endif
 
       gtk_widget_grab_focus(gl_area); // at the start, fixes focus problem
       setup_gestures_for_opengl_widget_in_main_window(gl_area);
@@ -753,20 +814,8 @@ new_startup_application_activate(GtkApplication *application,
       setup_gui_components();
       setup_go_to_residue_keyboarding_mode_entry_signals();
 
-      // create the preference defaults
-      /// needs to come after python init now
-      make_preferences_internal();
-
-      // if there is no command line arguments, the the function that sets this data is not run
-      // so cld is null
-      command_line_data *cld = static_cast<command_line_data *>(g_object_get_data(G_OBJECT(application),
-                                                                                  "command-line-data"));
-      if (cld) {
-         handle_command_line_data(*cld);
-         run_command_line_scripts();
-      }
-
       // load_tutorial_model_and_data();
+      delete activate_data;
 
       g_idle_add(+[](gpointer data)-> gboolean {
          GtkWindow* splash_screen = GTK_WINDOW(data);
@@ -774,10 +823,14 @@ new_startup_application_activate(GtkApplication *application,
          return G_SOURCE_REMOVE;
       }, splash_screen);
 
+#if GLIB_MAJOR_VERSION == 2 && GLIB_MINOR_VERSION >= 74 || GLIB_MAJOR_VERSION > 2
+      g_idle_add_once((GSourceOnceFunc)[](gpointer user_data) { run_command_line_scripts(); }, nullptr);
+#else
+      std::cout << "WARNING:: Rebuild Coot against Glib >= 2.74. Won't run commandline scripts." << std::endl;
+#endif
       return G_SOURCE_REMOVE;
    }, activate_data);
 
-   // delete activate_data; // 20230515-PE restore this when other command line stuff is working OK
 
 }
 
@@ -801,122 +854,6 @@ void load_css() {
 
 }
 
-void
-application_open_callback(GtkApplication *app,
-                          GFile          **files,
-                          gint            n_files,
-                          gchar          *hint,
-                          gpointer        user_data) {
-
-   command_line_data cld;
-
-   for (gint i=0; i<n_files; i++) {
-      GFile *file = files[i];
-      GError *error = NULL;
-      GFileInfo *file_info = g_file_query_info(file, G_FILE_ATTRIBUTE_STANDARD_NAME,
-                                               G_FILE_QUERY_INFO_NONE, NULL, &error);
-      if (file_info) {
-         // const char *file_name = g_file_info_get_name(file_info);
-         const char *path = g_file_get_path(file);
-
-         if (path) {
-            std::string file_name(path);
-            std::cout << "application_open_callback(): handle " << file_name << std::endl;
-            cld.add(std::string(file_name));
-         } else {
-            std::cout << "ERROR:: application_open_callback(): file_name was null " << std::endl;
-         }
-      } else {
-         std::cout << "ERROR:: application_open_callback() error " << i << " " << error->message << std::endl;
-      }
-   }
-
-   // make a pointer to that stuff
-   command_line_data *cld_p = new command_line_data(cld);
-   g_object_set_data(G_OBJECT(app), "command-line-data", cld_p);
-
-   // 20230515-PE Is this really what I want to do?
-   // This seems like a bit of a hack.
-   // Perhaps put the contentx of new_startup_application_activate() is a new function
-   // That both this function and new_startup_application_activate() call.
-   //
-   new_startup_application_activate(app, user_data);
-
-}
-
-typedef struct {
-  gboolean switch_option;
-} AppOptions;
-static AppOptions app_options;
-
-void
-command_line_stuff(GApplication *app, AppOptions *options) {
-
-   const GOptionEntry cmd_params[] =
-  {
-    {
-      .long_name = "my_switch_option",
-      .short_name = 'm',
-      .flags = G_OPTION_FLAG_NONE,     // see `GOptionFlags`
-      .arg = G_OPTION_ARG_NONE,        // type of option (see `GOptionArg`)
-      .arg_data = &(options->switch_option),// store data here
-      .description = "<my description>",
-      .arg_description = NULL,
-    },
-    {NULL}
-  };
-
-  g_application_add_main_option_entries(G_APPLICATION (app), cmd_params);
-}
-
-
-void application_command_line_callback(GtkApplication *app, GVariant *parameters, gpointer user_data) {
-
-#if 0
-   GVariantIter iter;
-   GVariant *argument;
-   gchar *key;
-   gsize length;
-   g_variant_iter_init(&iter, arguments);
-   while (g_variant_iter_next(&iter, "{sv}", &key, &argument)) {
-      std::string ss = g_variant_get_string(argument, &length);
-      std::cout << "command line argument: " << key << " " << ss << std::endl;
-      g_variant_unref(argument);
-   };
-   g_variant_unref(arguments);
-#endif
-
-   GVariant *argument;
-   GVariantIter iter;
-   const char *arg;
-
-   return;
-
-   /* Convert the command line arguments to a GVariant */
-   // variant = g_variant_new_strv((const gchar * const *)argv, argc);
-
-   // variant = arguments;
-
-   std::cout << "Here A " << parameters << std::endl;
-   /* Create an iterator for the GVariant */
-   // iter = g_variant_iter_new(parameters);
-
-   g_variant_iter_init(&iter, parameters);
-
-   /* Loop over the arguments and print them */
-   std::cout << "Here B " << &iter << std::endl;
-   while (g_variant_iter_next(&iter, "{sv}", &arg, &argument)) {
-      std::cout << "Here C " << &iter << std::endl;
-      g_print("Argument: %s\n", arg);
-   }
-
-   /* Free the iterator and GVariant */
-   // g_variant_iter_free(iter);
-
-   // g_variant_unref(variant);
-  
-}
-
 void window_removed(GtkApplication* self,GtkWindow* window, gpointer user_data) {
 
    // this is not needed because closing the main window using the window manager
@@ -930,6 +867,19 @@ void window_removed(GtkApplication* self,GtkWindow* window, gpointer user_data) 
 
 }
 
+int do_no_graphics_mode(command_line_data& cld, int argc, char** argv) {
+   handle_command_line_data(cld);
+   // Is this correct here like this?
+   // How is this supposed to behave exactly?
+   run_command_line_scripts();
+
+   setup_python_basic(argc, argv);
+   setup_python_coot_module();
+   setup_python_with_coot_modules(argc, argv);
+   start_command_line_python_maybe(true, argc, argv);
+   return 0;
+}
+
 int new_startup(int argc, char **argv) {
 
 #ifdef USE_LIBCURL
@@ -941,9 +891,18 @@ int new_startup(int argc, char **argv) {
    // setup_symm_lib();
    // check_reference_structures_dir();
 
+   command_line_data cld = parse_command_line(argc, argv);
+
+   if(!cld.do_graphics) {
+      return do_no_graphics_mode(cld, argc, argv);
+   }
+
    gtk_init();
 
    load_css();
+
+   // GTK version
+   std::cout << "GTK " << GTK_MAJOR_VERSION << "." << GTK_MINOR_VERSION << "." << GTK_MICRO_VERSION << std::endl;
 
    GtkWidget *splash_screen = new_startup_create_splash_screen_window();
    gtk_widget_set_visible(splash_screen, TRUE);
@@ -955,19 +914,17 @@ int new_startup(int argc, char **argv) {
    // g_object_get(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", &dark_mode_flag, NULL);
 
    GError *error = NULL;
-   // GtkApplication *app = gtk_application_new ("org.emsley.coot", G_APPLICATION_HANDLES_COMMAND_LINE);
-   GtkApplication *app = gtk_application_new ("org.emsley.coot", G_APPLICATION_HANDLES_OPEN);
+#if GLIB_MAJOR_VERSION == 2 && GLIB_MINOR_VERSION >= 74 || GLIB_MAJOR_VERSION > 2
+   GtkApplication *app = gtk_application_new ("org.emsley.coot",
+      (GApplicationFlags) (G_APPLICATION_DEFAULT_FLAGS | G_APPLICATION_NON_UNIQUE));
+#else
+   GtkApplication *app = gtk_application_new ("org.emsley.coot",
+      (GApplicationFlags) (G_APPLICATION_NON_UNIQUE));
+#endif
    g_application_register(G_APPLICATION(app), NULL, &error);
-   // g_application_set_flags(G_APPLICATION(app), G_APPLICATION_HANDLES_COMMAND_LINE);
 
-
-   // command_line_stuff(G_APPLICATION(app), &app_options);
-
-   // g_signal_connect(app, "command-line", G_CALLBACK(application_command_line_callback), nullptr);
-
-   application_activate_data *activate_data = new application_activate_data(argc,argv);
+   application_activate_data *activate_data = new application_activate_data(argc,argv,std::move(cld));
    activate_data->splash_screen = splash_screen;
-   g_signal_connect(app, "open",     G_CALLBACK(application_open_callback), activate_data); // passed on
    // this destroys active_data
    g_signal_connect(app, "activate", G_CALLBACK(new_startup_application_activate), activate_data);
 
@@ -978,8 +935,8 @@ int new_startup(int argc, char **argv) {
    // delete activate_data; Nope. This is used in new_startup_application_activate.
    // Delete it there if you want to delete it.
 
-   int status = g_application_run(G_APPLICATION(app), argc, argv);
+   int status = g_application_run(G_APPLICATION(app), 1, argv);
    std::cout << "--- g_application_run() returns with status " << status << std::endl;
-   g_object_unref (app);
+   g_object_unref(app);
    return status;
 }

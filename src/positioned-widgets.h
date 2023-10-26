@@ -41,6 +41,7 @@
 #define COOT_ACCESSION_CODE_WINDOW_PDB_REDO 112
 #define COOT_UNIPROT_ID                     113
 #define COOT_EMDB_CODE                      114
+#define COOT_COD_CODE                       115
 #define COOT_MODEL_REFINE_DIALOG           13
 #define COOT_GO_TO_ATOM_WINDOW             14
 #define COOT_RAMACHANDRAN_PLOT_WINDOW      15
@@ -50,7 +51,6 @@
 #define COOT_CHECKED_WATERS_BADDIES_DIALOG 18
 #define COOT_CHECK_WATERS_DIALOG           29
 #define COOT_MTZ_COLUMN_SELECTOR_DIALOG    19
-#define COOT_DIFF_MAPS_PEAK_DIALOG         30
 #define COOT_EDIT_RESTRAINTS_DIALOG        31
 
 #define COOT_SCREENDUMP_SIMPLE   20

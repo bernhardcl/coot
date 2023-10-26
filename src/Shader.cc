@@ -176,6 +176,8 @@ Shader::set_mat4_for_uniform(const std::string &uniform_name, const glm::mat4 &m
 void
 Shader::Use() {
 
+   // std::cout << "Shader::Use() --- start --- " << name << std::endl;
+
    if (name == "---Unset---") {
       std::cout << "GL ERROR:: --------------------------------- ooops Use() called for unset Shader " << std::endl;
    }
@@ -260,15 +262,15 @@ void Shader::set_uniform_locations() {
        entity_type == Entity_t::MOLECULAR_TRIANGLES ||
        entity_type == Entity_t::INSTANCED_DISPLAY_OBJECT ||
        entity_type == Entity_t::GENERIC_DISPLAY_OBJECT) {
-      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 0: " << err << std::endl;
+      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 0: " << err << " " << name << std::endl;
       mvp_uniform_location           = glGetUniformLocation_internal("mvp");
-      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 1: " << err << std::endl;
+      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 1: " << err << " " << name << std::endl;
       view_rotation_uniform_location = glGetUniformLocation_internal("view_rotation");
-      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 2: " << err << std::endl;
+      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 2: " << err << " " << name << std::endl;
       background_colour_uniform_location = glGetUniformLocation_internal("background_colour");
-      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 3: " << err << std::endl;
+      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 3: " << err << " " << name << std::endl;
       eye_position_uniform_location = glGetUniformLocation_internal("eye_position");
-      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 4: " << err << std::endl;
+      err = glGetError(); if (err) std::cout << "GL ERROR:: set_uniform_locations() error 4: " << err << " " << name << std::endl;
 
       // the compiler can "throw these away" 4294967295 if they are not used in the fragment shader (it optimizes)
       if (false)
@@ -479,9 +481,7 @@ Shader::create() const {
 }
 
 void
-Shader::setup_light(unsigned int light_index, const lights_info_t &light,
-                    const glm::mat4 &vrm,
-                    const glm::vec3 &eye_position) {
+Shader::setup_light(unsigned int light_index, const lights_info_t &light, const glm::mat4 &vrm) {
 
    bool debug = false;
 
@@ -534,11 +534,23 @@ Shader::setup_light(unsigned int light_index, const lights_info_t &light,
    if (err)
       std::cout << "error setup_light() " << light_index << " " << name << " -- end -- " << err << std::endl;
 
+}
+
+
+void
+Shader::setup_eye_position(const glm::vec3 &eye_position, const glm::vec3 &rotation_centre,
+                           const glm::mat4 &vrm) {
+
+   // 20230910-PE The eye position doesn't depend on the lights - so this code fragment should not be in
+   // this function. There should be a "setup_eye_position()" function - or some such.
+
    // similarly we need to move the eye_position in the same way:
    {
       glm::vec4 p4_eye = glm::vec4(eye_position, 1.0) * vrm;
-      glm::vec3 ep_mcs = glm::vec3(p4_eye);
+      glm::vec3 ep_mcs = glm::vec3(p4_eye) + rotation_centre;
+      // std::cout << "sending eye_position_in_molecule_coordinates_space " << glm::to_string(ep_mcs) << std::endl;
       set_vec3_for_uniform("eye_position_in_molecule_coordinates_space", ep_mcs);
    }
+
 
 }

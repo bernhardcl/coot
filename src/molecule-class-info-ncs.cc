@@ -234,10 +234,15 @@ coot::ghost_molecule_display_t::update_bonds(mmdb::Manager *mol) {
    std::vector<glm::vec4> colour_table;
    for (unsigned int i=0; i<15; i++) { colour_table.push_back(glm::vec4(0.4, 0.8, 0.2, 1.0)); }
    graphics_info_t::attach_buffers();
+
+   std::cout << "ghost code needs reworking: update_bonds() for ghosts " << std::endl;
+
+#if 0
    mesh.make_graphical_bonds(bonds_box, bbt, Mesh::BALL_AND_STICK, -1, false, 0.1, 0.08, 1, 8, 2, colour_table, *graphics_info_t::Geom_p());
    if (false)
       std::cout << "########################## ghost mesh v and ts: " << mesh.vertices.size() << " " << mesh.triangles.size()
                 << " with representation_type " << Mesh::BALL_AND_STICK << std::endl;
+#endif
 }
 
 void
@@ -251,12 +256,15 @@ molecule_class_info_t::draw_ncs_ghosts(Shader *shader_for_meshes,
    // std::cout << "draw_ncs_ghosts() " << std::endl;
    if (show_ghosts_flag) {
       for (auto &ghost : ncs_ghosts) {
-         ghost.draw(shader_for_meshes, mvp, model_rotation_matrix, lights, eye_position, background_colour);
+         // ghost.draw(shader_for_meshes, mvp, model_rotation_matrix, lights, eye_position, background_colour);
+         std::cout << "draw_ncs_ghosts() missing draw() function - FIXME" << std::endl;
       }
    }
 
 }
 
+#if 0 // 20230826-PE needs to derive from the api ghost_molecule_display_t class - which doesn't have a draw()
+      // function.
 void
 coot::ghost_molecule_display_t::draw(Shader *shader_p,
                                      const glm::mat4 &mvp,
@@ -268,6 +276,7 @@ coot::ghost_molecule_display_t::draw(Shader *shader_p,
    // std::cout << "ncs_ghosts::draw() " << mesh.vertices.size() << " " << mesh.triangles.size() << std::endl;
    mesh.draw(shader_p, mvp, view_rotation_matrix, lights, eye_position, 1.0f, background_colour, false, true, false);
 }
+#endif
 
 // public interface
 int
@@ -1180,7 +1189,8 @@ molecule_class_info_t::ncs_chains_match_p(const std::vector<std::pair<std::strin
 		  }
 	       }
 	       int n_count = a.size();
-	       std::cout << "INFO:: NCS chain comparison " << n_match << "/" << v1.size() << std::endl;
+               if (false)
+                  std::cout << "INFO:: NCS chain comparison " << n_match << "/" << v1.size() << std::endl;
 	       if (n_count > 0) {
 		  // float hit_rate = float(n_match)/float(n_count);
 		  // case where protein is 1 to 123 but NAP at 500 fails.  So not n_count but v1.size():
@@ -1716,6 +1726,36 @@ molecule_class_info_t::copy_from_ncs_master_to_others(const std::string &master_
 	    std::string master = ncs_ghosts[ighost].target_chain_id;
 	    if (master == master_chain_id) {
 	       copy_chain(master, ncs_ghosts[ighost].chain_id);
+	    }
+	 }
+      }
+   }
+   return ncopied;
+}
+
+int
+molecule_class_info_t::copy_from_ncs_master_to_specific_other_chains(const std::string &master_chain_id,
+                                                                     const std::vector<std::string> &other_chain_ids) {
+
+   // check in the ghosts if master_chain_id is actually a master
+   // molecule, and if it is, apply the copy to all ghosts for which
+   // it is a master.
+   int ncopied = 0;
+   if (atom_sel.n_selected_atoms > 0) {
+      if (ncs_ghosts.size() > 0) {
+	 if (ncs_ghosts[0].is_empty() || ncs_ghosts_have_rtops_flag == 0) {
+	    // std::cout << "   %%%%%%%%% calling fill_ghost_info from "
+	    // std::cout << "copy_from_ncs_master_to_others "
+	    // << std::endl;
+	    fill_ghost_info(1, 0.7); // 0.7?
+	 }
+	 for (unsigned int ighost=0; ighost<ncs_ghosts.size(); ighost++) {
+            const std::string this_chain_id = ncs_ghosts[ighost].chain_id;
+	    std::string master_for_this_chain = ncs_ghosts[ighost].target_chain_id;
+	    if (master_for_this_chain == master_chain_id) {
+               if (std::find(other_chain_ids.begin(), other_chain_ids.end(), this_chain_id) != other_chain_ids.end()) {
+                  copy_chain(master_for_this_chain, this_chain_id);
+               }
 	    }
 	 }
       }

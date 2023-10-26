@@ -42,8 +42,12 @@ graphics_info_t::draw_molecules_for_ssao() {
    for (int i=0; i<n_molecules(); i++) {
       if (is_valid_model_molecule(i)) {
          if (molecules[i].draw_it)
-            if (! molecules[i].draw_model_molecule_as_lines)
-               molecules[i].molecule_as_mesh.draw_for_ssao(&shader_for_meshes_for_ssao, model_mat, view_mat, projection_mat);
+            if (! molecules[i].draw_model_molecule_as_lines) {
+               // molecules[i].molecule_as_mesh.draw_for_ssao(&shader_for_meshes_for_ssao, model_mat, view_mat, projection_mat);
+               molecules[i].draw_molecule_as_meshes_for_ssao(&shader_for_meshes_for_ssao,
+                                                             &shader_for_instanced_meshes_for_ssao,
+                                                             model_mat, view_mat, projection_mat);
+            }
       }
       if (is_valid_map_molecule(i)) {
          if (molecules[i].draw_it_for_map) {
@@ -98,6 +102,9 @@ graphics_info_t::draw_models(Shader *shader_for_tmeshes_p,
    glm::mat4 mvp = get_mvp(graphics_x_size, graphics_y_size);
    glm::mat4 model_rotation = get_model_rotation();
    glm::vec4 bg_col_v4(bg_col, 1.0f);
+   auto ccrc = RotationCentre();
+   glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
+
    if (draw_shadows) {
       // done elsewhere
    } else {
@@ -112,7 +119,7 @@ graphics_info_t::draw_models(Shader *shader_for_tmeshes_p,
          // now the coloured vertices mesh (for molecule things, not textured things)
          if (shader_for_meshes_p) {
             float opacity = 1.0f;
-            model.draw_meshes(shader_for_meshes_p, mvp, model_rotation, lights, eye_position, opacity, bg_col_v4, do_depth_fog);
+            model.draw_meshes(shader_for_meshes_p, mvp, model_rotation, lights, eye_position, rc, opacity, bg_col_v4, do_depth_fog);
 	 }
       }
    }
@@ -175,6 +182,9 @@ graphics_info_t::draw_Models_for_shadow_map(unsigned int light_index) {
       glm::mat4 mvp_orthogonal = get_mvp_for_shadow_map(light.direction);
       glm::mat4 model_rotation = get_model_rotation();
       glm::vec4 bg_col_v4(background_colour, 1.0f);
+      auto ccrc = RotationCentre();
+      glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
+
       for (unsigned int ii=0; ii<models.size(); ii++) {
          auto &m = models[ii];
          shader_for_texture_meshes_shadow_map.Use(); // needed?
@@ -195,7 +205,7 @@ graphics_info_t::draw_Models_for_shadow_map(unsigned int light_index) {
             glm::vec3 dummy_eye_position;
             float opacity = 1.0f;
             m.draw_mesh(j, &shader_for_meshes_shadow_map, mvp_orthogonal, model_rotation,
-			dummy_lights, dummy_eye_position, opacity, bg_col_v4, false, false);
+			dummy_lights, dummy_eye_position, rc, opacity, bg_col_v4, false, false);
 	 }
       }
    }
@@ -203,6 +213,8 @@ graphics_info_t::draw_Models_for_shadow_map(unsigned int light_index) {
 
 void
 graphics_info_t::draw_molecules_for_shadow_map(unsigned int light_index) {
+
+   // std::cout << "draw_molecules_for_shadow_map() " << std::endl;
 
    GLenum err = glGetError();
    if (err) std::cout << "GL ERROR:: draw_molecules_for_shadow_map() -- start -- " << err << std::endl;
@@ -214,6 +226,8 @@ graphics_info_t::draw_molecules_for_shadow_map(unsigned int light_index) {
       glm::mat4 mvp_orthogonal = get_mvp_for_shadow_map(light.direction);
       glm::mat4 model_rotation = get_model_rotation();
       glm::vec4 bg_col_v4(background_colour, 1.0f);
+      auto ccrc = RotationCentre();
+      glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
 
       // --------- maps ----------
 
@@ -229,7 +243,7 @@ graphics_info_t::draw_molecules_for_shadow_map(unsigned int light_index) {
                bool do_depth_fog = false;
                // draw the surface - not the mesh - not sure if this is a good idea yet.
                m.map_as_mesh.draw(&shader_for_meshes_shadow_map,
-                                  mvp_orthogonal, model_rotation, lights, dummy_eye_position,
+                                  mvp_orthogonal, model_rotation, lights, dummy_eye_position, rc,
                                   opacity, bg_col_v4, gl_lines_mode, do_depth_fog, show_just_shadows);
             }
          }
@@ -247,9 +261,16 @@ graphics_info_t::draw_molecules_for_shadow_map(unsigned int light_index) {
                bool opacity = 1.0;
                bool do_depth_fog = false;
                // model molecule, that is of course.
+#if 0 // 20230818-PE pre-model_molecule_meshes
                m.molecule_as_mesh.draw(&shader_for_meshes_shadow_map,
                                        mvp_orthogonal, model_rotation, lights, dummy_eye_position,
                                        opacity, bg_col_v4, gl_lines_mode, do_depth_fog, show_just_shadows);
+#endif
+
+               m.model_molecule_meshes.draw(&shader_for_meshes_shadow_map,
+                                            &shader_for_instanced_meshes_shadow_map,
+                                            mvp_orthogonal, model_rotation, lights, dummy_eye_position,
+                                            opacity, bg_col_v4, gl_lines_mode, do_depth_fog, show_just_shadows);
             }
          }
       }

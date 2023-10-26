@@ -37,11 +37,10 @@ using json = nlohmann::json;
 
 #include <gtk/gtk.h>
 
-#include "support.h"
-#include "interface.h"
 #include "c-interface.h"
 #include "cc-interface.hh" // for coot_get_url()
 #include "coot-version.hh"
+#include "curl-utils.hh"
 
 #include "graphics-info.h" // for extensions register // after json.hpp
 

@@ -43,27 +43,15 @@
 #include "coot-utils/coot-map-utils.hh" // for map_molecule_centre_info_t
 #include "api-cell.hh" // 20230702-PE not needed in this file - remove it from here
 
+#include "bond-colour.hh"
+
 // 2023-07-04-PE This is a hack. This should be configured - and the
 // various functions that depend on this being true should be
 // reworked so that they run without a thread pool.
 #define HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
-namespace coot {
 
-   // give this a type
-   enum api_bond_colour_t { UNSET_TYPE = -1, NORMAL_BONDS=1, CA_BONDS=2,
-      COLOUR_BY_CHAIN_BONDS=3,
-      CA_BONDS_PLUS_LIGANDS=4, BONDS_NO_WATERS=5, BONDS_SEC_STRUCT_COLOUR=6,
-      BONDS_NO_HYDROGENS=15,
-      CA_BONDS_PLUS_LIGANDS_SEC_STRUCT_COLOUR=7,
-      CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR=14,
-      CA_BONDS_PLUS_LIGANDS_AND_SIDECHAINS=17,
-      COLOUR_BY_MOLECULE_BONDS=8,
-      COLOUR_BY_RAINBOW_BONDS=9,
-      COLOUR_BY_B_FACTOR_BONDS=10,
-      COLOUR_BY_OCCUPANCY_BONDS=11,
-      COLOUR_BY_USER_DEFINED_COLOURS____BONDS=12,
-      COLOUR_BY_USER_DEFINED_COLOURS_CA_BONDS=13 };
+namespace coot {
 
    class molecule_t {
 
@@ -175,9 +163,9 @@ namespace coot {
       void make_bonds_type_checked(protein_geometry *geom, rotamer_probability_tables *rot_prob_tables_p, bool draw_hydrogen_atoms_flag, bool draw_missing_loops_flag, const char *s = 0);
 #endif
 
-      int bonds_box_type; // public accessable via get_bonds_box_type(); // wass Bonds_box_type()
+      api_bond_colour_t bonds_box_type; // public accessable via get_bonds_box_type(); // wass Bonds_box_type()
       graphical_bonds_container bonds_box;
-      int get_bonds_box_type() const { return bonds_box_type; }
+      api_bond_colour_t get_bonds_box_type() const { return bonds_box_type; }
 
       // this is the bond dictionary also mode.
       // 20221011-PE force_rebonding arg is not currently used.
@@ -193,8 +181,8 @@ namespace coot {
       void make_ca_bonds();
       // just a copy of the version in src
       float bonds_colour_map_rotation;
-      std::vector<glm::vec4> make_colour_table(bool against_a_dark_background) const;
-      glm::vec4 get_bond_colour_by_colour_wheel_position(int icol, int bonds_box_type) const;
+      // std::vector<glm::vec4> make_colour_table(bool against_a_dark_background) const; public now
+      glm::vec4 get_bond_colour_by_colour_wheel_position(int icol, api_bond_colour_t bonds_box_type) const;
       colour_t get_bond_colour_by_mol_no(int colour_index, bool against_a_dark_background) const;
       colour_t get_bond_colour_basic(int colour_index, bool against_a_dark_background) const;
       bool use_bespoke_grey_colour_for_carbon_atoms;
@@ -210,6 +198,13 @@ namespace coot {
       bool has_xmap() const { return is_valid_map_molecule(); }
 
       colour_holder map_colour;
+      glm::vec4 position_to_colour_using_other_map(const clipper::Coord_orth &position,
+                                                   const clipper::Xmap<float> &other_map_for_colouring) const;
+      float other_map_for_colouring_min_value;
+      float other_map_for_colouring_max_value;
+      glm::vec4 fraction_to_colour(float f) const; // for other map colouring - perhaps this function name is too generic?
+      bool  radial_map_colour_invert_flag;
+      float radial_map_colour_saturation;
 
       // save the data used for the fourier, so that we can use it to
       // sharpen the map:
@@ -343,7 +338,7 @@ namespace coot {
       void init() {
          // set the imol before calling this function.
          ligand_flip_number = 0;
-         bonds_box_type = UNSET_TYPE;
+         bonds_box_type = api_bond_colour_t::UNSET_TYPE;
          is_em_map_cached_flag = false;
          xmap_is_diff_map = false;
          is_from_shelx_ins_flag = false;
@@ -357,6 +352,12 @@ namespace coot {
          original_r_free_flags_p = nullptr;
          refmac_r_free_flag_sensible = false;
          use_bespoke_grey_colour_for_carbon_atoms = false;
+
+         radial_map_colour_saturation = 0.5;
+         radial_map_colour_invert_flag = false;
+
+         other_map_for_colouring_min_value = 0.0;
+         other_map_for_colouring_max_value = 1.0;
 
          map_colour = colour_holder(0.3, 0.3, 0.7);
          last_restraints = nullptr;
@@ -378,6 +379,8 @@ namespace coot {
             }
             std::cout << "-------------" << std::endl;
          }
+
+         indexed_user_defined_colour_selection_cids_apply_to_non_carbon_atoms_also = true;
       }
 
    public:
@@ -393,6 +396,9 @@ namespace coot {
 
       //! constructor
       molecule_t(const std::string &name_in, int mol_no_in) : name(name_in) {imol_no = mol_no_in; init(); }
+      //! constructor, when we know we are giving it an em map
+      molecule_t(const std::string &name_in, int mol_no_in, short int is_em_map) : name(name_in) {
+         imol_no = mol_no_in; init(); is_em_map_cached_flag = is_em_map; }
       //! constructor
       molecule_t(const std::string &name_in, int mol_no_in, const clipper::Xmap<float> &xmap_in, bool is_em_map_flag)
          : name(name_in), xmap(xmap_in) {imol_no = mol_no_in; init(); is_em_map_cached_flag = is_em_map_flag; }
@@ -500,6 +506,13 @@ namespace coot {
       // public
       void make_bonds(protein_geometry *geom, rotamer_probability_tables *rot_prob_tables_p,
                       bool draw_hydrogen_atoms_flag, bool draw_missing_loops_flag);
+
+      //! useful for debugging, perhaps
+      std::vector<glm::vec4> make_colour_table(bool against_a_dark_background) const;
+
+      // for debugging
+      void print_colour_table(const std::string &debugging_label) const;
+
       // returns either the specified atom or null if not found
       mmdb::Atom *get_atom(const atom_spec_t &atom_spec) const;
       // returns either the specified residue or null if not found
@@ -540,13 +553,31 @@ namespace coot {
                                                               bool draw_missing_residue_loops);
 
       // adding colours using the functions below add into user_defined_colours
-      std::vector<colour_holder> user_defined_bond_colours;
+      std::map<unsigned int, colour_holder> user_defined_bond_colours;
+
+      // we store these variables so that they can be used by (temporary) molecules constructed from atom selections
+      //
+      std::vector<std::pair<std::string, unsigned int> > indexed_user_defined_colour_selection_cids;
+      bool indexed_user_defined_colour_selection_cids_apply_to_non_carbon_atoms_also;
 
       //! user-defined colour-index to colour
+      //! (internallly, this converts the `colour_map` to the above vector of colour holders, so it's probably a good idea
+      //! if the colour (index) keys are less than 200 or so.
       void set_user_defined_bond_colours(const std::map<unsigned int, std::array<float, 3> > &colour_map);
 
-      //! user-defined atom selection to colour index
-      void set_user_defined_atom_colour_by_residue(const std::vector<std::pair<std::string, unsigned int> > &indexed_residues_cids);
+      //! user-defined atom selection to colour index.
+      // make this static?
+      void set_user_defined_atom_colour_by_selections(const std::vector<std::pair<std::string, unsigned int> > &indexed_residues_cids,
+                                                      bool colour_applies_to_non_carbon_atoms_also,
+                                                      mmdb::Manager *mol);
+
+      // need not be public
+      void store_user_defined_atom_colour_selections(const std::vector<std::pair<std::string, unsigned int> > &indexed_residues_cids,
+                                                     bool colour_applies_to_non_carbon_atoms_also);
+
+      void apply_user_defined_atom_colour_selections(const std::vector<std::pair<std::string, unsigned int> > &indexed_residues_cids,
+                                                     bool colour_applies_to_non_carbon_atoms_also,
+                                                     mmdb::Manager *mol);
 
       //! set the colour wheel rotation base for the specified molecule
       void set_colour_wheel_rotation_base(float r);
@@ -668,6 +699,8 @@ namespace coot {
                                                                        coot::protein_geometry &geom,
                                                                        ctpl::thread_pool &static_thread_pool);
 
+      coot::instanced_mesh_t get_extra_restraints_mesh(int mode) const;
+
       // ------------------------ model-changing functions
 
       int move_molecule_to_new_centre(const coot::Cartesian &new_centre);
@@ -786,12 +819,15 @@ namespace coot {
       //! @return the number of atoms added.
       int merge_molecules(const std::vector<mmdb::Manager *> &mols);
 
-      //! My ligands don't jiggle-jiggle...
-      //!
-      //! Hey, what do you know, they actually do.
+      // My ligands don't jiggle-jiggle...
+      //
+      // Hey, what do you know, they actually do.
       float fit_to_map_by_random_jiggle(const residue_spec_t &res_spec, const clipper::Xmap<float> &xmap, float map_rmsd,
                                         int n_trials, float translation_scale_factor);
 
+      //! My ligands don't jiggle-jiggle...
+      //!
+      //! Hey, what do you know, they actually do.
       float fit_to_map_by_random_jiggle_using_atom_selection(const std::string &cid, const clipper::Xmap<float> &xmap, float map_rmsd,
                                         int n_trials, float translation_scale_factor);
 
@@ -864,6 +900,9 @@ namespace coot {
       // ----------------------- refinement
 
       coot::extra_restraints_t extra_restraints;
+
+      //! read extra restraints (e.g. from ProSMART)
+      void read_extra_restraints(const std::string &file_name);
       //! refinement tool
       std::vector<mmdb::Residue *> select_residues(const residue_spec_t &spec, const std::string &mode) const;
       //! resno_start and resno_end are inclusive
@@ -949,8 +988,43 @@ namespace coot {
 
       // changes the internal map mesh holder (hence not const)
       simple_mesh_t get_map_contours_mesh(clipper::Coord_orth position, float radius, float contour_level);
+      simple_mesh_t get_map_contours_mesh_using_other_map_for_colours(const clipper::Coord_orth &position, float radius, float contour_level,
+                                                                      const clipper::Xmap<float> &xmap);
+
+      //! map histogram class
+      class histogram_info_t {
+      public:
+         //! base
+         float base;
+         //! bin width
+         float bin_width;
+         //! counts
+         std::vector<int> counts;
+         //! mean
+         float mean;
+         //! variance
+         float variance;
+         histogram_info_t() : base(-1), bin_width(-1) {}
+         histogram_info_t(float min_density, float bw, const std::vector<int> &c) :
+            base(min_density), bin_width(bw), counts(c) {}
+      };
+
+      //! @return the map histogram
+      //! The caller should select the number of bins - 200 is a reasonable default.
+      //! The caller should also set the zoom factor (which reduces the range by the given factor)
+      //! centred around the median (typically 1.0 but usefully can vary until ~20.0).
+      histogram_info_t get_map_histogram(unsigned int n_bins, float zoom_factor) const;
 
       void set_map_colour(colour_holder holder);
+      void set_map_colour_saturation(float s) { radial_map_colour_saturation = s; }
+
+      //! Set the limit for the colour range for the values from the other map.
+      //! If the other map were, for example, a map of correlation values, then
+      //! you'd pass -1.0 and 1.0.
+      void set_other_map_for_colouring_min_max(float min_v, float max_v);
+      void set_other_map_for_colouring_invert_colour_ramp(bool state) {
+         radial_map_colour_invert_flag = state;
+      }
 
       //! The container class for an interesting place.
       //!
