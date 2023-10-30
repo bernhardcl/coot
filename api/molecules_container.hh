@@ -677,6 +677,9 @@ public:
    //! in the the specified molecule
    coot::util::missing_atom_info missing_atoms_info_raw(int imol);
 
+   //! @return a list of residues specs that have atoms within dist of the atoms of the specified residue
+   std::vector<coot::residue_spec_t> get_residues_near_residue(int imol, const std::string &residue_cid, float dist) const;
+
    //! superposition (using SSM)
    //!
    //! The specified chain of the moving molecule is superposed onto the chain in the reference molecule (if possible).
@@ -745,7 +748,7 @@ public:
       std::string sigF_obs;
       //! R-Free column. There were not avaliable if the return value is empty
       std::string Rfree;
-      auto_read_mtz_info_t() {idx = -1;}
+      auto_read_mtz_info_t() {idx = -1; weights_used = false; }
       auto_read_mtz_info_t(int index, const std::string &F_in, const std::string &phi_in) :
          idx(index), F(F_in), phi(phi_in), weights_used(false) {}
       void set_fobs_sigfobs(const std::string &f, const std::string &s) {
@@ -780,6 +783,11 @@ public:
    //! create a new map that is blurred/sharpened
    //! @return the molecule index of the new map or -1 on failure or if `in_place_flag` was true.
    int sharpen_blur_map(int imol_map, float b_factor, bool in_place_flag);
+
+   //! create a new map that is blurred/sharpened and resampling.
+   //! Note that resampling can be slow, a resample_factor of 1.5 is about the limit of the trade of of prettiness for speed.
+   //! @return the molecule index of the new map or -1 on failure or if `in_place_flag` was true.
+   int sharpen_blur_map_with_resample(int imol_map, float b_factor, float resample_factor, bool in_place_flag);
 
    //! mask map by atom selection (note the argument order is reversed compared to the coot api).
    //!
@@ -1231,7 +1239,8 @@ public:
    //! typical values for `min_dist` is 2.3
    //! typical values for `max_dist` is 3.5
    //!
-   //! return a vector of atom specifiers
+   //! @return a vector of atom specifiers
+   //! Use the string_user_data of the spec for the button label
    std::vector <coot::atom_spec_t>
    find_water_baddies(int imol_model, int imol_map,
                       float b_factor_lim,

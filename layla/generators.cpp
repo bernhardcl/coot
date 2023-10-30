@@ -134,6 +134,17 @@ std::vector<std::string> coot::layla::GeneratorRequest::build_commandline() cons
     auto input_filename = this->get_input_filename();
     switch(generator) {
         case Generator::Grade2: {
+            ret.push_back("-r");
+            ret.push_back(this->monomer_id);
+
+            ret.push_back("-o");
+            ret.push_back(this->get_output_filename());
+
+            if(std::holds_alternative<Grade2Options>(this->generator_settings)) {
+                auto settings = std::get<Grade2Options>(this->generator_settings);
+                // todo
+            }
+
             switch(input_format) {
                 case InputFormat::MolFile: {
                     g_error("Todo: implement molfile for grade2");
@@ -141,13 +152,10 @@ std::vector<std::string> coot::layla::GeneratorRequest::build_commandline() cons
                 }
                 default:
                 case InputFormat::SMILES: {
-                    g_error("Todo: implement smiles for grade2");
+                    auto smiles_arg = this->molecule_smiles;
+                    ret.push_back(smiles_arg);
                     break;
                 }
-            }
-            if(std::holds_alternative<Grade2Options>(this->generator_settings)) {
-                auto settings = std::get<Grade2Options>(this->generator_settings);
-                // todo
             }
             break;
         }
@@ -203,6 +211,7 @@ void initial_check(GTask* task) {
     };
     
     using Generator = coot::layla::GeneratorRequest::Generator;
+    using InputFormat = coot::layla::GeneratorRequest::InputFormat;
     switch(task_data->request->generator) {
         case Generator::Acedrg: {
             std::unique_ptr<RDKit::RWMol> mol;
@@ -232,8 +241,10 @@ void initial_check(GTask* task) {
         }
         default:
         case Generator::Grade2: {
-            valid = false;
-            reason = "Support for Grade2 has not been implemented yet.";
+            if (task_data->request->input_format != InputFormat::SMILES) {
+                valid = false;
+                reason = "Grade2 integration now only supports SMILES.";
+            }
             break;
         }
     }
@@ -321,7 +332,8 @@ void resolve_target_generator_executable(GTask* task) {
             break;
         }
         case Generator::Grade2: {
-            g_error("todo: Implement resolving Grade2 executable");
+            g_warning("todo: Implement resolving Grade2 executable");
+            task_data->request->executable_path = "grade2";
             break;
         }
     }
@@ -330,7 +342,7 @@ void resolve_target_generator_executable(GTask* task) {
 
 // Forward declaration
 void launch_generator_finish(GObject* subprocess_object, GAsyncResult* res, gpointer user_data);
-void pipe_reader(gpointer user_data);
+gboolean pipe_reader(gpointer user_data); // this now returns a value
 
 void launch_generator_async(GTask* task) {
 
@@ -376,14 +388,10 @@ void launch_generator_async(GTask* task) {
         return should_run;
     }, g_object_ref(task));
 
-#if GLIB_MAJOR_VERSION == 2 && GLIB_MINOR_VERSION >= 74 || GLIB_MAJOR_VERSION > 2
-    g_idle_add_once(pipe_reader, g_object_ref(task));
-#else
-    std::cout << "WARNING:: Rebuild Layla against Glib >= 2.74. Functionality is broken." << std::endl;
-#endif
+    g_idle_add((GSourceFunc)pipe_reader, g_object_ref(task));
 }
 
-void pipe_reader(gpointer user_data) {
+gboolean pipe_reader(gpointer user_data) {
     GTask* task = G_TASK(user_data);
     GCancellable* cancellable = g_task_get_cancellable(task);
     GeneratorTaskData* task_data = (GeneratorTaskData*) g_task_get_task_data(G_TASK(task));
@@ -418,16 +426,13 @@ void pipe_reader(gpointer user_data) {
             g_bytes_unref(bytes);
         }
         if(should_go_on) {
-#if GLIB_MAJOR_VERSION == 2 && GLIB_MINOR_VERSION >= 74 || GLIB_MAJOR_VERSION > 2
-            g_idle_add_once(pipe_reader, g_object_ref(task));
-#else
-            std::cout << "WARNING:: Rebuild Layla against Glib >= 2.74. Functionality is broken." << std::endl;
-#endif
+           g_idle_add((GSourceFunc)pipe_reader, g_object_ref(task));
         }
         g_object_unref(task);
     };
     g_input_stream_read_bytes_async(task_data->input_stream, 18, G_PRIORITY_HIGH, cancellable, callback, g_object_ref(task));
     g_object_unref(task);
+    return FALSE; // run this just once
 };
 
 void launch_generator_finish(GObject* subprocess_object, GAsyncResult* res, gpointer user_data) {
@@ -486,6 +491,9 @@ GCancellable* coot::layla::run_generator_request(GeneratorRequest request, CootL
             gtk_label_set_text(task_data->dialog_status_label, "Operation completed successfully!");
             g_warning("Task finished successfully!");
             auto filename = task_data->request->get_output_filename();
+            if(task_data->request->generator == GeneratorRequest::Generator::Grade2) {
+                filename += ".restraints";    
+            }
             filename += ".cif";
             coot_layla_notifier_report_cif_file_generated(notifier, filename.c_str());
         }
@@ -516,8 +524,7 @@ GCancellable* coot::layla::run_generator_request(GeneratorRequest request, CootL
         g_slice_free(GeneratorTaskData, task_data_ptr);
     });
 
-#if GLIB_MAJOR_VERSION == 2 && GLIB_MINOR_VERSION >= 74 || GLIB_MAJOR_VERSION > 2
-    g_idle_add_once([](gpointer user_data){
+    g_idle_add(+[](gpointer user_data){
         GeneratorTaskData* task_data = (GeneratorTaskData*) g_task_get_task_data(G_TASK(user_data));
         std::string title = "Layla: Running ";
         switch (task_data->request->generator) {
@@ -537,10 +544,8 @@ GCancellable* coot::layla::run_generator_request(GeneratorRequest request, CootL
         title += " for CIF";
         gtk_window_set_title(task_data->progress_dialog, title.c_str());
         initial_check(G_TASK(user_data));
+        return FALSE;
     }, task);
-#else
-        std::cout << "WARNING:: Rebuild Layla against Glib >= 2.74. Functionality is broken." << std::endl;
-#endif
     // this segfaults:
     // g_object_unref(dummy);
 

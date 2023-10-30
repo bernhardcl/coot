@@ -4166,6 +4166,38 @@ molecules_container_t::sharpen_blur_map(int imol_map, float b_factor, bool in_pl
    return imol_new;
 }
 
+//! create a new map that is blurred/sharpened
+//! @return the molecule index of the new map or -1 on failure or if `in_place_flag` was true.
+int
+molecules_container_t::sharpen_blur_map_with_resample(int imol_map, float b_factor, float resample_factor, bool in_place_flag) {
+
+   int imol_new = -1;
+   if (is_valid_map_molecule(imol_map)) {
+      const clipper::Xmap<float> &xmap = molecules[imol_map].xmap;
+      clipper::Xmap<float> xmap_new = coot::util::sharpen_blur_map_with_resample(xmap, b_factor, resample_factor);
+      if (in_place_flag) {
+         molecules[imol_map].xmap = xmap_new;
+      } else {
+         std::string name = molecules[imol_map].get_name();
+         if (b_factor < 0.0)
+            name += " Sharpen ";
+         else
+            name += " Blur ";
+         name += std::to_string(b_factor);
+         if (resample_factor < 0.999 || resample_factor > 1.001) {
+            name += " Resample ";
+            name += coot::util::float_to_string_using_dec_pl(resample_factor, 2);
+         }
+         imol_new = molecules.size();
+         coot::molecule_t cm(name, imol_new);
+         cm.xmap = xmap_new;
+         molecules.push_back(cm);
+      }
+   }
+   return imol_new;
+}
+
+
 
 
 //! Make a vector of maps that are split by chain-id of the input imol
@@ -4652,3 +4684,18 @@ molecules_container_t::get_cif_file_name(const std::string &comp_id, int imol_en
    std::string fn = geom.get_cif_file_name(comp_id, imol_enc);
    return fn;
 }
+
+//! @return a list of residues specs that have atoms within dist of the atoms of the specified residue
+std::vector<coot::residue_spec_t>
+molecules_container_t::get_residues_near_residue(int imol, const std::string &residue_cid, float dist) const {
+
+   std::vector<coot::residue_spec_t> v;
+   if (is_valid_model_molecule(imol)) {
+      v = molecules[imol].residues_near_residue(residue_cid, dist);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return v;
+
+}
+

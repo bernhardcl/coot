@@ -783,8 +783,8 @@ new_startup_application_activate(GtkApplication *application,
       gtk_box_prepend(GTK_BOX(graphics_hbox), gl_area);
       gtk_window_set_application(GTK_WINDOW(app_window), application);
 #ifdef __APPLE__
-      gtk_widget_set_size_request(gl_area, 600, 600); // Hmm
-      gtk_window_set_default_size(GTK_WINDOW(app_window), 900, 900);
+      gtk_widget_set_size_request(gl_area, 550, 550); // Hmm
+      gtk_window_set_default_size(GTK_WINDOW(app_window), 580, 580);
       gtk_window_set_default_widget(GTK_WINDOW(app_window), gl_area);
       gtk_widget_set_visible(app_window, TRUE);
       gtk_window_set_focus_visible(GTK_WINDOW(app_window), TRUE);
@@ -823,11 +823,7 @@ new_startup_application_activate(GtkApplication *application,
          return G_SOURCE_REMOVE;
       }, splash_screen);
 
-#if GLIB_MAJOR_VERSION == 2 && GLIB_MINOR_VERSION >= 74 || GLIB_MAJOR_VERSION > 2
-      g_idle_add_once((GSourceOnceFunc)[](gpointer user_data) { run_command_line_scripts(); }, nullptr);
-#else
-      std::cout << "WARNING:: Rebuild Coot against Glib >= 2.74. Won't run commandline scripts." << std::endl;
-#endif
+      g_idle_add([](gpointer user_data) { run_command_line_scripts(); return FALSE; }, nullptr);
       return G_SOURCE_REMOVE;
    }, activate_data);
 
