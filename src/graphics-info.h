@@ -500,6 +500,8 @@ enum { IN_STEREO_MONO = 0,
 #include "select-atom-info.hh"
 #include "gl-bits.hh"
 
+const guint UPDATING_MAPS_TIMEOUT_FUNCTION_IDX_UNSET = 99999999;
+
 class graphics_info_t {
 
    static int n_molecules_max;
@@ -1482,6 +1484,7 @@ public:
    // To which map is the mouse scroll wheel attached?
    //
    static int scroll_wheel_map;
+   void update_scroll_wheel_map_on_molecule_close();
 
    void contour_level_scroll_scrollable_map(int direction);
 
@@ -4829,6 +4832,8 @@ string   static std::string sessionid;
    int rail_points_total() const;
 
    void updating_maps_update_the_coot_points_overlay();
+
+   static guint updating_maps_timeout_function_idx;
 
    // --------------------------------------------------------------------------------------
 
