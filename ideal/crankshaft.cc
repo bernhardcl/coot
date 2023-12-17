@@ -1544,6 +1544,7 @@ coot::crankshaft::refine_and_score_mol(mmdb::Manager *mol,
 
       auto tp_0 = std::chrono::high_resolution_clock::now();
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
       restraints_container_t restraints(refine_residues, links, geom, mol, fixed_atom_specs, &xmap);
       restraints.thread_pool(thread_pool_p, n_threads_in);
       restraints.set_quiet_reporting();
@@ -1580,6 +1581,7 @@ coot::crankshaft::refine_and_score_mol(mmdb::Manager *mol,
 
       score.density_score = score_map;
       score.model_score = gdic.distortion();
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    }
    return score;
 }

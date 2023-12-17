@@ -1159,6 +1159,7 @@ graphics_info_t::geometric_distortions_from_mol(int imol, const atom_selection_c
 
    std::vector<coot::geometry_distortion_info_container_t> dcv;
    std::string altconf("");  // use this (e.g. "A") or "".
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
    if (! asc.mol)
       return dcv;
@@ -1338,6 +1339,7 @@ graphics_info_t::geometric_distortions_from_mol(int imol, const atom_selection_c
       }
    }
    // print_geometry_distortion(dcv);
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    return dcv;
 }
 // #endif // HAVE_GSL

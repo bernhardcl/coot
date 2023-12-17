@@ -2188,6 +2188,7 @@ coot::molecule_t::refine_direct(std::vector<mmdb::Residue *> rv, const std::stri
    bool do_rama_plot_restraints = false;
 
    int status =  0;
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    std::vector<coot::atom_spec_t> fixed_atom_specs;
    std::vector<std::pair<bool,mmdb::Residue *> > local_residues;
    for (const auto &r : rv)
@@ -2227,6 +2228,7 @@ coot::molecule_t::refine_direct(std::vector<mmdb::Residue *> rv, const std::stri
    restraints.unset_fixed_during_refinement_udd();
 
    // save_info.new_modification("refine_direct");
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
    return status;
 }
@@ -3882,6 +3884,7 @@ coot::molecule_t::fix_atom_selection_during_refinement(const std::string &atom_s
    atom_sel.mol->DeleteSelection(selHnd);
 }
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 // refine all of this molecule - the links and non-bonded contacts will be determined from mol_ref;
 void
 coot::molecule_t::init_all_molecule_refinement(mmdb::Manager *mol_ref, coot::protein_geometry &geom,
@@ -3953,6 +3956,7 @@ coot::molecule_t::init_all_molecule_refinement(mmdb::Manager *mol_ref, coot::pro
       last_restraints = nullptr; // failure to setup
    }
 }
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
 // ------------------------------- rsr utils - add in the environment of this fragment molecule
 // from the reidue from which this fragment was copied

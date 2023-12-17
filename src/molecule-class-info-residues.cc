@@ -249,6 +249,7 @@ molecule_class_info_t::sprout_hydrogens(const std::string &chain_id,
 		     }
 		  } // ------ end debug ----------
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 		  // those Hs were just attached with non-good geometry, we
 		  // need to minimise.  Keep all atoms fixed except all hydrogens.
 		  std::vector<std::pair<bool,mmdb::Residue *> > residues;
@@ -289,6 +290,7 @@ molecule_class_info_t::sprout_hydrogens(const std::string &chain_id,
 		     restraints_2.minimize(flags);
 		  }
 
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 		  // from_res, to_res
 		  sprout_hydrogens_transfer_hydrogen_positions(residue_cp_p, residue_p, alt_conf);
 	       }

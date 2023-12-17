@@ -327,6 +327,7 @@ coot::molecule_t::geometric_distortions_from_mol(const atom_selection_container_
                   if (with_nbcs)
                      flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                   unsigned int n_threads = coot::get_max_number_of_threads();
                   if (n_threads > 0)
                      restraints.thread_pool(&static_thread_pool, n_threads);
@@ -369,6 +370,7 @@ coot::molecule_t::geometric_distortions_from_mol(const atom_selection_container_
                      // we need to signal to the caller that there were no restraints.
                      cif_dictionary_read_number += res_types.size();
                   }
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                }
                asc.mol->DeleteSelection(selHnd);
             }

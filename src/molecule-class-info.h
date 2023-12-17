@@ -3560,12 +3560,14 @@ void draw_map_molecule(bool draw_transparent_maps,
 
    int pending_contour_level_change_count;
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    void crankshaft_peptide_rotation_optimization(const coot::residue_spec_t &rs,
 						 unsigned int n_peptides,
 						 const clipper::Xmap<float> &xmap,
 						 float map_weight,
 						 int n_samples,
 						 ctpl::thread_pool *thread_pool_p, int n_threads);
+#endif
 
    std::vector<std::pair<mmdb::Atom *, mmdb::Atom *> > peptide_C_N_pairs(const std::vector<mmdb::Residue *> &residues) const;
 

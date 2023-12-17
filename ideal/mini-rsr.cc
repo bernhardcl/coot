@@ -260,6 +260,7 @@ execute_crankshaft(const coot::residue_spec_t &rs, int n_peptides, const clipper
 int
 main(int argc, char **argv) {
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 #ifndef HAVE_GSL
    std::cout << "We don't have GSL, this program does nothing" << std::endl;
 #else
@@ -484,7 +485,7 @@ main(int argc, char **argv) {
 
 	       if (inputs.use_trans_peptide_restraints)
 		  make_trans_peptide_restraints = true;
-
+ 
 	       int n_threads = coot::get_max_number_of_threads();
 	       ctpl::thread_pool thread_pool(n_threads);
 	       restraints.thread_pool(&thread_pool, n_threads);
@@ -561,6 +562,7 @@ main(int argc, char **argv) {
    }
 
 #endif // HAVE_GSL
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    return 0; 
 }
 

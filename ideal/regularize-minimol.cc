@@ -90,6 +90,7 @@ coot::refine_minimol_fragment(coot::minimol::fragment &frag,
       }
    }
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    if (! residues.empty()) {
       int n_threads = 1; // needs optimizing
       ctpl::thread_pool tp(n_threads);
@@ -120,6 +121,7 @@ coot::refine_minimol_fragment(coot::minimol::fragment &frag,
       update_frag_atoms(frag, mol);
 
    }
+#endif  //  HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 }
 
 
@@ -168,6 +170,7 @@ coot::regularize_minimol_molecule(const coot::minimol::molecule &molin,
       coot::restraints_container_t restraints(residues, geom, mol, &dummy_xmap);
       restraints.set_quiet_reporting();
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
       int n_threads_max = get_max_number_of_threads();
       int n_threads = n_threads_max -1;
       if (n_threads < 1) n_threads = 1;
@@ -205,6 +208,7 @@ coot::regularize_minimol_molecule(const coot::minimol::molecule &molin,
 //       << std::endl << std::endl;
 
 
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    }
    return m;
 

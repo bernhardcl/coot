@@ -653,6 +653,7 @@ graphics_info_t::crankshaft_peptide_rotation_optimization_intermediate_atoms() {
 	    unsigned int n_peptides = 3;
 	    int n_samples = -1; // auto
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 	    graphics_info_t g;
 	    int imol_map = g.Imol_Refinement_Map();
 	    if (is_valid_map_molecule(imol_map)) {
@@ -688,6 +689,7 @@ graphics_info_t::crankshaft_peptide_rotation_optimization_intermediate_atoms() {
 		  g.add_status_bar_text("Couldn't crankshaft this");
 	       }
 	    }
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 	 }
       }
    }

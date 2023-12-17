@@ -773,6 +773,7 @@ coot::distorted_chiral_volumes(int imol, mmdb::Manager *mol, protein_geometry *g
    bool do_flank_restraints = false;
    pseudo_restraint_bond_type pseudos = coot::NO_PSEUDO_BONDS;
    int n_threads = 1;
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    ctpl::thread_pool tp(n_threads);
    restraints.thread_pool(&tp, n_threads);
 
@@ -797,6 +798,8 @@ coot::distorted_chiral_volumes(int imol, mmdb::Manager *mol, protein_geometry *g
       }
    }
    return std::make_pair(missing_types, d_specs);
+   // maybe should return some dummy
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 }
 
 

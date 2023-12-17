@@ -73,6 +73,7 @@ coot::model_bond_deltas::resolve() {
 
 	 restraints_container_t restraints(residues, *geom_p, mol, &dummy_xmap);
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 	 int n_threads = 2;
 	 ctpl::thread_pool thread_pool(n_threads);
 	 restraints.thread_pool(&thread_pool, n_threads);
@@ -90,6 +91,7 @@ coot::model_bond_deltas::resolve() {
 		      << resultant.size() << std::endl;
 	    resultants.push_back(resultant);
 	 }
+#endif // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
       }
 
       // loop over chains

@@ -4851,6 +4851,8 @@ coot::simple_refine(mmdb::Residue *residue_p,
 	 pseudo_restraint_bond_type pseudos = coot::NO_PSEUDO_BONDS;
 	 bool do_internal_torsions = true;
 	 bool do_trans_peptide_restraints = true;
+// BL says:: not sure if this is enough to make it actually work but protect withoug threads
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
          int n_threads = coot::get_max_number_of_threads();
          ctpl::thread_pool thread_pool(n_threads);
          restraints.thread_pool(&thread_pool, n_threads);
@@ -4858,6 +4860,9 @@ coot::simple_refine(mmdb::Residue *residue_p,
 				    do_trans_peptide_restraints, 0, 0, true, true, false, pseudos);
 
 	 restraints.minimize(flags, 3000, 1);
+#else
+	 std::cout<< "BL WARNING:: no threads, no restraints, so no minimization. Sorry"<< std::endl;
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
       }
    }
 }

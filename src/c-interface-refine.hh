@@ -45,8 +45,10 @@ void crankshaft_peptide_rotation_optimization_scm(int imol, SCM residue_spec_smc
 #endif
 
 #ifdef USE_PYTHON
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 //! \brief Apply crankshaft peptide rotation optimization to the specified residue
 void crankshaft_peptide_rotation_optimization_py(int imol, PyObject *residue_spec_py);
+#endif
 #endif
 
 void convert_dictionary_planes_to_improper_dihedrals();

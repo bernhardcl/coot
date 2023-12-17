@@ -218,6 +218,7 @@ void LaylaState::load_from_smiles() {
 
 void LaylaState::file_import_molecule() {
 
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
     GtkWidget *load_dialog = gtk_dialog_new();
     gtk_window_set_transient_for(GTK_WINDOW(load_dialog), this->main_window);
     g_object_set_data(G_OBJECT(load_dialog), "ligand_builder_instance", this);
@@ -307,6 +308,7 @@ void LaylaState::file_import_molecule() {
    };
 
    g_signal_connect(load_dialog, "response", G_CALLBACK(dialog_response), dialog_widgets);
+#endif  // MAKE_ENHANCED_LIGAND_TOOLS
 }
 
 void LaylaState::run_choose_element_dialog() {

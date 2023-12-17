@@ -3147,6 +3147,7 @@ void res_tracer_proc(const clipper::Xmap<float> &xmap, const coot::fasta_multi &
                                                 << " n_atoms_for_refinement: " << n_atoms_for_refinement << std::endl;
                                    }
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                                    std::vector<mmdb::Link> links;
                                    std::vector<coot::atom_spec_t> fixed_atom_specs;
                                    coot::restraint_usage_Flags flags = coot::TYPICAL_RESTRAINTS;
@@ -3159,6 +3160,7 @@ void res_tracer_proc(const clipper::Xmap<float> &xmap, const coot::fasta_multi &
                                    int imol = 0;
                                    restraints.make_restraints(imol, geom, flags, do_internal_torsions, false, 0, 0, true, true, false, pseudos);
                                    restraints.minimize(flags);
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                                 };
 
 

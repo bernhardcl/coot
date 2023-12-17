@@ -1353,6 +1353,7 @@ coot::multi_build_terminal_residue_addition::refine_end(coot::minimol::fragment 
 							const clipper::Xmap<float> &xmap,
 							ctpl::thread_pool *thread_pool_p, int n_threads) {
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    mmdb::Manager *mol = new mmdb::Manager; // d
    mmdb::Model *model_p = new mmdb::Model;
    int ires_new = -1;
@@ -1462,6 +1463,7 @@ coot::multi_build_terminal_residue_addition::refine_end(coot::minimol::fragment 
    }
 
    delete mol;
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 } 
 
 bool

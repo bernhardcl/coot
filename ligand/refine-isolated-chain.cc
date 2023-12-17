@@ -5,6 +5,8 @@
 void coot::refine_isolated_chain(mmdb::Chain *chain_p, mmdb::Manager *mol_for_this_chain, const coot::protein_geometry &geom,
                                  ctpl::thread_pool *thread_pool_p, unsigned int n_threads, float weight,
                                  const clipper::Xmap<float> &xmap) {
+
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    std::vector<std::pair<bool, mmdb::Residue *> > residues;
    int n_res = chain_p->GetNumberOfResidues();
    unsigned int n_atoms_for_refinement = 0; // debug crash
@@ -43,5 +45,6 @@ void coot::refine_isolated_chain(mmdb::Chain *chain_p, mmdb::Manager *mol_for_th
    int imol = 0;
    restraints.make_restraints(imol, geom, flags, do_internal_torsions, false, 0, 0, true, true, false, pseudos);
    restraints.minimize(flags);
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 }
 

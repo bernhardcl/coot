@@ -274,6 +274,7 @@ rama_rsr_extend_fragments(mmdb::Manager *mol, const clipper::Xmap<float> &xmap, 
                                  residues.push_back(std::make_pair(false, residue_p));
                               }
                            }
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                            if (residues.size() == 3) {
 
                               std::cout << "debug:: in refine_triple() seqno is " << seqnum << " and residue numbers "
@@ -293,6 +294,7 @@ rama_rsr_extend_fragments(mmdb::Manager *mol, const clipper::Xmap<float> &xmap, 
                               restraints.make_restraints(imol, geom, flags, do_internal_torsions, false, 0, 0, true, true, false, pseudos);
                               restraints.minimize(flags);
                            }
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                         };
 
    auto refine_quad = [] (int seqnum, mmdb::Chain *chain_p, mmdb::Manager *mol, const std::string &terminus_type, const clipper::Xmap<float> &xmap,
@@ -309,6 +311,7 @@ rama_rsr_extend_fragments(mmdb::Manager *mol, const clipper::Xmap<float> &xmap, 
                                  residues.push_back(std::make_pair(false, residue_p));
                               }
                            }
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                            if (residues.size() == 4) {
 
                               std::cout << "debug:: in refine_quad() seqno is " << seqnum << " and residue numbers "
@@ -340,6 +343,7 @@ rama_rsr_extend_fragments(mmdb::Manager *mol, const clipper::Xmap<float> &xmap, 
                            } else {
                               std::cout << "ERROR:: in refine_quad() residues.size() was " << residues.size() << std::endl;
                            }
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                         };
 
    // refine this quad of residues without considering other residues (for non-bonded contacts)
@@ -377,6 +381,7 @@ rama_rsr_extend_fragments(mmdb::Manager *mol, const clipper::Xmap<float> &xmap, 
                                         }
                                      }
                                      if (ref_residues.size() == 4) {
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                                         if (true) {
                                            auto tp_0 = std::chrono::high_resolution_clock::now();
                                            std::vector<mmdb::Link> links;
@@ -396,6 +401,7 @@ rama_rsr_extend_fragments(mmdb::Manager *mol, const clipper::Xmap<float> &xmap, 
                                            // std::cout << "Timings: refine_isolated_quad(): " << chain_id << " " << seqnum << " " << d10 << " milliseconds" << std::endl;
                                            // std::cout << "INFO:: in refine_isolated_quad() refinement finished for " << ref_residues.size() << " residues " << std::endl;
                                         }
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
                                         // copy atoms back into original chain
                                         for (unsigned int i=0; i<4; i++) {

@@ -48,7 +48,8 @@
 // 2023-07-04-PE This is a hack. This should be configured - and the
 // various functions that depend on this being true should be
 // reworked so that they run without a thread pool.
-#define HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+// BL disable and individually disable functions. But of course shoudl all work without thread_pool
+// #define HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
 
 namespace coot {

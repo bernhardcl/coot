@@ -28,6 +28,7 @@ coot::restraints_container_t::make_restraints_ng(int imol,
 
    bool console_output_for_restraints_generation_timings = false;
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    if (! thread_pool_p) {
          std::cout << "ERROR:: " << __FUNCTION__ << " --- thread pool was not set! ---------"
                    << std::endl;
@@ -179,6 +180,10 @@ coot::restraints_container_t::make_restraints_ng(int imol,
    for (unsigned int i=0; i<restraints_vec.size(); i++)
       restraints_vec[i].restraint_index = i;
    return size();
+#else
+   // BL says:: return something int
+   return -1;
+#endif // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 }
 
 
@@ -941,6 +946,7 @@ void
 coot::restraints_container_t::make_non_bonded_contact_restraints_using_threads_ng(int imol,
                                                                                   const coot::protein_geometry &geom) {
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    bool console_output_for_restraints_generation_timings = false;
 
    auto tp_0 = std::chrono::high_resolution_clock::now();
@@ -1097,6 +1103,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_using_threads_n
                 << " dispatching threads: " << d43 << " waiting: " << d54
                 << " adding NBCs to restraints " << d65 << std::endl;
 
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 }
 
 
@@ -1106,6 +1113,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_ng(int imol,
 
    unsigned int n_nbc_restraints = 0;
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    // std::cout << "make_non_bonded_contact_restraints_ng() " << size() << " "  << std::endl;
 
    // potentially multithreadable.
@@ -1424,6 +1432,7 @@ coot::restraints_container_t::make_non_bonded_contact_restraints_ng(int imol,
    // is the following needed? I doubt.
    make_distortion_electron_density_ranges();
 
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    return n_nbc_restraints;
 
 }

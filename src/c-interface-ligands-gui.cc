@@ -736,6 +736,7 @@ void
 residue_to_ligand_builder(int imol, const std::string &chain_id, int res_no, const std::string &ins_code,
 			  double weight_for_3d_distances) {
 
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
    graphics_info_t g;
    if (g.is_valid_model_molecule(imol)) {
       mmdb::Residue *residue_p = graphics_info_t::molecules[imol].get_residue(chain_id, res_no, ins_code);
@@ -754,6 +755,7 @@ residue_to_ligand_builder(int imol, const std::string &chain_id, int res_no, con
          }
       }
    }
+#endif  // MAKE_ENHANCED_LIGAND_TOOLS
 }
 
 void smiles_to_ligand_builder(const std::string &smiles_string) {
@@ -1273,6 +1275,7 @@ get_ligand_distortion_info(int imol, coot::residue_spec_t &rs) {
          std::vector<mmdb::Link> links;
          coot::restraint_usage_Flags flags = coot::TYPICAL_RESTRAINTS;
          clipper::Xmap<float> xmap_dummy;
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
          coot::restraints_container_t restraints(refining_residues, links, geom, mol, fixed_atom_specs, &xmap_dummy);
          unsigned int n_threads = coot::get_max_number_of_threads();
          restraints.thread_pool(&g.static_thread_pool, n_threads);
@@ -1285,6 +1288,7 @@ get_ligand_distortion_info(int imol, coot::residue_spec_t &rs) {
                                     pseudo_bonds_type);
          bool keep_distortion_for_hydrogen_atom_restraints = false;
          r = restraints.geometric_distortions(keep_distortion_for_hydrogen_atom_restraints);
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
       }
    }
    return r;

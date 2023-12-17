@@ -408,6 +408,7 @@ PyObject *residues_distortions_py(int imol, PyObject *residue_specs_list_py) {
 	       residues.push_back(r);
 	    }
 	 }
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
 
 	 if (residues.size() > 0) {
 	    graphics_info_t g;
@@ -463,6 +464,7 @@ PyObject *residues_distortions_py(int imol, PyObject *residue_specs_list_py) {
 	       }
 	    }
 	 }
+#endif  // MAKE_ENHANCED_LIGAND_TOOLS
       }
    }
    
@@ -1475,6 +1477,7 @@ void crankshaft_peptide_rotation_optimization_scm(int imol, SCM residue_spec_scm
 #endif
 
 #ifdef USE_PYTHON
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 void crankshaft_peptide_rotation_optimization_py(int imol, PyObject *residue_spec_py) {
 
    if (is_valid_model_molecule(imol)) {
@@ -1496,6 +1499,7 @@ void crankshaft_peptide_rotation_optimization_py(int imol, PyObject *residue_spe
       }
    }
 }
+#endif
 #endif
 
 

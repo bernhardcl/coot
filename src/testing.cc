@@ -712,6 +712,8 @@ testing_func_probabilities_refine_fragment(atom_selection_container_t atom_sel,
 					   bool output_numerical_gradients) {
 
 #ifdef HAVE_GSL
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+
    long t0 = 0; // glutGet(GLUT_ELAPSED_TIME);
 
    // now refine a bit of structure:
@@ -814,6 +816,7 @@ testing_func_probabilities_refine_fragment(atom_selection_container_t atom_sel,
    float seconds = float(t1-t0)/1000.0;
    std::cout << "refinement_took " << seconds << " seconds" << std::endl;
    return res_sel;
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 #endif // HAVE_GSL
 }
 

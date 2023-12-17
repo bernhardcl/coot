@@ -650,6 +650,7 @@ molecule_class_info_t::switch_HIS_protonation(coot::residue_spec_t res_spec) {
 
 #include "ideal/crankshaft.hh"
 
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 void
 molecule_class_info_t::crankshaft_peptide_rotation_optimization(const coot::residue_spec_t &rs,
 								unsigned int n_peptides,
@@ -677,6 +678,7 @@ molecule_class_info_t::crankshaft_peptide_rotation_optimization(const coot::resi
       update_symmetry();
    }
 }
+#endif
 
 int
 molecule_class_info_t::add_residue_with_atoms(const coot::residue_spec_t &residue_spec, const std::string &res_name, const std::vector<coot::minimol::atom> &list_of_atoms) {

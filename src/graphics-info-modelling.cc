@@ -1296,6 +1296,10 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
 				      bool use_map_flag,
 				      const clipper::Xmap<float> *xmap_p) {
 
+   bool found_restraints_flag = false;
+
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+
    if (last_restraints) {
       std::cout << "----------------------------------------------" << std::endl;
       std::cout << "----------------------------------------------" << std::endl;
@@ -1427,8 +1431,6 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
    if (do_numerical_gradients)
       last_restraints->set_do_numerical_gradients();
 
-   bool found_restraints_flag = false;
-
    if (last_restraints->size() > 0) {
 
       last_restraints->analyze_for_bad_restraints();
@@ -1456,6 +1458,7 @@ graphics_info_t::make_last_restraints(const std::vector<std::pair<bool,mmdb::Res
          gtk_widget_set_visible(widget, TRUE);
       }
    }
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
    return found_restraints_flag;
 }

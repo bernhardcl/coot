@@ -3098,6 +3098,9 @@ molecules_container_t::make_last_restraints(const std::vector<std::pair<bool,mmd
    if (use_map_flag)
       last_restraints->add_map(geometry_vs_map_weight);
 
+   bool found_restraints_flag = false;
+
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    unsigned int n_threads = coot::get_max_number_of_threads();
    if (n_threads > 0)
       last_restraints->thread_pool(&static_thread_pool, n_threads);
@@ -3164,8 +3167,6 @@ molecules_container_t::make_last_restraints(const std::vector<std::pair<bool,mmd
    if (do_numerical_gradients)
       last_restraints->set_do_numerical_gradients();
 
-   bool found_restraints_flag = false;
-
    if (last_restraints->size() > 0) {
 
       last_restraints->analyze_for_bad_restraints();
@@ -3193,6 +3194,7 @@ molecules_container_t::make_last_restraints(const std::vector<std::pair<bool,mmd
          // gtk_widget_show(widget);
       }
    }
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 
    return found_restraints_flag;
 }
@@ -4434,7 +4436,9 @@ molecules_container_t::init_refinement_of_molecule_as_fragment_based_on_referenc
             const clipper::Xmap<float> &xmap = molecules[imol_map].xmap;
             std::cout << "debug:: in init_refinement_of_molecule_as_fragment_based_on_reference() "
                       << " cell " << xmap.cell().descr().format() << std::endl;
+#ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
             molecules[imol_frag].init_all_molecule_refinement(mol_ref, geom, xmap, map_weight, &static_thread_pool);
+#endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
          } else {
             std::cout << "WARNING:: in init_refinement_of_molecule_as_fragment_based_on_reference()"
                       << " not a valid map" << std::endl;
