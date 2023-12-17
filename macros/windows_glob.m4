@@ -10,10 +10,10 @@ saved_LIBS="$LIBS"
 saved_CFLAGS="$CFLAGS"
 
 if test x$glob_prefix != x; then
- ac_GLOB_CFLAGS="-I$glob_prefix/include"
+ ac_GLOB_CFLAGS="-I$glob_prefix/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
  ac_GLOB_LIBS="-L$glob_prefix/lib -lglob"
 else
- ac_GLOB_CFLAGS=""
+ ac_GLOB_CFLAGS="-D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
  ac_GLOB_LIBS="-lglob"
 fi
 
