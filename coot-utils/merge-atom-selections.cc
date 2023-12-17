@@ -4,6 +4,8 @@
 #include <queue>
 #include <algorithm>
 
+#include "compat/coot-sysdep.h"
+
 #include <clipper/core/coords.h>
 
 #include "utils/coot-utils.hh"

@@ -5,6 +5,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>  // to_string()
 
+#include "compat/coot-sysdep.h"
+
 #include "Mesh.hh"
 #include "bond-colour-mode.hh"
 #include "coot-utils/oct.hh"

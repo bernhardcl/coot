@@ -30,6 +30,7 @@
 #include <set>
 #include <iterator>
 
+#include "compat/coot-sysdep.h"
 #include "Cartesian.h"
 #include <mmdb2/mmdb_manager.h>
 #include "mmdb-extras.h"

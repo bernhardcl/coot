@@ -55,6 +55,8 @@
 
 #include "energy-lib.hh"
 
+#include "compat/coot-sysdep.h"
+
 #include "clipper/core/coords.h"
 
 #include "hb-types.hh"

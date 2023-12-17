@@ -28,6 +28,8 @@
 
 #include <gsl/gsl_sf_bessel.h>
 
+#include "compat/coot-sysdep.h"
+
 #include "clipper/core/map_interp.h"
 #include "clipper/core/hkl_compute.h"
 #include "clipper/mmdb/clipper_mmdb.h"

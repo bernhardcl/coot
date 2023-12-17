@@ -39,6 +39,8 @@
 
 #include <map>
 
+#include "compat/coot-sysdep.h"
+
 #include <mmdb2/mmdb_manager.h>
 #include <clipper/core/coords.h>
 

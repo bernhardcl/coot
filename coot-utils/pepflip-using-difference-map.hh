@@ -1,5 +1,6 @@
 
 #include <vector>
+#include "compat/coot-sysdep.h"
 #include <clipper/core/coords.h>
 #include <clipper/core/xmap.h>
 

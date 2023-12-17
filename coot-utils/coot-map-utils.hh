@@ -25,6 +25,7 @@
 
 #include <map>
 
+#include "compat/coot-sysdep.h"
 #include <clipper/core/coords.h>
 #include <clipper/core/xmap.h>
 #include <clipper/core/hkl_data.h>
