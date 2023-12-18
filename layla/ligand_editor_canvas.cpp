@@ -333,6 +333,13 @@ static void coot_ligand_editor_canvas_dispose(GObject* _self) {
     G_OBJECT_CLASS(coot_ligand_editor_canvas_parent_class)->dispose(_self);
 }
 
+static void coot_ligand_editor_canvas_finalize(GObject* _self) {
+    CootLigandEditorCanvas* self = COOT_COOT_LIGAND_EDITOR_CANVAS(_self);
+    // GObject doesn't run C++ destructors
+    // so we take care of this ourselves
+    G_OBJECT_CLASS(coot_ligand_editor_canvas_parent_class)->finalize(_self);
+}
+
 static void coot_ligand_editor_canvas_class_init(CootLigandEditorCanvasClass* klass) {
     // I think that this is a GObject class constructor that sets up the GObject class at runtime.
     impl::status_updated_signal = g_signal_new("status-updated",
@@ -381,6 +388,7 @@ static void coot_ligand_editor_canvas_class_init(CootLigandEditorCanvasClass* kl
     GTK_WIDGET_CLASS(klass)->snapshot = coot_ligand_editor_canvas_snapshot;
     GTK_WIDGET_CLASS(klass)->measure = coot_ligand_editor_canvas_measure;
     G_OBJECT_CLASS(klass)->dispose = coot_ligand_editor_canvas_dispose;
+    G_OBJECT_CLASS(klass)->finalize = coot_ligand_editor_canvas_finalize;
     
 }
 

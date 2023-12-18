@@ -50,6 +50,15 @@ static void coot_layla_notifier_dispose(GObject* _self) {
     G_OBJECT_CLASS(coot_layla_notifier_parent_class)->dispose(_self);
 }
 
+static void coot_layla_notifier_finalize(GObject* _self) {
+    CootLaylaNotifier* self = COOT_COOT_LAYLA_NOTIFIER(_self);
+    // GObject doesn't run C++ destructors
+    // so we take care of this ourselves
+    
+    
+    G_OBJECT_CLASS(coot_layla_notifier_parent_class)->finalize(_self);
+}
+
 static void coot_layla_notifier_class_init(CootLaylaNotifierClass* klass) {
     // I think that this is a GObject class constructor that sets up the GObject class at runtime.
 
@@ -65,6 +74,7 @@ static void coot_layla_notifier_class_init(CootLaylaNotifierClass* klass) {
         G_TYPE_STRING
     );
     G_OBJECT_CLASS(klass)->dispose = coot_layla_notifier_dispose;
+    G_OBJECT_CLASS(klass)->finalize = coot_layla_notifier_finalize;
 
 }
 
