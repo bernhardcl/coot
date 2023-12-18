@@ -548,6 +548,10 @@
               <attribute name="action">app.background_dark_grey_action</attribute>
             </item>
             <item>
+              <attribute name="label">Semi-Dark Grey</attribute>
+              <attribute name="action">app.background_semi_dark_grey_action</attribute>
+            </item>
+            <item>
               <attribute name="label">Light Grey</attribute>
               <attribute name="action">app.background_light_grey_action</attribute>
             </item>
@@ -648,6 +652,10 @@
           <!--   <attribute name="label">Central Atom Label...</attribute> -->
           <!--   <attribute name="action">app.draw_central_atom_label_action</attribute> -->
           <!-- </item> -->
+          <item>
+            <attribute name="label">Gaussian Surface...</attribute>
+            <attribute name="action">app.gaussian_surface_action</attribute>
+          </item>
           <item>
             <attribute name="label">Go To Atom...</attribute>
             <attribute name="action">app.go_to_atom_action</attribute>
@@ -952,6 +960,31 @@
       <item>
         <attribute name="label">Views</attribute>
         <attribute name="action">app.add_views_module_action</attribute>
+      </item>
+    </section>
+  </menu>
+
+  <menu id="rigid-body-fit-menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Residue</attribute>
+        <attribute name="action">app.rigid_body_fit_residue_action</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Residue Range</attribute>
+        <attribute name="action">app.rigid_body_fit_residue_range_action</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Fragment</attribute>
+        <attribute name="action">app.rigid_body_fit_fragment_action</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Chain</attribute>
+        <attribute name="action">app.rigid_body_fit_chain_action</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Molecule</attribute>
+        <attribute name="action">app.rigid_body_fit_molecule_action</attribute>
       </item>
     </section>
   </menu>
@@ -1433,7 +1466,7 @@ Copyright 2023 Global Phasing Ltd.</property>
                 <child>
                   <object class="GtkButton" id="add_alt_conf_cancel_button">
                     <property name="label" translatable="yes">  Cancel  </property>
-                    <property name="can-focus">1</property>
+                    <property name="can-focus">0</property>
                     <property name="use-underline">1</property>
                     <signal name="clicked" handler="on_add_alt_conf_cancel_button_clicked" swapped="no"/>
                   </object>
@@ -1457,7 +1490,7 @@ Copyright 2023 Global Phasing Ltd.</property>
                     <child>
                       <object class="GtkCheckButton" id="add_alt_conf_ca_radiobutton">
                         <property name="label" translatable="yes">Split Single Residue at C-alpha</property>
-                        <property name="can-focus">1</property>
+                        <property name="can-focus">0</property>
                         <property name="use-underline">1</property>
                         <property name="active">1</property>
                         <signal name="toggled" handler="on_add_alt_conf_ca_radiobutton_toggled" swapped="no"/>
@@ -6336,12 +6369,20 @@ Do you want to continue?
                 </object>
               </child>
 
-
               <child>
                 <object class="GtkButton" id="graphics-grab-focus-button">
                   <property name="label" translatable="yes">Grab Focus</property>
                   <property name="can-focus">0</property>
                   <signal name="clicked" handler="on_graphics_grab_focus_button_clicked" swapped="no"/>
+                </object>
+              </child>
+
+              <child>
+                <object class="GtkButton" id="coot-points-button">
+                  <property name="label" translatable="yes">Coot Points</property>
+                  <property name="can-focus">0</property>
+                  <property name="visible">False</property>
+                  <signal name="clicked" handler="on_coot_points_button_clicked" swapped="no"/>
                 </object>
               </child>
 
@@ -6865,6 +6906,198 @@ Do you want to continue?
             </child>
 
             <child type="overlay">
+              <object class="GtkFrame" id="gaussian_surface_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <child>
+                  <object class="GtkBox" id="gaussian_surface_vbox">
+                    <property name="margin-start">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="orientation">vertical</property>
+
+                    <child>
+                      <object class="GtkGrid" id="gaussian_surface_grid">
+
+                        <child>
+                          <object class="GtkComboBox" id="gaussian_surface_molecule_chooser_combobox">
+                            <property name="hexpand">True</property>
+                            <property name="margin-top">6</property>
+                            <property name="margin-bottom">6</property>
+                            <property name="margin-start">6</property>
+                            <property name="margin-end">6</property>
+                            <layout>
+                              <property name="column-span">2</property>
+                              <property name="row">0</property>
+                              <property name="column">0</property>
+                            </layout>
+                            <child>
+                              <object class="GtkCellRendererText"/>
+                              <attributes>
+                                <attribute name="text">0</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="gaussian_surface_sigma_label">
+                            <property name="label">Sigma</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-end">2</property>
+                            <property name="margin-start">2</property>
+                            <property name="margin-top">2</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkEntry" id="gaussian_surface_sigma_entry">
+                            <property name="width-request">5</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="gaussian_surface_contour_level_label">
+                            <property name="label">Contour Level</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-end">2</property>
+                            <property name="margin-start">2</property>
+                            <property name="margin-top">2</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkEntry" id="gaussian_surface_contour_level_entry">
+                            <property name="width-request">5</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="gaussian_surface_radius_label">
+                            <property name="label">Radius</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-end">2</property>
+                            <property name="margin-start">2</property>
+                            <property name="margin-top">2</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">3</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkEntry" id="gaussian_surface_radius_entry">
+                            <property name="width-request">5</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">3</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="gaussian_surface_b_factor_label">
+                            <property name="label">B-factor</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-end">2</property>
+                            <property name="margin-start">2</property>
+                            <property name="margin-top">2</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">4</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkEntry" id="gaussian_surface_b_factor_entry">
+                            <property name="width-request">5</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">4</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="gaussian_surface_chain_colour_label">
+                            <property name="label">Chain Colour Mode</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-end">2</property>
+                            <property name="margin-start">2</property>
+                            <property name="margin-top">2</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">5</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                        <child> <!-- this needs to be radio buttons -->
+                          <object class="GtkEntry" id="gaussian_surface_chain_colour_entry">
+                            <property name="width-request">5</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">5</property>
+                            </layout>
+                          </object>
+                        </child>
+
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="margin-top">10</property>
+                        <property name="margin-bottom">10</property>
+                        <property name="margin-start">6</property>
+                        <property name="margin-end">6</property>
+                      </object>
+                    </child>
+ 
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="homogeneous">True</property>
+                        <property name="spacing">5</property>
+                        <child>
+                          <object class="GtkButton" id="gaussian_surface_cancel_button">
+                            <property name="label">Cancel</property>
+                            <signal name="clicked" handler="on_gaussian_surface_cancel_button_clicked" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="gaussian_surface_ok_button">
+                            <property name="label">Calculate</property>
+                            <signal name="clicked" handler="on_gaussian_surface_ok_button_clicked" swapped="no"/>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
               <object class="GtkFrame" id="refinement_and_regularization_parameters_frame">
                 <!-- <property name="title" translatable="yes">(New) Refinement and Regularization Parameters</property> -->
                 <property name="halign">end</property>
@@ -6892,13 +7125,15 @@ Do you want to continue?
                             <child>
                               <object class="GtkCheckButton" id="refine_params_use_planar_peptides_checkbutton">
                                 <property name="label" translatable="yes">Use Planar Peptide Restraints</property>
-                                <property name="can-focus">1</property>
+                                <property name="can-focus">0</property>
+                                <signal name="toggled" handler="on_refine_params_use_planar_peptides_checkbutton_toggled" />
                               </object>
                             </child>
                             <child>
                               <object class="GtkCheckButton" id="refine_params_use_trans_peptide_restraints_checkbutton">
                                 <property name="label" translatable="yes">Use Trans-peptide Restraints</property>
-                                <property name="can-focus">1</property>
+                                <signal name="toggled" handler="on_refine_params_use_trans_peptide_restraints_checkbutton_toggled" />
+                                <property name="can-focus">0</property>
                               </object>
                             </child>
                             <child>
@@ -7758,30 +7993,29 @@ Do you want to continue?
                 <!-- <signal name="activate" handler="on_model_toolbar_fixed_atoms_menubutton_activated" swapped="no"/> -->
               </object>
             </child>
+
             <child>
-              <object class="GtkToggleButton" id="vertical_toolbar_testbutton_3">
+              <object class="GtkMenuButton" id="vertical_toolbar_rigid_body_menubutton">
                 <child>
                   <object class="GtkBox">
                     <property name="orientation">horizontal</property>
                     <property name="spacing">5</property>
                     <child>
                       <object class="GtkImage">
-
                         <property name="icon-name">rigid-body</property>
                       </object>
                     </child>
                     <child>
                       <object class="GtkLabel">
-
                         <property name="label" translatable="yes">Rigid Body Fit</property>
                       </object>
                     </child>
                   </object>
                 </child>
                 <property name="can-focus">0</property>
-                <signal name="toggled" handler="on_model_toolbar_rigid_body_fit_togglebutton_toggled" swapped="no"/>
               </object>
             </child>
+
             <child>
               <object class="GtkMenuButton" id="rotate_translate_menubutton">
                 <child>
@@ -15234,6 +15468,12 @@ Move a copy?</property>
             </child>
             <child>
               <object class="GtkShortcutsShortcut">
+                <property name="accelerator">quoteleft</property>
+                <property name="title" translatable="yes">Highlight Active Residue</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
                 <property name="accelerator">1</property>
                 <property name="title" translatable="yes">Clipping Front Expand</property>
               </object>
@@ -15285,7 +15525,7 @@ Move a copy?</property>
 
         <child>
           <object class="GtkShortcutsGroup">
-            <property name="title">Moving Around Functions</property>
+            <property name="title">Functions for Moving Around</property>
             <child>
               <object class="GtkShortcutsShortcut">
                 <property name="accelerator">space</property>
@@ -15371,6 +15611,18 @@ Move a copy?</property>
                 <property name="title" translatable="yes">Change Scroll-wheel map</property>
               </object>
             </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">bracketleft</property>
+                <property name="title" translatable="yes">Decrease Map Radius</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">bracketright</property>
+                <property name="title" translatable="yes">Increase Map Radius</property>
+              </object>
+            </child>
           </object>
         </child>
 
@@ -15404,7 +15656,7 @@ Move a copy?</property>
             </child>
             <child>
               <object class="GtkShortcutsShortcut">
-                <property name="accelerator">j</property>
+                <property name="accelerator">e</property>
                 <property name="title" translatable="yes">Auto-fit Rotamer</property>
               </object>
             </child>
@@ -15430,18 +15682,6 @@ Move a copy?</property>
               <object class="GtkShortcutsShortcut">
                 <property name="accelerator">&lt;Shift&gt;E</property>
                 <property name="title" translatable="yes">Chain Refine</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkShortcutsShortcut">
-                <property name="accelerator">bracketleft</property>
-                <property name="title" translatable="yes">Decrease Map Radius</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkShortcutsShortcut">
-                <property name="accelerator">bracketright</property>
-                <property name="title" translatable="yes">Increase Map Radius</property>
               </object>
             </child>
           </object>

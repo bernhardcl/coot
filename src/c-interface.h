@@ -1526,12 +1526,6 @@ PyObject *refmac_parameters_py(int imol);
 #endif	/* __cplusplus */
 
 
-/*! \brief does the mtz file have the columms that we want it to have? */
-int valid_labels(const char *mtz_file_name, const char *f_col,
-		 const char *phi_col,
-		 const char *weight_col,
-		 int use_weights);
-
 /*! \brief does the mtz file have phases? */
 /* We need to know if an mtz file has phases.  If it doesn't then we */
 /*  go down a (new 20060920) different path. */
@@ -2243,6 +2237,9 @@ void set_colour_map_rotation_on_read_pdb_c_only_flag(short int i);
 /*! \brief colour molecule number imol by chain type */
 void set_colour_by_chain(int imol);
 
+/*! \brief colour molecule number imol by chain type */
+void set_colour_by_ncs_chain(int imol, short int goodsell_mode);
+
 /*! \brief colour molecule number imol by chain type, goodsell-like colour scheme */
 void set_colour_by_chain_goodsell_mode(int imol);
 
@@ -2547,6 +2544,10 @@ int atom_index_first_atom_in_residue_with_altconf(int imol,
 						  int iresno,
 						  const char *ins_code,
 						  const char *alt_conf);
+/*! \brief return the minimum residue number for imol chain chain_id */
+int min_resno_in_chain(int imol, const char *chain_id);
+/*! \brief return the maximum residue number for imol chain chain_id */
+int max_resno_in_chain(int imol, const char *chain_id);
 /*! \brief return the median temperature factor for imol */
 float median_temperature_factor(int imol);
 /*! \brief return the average temperature factor for the atoms in imol */

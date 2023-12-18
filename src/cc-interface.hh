@@ -243,6 +243,13 @@ std::vector<int> auto_read_make_and_draw_maps(const char *filename);
 std::vector<int> auto_read_make_and_draw_maps_from_mtz(const std::string &file_name);
 std::vector<int> auto_read_make_and_draw_maps_from_cns(const std::string &file_name);
 
+
+/*! \brief does the mtz file have the columms that we want it to have? */
+int valid_labels(const std::string &mtz_file_name, const std::string &f_col,
+		 const std::string &phi_col,
+		 const std::string &weight_col,
+		 bool use_weights_flag);
+
 /* ----- remove wiget functions from this header GTK-FIXME
 void add_map_colour_mol_menu_item(int imol, const std::string &name,
 				  GtkWidget *sub_menu, GtkSignalFunc callback);
@@ -550,7 +557,7 @@ void add_to_database(const std::vector<std::string> &command_strings);
 /*  ----------------------------------------------------------------------- */
 /*                         Merge Molecules                                  */
 /*  ----------------------------------------------------------------------- */
-#include "merge-molecule-results-info-t.hh"
+#include "api/merge-molecule-results-info-t.hh"
 // return the status and vector of chain-ids of the new chain ids.
 //
 std::pair<int, std::vector<merge_molecule_results_info_t> > merge_molecules_by_vector(const std::vector<int> &add_molecules, int imol);
@@ -1453,6 +1460,9 @@ void set_display_control_button_state(int imol, const std::string &button_type, 
 void fullscreen();
 void unfullscreen();
 
+//! set the flag for use of trackpad - this moves around the mouse bindings internally.
+void set_use_trackpad(short int state);
+
 /*  ----------------------------------------------------------------------- */
 /*                  Abstraction of New molecule by symmetry functions       */
 /*  ----------------------------------------------------------------------- */
@@ -1833,6 +1843,28 @@ void probe_radius_graph_close_callback( GtkWidget *button, GtkWidget *dialog);
 //!
 //!        there should be one day...
 int gaussian_surface(int imol);
+
+//! \brief set the sigma for gaussian surface (default 4.0)
+void set_gaussian_surface_sigma(float s);
+
+//! \brief set the contour_level for gaussian surface (default 4.4)
+void set_gaussian_surface_contour_level(float s);
+
+//! \brief set the box_radius for gaussian surface (defautl 5)
+void set_gaussian_surface_box_radius(float s);
+
+//! \brief set the grid_scale for gaussian surface (default 0.7)
+void set_gaussian_surface_grid_scale(float s);
+//! \brief set the fft B-factor for gaussian surface. Use 0 for no B-factor (default 100)
+void set_gaussian_surface_fft_b_factor(float f);
+
+//! \brief set the chain colour mode for Gaussian surfaces
+//! mode = 1 means each chain has its own colour
+//! mode = 2 means the chain colour is determined from NCS/molecular symmetry (so
+//!         that, in this mode, chains with the same sequence have the same colour
+void set_gaussian_surface_chain_colour_mode(short int mode);
+
+void show_gaussian_surface_overlay();
 
 /* ------------------------------------------------------------------------- */
 /*                      LINKs                                                */

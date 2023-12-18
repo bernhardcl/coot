@@ -298,10 +298,13 @@ class molecules_container_t {
       read_standard_residues();
       interrupt_long_term_job = false;
       mmdb::InitMatType();
+      contouring_time = 0;
       // debug();
    }
 
    void debug() const;
+
+   double contouring_time;
 
 public:
 
@@ -373,6 +376,9 @@ public:
    //! close the molecule (and delete dynamically allocated memory)
    //! @return 1 on successful closure and 0 on failure to close
    int close_molecule(int imol);
+
+   //! @return the eigenvalues of the atoms in the specified residue
+   std::vector<double> get_eigenvalues(int imol, const std::string &chain_id, int res_no, const std::string &ins_code);
 
    //! @return the mesh of a unit solid cube at the origin
    coot::simple_mesh_t test_origin_cube() const;
@@ -460,6 +466,12 @@ public:
    //! is already a model molecule
    void replace_molecule_by_model_from_file(int imol, const std::string &pdb_file_name);
 
+   //! @return the model molecule imol as a string. Return emtpy string on error
+   std::string molecule_to_PDB_string(int imol) const;
+
+   //! @return the model molecule imol as a string. Return emtpy string on error
+   std::string molecule_to_mmCIF_string(int imol) const;
+
    //! get the active atom given the screen centre
    //!
    //! ``displayed_model_molecules_list`` is a colon-separated list of molecules, *e.g.* "2:3:4"
@@ -476,6 +488,8 @@ public:
    //! @return the dictionary read for the give residue type, return an empty string on failure
    //! to lookup the residue type
    std::string get_cif_file_name(const std::string &comp_id, int imol_enc) const;
+   //! @return a string that is the contents of a dictionary cif file
+   std::string get_cif_restraints_as_string(const std::string &comp_id, int imol_enc) const;
    //! get a monomer
    //! @return the new molecule index on success and -1 on failure
    int get_monomer(const std::string &monomer_name);
@@ -489,11 +503,19 @@ public:
    // 20221030-PE nice to have one day:
    // int get_monomer_molecule_by_network_and_dict_gen(const std::string &text);
 
-   //! return the group for the give list of residue names
+   //! @return the group for the given list of residue names.
    std::vector<std::string> get_groups_for_monomers(const std::vector<std::string> &residue_names) const;
 
-   //! return the group for the give residue name
+   //! @return the group for the given residue name.
    std::string get_group_for_monomer(const std::string &residue_name) const;
+
+   //! @return the hb_type for the given atom. On failure return an empty string.
+   //! Valid types are: "HB_UNASSIGNED" ,"HB_NEITHER", "HB_DONOR", "HB_ACCEPTOR", "HB_BOTH", "HB_HYDROGEN".
+   std::string get_hb_type(const std::string &compound_id, int imol_enc, const std::string &atom_name) const;
+
+   //! write a PNG for the given compound_id. imol can be IMOL_ENC_ANY
+   //! Currently this function does nothing (drawing is done with the not-allowed cairo)
+   void write_png(const std::string &compound_id, int imol, const std::string &file_name) const;
 
    //! write the coordinate to the give file name
    //! @return 1 on success and 0 on failure
@@ -631,9 +653,12 @@ public:
    //! box_radius = 5.0
    //!
    //! grid_scale = 0.7
+   //!
+   //! b_factor = 100.0 (use 0.0 for no FFT-B-factor smoothing)
+   //!
    //! @return a simple mesh composed of a number of Gaussian surfaces (one for each chain)
    coot::simple_mesh_t get_gaussian_surface(int imol, float sigma, float contour_level,
-                                            float box_radius, float grid_scale) const;
+                                            float box_radius, float grid_scale, float b_factor) const;
 
    //! get chemical feaatures for the specified residue
    coot::simple_mesh_t get_chemical_features_mesh(int imol, const std::string &cid) const;
@@ -660,6 +685,11 @@ public:
 
    //! @return vector of chain-ids for the given molecule
    std::vector<std::string> get_chains_in_model(int imol) const;
+
+   //! Get the chains that are related by NCS or molecular symmetry:
+   //! @return a vector of vector of chain ids, e.g. [[A,C], [B,D]] (for hemoglobin).
+   std::vector<std::vector<std::string> > get_ncs_related_chains(int imol) const;
+
    //! @return vector of single letter codes - in a pair with the given residue spec
    std::vector<std::pair<coot::residue_spec_t, std::string> > get_single_letter_codes_for_chain(int imol, const std::string &chain_id) const;
 
@@ -1336,9 +1366,25 @@ public:
    //! For trivial (i.e non-flexible) ligands you should instead use the jiggle-fit algorithm, which
    //! takes a fraction of a second. (That is the algorithm used for "Add Other Solvent Molecules" in Coot.)
    //!
-   //! @return a vector indices of molecules for the best fitting ligands to this blob.
+   //! @return a vector of indices of molecules for the best fitting ligands to this blob.
    std::vector<int> fit_ligand_right_here(int imol_protein, int imol_map, int imol_ligand, float x, float y, float z,
                                           float n_rmsd, bool use_conformers, unsigned int n_conformers);
+
+   //! Ligand Fitting
+   //!
+   //! @return a vector of indices of molecules for the best fitting ligands each of the "possible ligand" blobs.
+
+   class fit_ligand_info_t {
+   public:
+      int imol; // the imol of the fitted ligand
+      int cluster_idx;  // the index of the cluster
+      int ligand_idx;  // the ligand idx for a given cluster
+      fit_ligand_info_t(int i, int c, int l) : imol(i), cluster_idx(c), ligand_idx(l) {}
+      fit_ligand_info_t() { imol = -1; cluster_idx = -1; ligand_idx = -1; }
+   };
+
+   std::vector<fit_ligand_info_t> fit_ligand(int imol_protein, int imol_map, int imol_ligand,
+                                             float n_rmsd, bool use_conformers, unsigned int n_conformers);
 
    //! "Jiggle-Fit Ligand"
    //! if n_trials is 0, then a sensible default value will be used.
@@ -1437,6 +1483,11 @@ public:
    //! get the stats for the long-term job (testing function)
    ltj_stats_t testing_interrogate_long_term_job() { return long_term_job_stats; }
 
+   //! get the time for conntouring in miliseconds
+   double get_contouring_time() const { return contouring_time; }
+
+   //! get the time to run test test function in miliseconds
+   double test_the_threading(int n_threads);
 
    // -------------------------------- Other ---------------------------------------
 
@@ -1453,7 +1504,7 @@ public:
                                                         const std::string &colour_sheme,
                                                         const std::string &style);
    PyObject *get_pythonic_gaussian_surface_mesh(int imol, float sigma, float contour_level,
-                                                float box_radius, float grid_scale);
+                                                float box_radius, float grid_scale, float fft_b_factor);
 
    //! @return a pair - the first of which (index 0) is the list of atoms, the second (index 1) is the list of bonds.
    //! An atom is a list:

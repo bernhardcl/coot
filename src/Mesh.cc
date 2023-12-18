@@ -60,6 +60,8 @@ Mesh::init() {
    buffer_id = 0; // not valid
    index_buffer_id = 0; // not valid
    debug_mode = false;
+   inst_colour_buffer_id = -1;
+   inst_model_translation_buffer_id = -1;
 
    std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
    time_constructed = now;
@@ -679,8 +681,6 @@ Mesh::setup_debugging_instancing_buffers() {
 void
 Mesh::delete_gl_buffers() {
 
-#if 0
-
    // 20230828-PE Because Mesh is copied around, this can be called many times if it is
    // called from the destructor. But deleting the GL buffers more than
    // once causes as crash.
@@ -698,13 +698,14 @@ Mesh::delete_gl_buffers() {
       glDeleteBuffers(1, &index_buffer_id);
 
       if (is_instanced) {
+         glDeleteBuffers(1, &inst_model_translation_buffer_id);
          glDeleteBuffers(1, &inst_colour_buffer_id);
-         glDeleteBuffers(1, &inst_rts_buffer_id);
+         if (is_instanced_with_rts_matrix)
+            glDeleteBuffers(1, &inst_rts_buffer_id);
       }
+      glDeleteVertexArrays(1, &vao);
+      vao = VAO_NOT_SET;
    }
-#else
-   std::cout << "Mesh::delete_gl_buffers() - no deletion" << std::endl;
-#endif
 
 }
 
@@ -742,7 +743,7 @@ Mesh::setup_buffers() {
    err = glGetError();
    if (err) {
       // 20220803-PE did you forget to attach_buffers() beforehand again?
-      std::cout << "GL ERROR:: Mesh::setup_buffers() on binding vao " << vao << " error " << err << std::endl;
+      std::cout << "GL ERROR:: Mesh::setup_buffers() on binding vao " << vao << " error " << _(err) << std::endl;
    }
 
    unsigned int n_vertices = vertices.size();
@@ -959,14 +960,16 @@ Mesh::setup_instanced_octahemispheres(Shader *shader_p,
 // instancing buffer for particles. Make *space* for n_particles, but set
 // n_instances = 0.
 void
-Mesh::setup_vertex_and_instancing_buffers_for_particles(unsigned int n_particles) {
+Mesh::setup_vertex_and_instancing_buffers_for_particles(unsigned int n_instances_in) {
+
+   bool debug = true;
 
    // we want to allocate space for n_particles instances, but until the particles
    // are created, and the particle bufffer data updated, we don't want to draw
    // them, so n_instances is 0.
    //
    n_instances = 0;
-   n_instances_allocated = n_particles;
+   n_instances_allocated = n_instances_in;
    particle_draw_count = 0;
 
    // glm::vec3 n(0,0,1);
@@ -988,7 +991,7 @@ Mesh::setup_vertex_and_instancing_buffers_for_particles(unsigned int n_particles
 
    // instanced position
 
-   unsigned int n_bytes = n_particles * sizeof(Particle);
+   unsigned int n_bytes = n_instances_allocated * sizeof(Particle);
 
    glGenBuffers(1, &inst_model_translation_buffer_id);
    glBindBuffer(GL_ARRAY_BUFFER, inst_model_translation_buffer_id);
@@ -1004,7 +1007,7 @@ Mesh::setup_vertex_and_instancing_buffers_for_particles(unsigned int n_particles
    // instanced colours - setup another buffer - extravagent.
    glGenBuffers(1, &inst_colour_buffer_id);
    glBindBuffer(GL_ARRAY_BUFFER, inst_colour_buffer_id);
-   glBufferData(GL_ARRAY_BUFFER, n_particles * sizeof(Particle), nullptr, GL_DYNAMIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, n_instances_allocated * sizeof(Particle), nullptr, GL_DYNAMIC_DRAW);
    glEnableVertexAttribArray(4);
    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(Particle),
                          reinterpret_cast<void *>(2 * sizeof(glm::vec3)));
@@ -1018,7 +1021,7 @@ Mesh::setup_vertex_and_instancing_buffers_for_particles(unsigned int n_particles
    err = glGetError(); if (err) std::cout << "GL error setup_instancing_buffers_for_particles()\n";
    unsigned int n_triangles = triangles.size();
    n_bytes = n_triangles * 3 * sizeof(unsigned int);
-   if (false)
+   if (debug)
       std::cout << "debug:: setup_vertex_and_instancing_buffers_for_particles() "
                 << "vao " << vao
                 << " glBufferData for index buffer_id " << index_buffer_id
@@ -1715,6 +1718,8 @@ Mesh::draw_extra_distance_restraint_instances(Shader *shader_p,
 void
 Mesh::draw_particles(Shader *shader_p, const glm::mat4 &mvp, const glm::mat4 &view_rotation) {
 
+   debug_mode = false; // this is not the place for this.
+
    if (debug_mode)
       std::cout << "in draw_particles() with n_instances " << n_instances << " and n_triangles: "
                 << triangles.size() << std::endl;
@@ -1747,7 +1752,9 @@ Mesh::draw_particles(Shader *shader_p, const glm::mat4 &mvp, const glm::mat4 &vi
    err = glGetError();
    if (err) std::cout << "GL ERROR:: Mesh::draw_particles() " << shader_p->name
                       << " draw() ___PRE___ mvp uniform " << err << std::endl;
-   // std::cout << "debug:: Mesh::draw_particles()    sending mvp " << glm::to_string(mvp) << std::endl;
+
+   if (debug_mode)
+      std::cout << "debug:: Mesh::draw_particles()    sending mvp " << glm::to_string(mvp) << std::endl;
    glUniformMatrix4fv(shader_p->mvp_uniform_location, 1, GL_FALSE, glm::value_ptr(mvp));
    err = glGetError();
    if (err) std::cout << "GL ERROR:: Mesh::draw_particles() " << shader_p->name
@@ -1756,7 +1763,9 @@ Mesh::draw_particles(Shader *shader_p, const glm::mat4 &mvp, const glm::mat4 &vi
    if (err) std::cout << "GL ERROR:: Mesh::draw_particles() " << shader_p->name
                       << " draw_particles() post mvp uniform 2 " << err << std::endl;
 
-   // std::cout << "debug sending view_rotation " << glm::to_string(view_rotation) << std::endl;
+   if (debug_mode)
+      std::cout << "debug sending view_rotation " << glm::to_string(view_rotation) << std::endl;
+
    glUniformMatrix4fv(shader_p->view_rotation_uniform_location, 1, GL_FALSE, glm::value_ptr(view_rotation));
    err = glGetError();
    if (err) std::cout << "GL ERROR:: Mesh::draw_particles() " << shader_p->name
@@ -1767,6 +1776,7 @@ Mesh::draw_particles(Shader *shader_p, const glm::mat4 &mvp, const glm::mat4 &vi
    //
    float rotation_angle = 0.05f * static_cast<float>(particle_draw_count);
 
+   // std::cout << "Mesh::draw_particles() sending rotation_angle " << rotation_angle << std::endl;
    shader_p->set_float_for_uniform("rotation_angle", rotation_angle);
 
    glEnable(GL_BLEND);
@@ -1774,7 +1784,7 @@ Mesh::draw_particles(Shader *shader_p, const glm::mat4 &mvp, const glm::mat4 &vi
 
    unsigned int n_verts = 3 * triangles.size();
    if (debug_mode)
-      std::cout << "debug:: Mesh::draw_particles() " << name << " with shader " << shader_p->name
+      std::cout << "debug:: Mesh::draw_particles() " << name << " with shader \"" << shader_p->name << "\""
                 << " drawing n_instances " << n_instances << std::endl;
    glDrawElementsInstanced(GL_TRIANGLES, n_verts, GL_UNSIGNED_INT, nullptr, n_instances);
    err = glGetError();
@@ -2612,7 +2622,7 @@ Mesh::update_instancing_buffer_data(const std::vector<glm::mat4> &mats) {
    GLenum err = glGetError();
    if (err)
       std::cout << "GL error Mesh::update_instancing_buffer_data() --start-- " << "binding vao " << vao
-                << " error " << err << std::endl;
+                << " error " << _(err) << std::endl;
 
    int n_mats =    mats.size();
    if (n_mats > n_instances_allocated) {
@@ -2653,7 +2663,7 @@ Mesh::update_instancing_buffer_data_standard(const std::vector<glm::mat4> &mats)
    err = glGetError();
    if (err)
       std::cout << "GL error Mesh::update_instancing_buffer_data_standard() A1 "
-                << "binding vao " << vao << " error " << err << std::endl;
+                << "binding vao " << vao << " error " << _(err) << std::endl;
    if (err == GL_INVALID_OPERATION)
       std::cout << "Because vao was not the name of a vertex array object previously returned from a call to glGenVertexArrays (or zero)"
                 << std::endl;
@@ -2773,7 +2783,7 @@ Mesh::update_instancing_buffer_data_for_extra_distance_restraints(const std::vec
    err = glGetError();
    if (err)
       std::cout << "GL error Mesh::update_instancing_buffer_data_standard() A1 "
-                << "binding vao " << vao << " error " << err << std::endl;
+                << "binding vao " << vao << " error " << _(err) << std::endl;
    if (err == GL_INVALID_OPERATION)
       std::cout << "Because vao was not the name of a vertex array object previously returned from a call to glGenVertexArrays (or zero)"
                 << std::endl;
@@ -2792,51 +2802,72 @@ Mesh::update_instancing_buffer_data_for_extra_distance_restraints(const std::vec
 
 }
 
+// static
+std::string
+Mesh::_(int err) {
+
+   std::string s = std::to_string(err);
+   if (err == GL_INVALID_ENUM)      s = "GL_INVALID_ENUM";
+   if (err == GL_INVALID_OPERATION) s = "GL_INVALID_OPERATION";
+   if (err == GL_INVALID_VALUE)     s = "GL_INVALID_VALUE";
+   return s;
+}
 
 void
 Mesh::update_instancing_buffer_data_for_particles(const particle_container_t &particles) {
 
+   if (false) {
+      std::cout << "debug:: update_instancing_buffer_data_for_particles()" << std::endl;
+      for (unsigned int i=0; i<particles.size(); i++) {
+         std::cout << "    " << i << " "
+                   << glm::to_string(particles.particles[i].position) << " "
+                   << glm::to_string(particles.particles[i].velocity) << " "
+                   << glm::to_string(particles.particles[i].colour)   << std::endl;
+      }
+   }
+
+   is_instanced = true;
+   is_instanced_colours = true;
+
    GLenum err = glGetError();
-   if (err) std::cout << "GL error Mesh::update_instancing_buffer_data_for_particles() A0 "
-                      << "binding vao " << vao << " error " << err << std::endl;
-
-   glBindVertexArray(vao);
-   err = glGetError();
-   if (err) std::cout << "GL error Mesh::update_instancing_buffer_data_for_particles() A1 "
-                      << "binding vao " << vao << std::endl;
-
-   n_instances = particles.size();
-
-   if (false)
-      std::cout << "debug:: update_instancing_buffer_data() transfering " << n_instances
-                << " particle/instances " << std::endl;
+   if (err) std::cout << "GL ERROR:: Mesh::update_instancing_buffer_data_for_particles() A0 "
+                      << "binding vao " << vao << " error " << _(err) << std::endl;
 
    if (vao == VAO_NOT_SET)
-      std::cout << "You forgot to setup this Mesh " << name << std::endl;
+      std::cout << "GL ERROR:: You forgot to setup this Mesh " << name << std::endl;
 
    glBindVertexArray(vao);
-
    err = glGetError();
-   if (err) std::cout << "GL error Mesh::update_instancing_buffer_data_for_particles() A2 "
-                      << "binding vao " << vao << " error " << err << std::endl;
+   if (err) std::cout << "GL ERROR:: Mesh::update_instancing_buffer_data_for_particles() A1 "
+                      << "binding vao " << vao << " " << _(err) << std::endl;
+
+   n_instances = particles.size();
+   if (n_instances > n_instances_allocated) {
+      std::cout << "OOPPS! Too many particles! " << n_instances << " " << n_instances_allocated << std::endl;
+      n_instances = n_instances_allocated;
+   }
+
+   if (false)
+      std::cout << "DEBUG:: update_instancing_buffer_data_for_particles() transfering " << n_instances
+                << " particle/instances " << std::endl;
 
    // std::cout << " particle 0 position " << glm::to_string(particles.particles[0].position)
    //           << std::endl;
    glBindBuffer(GL_ARRAY_BUFFER, inst_model_translation_buffer_id);
    err = glGetError();
-   if (err) std::cout << "GL error Mesh::update_instancing_buffer_data_for_particles() A3 "
+   if (err) std::cout << "GL ERROR:: Mesh::update_instancing_buffer_data_for_particles() A3 "
                       << " vao " << vao
                       << " inst_model_translation_buffer_id " << inst_model_translation_buffer_id
                       << "\n";
    glBufferSubData(GL_ARRAY_BUFFER, 0, n_instances * sizeof(Particle), &(particles.particles[0]));
    err = glGetError();
-   if (err) std::cout << "GL error Mesh::update_instancing_buffer_data_for_particles() B\n";
+   if (err) std::cout << "GL ERROR:: Mesh::update_instancing_buffer_data_for_particles() B " << _(err) << "\n";
    glBindBuffer(GL_ARRAY_BUFFER, inst_colour_buffer_id);
    err = glGetError();
-   if (err) std::cout << "GL error Mesh::update_instancing_buffer_data_for_particles() C\n";
+   if (err) std::cout << "GL ERROR:: Mesh::update_instancing_buffer_data_for_particles() C\n";
    glBufferSubData(GL_ARRAY_BUFFER, 0, n_instances * sizeof(Particle), &(particles.particles[0]));
    err = glGetError();
-   if (err) std::cout << "GL error Mesh::update_instancing_buffer_data_for_particles() D\n";
+   if (err) std::cout << "GL ERROR:: Mesh::update_instancing_buffer_data_for_particles() D " << _(err) << "\n";
 
 }
 

@@ -3056,6 +3056,20 @@ void set_colour_by_chain(int imol) {
    add_to_history_typed(cmd, args);
 }
 
+/*! \brief colour molecule number imol by chain type */
+void set_colour_by_ncs_chain(int imol, short int goodsell_mode) {
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t::molecules[imol].make_colour_by_ncs_related_chains(goodsell_mode);
+      graphics_draw();
+   }
+   std::string cmd = "set-colour-by-ncs-chain";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(imol);
+   add_to_history_typed(cmd, args);
+}
+
+
 void set_colour_by_chain_goodsell_mode(int imol) {
 
    if (is_valid_model_molecule(imol)) {
@@ -3973,6 +3987,34 @@ int atom_index_first_atom_in_residue_with_altconf(int imol,
    }
    return index;
 }
+
+/*! \brief return the minimum residue number for imol chain chain_id */
+int min_resno_in_chain(int imol, const char *chain_id) {
+
+   int res_no_min = 999997;
+   if (is_valid_model_molecule(imol)) {
+      auto p = graphics_info_t::molecules[imol].min_res_no_in_chain(chain_id);
+      if (p.first) {
+         res_no_min = p.second;
+      }
+   }
+   return res_no_min;
+
+}
+   
+/*! \brief return the maximum residue number for imol chain chain_id */
+int max_resno_in_chain(int imol, const char *chain_id) {
+
+   int res_no_max = -99999;
+   if (is_valid_model_molecule(imol)) {
+      auto p = graphics_info_t::molecules[imol].max_res_no_in_chain(chain_id);
+      if (p.first) {
+         res_no_max = p.second;
+      }
+   }
+   return res_no_max;
+}
+
 
 
 float median_temperature_factor(int imol) {
@@ -7101,10 +7143,10 @@ run_command_line_scripts() {
 
    graphics_info_t g;
    for (unsigned int i=0; i<graphics_info_t::command_line_accession_codes.size(); i++) {
-      std::cout << "get accession code " << graphics_info_t::command_line_accession_codes[i]
-                << std::endl;
+      std::cout << "run_command_line_scripts(): get accession code "
+                << graphics_info_t::command_line_accession_codes[i] << std::endl;
       std::vector<std::string> c;
-      c.push_back("get-eds-pdb-and-mtz");
+      c.push_back("get_ebi.get-eds-pdb-and-mtz");
       c.push_back(single_quote(graphics_info_t::command_line_accession_codes[i]));
 
 #ifdef USE_GUILE
@@ -7113,6 +7155,7 @@ run_command_line_scripts() {
 #else
 #ifdef USE_PYTHON
       std::string pc = g.state_command(c, graphics_info_t::USE_PYTHON_STATE_COMMANDS);
+      safe_python_command("import get_ebi");
       safe_python_command(pc.c_str());
 #endif
 #endif
@@ -9440,6 +9483,9 @@ void load_tutorial_model_and_data() {
       std::cout << "--------- imol_map: " << imol_map << std::endl;
       std::cout << "--------- imol_diff_map: " << imol_diff_map << std::endl;
    }
+
+   graphics_info_t g;
+   g.graphics_grab_focus();
 
 }
 

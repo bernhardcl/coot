@@ -101,8 +101,6 @@ graphics_info_t::on_glarea_drag_end_primary(G_GNUC_UNUSED GtkGestureDrag *gestur
 void
 graphics_info_t::on_glarea_drag_begin_secondary(G_GNUC_UNUSED GtkGestureDrag *gesture, double x, double y, GtkWidget *gl_area) {
 
-   // 20220429-PE is this controller for left-mouse or right-mouse?
-
    SetMouseBegin(x,y);
    SetMouseClicked(x, y);
    mouse_x = x;
@@ -113,9 +111,10 @@ graphics_info_t::on_glarea_drag_begin_secondary(G_GNUC_UNUSED GtkGestureDrag *ge
    set_mouse_previous_position(x,y);
 
    bool trackpad_drag = false;
-#ifdef __APPLE__ // secondary is right-mouse on PC, trackpad on MacBook
-   trackpad_drag = true;
-#endif
+   if (using_trackpad) {
+      trackpad_drag = true;
+      check_if_in_range_defines();
+   }
    if (trackpad_drag) {
       bool was_a_double_click = false; // maybe set this correctly?
       bool handled = check_if_moving_atom_pull(was_a_double_click);
@@ -175,9 +174,8 @@ graphics_info_t::on_glarea_drag_update_secondary(GtkGestureDrag *gesture,
          } else {
 
             bool trackpad_drag = false;
-#ifdef __APPLE__ // this is right-mouse on PC, trackpad on MacBook
-            trackpad_drag = true;
-#endif
+            if (using_trackpad)
+               trackpad_drag = true;
             bool handled = false;
             if (trackpad_drag) {
                if (in_moving_atoms_drag_atom_mode_flag) {
@@ -608,12 +606,14 @@ graphics_info_t::on_glarea_key_controller_key_pressed(GtkEventControllerKey *con
       return FALSE;
    };
 
+   // I like this function. It should be the callback of a button that gets added
+   // to the toolbar when you add Updating Maps.
    auto test_function = [coot_points_frame_callback] () {
       GtkWidget *frame = get_widget_from_builder("coot-points-frame");
       if (frame) {
          gtk_widget_set_visible(frame, TRUE);
          GSourceFunc cb = G_SOURCE_FUNC(coot_points_frame_callback);
-         g_timeout_add(3000, cb, nullptr);
+         g_timeout_add(4000, cb, nullptr);
       }
    };
 
@@ -630,11 +630,13 @@ graphics_info_t::on_glarea_key_controller_key_pressed(GtkEventControllerKey *con
       std::cout << "on_glarea_key_controller_key_pressed() control_is_pressed " << control_is_pressed
                 << " shift_is_pressed " << shift_is_pressed << std::endl;
 
-   if (keyval == 101)
-      test_function();
+   // key-bindings for testing
+   //
+   // if (keyval == 101)  E
+   //    test_function();
 
-   if (keyval == 113)
-      load_tutorial_model_and_data_ec(); // ec: event-controller
+   // if (keyval == 113)  Q
+   //    load_tutorial_model_and_data_ec(); // ec: event-controller
 
    keyboard_key_t kbk(keyval, control_is_pressed);
    add_key_to_history(kbk);
@@ -680,8 +682,9 @@ graphics_info_t::on_glarea_scrolled(GtkEventControllerScroll *controller,
    shift_is_pressed = (modifier & GDK_SHIFT_MASK);
 
    bool handled = false;
-   std::cout << "on_glarea_scrolled() control_is_pressed " << control_is_pressed
-             << " shift_is_pressed " << shift_is_pressed << std::endl;
+   if (false)
+      std::cout << "on_glarea_scrolled() control_is_pressed " << control_is_pressed
+                << " shift_is_pressed " << shift_is_pressed << std::endl;
 
    if (control_is_pressed) {
       if (shift_is_pressed) {

@@ -631,6 +631,111 @@ int test_rsr_using_residue_range(molecules_container_t &mc) {
    return status;
 }
 
+int test_rsr_using_multi_atom_cid(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   // this can be a coot::utils function
+   //
+   auto get_n_diffs = [] (mmdb::Manager *mol, mmdb::Manager *mol_orig) {
+
+      int n_checked = 0;
+      int n_diffs = 0;
+      int imod = 1;
+      mmdb::Model *model_p_1 = mol->GetModel(imod);
+      if (model_p_1) {
+         mmdb::Model *model_p_2 = mol_orig->GetModel(imod);
+         if (model_p_2) {
+            int n_chains_1 = model_p_1->GetNumberOfChains();
+            for (int ichain=0; ichain<n_chains_1; ichain++) {
+               mmdb::Chain *chain_p_1 = model_p_1->GetChain(ichain);
+               int n_chains_2 = model_p_2->GetNumberOfChains();
+               for (int jchain=0; jchain<n_chains_2; jchain++) {
+                  mmdb::Chain *chain_p_2 = model_p_2->GetChain(jchain);
+                  int n_res_1 = chain_p_1->GetNumberOfResidues();
+                  int n_res_2 = chain_p_2->GetNumberOfResidues();
+
+                  for (int ires=0; ires<n_res_1; ires++) {
+                     mmdb::Residue *residue_p_1 = chain_p_1->GetResidue(ires);
+                     if (residue_p_1) {
+                        int seqnum_1 = residue_p_1->GetSeqNum();
+                        std::string ins_code_1 = residue_p_1->GetInsCode();
+
+                        for (int jres=0; jres<n_res_2; jres++) {
+                           mmdb::Residue *residue_p_2 = chain_p_2->GetResidue(jres);
+                           if (residue_p_2) {
+                              int seqnum_2 = residue_p_2->GetSeqNum();
+                              std::string ins_code_2 = residue_p_2->GetInsCode();
+
+                              if (seqnum_1 ==  seqnum_2) {
+                                 if (ins_code_1 == ins_code_2) {
+                                    std::string rn_1 = residue_p_1->GetResName();
+                                    std::string rn_2 = residue_p_2->GetResName();
+                                    if (rn_1 == rn_2) {
+
+                                       int n_atoms_1 = residue_p_1->GetNumberOfAtoms();
+                                       for (int iat=0; iat<n_atoms_1; iat++) {
+                                          mmdb::Atom *at_1 = residue_p_1->GetAtom(iat);
+                                          if (! at_1->isTer()) {
+                                             std::string atom_name_1(at_1->GetAtomName());
+                                             std::string alt_conf_1(at_1->altLoc);
+
+                                             int n_atoms_2 = residue_p_2->GetNumberOfAtoms();
+                                             for (int jat=0; jat<n_atoms_2; jat++) {
+                                                mmdb::Atom *at_2 = residue_p_2->GetAtom(jat);
+                                                if (! at_2->isTer()) {
+                                                   std::string atom_name_2(at_2->GetAtomName());
+                                                   std::string alt_conf_2(at_2->altLoc);
+                                                   if (atom_name_1 == atom_name_2) {
+                                                      if (alt_conf_1 == alt_conf_2) {
+                                                         n_checked++;
+                                                         float dx = at_1->x - at_2->x;
+                                                         float dy = at_1->y - at_2->y;
+                                                         float dz = at_1->z - at_2->z;
+                                                         if ((fabsf(dx) + fabsf(dy) + fabsf(dz)) > 0.01)
+                                                            n_diffs++;
+                                                      }
+                                                   }
+                                                }
+                                             }
+                                          }
+                                       }
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+      // std::cout << "n_diffs: " << n_diffs << " n_checked: " << n_checked << std::endl;
+      return n_diffs;
+   };
+
+   int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-4.pdb"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-4.mtz"), "FWT", "PHWT", "W", false, false);
+   mc.set_imol_refinement_map(imol_map);
+   int n_cycles = 1000;
+   std::string mode = "SINGLE";
+   std::string multi_cid = "//A/10-12";
+   mmdb::Manager *mol = mc.get_mol(imol);
+   mmdb::Manager *mol_orig = coot::util::copy_molecule(mol);
+   mc.refine_residues_using_atom_cid(imol, multi_cid, mode, n_cycles);
+   int n_diffs_1 = get_n_diffs(mol, mol_orig);
+   multi_cid = "//A/10-12||//A/20-22";
+   mc.refine_residues_using_atom_cid(imol, multi_cid, mode, n_cycles);
+   int n_diffs_2 = get_n_diffs(mol, mol_orig);
+   if (n_diffs_2 > (n_diffs_1 + 10)) status = 1;
+   std::cout << "n_diffs_1 " << n_diffs_1 << " n_diffs_2 " << n_diffs_2 << std::endl;
+
+   return status;
+}
+
+
 int test_add_terminal_residue(molecules_container_t &mc) {
 
    auto mmdb_to_cartesian = [] (mmdb::Atom *at) {
@@ -938,6 +1043,46 @@ int test_copy_fragment_using_cid(molecules_container_t &mc) {
    if (at_1) {
       std::string cid = "//A/131-140";
       int imol_new = mc.copy_fragment_using_cid(imol, cid);
+      if (mc.is_valid_model_molecule(imol_new)) {
+         std::vector<mmdb::Residue *> residues;
+         mmdb::Manager *mol = mc.get_mol(imol_new);
+         int imod = 1;
+         mmdb::Model *model_p = mol->GetModel(imod);
+         if (model_p) {
+            int n_chains = model_p->GetNumberOfChains();
+            for (int ichain=0; ichain<n_chains; ichain++) {
+               mmdb::Chain *chain_p = model_p->GetChain(ichain);
+               int n_res = chain_p->GetNumberOfResidues();
+               for (int ires=0; ires<n_res; ires++) {
+                  mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+                  if (residue_p) {
+                     residues.push_back(residue_p);
+                  }
+               }
+            }
+         }
+         if (residues.size() == 10) {
+            coot::atom_spec_t atom_spec_2("A", 136, "", " O  ","");
+            mmdb::Atom *at_2 = mc.get_atom(imol, atom_spec_2);
+            if (at_2)
+               status = 1;
+         }
+      }
+   }
+   return status;
+}
+
+int test_copy_fragment_for_refinement_using_cid(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   coot::atom_spec_t atom_spec("A", 270, "", " O  ","");
+   mmdb::Atom *at_1 = mc.get_atom(imol, atom_spec);
+   if (at_1) {
+      std::string cid = "//A/131-140";
+      int imol_new = mc.copy_fragment_for_refinement_using_cid(imol, cid);
       if (mc.is_valid_model_molecule(imol_new)) {
          std::vector<mmdb::Residue *> residues;
          mmdb::Manager *mol = mc.get_mol(imol_new);
@@ -1543,7 +1688,7 @@ int test_ligand_fitting_here(molecules_container_t &mc) {
             }
          }
       } else {
-         std::cout << "debug:: test_fit_ligand() failed to get model for ligand " << imol_ligand << std::endl;
+         std::cout << "debug:: test_ligand_fitting_here() failed to get model for ligand " << imol_ligand << std::endl;
       }
    }
    mc.close_molecule(imol);
@@ -1551,6 +1696,60 @@ int test_ligand_fitting_here(molecules_container_t &mc) {
    mc.close_molecule(imol_ligand);
    return status;
 }
+
+int test_ligand_fitting_in_map(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   auto largest_eigenvalue = [] (const std::vector<double> &evs) {
+      double l = 0.0;
+      for (unsigned int i=0; i<evs.size(); i++)
+         if (evs[i] > l) l = evs[i];
+      return l;
+   };
+
+   int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-4.pdb"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-4.mtz"), "FWT", "PHWT", "W", false, false);
+   int imol_ligand = mc.get_monomer("GLC");
+
+   if (mc.is_valid_model_molecule(imol)) {
+      if (mc.is_valid_model_molecule(imol_ligand)) {
+         std::vector<molecules_container_t::fit_ligand_info_t> solutions = mc.fit_ligand(imol, imol_map, imol_ligand, 1.0, true, 30);
+         std::cout << "found " << solutions.size() << " ligand fitting solutions" << std::endl;
+
+         // check that these solutions have different eigen values (because they
+         // are different conformers)
+         std::vector<double> ligands_largest_eigenvector;
+         std::vector<molecules_container_t::fit_ligand_info_t>::const_iterator it;
+         for (it=solutions.begin(); it!=solutions.end(); ++it) {
+            const auto &fli(*it);
+            if (false) { // let's write out those solutions
+               std::string fn("Ligand-sol-" + coot::util::int_to_string(fli.imol) + ".pdb");
+               mc.write_coordinates(fli.imol, fn);
+            }
+            auto eigenvalues = mc.get_eigenvalues(fli.imol, "A", 1, "");
+            double f = largest_eigenvalue(eigenvalues);
+            ligands_largest_eigenvector.push_back(f);
+         }
+
+         if (false)
+            for (unsigned int ii=0; ii<ligands_largest_eigenvector.size(); ii++)
+               std::cout << "Largest-ev: " << ii << " " << ligands_largest_eigenvector[ii] << std::endl;
+
+         coot::stats::single ss(ligands_largest_eigenvector);
+         double sd = std::sqrt(ss.variance());
+         std::cout << "EV sd " << sd << std::endl;
+         if (sd > 0.001)
+            status = 1;
+      }
+   }
+
+   return status;
+
+}
+
+
 
 int test_jiggle_fit(molecules_container_t &mc) {
 
@@ -1803,6 +2002,18 @@ int test_peptide_omega(molecules_container_t &mc) {
       }
    }
    mc.close_molecule(imol);
+   return status;
+}
+
+int test_omega_5tig_cif(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol = mc.read_pdb(reference_data("5tig.cif"));
+   coot::validation_information_t oa = mc.peptide_omega_analysis(imol);
+   status = 1; // it didn't crash
+
    return status;
 }
 
@@ -2093,7 +2304,8 @@ int test_gaussian_surface(molecules_container_t &mc) {
       float contour_level = 4.0;
       float box_radius = 5.0;
       float grid_scale = 0.7;
-      coot::simple_mesh_t mesh = mc.get_gaussian_surface(imol, sigma, contour_level, box_radius, grid_scale);
+      float b_factor = 20.0;
+      coot::simple_mesh_t mesh = mc.get_gaussian_surface(imol, sigma, contour_level, box_radius, grid_scale, b_factor);
       std::cout << "in test_gaussian_surface() " << mesh.vertices.size() << " " << mesh.triangles.size() << std::endl;
       if (mesh.vertices.size() > 0)
          if (mesh.triangles.size() > 0)
@@ -3744,6 +3956,199 @@ int test_residues_near_residues(molecules_container_t &mc) {
    return status;
 }
 
+int test_ncs_chains(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol = mc.read_pdb(reference_data("7bqx-assembly1.cif"));
+   if (mc.is_valid_model_molecule(imol)) {
+      int n_chains = 0;
+      auto vvc = mc.get_ncs_related_chains(imol);
+      std::cout << "found " << vvc.size() << " NCS-chain groups" << std::endl;
+      for (const auto &vc : vvc) {
+         for (const auto &c : vc) {
+            // std::cout << " " << c;
+            n_chains++;
+         }
+         // std::cout << std::endl;
+      }
+      std::cout << "Found " << n_chains << " chains in total" << std::endl;
+      if (n_chains == 95) status = 1;
+   }
+   return status;
+}
+
+int test_pdbe_dictionary_depiction(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   // this test doesn't have a good/correct success criterion.
+   // Just that the file is written. It is up to us to look at the image.
+
+   mc.import_cif_dictionary(reference_data("MOI.restraints.cif"), coot::protein_geometry::IMOL_ENC_ANY); // from Oliver Smart
+   mc.write_png("MOI", coot::protein_geometry::IMOL_ENC_ANY, "MOI-depiction.png");
+   if (coot::file_exists("MOI-depiction.png")) status = 1; // not a good test.
+   return status;
+}
+
+
+int test_cif_writer(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   mc.import_cif_dictionary(reference_data("HEM.restraints.cif"), coot::protein_geometry::IMOL_ENC_ANY);
+   std::string s1 = mc.get_cif_restraints_as_string("xHEMx", coot::protein_geometry::IMOL_ENC_ANY);
+   std::string s2 = mc.get_cif_restraints_as_string("HEM",   coot::protein_geometry::IMOL_ENC_ANY);
+   if (s1.length() == 0)
+      if (s2.length() > 10)
+         status = 1;
+   if (false) {
+      std::cout << "debug s2 length " << s2.length() << std::endl;
+      std::ofstream f("s2.out");
+      f << s2;
+      f.close();
+   }
+   return status;
+}
+
+int test_pdb_as_string(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol     = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+   std::string s1 = mc.molecule_to_PDB_string(imol);
+   mc.auto_fit_rotamer(imol, "A", 61, "", "", imol_map);
+   std::string s2 = mc.molecule_to_PDB_string(imol);
+
+   std::cout << "test_pdb_as_string(): lengths " << s1.length() << " " << s2.length() << std::endl;
+
+   if (s1.length() == s2.length()) status = 1;
+
+   if (false) {
+      std::ofstream f("test_pdb_as_string.pdb");
+      f << s2;
+      f.close();
+   }
+
+   return status;
+
+}
+
+int test_mmcif_as_string(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol     = mc.read_pdb(reference_data("2vtq.cif"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+   std::string s1 = mc.molecule_to_mmCIF_string(imol);
+   mc.auto_fit_rotamer(imol, "A", 61, "", "", imol_map);
+   std::string s2 = mc.molecule_to_mmCIF_string(imol);
+
+   std::cout << "test_mmcif_as_string(): lengths " << s1.length() << " " << s2.length() << std::endl;
+
+   if (s1.length() == s2.length()) status = 1;
+
+   if (true) {
+      std::ofstream f1("test_mmcif_as_string_1.mmcif");
+      f1 << s1;
+      f1.close();
+      std::ofstream f2("test_mmcif_as_string_2.mmcif");
+      f2 << s2;
+      f2.close();
+   }
+
+   return status;
+
+}
+
+int test_mmcif_atom_selection(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   std::string fn = "1ej6-assembly1.cif";
+   std::cout << "reading " << fn << std::endl;
+   int imol = mc.read_pdb(reference_data(fn));
+   mmdb::Manager *mol = mc.get_mol(imol);
+   if (mol) {
+      int n_selected_atoms_1 = 0;
+      int n_selected_atoms_2 = 0;
+      int n_selected_atoms_3 = 0;
+      mmdb::Atom **selected_atoms_1 = 0;
+      mmdb::Atom **selected_atoms_2 = 0;
+      mmdb::Atom **selected_atoms_3 = 0;
+      int selHnd_1 = mol->NewSelection();
+      int selHnd_2 = mol->NewSelection();
+      int selHnd_3 = mol->NewSelection();
+      std::cout << "selecting //A" << std::endl;
+      mol->Select(selHnd_1, mmdb::STYPE_ATOM, "//A",     mmdb::SKEY_NEW);
+      std::cout << "selecting //A-1" << std::endl;
+      mol->Select(selHnd_2, mmdb::STYPE_ATOM, "//A-1",   mmdb::SKEY_NEW);
+      std::cout << "selecting //A-1,A" << std::endl;
+      mol->Select(selHnd_3, mmdb::STYPE_ATOM, "//A-1,A", mmdb::SKEY_NEW);
+      mol->GetSelIndex(selHnd_1, selected_atoms_1, n_selected_atoms_1);
+      mol->GetSelIndex(selHnd_2, selected_atoms_2, n_selected_atoms_2);
+      mol->GetSelIndex(selHnd_3, selected_atoms_3, n_selected_atoms_3);
+      std::cout << "n-selected " << n_selected_atoms_1 << " " << n_selected_atoms_2 << " " << n_selected_atoms_3
+                << std::endl;
+      // there should be nothing in A-1 selection that is in //A
+      unsigned int n_matcher = 0;
+      for (int i=0; i<n_selected_atoms_1; i++) {
+         if (i >= 100) break;
+         mmdb:: Atom *at_1 = selected_atoms_1[i];
+         for (int j=0; i<n_selected_atoms_2; j++) {
+            mmdb:: Atom *at_2 = selected_atoms_2[j];
+            if (at_1 == at_2) {
+               n_matcher++;
+               break;
+            }
+         }
+      }
+      std::cout << "Looked for 100 atoms and found " << n_matcher << " matchers" << std::endl;
+      if (n_matcher == 0) status = 1;
+   }
+   return status;
+}
+
+int test_contouring_timing(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   int imol     = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+
+   if (mc.is_valid_model_molecule(imol)) {
+      float contour_level = 0.12;
+
+      clipper::Coord_orth p(55, 10, 10);
+      for (unsigned int i=0; i<80; i++) {
+         float radius = i;
+         coot::simple_mesh_t map_mesh = mc.get_map_contours_mesh(imol_map, p.x(), p.y(), p.z(), radius, contour_level);
+         double t = mc.get_contouring_time();
+         std::cout << "contouring time: " << i << " " << t << std::endl;
+         if (t > 10) status = true;
+      }
+   }
+
+   return status;
+}
+
+int test_test_the_threading(molecules_container_t &mc) {
+
+   int status = 1; // no faiiure
+
+   for (unsigned int i=0; i<50; i++) {
+      double r = mc.test_the_threading(i);
+      std::cout << " test_threading: " << i << " " << r << std::endl;
+   }
+
+   return status;
+}
 
 int test_template(molecules_container_t &mc) {
 
@@ -3871,11 +4276,37 @@ int main(int argc, char **argv) {
       status += run_test(test_molecular_representation, "molecular representation mesh", mc);
    }
 
-   status += run_test(test_residues_near_residues, "residues near residues",    mc);
+   status += run_test(test_test_the_threading, "threading speed test",    mc);
+
+   // status += run_test(test_ligand_fitting_in_map, "ligand fitting in map",    mc);
+
+   // status += run_test(test_contouring_timing, "contouring timing",    mc);
+
+   // status += run_test(test_mmcif_atom_selection, "mmCIF atom selection",    mc);
+
+   // status += run_test(test_mmcif_as_string, "mmCIF as string",    mc);
+
+   // status += run_test(test_pdb_as_string, "PDB as string",    mc);
+
+   // status += run_test(test_cif_writer, "mmCIF dictionary writer",    mc);
+
+   // status += run_test(test_pdbe_dictionary_depiction, "PDBe dictionary depiction",    mc);
+
+   // status += run_test(test_rsr_using_multi_atom_cid, "multi-atom-cid RSR",    mc);
+
+   //status += run_test(test_rsr_using_atom_cid, "atom-cid RSR",    mc);
+
+   // status += run_test(test_residues_near_residues, "residues near residues",    mc);
 
    // status += run_test(test_import_cif_dictionary, "import cif dictionary",    mc);
 
    // status += run_test(test_electro_molecular_representation, "electro molecular representation mesh", mc);
+
+   // status += run_test(test_replace_fragment,      "replace fragment",         mc);
+
+   // status += run_test(test_ncs_chains,      "NCS chains",         mc);
+
+   // status += run_test(test_omega_5tig_cif,      "Omega for 5tig cif",         mc);
 
    // status += run_test(test_jiggle_fit_params, "actually testing for goodness pr params", mc);
 

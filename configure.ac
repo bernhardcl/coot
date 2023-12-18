@@ -26,7 +26,7 @@ dnl
 dnl Process this file with autoconf to produce a configure script.
 
 
-AC_INIT([coot],[1.0.06-pre])
+AC_INIT([coot],[1.x-pre])
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -206,7 +206,14 @@ dnl    echo checking GUILE_VERSION: $GUILE_VERSION
 dnl    AC_SUBST(GUILE_VERSION)
 dnl fi
 
-GUILE_FLAGS
+AC_ARG_WITH([guile], AS_HELP_STRING([--with-guile]), with_guile=true, with_guile=false)
+if test "x$with_guile" = xtrue ; then
+   GUILE_FLAGS
+fi
+AM_CONDITIONAL(USE_GUILE, [test x$USE_GUILE = xuse_guile])
+
+
+
 if test "x$GUILE_CFLAGS" = x ; then
    :
 else
@@ -250,6 +257,8 @@ PKG_CHECK_MODULES(PyGObject, pygobject-3.0 >= 3.36)
 dnl =========================== Boost =========================
 
 AX_BOOST_BASE(,,[AC_MSG_ERROR([No boost found])])
+
+AX_BOOST_THREAD
 
 # Boost-Python is needed for RDKit interface.
 # Actually, this should only be tested if enhanced-ligand-tools was passed - not all the time as
@@ -400,7 +409,13 @@ if test "x$with_sound" = xfalse ; then
 else
    AC_MSG_RESULT(yes)
    PKG_CHECK_MODULES(VORBISFILE, [vorbisfile >= 1.2])
-   PKG_CHECK_MODULES(ALSA, [alsa >= 1.2])
+   uname_s=$(uname -s) # should autoconf do this for us? If so, I can't see where it is stored
+   if test "$uname_s" = Linux ; then
+      PKG_CHECK_MODULES(ALSA, [alsa >= 1.2])
+   else
+      # it's a mac then
+      PKG_CHECK_MODULES(OpenAL, [OpenAL >= 1.23])
+   fi
    # Use Core Audio on macOS. Consider PortAudio instead of using alsa directly.
    AC_SUBST(SOUND_FLAGS, -DWITH_SOUND)
 fi

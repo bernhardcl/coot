@@ -42,6 +42,8 @@ bool graphics_info_t::prefer_python = 0; // no GUILE or PYTHON
 bool graphics_info_t::prefer_python = 1; // Default: yes in Windows
 #endif // windows test
 
+bool graphics_info_t::using_trackpad = false;
+
 bool graphics_info_t::use_gemmi = false;
 short int graphics_info_t::python_at_prompt_flag = 0;
 
@@ -1569,6 +1571,7 @@ bool graphics_info_t::do_tick_constant_draw = false; // was true: 20220606-PE ha
 bool graphics_info_t::do_tick_hydrogen_bonds_mesh = false;
 bool graphics_info_t::do_tick_happy_face_residue_markers = false;
 bool graphics_info_t::do_tick_outline_for_active_residue = false;
+bool graphics_info_t::do_tick_gone_diegos = false;
 int graphics_info_t::n_particles = 220;
 Mesh graphics_info_t::mesh_for_particles = Mesh("mesh for particles");
 particle_container_t graphics_info_t::particles;
@@ -1779,3 +1782,12 @@ coot::util::sfcalc_genmap_stats_t graphics_info_t::latest_sfcalc_stats;
 
 bool graphics_info_t::use_sounds = true;
 guint graphics_info_t::updating_maps_timeout_function_idx = UPDATING_MAPS_TIMEOUT_FUNCTION_IDX_UNSET;
+
+std::vector<meshed_particle_container_t> graphics_info_t::meshed_particles_for_gone_diegos;
+
+float graphics_info_t::gaussian_surface_sigma = 4.4;
+float graphics_info_t::gaussian_surface_contour_level = 4.0;
+float graphics_info_t::gaussian_surface_box_radius = 5.0;
+float graphics_info_t::gaussian_surface_grid_scale = 0.7;
+float graphics_info_t::gaussian_surface_fft_b_factor = 100.0;
+short int graphics_info_t::gaussian_surface_chain_colour_mode = 1; // 1 for "by chain" , 2 for "by NCS"

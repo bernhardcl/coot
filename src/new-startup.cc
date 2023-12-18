@@ -170,6 +170,8 @@ new_startup_on_glarea_resize(GtkGLArea *glarea, gint width, gint height) {
    if (true)
       std::cout << "DEBUG:: --- new_startup_on_glarea_resize() " <<  width << " " << height << std::endl;
 
+   std::cout << "int max " << INT_MAX << " " << std::sqrt(INT_MAX) << std::endl;
+
    graphics_info_t g;
    // for the GL widget, not the window.
    g.graphics_x_size = width;
@@ -229,11 +231,10 @@ void on_glarea_drag_begin_primary(GtkGestureDrag *gesture,
                                   GtkWidget      *area) {
    graphics_info_t g;
 
-#ifdef __APPLE__
-   g.on_glarea_drag_begin_secondary(gesture, x, y, area);
-#else
-   g.on_glarea_drag_begin_primary(gesture, x, y, area);
-#endif
+   if (g.using_trackpad)
+      g.on_glarea_drag_begin_secondary(gesture, x, y, area);
+   else
+      g.on_glarea_drag_begin_primary(gesture, x, y, area);
 }
 
 void on_glarea_drag_update_primary(GtkGestureDrag *gesture,
@@ -243,12 +244,11 @@ void on_glarea_drag_update_primary(GtkGestureDrag *gesture,
 
    graphics_info_t g;
 
-#ifdef __APPLE__
-   // Hack for mac. Needs more thought.
-   g.on_glarea_drag_update_secondary(gesture, delta_x, delta_y, area);
-#else
-   g.on_glarea_drag_update_primary(gesture, delta_x, delta_y, area);
-#endif
+   if (g.using_trackpad)
+      // Hack for mac. Needs more thought.
+      g.on_glarea_drag_update_secondary(gesture, delta_x, delta_y, area);
+   else
+      g.on_glarea_drag_update_primary(gesture, delta_x, delta_y, area);
 
 }
 
@@ -265,7 +265,6 @@ void on_glarea_drag_begin_secondary(GtkGestureDrag *gesture,
                                     double          x,
                                     double          y,
                                     GtkWidget      *area) {
-   // std::cout << "begin secondary" << std::endl;
    graphics_info_t g;
    g.on_glarea_drag_begin_secondary(gesture, x, y, area);
 }
@@ -378,7 +377,7 @@ on_glarea_swipe(GtkEventControllerScroll *controller,
                 gpointer                  user_data) {
 
    graphics_info_t g;
-   std::cout << "swipe " << dx << " " << dy << std::endl;
+   // std::cout << "swipe " << dx << " " << dy << std::endl;
 
    GtkGestureSwipe *swipe_gesture; // how to get this?
    double vel_x;
@@ -649,9 +648,9 @@ new_startup_application_activate(GtkApplication *application,
    activate_data->application = application;
 
 #ifdef WINDOWS_MINGW
-   std::string window_name = "GTK4 WinCoot-" + std::string(VERSION);
+   std::string window_name = "WinCoot-" + std::string(VERSION);
 #else
-   std::string window_name = "GTK4 Coot-" + std::string(VERSION);
+   std::string window_name = "Coot-" + std::string(VERSION);
 #endif
    GtkWidget *app_window = gtk_application_window_new(application);
    gtk_window_set_application(GTK_WINDOW(app_window), application);
@@ -731,9 +730,9 @@ new_startup_application_activate(GtkApplication *application,
       if (coot::file_exists(preferences_ui_file_name))
          preferences_ui_file_name_full = preferences_ui_file_name;
       GtkBuilder *preferences_builder = gtk_builder_new();
-      std::cout << "::::::::::::::::::::::: reading " << preferences_ui_file_name_full << std::endl;
+      // std::cout << "::::::::::::::::::::::: reading " << preferences_ui_file_name_full << std::endl;
       status = gtk_builder_add_from_file(preferences_builder, preferences_ui_file_name_full.c_str(), &error);
-      std::cout << "::::::::::::::::::::::: done reading " << preferences_ui_file_name_full << std::endl;
+      // std::cout << "::::::::::::::::::::::: done reading " << preferences_ui_file_name_full << std::endl;
       if (status == FALSE) {
          std::cout << "ERROR:: Failure to read or parse " << preferences_ui_file_name_full << std::endl;
          std::cout << error->message << std::endl;
@@ -743,7 +742,10 @@ new_startup_application_activate(GtkApplication *application,
 
       python_init();
 
-      handle_command_line_data(activate_data->cld);
+      // 20231114-PE we can't handle the command line data until the graphics have started.
+      // so this should be in the realize() function for the graphics widget.
+      // handle_command_line_data(activate_data->cld);
+
       if (activate_data->cld.do_graphics)
          graphics_info.use_graphics_interface_flag = true;
 
@@ -809,10 +811,14 @@ new_startup_application_activate(GtkApplication *application,
 
       create_actions(application);
 
+      // again?
       setup_python_with_coot_modules(argc, argv);
 
       setup_gui_components();
       setup_go_to_residue_keyboarding_mode_entry_signals();
+
+      // now we are ready to show graphical objects made from reading files:
+      handle_command_line_data(activate_data->cld);
 
       // load_tutorial_model_and_data();
       delete activate_data;
@@ -897,8 +903,9 @@ int new_startup(int argc, char **argv) {
 
    load_css();
 
-   // GTK version
-   std::cout << "GTK " << GTK_MAJOR_VERSION << "." << GTK_MINOR_VERSION << "." << GTK_MICRO_VERSION << std::endl;
+   // Tell us the GTK version
+   std::cout << "INFO:: built with GTK " << GTK_MAJOR_VERSION << "." << GTK_MINOR_VERSION << "." << GTK_MICRO_VERSION
+             << std::endl;
 
    GtkWidget *splash_screen = new_startup_create_splash_screen_window();
    gtk_widget_set_visible(splash_screen, TRUE);

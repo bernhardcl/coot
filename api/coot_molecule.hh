@@ -48,8 +48,11 @@
 // 2023-07-04-PE This is a hack. This should be configured - and the
 // various functions that depend on this being true should be
 // reworked so that they run without a thread pool.
-// BL disable and individually disable functions. But of course shoudl all work without thread_pool
-// #define HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+
+#ifdef HAVE_BOOST_THREAD // part of DEFS in Makefile
+#define HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
+#endif
+
 
 
 namespace coot {
@@ -384,6 +387,8 @@ namespace coot {
          indexed_user_defined_colour_selection_cids_apply_to_non_carbon_atoms_also = true;
       }
 
+      static std::string file_to_string(const std::string &fn);
+
    public:
 
       // enum refine_residues_mode {SINGLE, TRIPLE, QUINTUPLE, HEPTUPLE, SPHERE, BIG_SPHERE, CHAIN, ALL};
@@ -523,6 +528,13 @@ namespace coot {
       int undo(); // 20221018-PE return status not yet useful
       int redo(); // likewise
       int write_coordinates(const std::string &file_name) const; // return 0 on OK, 1 on failure
+
+      //! @return a model molecule imol as a string. Return emtpy string on error
+      std::string molecule_to_PDB_string() const;
+
+      //! @return a model molecule imol as a string. Return emtpy string on error
+      std::string molecule_to_mmCIF_string() const;
+
       std::vector<atom_spec_t> get_fixed_atoms() const;
 
       std::vector<std::string> chains_in_model() const;
@@ -531,6 +543,9 @@ namespace coot {
       residue_spec_t get_residue_closest_to(mmdb::Manager *mol, const clipper::Coord_orth &co) const;
 
       std::vector<std::string> get_chain_ids() const;
+
+      //! Get the chains that are related by NCS:
+      std::vector<std::vector<std::string> > get_ncs_related_chains() const;
 
       // ----------------------- model bonds
 
@@ -635,7 +650,7 @@ namespace coot {
                                                       const std::string &style) const;
 
       simple_mesh_t get_gaussian_surface(float sigma, float contour_level,
-                                       float box_radius, float grid_scale) const;
+                                         float box_radius, float grid_scale, float fft_b_factor) const;
 
       simple_mesh_t get_chemical_features_mesh(const std::string &cid, const protein_geometry &geom) const;
 
@@ -912,6 +927,8 @@ namespace coot {
       std::vector<mmdb::Residue *> select_residues(const residue_spec_t &spec, const std::string &mode) const;
       //! resno_start and resno_end are inclusive
       std::vector<mmdb::Residue *> select_residues(const std::string &chain_id, int resno_start, int resno_end) const;
+      //! 
+      std::vector<mmdb::Residue *> select_residues(const std::string &multi_cid, const std::string &mode) const;
 
       //! real space refinement
       int refine_direct(std::vector<mmdb::Residue *> rv, const std::string &alt_loc, const clipper::Xmap<float> &xmap,

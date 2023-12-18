@@ -664,6 +664,46 @@ molecules_container_t::get_group_for_monomer(const std::string &residue_name) co
 }
 
 
+#if 0 // 20231129-PE Cairo is not allowed.
+#include <GraphMol/MolDraw2D/MolDraw2DCairo.h>
+#include "lidia-core/rdkit-interface.hh"
+#endif
+
+//! write a PNG for the given compound_id
+void
+molecules_container_t::write_png(const std::string &compound_id, int imol_enc,
+                                 const std::string &file_name) const {
+
+#if 0 // 20231129-PE Cairo is not allowed.
+
+   // For now, let's use RDKit PNG depiction, not lidia-core/pyrogen
+
+   std::pair<short int, coot::dictionary_residue_restraints_t> r_p =
+      geom.get_monomer_restraints(compound_id, imol_enc);
+
+   std::cout << ":::::::::::::::::::::::::: r_p.first " << r_p.first << std::endl;
+   if (r_p.first) {
+      const auto &restraints = r_p.second;
+      std::pair<int, RDKit::RWMol> mol_pair = coot::rdkit_mol_with_2d_depiction(restraints);
+      std::cout << ":::::::::::::::::::::::::: mol_pair.first " << mol_pair.first << std::endl;
+      int conf_id = mol_pair.first;
+      if (conf_id >= 0) {
+         const auto &rdkit_mol(mol_pair.second);
+         RDKit::MolDraw2DCairo drawer(500, 500);
+         drawer.drawMolecule(rdkit_mol, nullptr, nullptr, nullptr, conf_id);
+         drawer.finishDrawing();
+         std::string dt = drawer.getDrawingText();
+         std::ofstream f(file_name.c_str());
+         f << dt;
+         f << "\n";
+         f.close();
+      }
+   }
+#endif
+}
+
+
+
 // 20221030-PE nice to have one day
 // int
 // molecules_container_t::get_monomer_molecule_by_network(const std::string &text) {
@@ -1785,13 +1825,11 @@ molecules_container_t::get_map_contours_mesh(int imol, double position_x, double
                                              float radius, float contour_level) {
 
    auto tp_0 = std::chrono::high_resolution_clock::now();
-   auto tp_1 = std::chrono::high_resolution_clock::now();
    coot::simple_mesh_t mesh;
    try {
       if (is_valid_map_molecule(imol)) {
          clipper::Coord_orth position(position_x, position_y, position_z);
          if (updating_maps_info.maps_need_an_update) {
-            tp_1 = std::chrono::high_resolution_clock::now();
             update_updating_maps(updating_maps_info.imol_model);
          }
 
@@ -1803,14 +1841,8 @@ molecules_container_t::get_map_contours_mesh(int imol, double position_x, double
    catch (...) {
       std::cout << "An error occured in " << __FUNCTION__<< "() - this should not happen " << std::endl;
    }
-   auto tp_2 = std::chrono::high_resolution_clock::now();
-   if (show_timings) {
-      auto d10 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_1 - tp_0).count();
-      auto d21 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_2 - tp_1).count();
-      auto d20 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_2 - tp_0).count();
-      std::cout << "---------- timings: for get_map_contours_mesh(): : " << d10 << " " << d20 << " ms "
-                << "with " << d21 << " ms for sfc" << std::endl;
-   }
+   auto tp_1 = std::chrono::high_resolution_clock::now();
+   contouring_time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_1 - tp_0).count();
    return mesh;
 }
 
@@ -2446,11 +2478,26 @@ molecules_container_t::refine_residues_using_atom_cid(int imol, const std::strin
    // std::cout << "starting refine_residues_using_atom_cid() with imol_refinement_map " << imol_refinement_map
    // << std::endl;
 
+   auto debug_selected_residues = [cid] (const std::vector<mmdb::Residue *> &rv) {
+      std::cout << "refine_residues_using_atom_cid(): selected these " << rv.size() << " residues "
+         " from cid: " << cid << std::endl;
+      std::vector<mmdb::Residue *>::const_iterator it;
+      for (it=rv.begin(); it!=rv.end(); ++it) {
+         std::cout << "   " << coot::residue_spec_t(*it) << std::endl;
+      }
+   };
+
+
    int status = 0;
    if (is_valid_model_molecule(imol)) {
       if (is_valid_map_molecule(imol_refinement_map)) {
-         coot::atom_spec_t spec = atom_cid_to_atom_spec(imol, cid);
-         status = refine_residues(imol, spec.chain_id, spec.res_no, spec.ins_code, spec.alt_conf, mode, n_cycles);
+         // coot::atom_spec_t spec = atom_cid_to_atom_spec(imol, cid);
+         // status = refine_residues(imol, spec.chain_id, spec.res_no, spec.ins_code, spec.alt_conf, mode, n_cycles);
+         std::vector<mmdb::Residue *> rv = molecules[imol].select_residues(cid, mode);
+
+         // debug_selected_residues(rv);
+         std::string alt_conf = "";
+         status = refine_direct(imol, rv, alt_conf, n_cycles);
       } else {
          std::cout << "WARNING:: " << __FUNCTION__ << " Not a valid map molecule " << imol_refinement_map << std::endl;
       }
@@ -3836,11 +3883,11 @@ molecules_container_t::get_interesting_places(int imol, const std::string &mode)
 //! get Gaussian surface representation
 coot::simple_mesh_t
 molecules_container_t::get_gaussian_surface(int imol, float sigma, float contour_level,
-                                            float box_radius, float grid_scale) const {
+                                            float box_radius, float grid_scale, float fft_b_factor) const {
 
    coot::simple_mesh_t mesh;
    if (is_valid_model_molecule(imol)) {
-      mesh = molecules[imol].get_gaussian_surface(sigma, contour_level, box_radius, grid_scale);
+      mesh = molecules[imol].get_gaussian_surface(sigma, contour_level, box_radius, grid_scale, fft_b_factor);
    } else {
       std::cout << "debug:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -4661,7 +4708,7 @@ molecules_container_t::find_water_baddies(int imol_model, int imol_map,
    if (is_valid_model_molecule(imol_model)) {
       if (is_valid_map_molecule(imol_map)) {
 
-         float map_sigma = molecules[imol_model].get_map_rmsd_approx();
+         float map_sigma = molecules[imol_map].get_map_rmsd_approx();
          v = coot::find_water_baddies_OR(molecules[imol_model].atom_sel,
                                          b_factor_lim,
                                          molecules[imol_map].xmap,
@@ -4689,6 +4736,42 @@ molecules_container_t::get_cif_file_name(const std::string &comp_id, int imol_en
    return fn;
 }
 
+//! @return a string that is the contents of a dictionary cif file
+std::string
+molecules_container_t::get_cif_restraints_as_string(const std::string &comp_id, int imol_enc) const {
+
+   // make this a util function, or a class function at least
+   auto file_to_string = [] (const std::string &file_name) {
+      std::string s;
+      std::string line;
+      std::ifstream f(file_name.c_str());
+      if (!f) {
+         std::cout << "get_cif_restraints_as_string(): Failed to open " << file_name << std::endl;
+      } else {
+         while (std::getline(f, line)) {
+            s += line;
+            s += "\n";
+         }
+      }
+      return s;
+   };
+
+   std::string r;
+   std::pair<short int, coot::dictionary_residue_restraints_t> r_p =
+      geom.get_monomer_restraints(comp_id, imol_enc);
+
+   if (r_p.first) {
+      const auto &dict = r_p.second;
+      std::string fn("tmp.cif");
+      dict.write_cif(fn);
+      if (coot::file_exists(fn)) {
+         r = file_to_string(fn);
+      }
+   }
+   return r;
+}
+
+
 //! @return a list of residues specs that have atoms within dist of the atoms of the specified residue
 std::vector<coot::residue_spec_t>
 molecules_container_t::get_residues_near_residue(int imol, const std::string &residue_cid, float dist) const {
@@ -4703,3 +4786,86 @@ molecules_container_t::get_residues_near_residue(int imol, const std::string &re
 
 }
 
+
+//! Get the chains that are related by NCS:
+std::vector<std::vector<std::string> >
+molecules_container_t::get_ncs_related_chains(int imol) const {
+
+   std::vector<std::vector<std::string> > v;
+   if (is_valid_model_molecule(imol)) {
+      v = molecules[imol].get_ncs_related_chains();
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return v;
+}
+
+
+//! @return the moldel molecule imol as a string. Return emtpy string on error
+std::string
+molecules_container_t::molecule_to_PDB_string(int imol) const {
+
+   std::string s;
+   if (is_valid_model_molecule(imol)) {
+      s = molecules[imol].molecule_to_PDB_string();
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return s;
+}
+
+//! @return the moldel molecule imol as a string. Return emtpy string on error
+std::string
+molecules_container_t::molecule_to_mmCIF_string(int imol) const {
+
+   std::string s;
+   if (is_valid_model_molecule(imol)) {
+      s = molecules[imol].molecule_to_mmCIF_string();
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return s;
+}
+
+
+//! return the hb_tye for the given atom. On failure return an empty string
+std::string
+molecules_container_t::get_hb_type(const std::string &compound_id, int imol_enc, const std::string &atom_name) const {
+
+   coot::hb_t hbt = geom.get_h_bond_type(atom_name, compound_id, imol_enc);
+   std::string hb;
+   if (hbt == coot::HB_UNASSIGNED) hb = "HB_UNASSIGNED";
+   if (hbt == coot::HB_NEITHER)    hb = "HB_NEITHER";
+   if (hbt == coot::HB_DONOR)      hb = "HB_DONOR";
+   if (hbt == coot::HB_ACCEPTOR)   hb = "HB_ACCEPTOR";
+   if (hbt == coot::HB_BOTH)       hb = "HB_BOTH";
+   if (hbt == coot::HB_HYDROGEN)   hb = "HB_HYDROGEN";
+   return hb;
+}
+
+
+
+//! get the time to run test test function in miliseconds
+double
+molecules_container_t::test_the_threading(int n_threads) {
+
+   auto reference_data = [] (const std::string &file) {
+      char *env = getenv("MOORHEN_TEST_DATA_DIR");
+      if (env) {
+         std::string joined = coot::util::append_dir_file(env, file);
+         return joined;
+      } else {
+         return file;
+      }
+   };
+
+   int imol_map = read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+   coot::set_max_number_of_threads(n_threads);
+   float radius = 50;
+   auto tp_0 = std::chrono::high_resolution_clock::now();
+   coot::simple_mesh_t map_mesh = get_map_contours_mesh(imol_map, 55,10,10, radius, 0.12);
+   auto tp_1 = std::chrono::high_resolution_clock::now();
+   auto d10 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_1 - tp_0).count();
+   close_molecule(imol_map);
+   return d10;
+}

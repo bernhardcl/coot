@@ -144,7 +144,7 @@ namespace molecule_map_type {
 #include "fragment-info.hh"
 #include "atom-name-bits.hh"
 #include "rama-rota-score.hh"
-#include "merge-molecule-results-info-t.hh"
+#include "api/merge-molecule-results-info-t.hh"
 #include "density-results-container-t.hh"
 
 #include "Shader.hh"
@@ -998,6 +998,8 @@ public:        //                      public
    //
    std::pair<bool,int> max_res_no_in_chain(mmdb::Chain *chain_p) const;
 
+   std::pair<bool,int> max_res_no_in_chain(const std::string &chain_id) const;
+   std::pair<bool,int> min_res_no_in_chain(const std::string &chain_id) const;
 
    void set_draw_hydrogens_state(int i) {
       if (draw_hydrogens_flag != i) {
@@ -1021,6 +1023,7 @@ public:        //                      public
    void make_ca_plus_ligands_and_sidechains_bonds(coot::protein_geometry *pg);
    void make_colour_by_chain_bonds(bool rebonding_is_needed); // simple/usual interfce to below function
    void make_colour_by_chain_bonds(const std::set<int> &no_bonds_to_these_atoms, bool c_only_flag, bool goodsell_mode, bool rebonding_is_needed);
+   void make_colour_by_ncs_related_chains(bool goodsell_mode); // presume rebonding *is* needed.
    void make_colour_by_molecule_bonds(bool rebonding_is_needed);
    void bonds_no_waters_representation();
    void bonds_sec_struct_representation();

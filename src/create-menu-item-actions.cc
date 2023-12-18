@@ -23,31 +23,13 @@
 
 extern "C" { void load_tutorial_model_and_data(); }
 
+
 extern "C" G_MODULE_EXPORT
 void on_coords_filechooser_dialog_response_gtk4(GtkDialog *dialog,
                                                 int        response) {
-
    if (response == GTK_RESPONSE_ACCEPT) {
-      GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
-      GFile *file   = gtk_file_chooser_get_file(chooser);
-      char *file_name = g_file_get_path(file);
-
-#if 0
-      GSList *files_list = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
-      while (files_list) {
-
-         const char *fnc = static_cast<const char *>(files_list->data);
-         if (fnc) {
-            std::string fn(fnc);
-            handle_read_draw_molecule_with_recentre(fn, 0);
-         }
-         files_list = g_slist_next(files_list);
-      }
-#endif
-
       bool move_molecule_here_flag = false;
       bool recentre_on_read_pdb_flag = true; // was false;
-
       const char *r = gtk_file_chooser_get_choice(GTK_FILE_CHOOSER(dialog), "recentering");
       if (r) {
          std::string sr(r);
@@ -57,22 +39,31 @@ void on_coords_filechooser_dialog_response_gtk4(GtkDialog *dialog,
             move_molecule_here_flag = true;
       }
 
-      if (file_name) {
-         std::cout << "INFO: " << file_name << " move_molecule_here_flag: " << move_molecule_here_flag
-                   << " recentre_on_read_pdb_flag " << recentre_on_read_pdb_flag << std::endl;
-         if (move_molecule_here_flag) {
-            handle_read_draw_molecule_and_move_molecule_here(file_name);
-         } else {
-            if (recentre_on_read_pdb_flag)
-               handle_read_draw_molecule_with_recentre(file_name, 1);
-            else
-               handle_read_draw_molecule_with_recentre(file_name, 0); // no recentre
+      GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
+      GListModel *lm = gtk_file_chooser_get_files(chooser);
+      guint n_items = g_list_model_get_n_items (lm);
+      if (n_items > 0) {
+         for (unsigned int i=0; i<n_items; i++) {
+            gpointer item = g_list_model_get_item(lm, i);
+            // std::cout << "   " << i << " " << item << std::endl;
+            GFile *f = G_FILE(item);
+            char *file_name = g_file_get_path(f);
+            // std::cout << "          file_name " << file_name << std::endl;
+            if (file_name) {
+               if (move_molecule_here_flag) {
+                  handle_read_draw_molecule_and_move_molecule_here(file_name);
+               } else {
+                  if (recentre_on_read_pdb_flag)
+                     handle_read_draw_molecule_with_recentre(file_name, 1);
+                  else
+                     handle_read_draw_molecule_with_recentre(file_name, 0); // no recentre
+               }
+            }
          }
       }
    }
    gtk_window_close(GTK_WINDOW(dialog));
 }
-
 
 void on_dataset_filechooser_dialog_response_gtk4(GtkDialog *dialog,
                                                  int        response) {
@@ -134,6 +125,7 @@ void open_coordinates_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                                                    ("_Open"),
                                                    GTK_RESPONSE_ACCEPT,
                                                    NULL);
+   gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), TRUE);
 
    // void gtk_file_chooser_add_choice (GtkFileChooser* chooser,
    //                                   const char* id,
@@ -262,7 +254,6 @@ void open_map_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    gtk_file_filter_add_pattern(filterselect, "*.mrc");
    gtk_file_filter_add_pattern(filterselect, "*.mrc.gz");
    gtk_file_filter_add_pattern(filterselect, "*.map.gz");
-   gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filterselect);
    gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filterselect);
    set_transient_for_main_window(dialog);
    gtk_widget_set_visible(dialog, TRUE);
@@ -1666,6 +1657,15 @@ background_dark_grey_action(G_GNUC_UNUSED GSimpleAction *simple_action,
 }
 
 void
+background_semi_dark_grey_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                                 G_GNUC_UNUSED GVariant *parameter,
+                                 G_GNUC_UNUSED gpointer user_data) {
+
+   graphics_info_t::background_colour = glm::vec3(0.207f,0.207f,0.207f);
+   graphics_info_t::graphics_draw();
+}
+
+void
 background_light_grey_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                         G_GNUC_UNUSED GVariant *parameter,
                         G_GNUC_UNUSED gpointer user_data) {
@@ -1918,11 +1918,17 @@ void replace_residue_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                             G_GNUC_UNUSED GVariant *parameter,
                             G_GNUC_UNUSED gpointer user_data) {
 
+   std::cout << "replace_residue_action() fill me! " << std::endl;
+
+   // use an overlay.
 }
 
 void rigid_body_fit_residue_ranges_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                                           G_GNUC_UNUSED GVariant *parameter,
                                           G_GNUC_UNUSED gpointer user_data) {
+   
+   safe_python_command("import coot_gui");
+   safe_python_command("coot_gui.rigid_body_refine_residue_ranges_gui()");
 
 }
 
@@ -1980,6 +1986,13 @@ fullscreen_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                   G_GNUC_UNUSED GVariant *parameter,
                   G_GNUC_UNUSED gpointer user_data) {
    fullscreen();
+}
+
+void
+gaussian_surface_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                        G_GNUC_UNUSED GVariant *parameter,
+                        G_GNUC_UNUSED gpointer user_data) {
+   show_gaussian_surface_overlay();
 }
 
 
@@ -3174,7 +3187,95 @@ rotate_translate_molecule(GSimpleAction *simple_action,
 }
 
 
+   // // Rigid-body Fit
+   // add_action("rigid_body_fit_residue",       rigid_body_fit_residue);
+   // add_action("rigid_body_fit_residue_range", rigid_body_fit_residue_range);
+   // add_action("rigid_body_fit_fragment",      rigid_body_fit_fragment);
+   // add_action("rigid_body_fit_chain",         rigid_body_fit_chain);
+   // add_action("rigid_body_fit_molecule",      rigid_body_fit_molecule);
 
+void
+rigid_body_fit_residue_action(GSimpleAction *simple_action,
+                              GVariant *parameter,
+                              gpointer user_data) {
+   graphics_info_t g;
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
+   if (pp.first) {
+      const auto &atom_spec = pp.second.second;
+      int imol = pp.second.first;
+      std::string atom_selection = "//" + atom_spec.chain_id + "/" + std::to_string(atom_spec.res_no);
+      rigid_body_refine_by_atom_selection(imol, atom_selection.c_str());
+      graphics_draw();
+   }
+}
+
+void
+rigid_body_fit_residue_range_action(GSimpleAction *simple_action,
+                                    GVariant *parameter,
+                                    gpointer user_data) {
+   graphics_info_t g;
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
+   if (pp.first) {
+      const auto &atom_spec = pp.second.second;
+      int imol = pp.second.first;
+      int res_no_1 = g.in_range_first_picked_atom.res_no;
+      int res_no_2 = g.in_range_second_picked_atom.res_no;
+      // std::cout << "debug:: ************ in_range_first_picked_atom "  << g.in_range_first_picked_atom  << std::endl;
+      // std::cout << "debug:: ************ in_range_second_picked_atom " << g.in_range_second_picked_atom << std::endl;
+      if (res_no_1 > res_no_2) std::swap(res_no_1, res_no_2);
+      std::string atom_selection = "//" + atom_spec.chain_id + "/" + std::to_string(res_no_1) + "-" + std::to_string(res_no_2);
+      rigid_body_refine_by_atom_selection(imol, atom_selection.c_str());
+      graphics_draw();
+   }
+}
+
+void
+rigid_body_fit_fragment_action(GSimpleAction *simple_action,
+                               GVariant *parameter,
+                               gpointer user_data) {
+   graphics_info_t g;
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
+   if (pp.first) {
+      const auto &atom_spec = pp.second.second;
+      int imol = pp.second.first;
+
+      mmdb::Residue *residue_p  = g.molecules[imol].get_residue(coot::residue_spec_t(atom_spec));
+      if (residue_p) {
+
+         float close_dist_max = 2.0;
+         mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
+         std::vector<mmdb::Residue *> residues = coot::simple_residue_tree(residue_p, mol, close_dist_max);
+         if (! residues.empty()) {
+
+            int res_no_1 =  99999;
+            int res_no_2 = -99999;
+            for (unsigned int i=0; i<residues.size(); i++) {
+               int rn = residues[i]->GetSeqNum();
+               if (rn < res_no_1) res_no_1 = rn;
+               if (rn > res_no_2) res_no_2 = rn;
+            }
+            std::string atom_selection = "//" + atom_spec.chain_id + "/" + std::to_string(res_no_1) + "-" + std::to_string(res_no_2);
+            rigid_body_refine_by_atom_selection(imol, atom_selection.c_str());
+            graphics_draw();
+         }
+      }
+   }
+}
+
+void
+rigid_body_fit_chain_action(GSimpleAction *simple_action,
+                            GVariant *parameter,
+                            gpointer user_data) {
+   graphics_info_t g;
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
+   if (pp.first) {
+      const auto &atom_spec = pp.second.second;
+      int imol = pp.second.first;
+      std::string atom_selection = "//" + atom_spec.chain_id;
+      rigid_body_refine_by_atom_selection(imol, atom_selection.c_str());
+      graphics_draw();
+   }
+}
 
 void
 mutate_to_type(GSimpleAction *simple_action,
@@ -3445,14 +3546,16 @@ create_actions(GtkApplication *application) {
 
    // Draw
 
-   add_action(       "background_black_action",        background_black_action);
-   add_action(  "background_light_grey_action",   background_light_grey_action);
-   add_action(   "background_dark_grey_action",    background_dark_grey_action);
-   add_action(       "background_white_action",        background_white_action);
+   add_action(          "background_black_action",          background_black_action);
+   add_action(     "background_light_grey_action",     background_light_grey_action);
+   add_action(      "background_dark_grey_action",      background_dark_grey_action);
+   add_action("background_semi_dark_grey_action",  background_semi_dark_grey_action);
+   add_action(          "background_white_action",          background_white_action);
    add_action(    "display_only_active_action",     display_only_active_action);
    add_action(        "bond_parameters_action",         bond_parameters_action);
    add_action(           "bond_colours_action",            bond_colours_action);
    add_action(             "fullscreen_action",              fullscreen_action);
+   add_action(       "gaussian_surface_action",        gaussian_surface_action);
    add_action(             "go_to_atom_action",              go_to_atom_action);
    add_action(         "label_CA_atoms_action",          label_CA_atoms_action);
    add_action(         "map_parameters_action",          map_parameters_action);
@@ -3542,6 +3645,13 @@ create_actions(GtkApplication *application) {
    add_action("rotate_translate_residue_range", rotate_translate_residue_range);
    add_action("rotate_translate_chain",         rotate_translate_chain);
    add_action("rotate_translate_molecule",      rotate_translate_molecule);
+
+   // Rigid-body Fit, molecule version is above already
+   add_action("rigid_body_fit_residue_action",       rigid_body_fit_residue_action);
+   add_action("rigid_body_fit_residue_range_action", rigid_body_fit_residue_range_action);
+   add_action("rigid_body_fit_fragment_action",      rigid_body_fit_fragment_action);
+   add_action("rigid_body_fit_chain_action",         rigid_body_fit_chain_action);
+   add_action("rigid_body_fit_molecule_action",      rigid_body_fit_molecule_action);
 
    // Mutate menu
    add_action_with_param("mutate_to_type", mutate_to_type);

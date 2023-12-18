@@ -144,6 +144,7 @@
 #include "Instanced-Markup-Mesh.hh"
 #include "Model.hh"
 #include "boids.hh"
+#include "meshed-particle-container.hh"
 // #include "graphics-ligand-view.hh"
 #include "graphics-ligand-mesh-molecule.hh"
 #include "restraints-editor.hh"
@@ -3451,6 +3452,9 @@ public:
    static Texture texture_for_anchored_atom_markers;
    static TextureMesh tmesh_for_anchored_atom_markers;
 
+   static std::vector<meshed_particle_container_t> meshed_particles_for_gone_diegos;
+   static void setup_draw_for_particles_for_new_gone_diegos(const std::vector<glm::vec3> &positions);
+   static void setup_draw_for_particles_for_gone_diegos(); // unused atm
 
    static bool draw_bad_nbc_atom_pair_markers_flag; // user can turn them off
    static void setup_draw_for_bad_nbc_atom_pair_markers();
@@ -4566,6 +4570,7 @@ string   static std::string sessionid;
      rotation_centre_z += offset.z;
    }
 
+   static bool using_trackpad;
    static double mouse_x;
    static double mouse_y;
    static double drag_begin_x; // gtk pixels
@@ -4700,7 +4705,7 @@ string   static std::string sessionid;
    static gboolean render(bool render_to_screendump_framebuffer_flag=false,
                           const std::string &output_file_name="coot-screendump.tga");
    static gboolean render_scene(); // like crows
-   enum { PASS_TYPE_STANDARD, PASS_TYPE_FOR_SHADOWS, PASS_TYPE_SSAO};
+   enum { PASS_TYPE_STANDARD, PASS_TYPE_GEN_SHADOW_MAP, PASS_TYPE_SSAO, PASS_TYPE_WITH_SHADOWS};
    static void render_scene_with_x_blur();
    static void render_scene_with_y_blur();
    static void render_scene_with_texture_combination_for_depth_blur();
@@ -5006,6 +5011,7 @@ string   static std::string sessionid;
    static bool do_tick_hydrogen_bonds_mesh;
    static bool do_tick_outline_for_active_residue;
    static bool do_tick_constant_draw;
+   static bool do_tick_gone_diegos;
 
    static void fullscreen();
    static void unfullscreen();
@@ -5287,6 +5293,13 @@ string   static std::string sessionid;
                                                                                                         // entry change callback
 
    static void add_shortcuts_to_window(GtkWidget *shortcuts_window);
+
+   static float gaussian_surface_sigma;
+   static float gaussian_surface_contour_level;
+   static float gaussian_surface_box_radius;
+   static float gaussian_surface_grid_scale;
+   static float gaussian_surface_fft_b_factor;
+   static short int gaussian_surface_chain_colour_mode;
 
    static bool use_sounds; // default true
 
