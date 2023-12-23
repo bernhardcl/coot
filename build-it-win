@@ -2423,6 +2423,7 @@ if test -n "$build_clipper" ; then
     # ${WGET} $extras_place/clipper-$clipper_version.tar.gz
     #${WGET} ftp://ftp.ccp4.ac.uk/opensource/clipper-$clipper_version.tar.gz
     ${WGET} $win_extras_place/clipper-$clipper_version.tar.gz
+    ${WGET} $win_extras_place/clipper_win64.patch
 
     ${WGET} $extras_place/clipper-configure-2.patch
 
@@ -2446,11 +2447,11 @@ if test -n "$build_clipper" ; then
     echo patching clipper with ${AUTOBUILD_SOURCES}/clipper-configure-2.patch
     patch -p0 < ${AUTOBUILD_SOURCES}/clipper-configure-2.patch
 
+    patch -p0 < ${AUTOBUILD_SOURCES}/clipper_win64.patch
+
     echo . ------------------------------------------------------------------------------
     echo . "         clipper                                                            "
     echo . ------------------------------------------------------------------------------
-    # BL says:: FIXME
-    # do we still need the patch?
     export     CPPFLAGS=-I$install_top_dir/include
     export      LDFLAGS="-L$install_top_dir/lib"
     echo CPPFLAGS $CPPFLAGS
