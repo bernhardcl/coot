@@ -66,6 +66,7 @@
 
 #include "pdbe-chem-comp-atom-depiction.hh"
 #include "gphl-chem-comp-info.hh"
+#include "pdbx-chem-comp-description-generator.hh"
 
 namespace coot {
 
@@ -797,6 +798,7 @@ namespace coot {
       std::vector   <dict_plane_restraint_t>   plane_restraint;
       std::vector   <dict_improper_dihedral_restraint_t>   improper_dihedral_restraint;
       pdbx_chem_comp_descriptor_container_t descriptors;
+      pdbx_chem_comp_description_generator_t description_generation;
       chem_comp_atom_depiction_t depiction;
       gphl_chem_comp_info_t gphl_chem_comp_info;
 
@@ -1384,6 +1386,8 @@ namespace coot {
       void pdbx_chem_comp_descriptor(mmdb::mmcif::PLoop mmCIFLoop, int imol_enc);
 
       void pdbe_chem_comp_atom_depiction(mmdb::mmcif::PLoop mmCIFLoop, int imol_enc);
+
+      void pdbx_chem_comp_description_generator(mmdb::mmcif::PLoop mmCIFLoop, int imol_enc);
 
       void gphl_chem_comp_info(mmdb::mmcif::PStruct structure, int imol_enc);
 

@@ -445,14 +445,23 @@ int test_density_mesh(molecules_container_t &mc) {
    int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
 
    clipper::Coord_orth p(55, 10, 10);
-   float radius = 12;
+   float radius = 22;
    float contour_level = 0.13;
+   mc.set_map_is_contoured_with_thread_pool(true);
    coot::simple_mesh_t map_mesh = mc.get_map_contours_mesh(imol_map, p.x(), p.y(), p.z(), radius, contour_level);
-   std::cout << "DEBUG:: test_density_mesh(): " << map_mesh.vertices.size() << " vertices and " << map_mesh.triangles.size()
-             << " triangles" << std::endl;
 
+   // std::cout << "DEBUG:: test_density_mesh(): " << map_mesh.vertices.size() << " vertices and " << map_mesh.triangles.size()
+   // << " triangles" << std::endl;
+
+   unsigned int size_1 = map_mesh.vertices.size();
    if (map_mesh.vertices.size() > 30000)
       status = 1;
+
+   mc.set_map_is_contoured_with_thread_pool(false);
+   coot::simple_mesh_t map_mesh_2 = mc.get_map_contours_mesh(imol_map, p.x(), p.y(), p.z(), radius, contour_level);
+   unsigned int size_2 = map_mesh_2.vertices.size();
+
+   std::cout << "compare sizes " << size_1 << " " << size_2 << std::endl;
 
    return status;
 }
@@ -1149,7 +1158,7 @@ int test_difference_map_contours(molecules_container_t &mc) {
          if (vertex.color[0] > vertex.color[2])
             status = 1;
    }
-   
+
    return status;
 }
 
@@ -3895,7 +3904,22 @@ int test_self_restraints(molecules_container_t &mc) {
    int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
    mc.generate_self_restraints(imol, 5.0);
    coot::instanced_mesh_t im = mc.get_extra_restraints_mesh(imol, 0);
-   if (im.geom[0].instancing_data_B.size() > 10) status = 1;
+   unsigned int size = im.geom[0].instancing_data_B.size();
+   if (size > 10) {
+      int imol_2 = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+      mc.generate_local_self_restraints(imol_2, 5, "//A/10");
+      im = mc.get_extra_restraints_mesh(imol_2, 0);
+      unsigned int size_1 = im.geom[0].instancing_data_B.size();
+      mc.generate_local_self_restraints(imol_2, 5, "//A/11-22");
+      im = mc.get_extra_restraints_mesh(imol_2, 0);
+      unsigned int size_2 = im.geom[0].instancing_data_B.size();
+      std::cout << "size-1 " << size_1 << " size-2: " << size_2 << std::endl;
+      if (size_1 > 10) {
+         if (size_2 > 2 * size_1) {
+            status = 1;
+         }
+      }
+   }
    return status;
 }
 
@@ -3988,8 +4012,17 @@ int test_pdbe_dictionary_depiction(molecules_container_t &mc) {
    // Just that the file is written. It is up to us to look at the image.
 
    mc.import_cif_dictionary(reference_data("MOI.restraints.cif"), coot::protein_geometry::IMOL_ENC_ANY); // from Oliver Smart
+
    mc.write_png("MOI", coot::protein_geometry::IMOL_ENC_ANY, "MOI-depiction.png");
-   if (coot::file_exists("MOI-depiction.png")) status = 1; // not a good test.
+
+   // if (coot::file_exists("MOI-depiction.png")) status = 1; // not a good test.
+
+   bool use_rdkit_rendering = true;
+   bool dark_background = false;
+   std::string svg = mc.get_svg_for_residue_type(coot::protein_geometry::IMOL_ENC_ANY, "MOI", use_rdkit_rendering, dark_background);
+   std::ofstream f("MOI.svg");
+   f << svg;
+   f.close();
    return status;
 }
 
@@ -4009,6 +4042,19 @@ int test_cif_writer(molecules_container_t &mc) {
       std::ofstream f("s2.out");
       f << s2;
       f.close();
+   }
+   return status;
+}
+
+int test_cif_gphl_chem_comp_info(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   mc.import_cif_dictionary(reference_data("HEM.restraints.cif"), coot::protein_geometry::IMOL_ENC_ANY);
+   const auto &info = mc.get_gphl_chem_comp_info("HEM", coot::protein_geometry::IMOL_ENC_ANY);
+   if (info.size() > 6) status = 1;
+   for (unsigned int i=0; i<info.size(); i++) {
+      std::cout << "   " << i << " " << info[i].first << " " << info[i].second << std::endl;
    }
    return status;
 }
@@ -4150,6 +4196,68 @@ int test_test_the_threading(molecules_container_t &mc) {
    return status;
 }
 
+int test_thread_launching(molecules_container_t &mc) {
+
+   int status = 1; // no failure
+   for (unsigned int i=1; i<50; i++) {
+      for (unsigned int j=1; j<50; j++) {
+         double t = mc.test_launching_threads(j, i);
+         std::cout << " launching " << j << " " << i << " : " << t << " micro-seconds " << std::endl;
+      }
+   }
+   return status;
+}
+
+int test_thread_pool(molecules_container_t &mc) {
+
+   int status = 1; // no failure
+   for (unsigned int j=1; j<50; j++) {
+      double t = mc.test_thread_pool_threads(j);
+      std::cout << " launching " << j << " " << t << " micro-seconds " << std::endl;
+   }
+   return status;
+}
+
+int test_long_name_ligand_cif_merge(molecules_container_t &mc) {
+
+   int status = 0;
+   int imol = mc.read_pdb(reference_data("8a2q.cif"));
+   mc.import_cif_dictionary(reference_data("7ZTVU.cif"), coot::protein_geometry::IMOL_ENC_ANY);
+
+   return status;
+}
+
+
+#include "gemmi/mmread.hpp"
+#include "gemmi/mmdb.hpp"
+
+int test_disappearing_ligand(molecules_container_t &mc) {
+
+   int status = 0;
+   // int imol = mc.read_pdb(reference_data("6ttq.cif")); // needs gemmi
+   int imol = mc.read_pdb(reference_data("8a2q.cif"));
+   mmdb::Manager *mol = mc.get_mol(imol);
+   for(int imod = 1; imod<=mol->GetNumberOfModels(); imod++) {
+      mmdb::Model *model_p = mol->GetModel(imod);
+      if (model_p) {
+         int n_chains = model_p->GetNumberOfChains();
+         for (int ichain=0; ichain<n_chains; ichain++) {
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
+            int n_res = chain_p->GetNumberOfResidues();
+            std::cout << "    " << chain_p->GetChainID() << " " << n_res << " residues " << std::endl;
+         }
+      }
+   }
+   mc.import_cif_dictionary(reference_data("MOI.restraints.cif"), coot::protein_geometry::IMOL_ENC_ANY);
+   int imol_lig = mc.get_monomer("MOI");
+   std::string sl = std::to_string(imol_lig);
+   std::pair<int, std::vector<merge_molecule_results_info_t> > ss = mc.merge_molecules(imol, sl);
+   mc.write_coordinates(imol, "merged.cif");
+   gemmi::Structure st = gemmi::read_structure_file("merged.cif");
+
+   return status;
+}
+
 int test_template(molecules_container_t &mc) {
 
    starting_test(__FUNCTION__);
@@ -4276,7 +4384,21 @@ int main(int argc, char **argv) {
       status += run_test(test_molecular_representation, "molecular representation mesh", mc);
    }
 
-   status += run_test(test_test_the_threading, "threading speed test",    mc);
+   status += run_test(test_disappearing_ligand, "disappearning ligand", mc);
+
+   // status += run_test(test_long_name_ligand_cif_merge, "Long-name ligand cif merge", mc);
+
+   // status += run_test(test_pdbe_dictionary_depiction, "PDBe dictionary depiction", mc);
+
+   // status += run_test(test_density_mesh,          "density mesh",             mc);
+
+   // status += run_test(test_thread_pool, "thread pool",    mc);
+
+   // status += run_test(test_thread_launching, "thread launching",    mc);
+
+   // status += run_test(test_cif_gphl_chem_comp_info, "extracting gphl info",    mc);
+
+   // status += run_test(test_test_the_threading, "threading speed test",    mc);
 
    // status += run_test(test_ligand_fitting_in_map, "ligand fitting in map",    mc);
 

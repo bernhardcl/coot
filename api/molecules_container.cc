@@ -99,6 +99,11 @@ molecules_container_t::debug() const {
    }
 }
 
+void
+molecules_container_t::set_map_is_contoured_with_thread_pool(bool state) {
+   map_is_contoured_using_thread_pool_flag = state;
+}
+
 
 std::string
 molecules_container_t::get_molecule_name(int imol) const {
@@ -664,7 +669,7 @@ molecules_container_t::get_group_for_monomer(const std::string &residue_name) co
 }
 
 
-#if 0 // 20231129-PE Cairo is not allowed.
+#if RDKIT_HAS_CAIRO_SUPPORT // 20231129-PE Cairo is not allowed.
 #include <GraphMol/MolDraw2D/MolDraw2DCairo.h>
 #include "lidia-core/rdkit-interface.hh"
 #endif
@@ -674,11 +679,12 @@ void
 molecules_container_t::write_png(const std::string &compound_id, int imol_enc,
                                  const std::string &file_name) const {
 
-#if 0 // 20231129-PE Cairo is not allowed.
+#if RDKIT_HAS_CAIRO_SUPPORT // 20231129-PE Cairo is not allowed in Moorhen.
+                            // 20231221-PE but is in Coot.
 
    // For now, let's use RDKit PNG depiction, not lidia-core/pyrogen
 
-   std::pair<short int, coot::dictionary_residue_restraints_t> r_p =
+   std::pair<bool, coot::dictionary_residue_restraints_t> r_p =
       geom.get_monomer_restraints(compound_id, imol_enc);
 
    std::cout << ":::::::::::::::::::::::::: r_p.first " << r_p.first << std::endl;
@@ -1833,7 +1839,7 @@ molecules_container_t::get_map_contours_mesh(int imol, double position_x, double
             update_updating_maps(updating_maps_info.imol_model);
          }
 
-         mesh = molecules[imol].get_map_contours_mesh(position, radius, contour_level);
+         mesh = molecules[imol].get_map_contours_mesh(position, radius, contour_level, map_is_contoured_using_thread_pool_flag, &static_thread_pool);
       } else {
          std::cout << "WARNING:: get_map_contours_mesh() Not a valid map molecule " << imol << std::endl;
       }
@@ -4142,16 +4148,23 @@ molecules_container_t::generate_chain_self_restraints(int imol,
 //! `residue_cids" is a "||"-separated list of residues, e.g. "//A/12||//A/14||/B/56"
 void
 molecules_container_t::generate_local_self_restraints(int imol, float local_dist_max,
-                                                      const std::string & residue_cids) {
+                                                      const std::string &multi_selection_cid) {
+
+   std::string residue_cids = multi_selection_cid; // 20231220-PE old style, residue by residue
+   bool do_old_style = false;
    if (is_valid_model_molecule(imol)) {
-      std::vector<coot::residue_spec_t> residue_specs;
-      std::vector<std::string> parts = coot::util::split_string(residue_cids, "||");
-      for (const auto &part : parts) {
-         coot::residue_spec_t rs = residue_cid_to_residue_spec(imol, part);
-         if (! rs.empty())
-            residue_specs.push_back(rs);
+      if (do_old_style) {
+         std::vector<coot::residue_spec_t> residue_specs;
+         std::vector<std::string> parts = coot::util::split_string(residue_cids, "||");
+         for (const auto &part : parts) {
+            coot::residue_spec_t rs = residue_cid_to_residue_spec(imol, part);
+            if (! rs.empty())
+               residue_specs.push_back(rs);
+         }
+         molecules[imol].generate_local_self_restraints(local_dist_max, residue_specs, geom);
+      } else {
+         molecules[imol].generate_local_self_restraints(local_dist_max, multi_selection_cid, geom);
       }
-      molecules[imol].generate_local_self_restraints(local_dist_max, residue_specs, geom);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -4757,7 +4770,7 @@ molecules_container_t::get_cif_restraints_as_string(const std::string &comp_id, 
    };
 
    std::string r;
-   std::pair<short int, coot::dictionary_residue_restraints_t> r_p =
+   std::pair<bool, coot::dictionary_residue_restraints_t> r_p =
       geom.get_monomer_restraints(comp_id, imol_enc);
 
    if (r_p.first) {
@@ -4844,6 +4857,14 @@ molecules_container_t::get_hb_type(const std::string &compound_id, int imol_enc,
 }
 
 
+#include "utils/coot-utils.hh"
+
+//! set the maximum number of threads in a thread pool
+void
+molecules_container_t::set_max_number_of_threads_in_thread_pool(unsigned int n_threads) {
+   coot::set_max_number_of_threads(n_threads);
+   static_thread_pool.resize(n_threads);
+}
 
 //! get the time to run test test function in miliseconds
 double
@@ -4868,4 +4889,74 @@ molecules_container_t::test_the_threading(int n_threads) {
    auto d10 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_1 - tp_0).count();
    close_molecule(imol_map);
    return d10;
+}
+
+double
+molecules_container_t::test_launching_threads(unsigned int n_threads_per_batch, unsigned int n_batches) const {
+
+   auto sum = [] (unsigned int i, unsigned int j) {
+      return i+j;
+   };
+
+   if (n_threads_per_batch == 0) {
+      return -1.0;
+   } else {
+      if (n_batches == 0) {
+         return -2.0;
+      } else {
+         auto tp_0 = std::chrono::high_resolution_clock::now();
+         for (unsigned int i=0; i<n_batches; i++) {
+            std::vector<std::thread> threads;
+            for (unsigned int j=0; j<n_threads_per_batch; j++)
+               threads.push_back(std::thread(sum, i, j));
+            for (unsigned int j=0; j<n_threads_per_batch; j++)
+               threads[j].join();
+         }
+         auto tp_1 = std::chrono::high_resolution_clock::now();
+         auto d10 = std::chrono::duration_cast<std::chrono::microseconds>(tp_1 - tp_0).count();
+         double time_per_patch = d10/static_cast<double>(n_batches);
+         return time_per_patch;
+      }
+   }
+}
+
+//! @return time in microsections
+double
+molecules_container_t::test_thread_pool_threads(unsigned int n_threads) const {
+
+   auto sum = [] (unsigned int thread_index, unsigned int i, unsigned int j, std::atomic<unsigned int> &done_count_for_threads) {
+      done_count_for_threads++;
+      return i+j;
+   };
+
+   double t = 0;
+   auto tp_0 = std::chrono::high_resolution_clock::now();
+   std::atomic<unsigned int> done_count_for_threads(0);
+
+   for (unsigned int i=0; i<n_threads; i++) {
+      static_thread_pool.push(sum, i, i, std::ref(done_count_for_threads));
+   }
+   while (done_count_for_threads < n_threads)
+      std::this_thread::sleep_for(std::chrono::nanoseconds(300));
+
+   auto tp_1 = std::chrono::high_resolution_clock::now();
+   auto d10 = std::chrono::duration_cast<std::chrono::microseconds>(tp_1 - tp_0).count();
+   t = d10;
+   return t;
+
+}
+
+
+//! @return a vector of string pairs that were part of a gphl_chem_comp_info.
+//!  return an empty vector on failure to find any such info.
+std::vector<std::pair<std::string, std::string> >
+molecules_container_t::get_gphl_chem_comp_info(const std::string &compound_id, int imol_enc) {
+
+   std::vector<std::pair<std::string, std::string> > v;
+   std::pair<bool, coot::dictionary_residue_restraints_t> r_p =
+      geom.get_monomer_restraints(compound_id, imol_enc);
+   if (r_p.first) {
+      v = r_p.second.gphl_chem_comp_info.info;
+   }
+   return v;
 }

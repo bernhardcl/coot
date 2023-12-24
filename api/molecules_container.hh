@@ -304,6 +304,7 @@ class molecules_container_t {
 
    void debug() const;
 
+   bool map_is_contoured_using_thread_pool_flag;
    double contouring_time;
 
 public:
@@ -512,6 +513,10 @@ public:
    //! @return the hb_type for the given atom. On failure return an empty string.
    //! Valid types are: "HB_UNASSIGNED" ,"HB_NEITHER", "HB_DONOR", "HB_ACCEPTOR", "HB_BOTH", "HB_HYDROGEN".
    std::string get_hb_type(const std::string &compound_id, int imol_enc, const std::string &atom_name) const;
+
+   //! @return a vector of string pairs that were part of a gphl_chem_comp_info.
+   //!  return an empty vector on failure to find any such info.
+   std::vector<std::pair<std::string, std::string> > get_gphl_chem_comp_info(const std::string &compound_id, int imol_enc);
 
    //! write a PNG for the given compound_id. imol can be IMOL_ENC_ANY
    //! Currently this function does nothing (drawing is done with the not-allowed cairo)
@@ -841,6 +846,9 @@ public:
    //! This does not affect the colour of the difference maps.
    void set_map_colour(int imol, float r, float g, float b);
 
+   //! set the state of the mode of the threading in map contouring
+   void set_map_is_contoured_with_thread_pool(bool state);
+
    //! get the mesh for the map contours.
    //!
    //! This function is not **const** because the internal state of a `coot_molecule_t` is changed.
@@ -1017,9 +1025,9 @@ public:
    //! @return the molecule centre
    coot::Cartesian get_molecule_centre(int imol) const;
 
-   //! copy a fragment
+   //! copy a fragment given the multi_cid selection string.
    //! @return the new molecule number (or -1 on no atoms selected)
-   int copy_fragment_using_cid(int imol, const std::string &cid);
+   int copy_fragment_using_cid(int imol, const std::string &multi_cid);
 
    //! copy a fragment - use this in preference to `copy_fragment_using_cid()` when copying
    //! a molecule fragment to make a molten zone for refinement.
@@ -1281,17 +1289,24 @@ public:
 
    //! calculate the MMRRCC for the residues in the chain
    //! Multi Masked Residue Range Corellation Coefficient
+#ifdef SWIG
+#else
    std::pair<std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t>,
              std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t> >
    mmrrcc(int imol, const std::string &chain_id, int imol_map) const;
+#endif
 
    //! calculate the MMRRCC for the residues in the chain
    //! Multi Masked Residue Range Corellation Coefficient
+#ifdef SWIG
+#else
    std::pair<std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t>,
              std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t> >
    mmrrcc_internal(const atom_selection_container_t &asc,
                    const std::string &chain_id,
                    const clipper::Xmap<float> &xmap) const;
+#endif
+
    // -------------------------------- Rail Points ------------------------------------------
    //! \name Rail Points!
 
@@ -1483,11 +1498,20 @@ public:
    //! get the stats for the long-term job (testing function)
    ltj_stats_t testing_interrogate_long_term_job() { return long_term_job_stats; }
 
-   //! get the time for conntouring in miliseconds
+   //! get the time for conntouring in milliseconds
    double get_contouring_time() const { return contouring_time; }
 
-   //! get the time to run test test function in miliseconds
+   //! set the maximum number of threads in a thread pool
+   void set_max_number_of_threads_in_thread_pool(unsigned int n_threads);
+
+   //! get the time to run a test function in milliseconds
    double test_the_threading(int n_threads);
+
+   //! @return the time per batch in microseconds
+   double test_launching_threads(unsigned int n_threads_per_batch, unsigned int n_batches) const;
+
+   //! @return time in microsections
+   double test_thread_pool_threads(unsigned int n_threads) const;
 
    // -------------------------------- Other ---------------------------------------
 
