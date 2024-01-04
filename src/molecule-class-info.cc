@@ -287,7 +287,7 @@ molecule_class_info_t::setup_internal() { // init
 
    material_for_models.do_specularity = true;
    material_for_models.specular_strength = 1.0;
-   
+
    map_as_mesh.set_name("empty map molecule mesh");
    model_molecule_meshes.set_name("empty model molecule mesh");
 
@@ -561,7 +561,9 @@ molecule_class_info_t::handle_read_draw_molecule(int imol_no_in,
       g.run_post_read_model_hook(imol_no);
 
       // save state strings
-      save_state_command_strings_.push_back("handle-read-draw-molecule");
+      // 20231228-PE hack in the "coot." for now and remove it later when
+      // writing a scheme script (not done ATM as far as I know).
+      save_state_command_strings_.push_back("coot.handle-read-draw-molecule");
       std::string f1 = coot::util::intelligent_debackslash(filename);
       std::string f2 = coot::util::relativise_file_name(f1, cwd);
       save_state_command_strings_.push_back(single_quote(f2));
@@ -9527,7 +9529,7 @@ molecule_class_info_t::set_map_colour_strings() const {
 
    std::vector<std::string> r;
 
-   r.push_back("set-last-map-colour");
+   r.push_back("coot.set-last-map-colour");
    r.push_back(graphics_info_t::float_to_string(map_colour.red));
    r.push_back(graphics_info_t::float_to_string(map_colour.green));
    r.push_back(graphics_info_t::float_to_string(map_colour.blue));
@@ -10122,7 +10124,7 @@ std::vector <std::string>
 molecule_class_info_t::get_map_contour_strings() const {
 
    std::vector <std::string> s;
-   s.push_back("set-last-map-contour-level");
+   s.push_back("coot.set-last-map-contour-level");
    char cs[100];
    snprintf(cs, 99, "%e", contour_level);
    s.push_back(cs);
@@ -10134,7 +10136,7 @@ std::vector <std::string>
 molecule_class_info_t::get_map_contour_sigma_step_strings() const {
 
    std::vector <std::string> s;
-   s.push_back("set-last-map-sigma-step");
+   s.push_back("coot.set-last-map-sigma-step");
    s.push_back(graphics_info_t::float_to_string(contour_sigma_step));
 
 //    s.push_back("set_contour_by_sigma_step_by_mol");
@@ -10691,6 +10693,8 @@ molecule_class_info_t::update_self(const coot::mtz_to_map_info_t &mmi) {
 
 }
 
+#include "coot-utils/diff-diff-map-peaks.hh"
+
 // update this difference map if the coordinates of the other molecule have changed.
 //
 // static (!) - this is a callback function
@@ -10736,10 +10740,35 @@ molecule_class_info_t::watch_coordinates_updates(gpointer data) {
                   clipper::Xmap<float> *xmap_2fofc_p = &g.molecules[imol_data].xmap;
                   clipper::Xmap<float> *xmap_fofc_p  = &g.molecules[imol_diff_map].xmap;
 
+                  // save the old (current) difference map
+                  g.molecules[imol_diff_map].updating_map_previous_difference_map = g.molecules[imol_diff_map].xmap;
+
                   coot::util::sfcalc_genmap_stats_t stats =
                      g.sfcalc_genmaps_using_bulk_solvent(imol_coords, imol_data, xmap_2fofc_p, xmap_fofc_p);
 
                   g.latest_sfcalc_stats = stats;
+
+                  // ------------ gone diff map peaks ---------------
+                  float base_level = 0.2;
+                  clipper::Coord_orth screen_centre(g.X(), g.Y(), g.Z());
+                  auto diff_diff_map_peaks = coot::diff_diff_map_peaks(g.molecules[imol_diff_map].updating_map_previous_difference_map,
+                                                                       g.molecules[imol_diff_map].xmap, base_level);
+                  clipper::Cell       cell       = g.molecules[imol_diff_map].xmap.cell();
+                  clipper::Spacegroup spacegroup = g.molecules[imol_diff_map].xmap.spacegroup();
+                  auto moved_peaks = coot::move_peaks_to_around_position(screen_centre, spacegroup, cell, diff_diff_map_peaks);
+                  std::cout << "INFO:: moved peaks " << moved_peaks.size() << std::endl;
+                  // the first one, where we shift from Refmac map to Clipper map has many thousands
+                  // of peaks. So ignore that one.
+                  if (moved_peaks.size() < 1000) {
+                     std::vector<std::pair<glm::vec3, float> > positions(moved_peaks.size());
+                     for (unsigned int i=0; i<moved_peaks.size(); i++) {
+                        const auto &p = moved_peaks[i].first;
+                        float f = moved_peaks[i].second;
+                        positions[i] = std::make_pair(glm::vec3(p.x(), p.y(), p.z()), f);
+                     }
+                     g.setup_draw_for_particles_for_gone_diff_map_peaks(positions);
+                  }
+                  // ------------ done gone diff map peaks ---------------
 
                   // 20230501-PE tweak the contour levels so that the levels (number of lines in the mesh)
                   // are about the same
