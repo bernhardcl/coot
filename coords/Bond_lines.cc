@@ -96,6 +96,7 @@ Bond_lines_container::Bond_lines_container(const atom_selection_container_t &Sel
    do_disulfide_bonds_flag = do_disulphide_bonds_in;
    do_bonds_to_hydrogens = do_bonds_to_hydrogens_in;
    b_factor_scale = 1.0;
+   geom = 0;
    have_dictionary = 0;
    for_GL_solid_model_rendering = 0;
    n_atoms_in_atom_selection = SelAtom.n_selected_atoms;
@@ -183,6 +184,7 @@ Bond_lines_container::Bond_lines_container(atom_selection_container_t SelAtom,
    do_bonds_to_hydrogens = 1;
    b_factor_scale = 1.0;
    have_dictionary = 0;
+   geom = 0;
    for_GL_solid_model_rendering = 0;
    init();
    n_atoms_in_atom_selection = SelAtom.n_selected_atoms;
@@ -250,6 +252,7 @@ Bond_lines_container::Bond_lines_container(const atom_selection_container_t &Sel
 
    // std::cout << "Bond_lines_container() for B-factors! @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
 
+   geom = nullptr;
    verbose_reporting = 0;
    do_disulfide_bonds_flag = 1;
    udd_has_ca_handle = -1;
@@ -2405,6 +2408,7 @@ Bond_lines_container::construct_from_asc(const atom_selection_container_t &SelAt
       add_rotamer_goodness_markup(SelAtom);
    }
    add_atom_centres(SelAtom, atom_colour_type);
+
    add_cis_peptide_markup(SelAtom, model_number);
 }
 
@@ -7685,8 +7689,10 @@ Bond_lines_container::add_atom_centres(const atom_selection_container_t &SelAtom
       delete atom_colour_map_p;
 }
 
+#include "coot-utils/coot-coord-extras.hh"
 
-// if model_number is 0, do all models
+// if model_number is 0, do all models.
+//
 void
 Bond_lines_container::add_cis_peptide_markup(const atom_selection_container_t &SelAtom, int model_number) {
 
@@ -7694,7 +7700,7 @@ Bond_lines_container::add_cis_peptide_markup(const atom_selection_container_t &S
    cis_peptide_quads.clear();
 
    std::vector<coot::util::cis_peptide_quad_info_t> quads =
-      coot::util::cis_peptide_quads_from_coords(SelAtom.mol, model_number);
+      coot::cis_peptide_quads_from_coords(SelAtom.mol, model_number, geom); // geom can be null.
 
    for (unsigned int i=0; i<quads.size(); i++) {
       bool keep_this = true;
