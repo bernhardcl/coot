@@ -1807,17 +1807,18 @@ int test_jiggle_fit(molecules_container_t &mc) {
       std::cout << "Second jiggle-fit test: using atom selection ------------------------------" << std::endl;
       imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-4.mtz"), "FWT", "PHWT", "W", false, false);
       int imol_start = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-4.pdb"));
-      int imol_other = mc.read_pdb("weird-orientation.pdb");
+      int imol_other = mc.read_pdb(reference_data("weird-orientation-tut-4.pdb"));
       if (mc.is_valid_model_molecule(imol_other)) {
-         // now test that we stared with bad fit to density
-         coot::validation_information_t vi_0 = mc.density_correlation_analysis(imol_start, imol_map);
-         coot::validation_information_t vi_1 = mc.density_correlation_analysis(imol_other, imol_map);
+         // now test that we started with bad fit to density
          // fit!
-         int imol_blur = mc.sharpen_blur_map(imol_map, 300, false);
+         int imol_blur = mc.sharpen_blur_map(imol_map, 200, false);
+         mc.write_map(imol_blur, "blurred.map");
          mc.imol_refinement_map = imol_blur;
-         mc.fit_to_map_by_random_jiggle_using_cid(imol_other, "//A", 100, 1);
+         coot::validation_information_t vi_0 = mc.density_correlation_analysis(imol_start, imol_blur);
+         coot::validation_information_t vi_1 = mc.density_correlation_analysis(imol_other, imol_blur);
+         mc.fit_to_map_by_random_jiggle_using_cid(imol_other, "//A", 5000, 2);
          // now test that we have good fit to density.
-         coot::validation_information_t vi_2 = mc.density_correlation_analysis(imol_other, imol_map);
+         coot::validation_information_t vi_2 = mc.density_correlation_analysis(imol_other, imol_blur);
 
          coot::stats::single s_0 = vi_0.get_stats();
          coot::stats::single s_1 = vi_1.get_stats();
@@ -1826,9 +1827,9 @@ int test_jiggle_fit(molecules_container_t &mc) {
          // 20230402-PE These results are disappointing - they are not as good as doing it interactively.
          // I wonder what the difference is.
 
-         std::cout << "orig:     mean " << std::fixed << std::right << s_0.mean() << " sd " << std::fixed << std::sqrt(s_0.variance()) << std::endl;
-         std::cout << "pre-fit:  mean " << std::fixed << std::right << s_1.mean() << " sd " << std::fixed << std::sqrt(s_1.variance()) << std::endl;
-         std::cout << "post-fit: mean " << std::fixed << std::right << s_2.mean() << " sd " << std::fixed << std::sqrt(s_2.variance()) << std::endl;
+         std::cout << "orig:     mean " << std::fixed << std::right << std::setw(10) << s_0.mean() << " sd " << std::fixed << std::sqrt(s_0.variance()) << std::endl;
+         std::cout << "pre-fit:  mean " << std::fixed << std::right << std::setw(10) << s_1.mean() << " sd " << std::fixed << std::sqrt(s_1.variance()) << std::endl;
+         std::cout << "post-fit: mean " << std::fixed << std::right << std::setw(10) << s_2.mean() << " sd " << std::fixed << std::sqrt(s_2.variance()) << std::endl;
 
          float d1 = s_0.mean() - s_2.mean();
          float d2 = s_2.mean() - s_1.mean();
@@ -2781,7 +2782,7 @@ int test_mmrrcc(molecules_container_t &mc) {
    if (false) {
       // Filo's example 11729 and 7adk
       imol = mc.read_pdb("pdb7adk.ent");
-      imol_map = mc.read_ccp4_map("emd_11729.map", 0);
+      imol_map = mc.read_ccp4_map(reference_data("emd_11729.map"), 0);
       auto results = mc.mmrrcc(imol, "B", imol_map);
       auto mc = results.first;
       auto sc = results.second;
@@ -3823,6 +3824,58 @@ int test_user_defined_bond_colours_v2(molecules_container_t &mc) {
    return status;
 }
 
+int test_user_defined_bond_colours_v3(molecules_container_t &mc) {
+
+      // from Filo:
+
+      // const imol = molecules_container.read_pdb('./4ri2.pdb')
+      // let colourMap = new cootModule.MapIntFloat3()
+      // let indexedResiduesVec = new cootModule.VectorStringUInt_pair()
+      // colourMap.set(51, [0.627, 0.529, 0.400])
+      // indexedResiduesVec.push_back( { first: '//A', second: 51 })
+      // colourMap.set(52, [0.424, 0.627, 0.400])
+      // indexedResiduesVec.push_back( { first: '//B', second: 52 })
+      // colourMap.set(53, [0.957, 0.263, 0.212])
+      // indexedResiduesVec.push_back( { first: '//', second: 53 })
+      // molecules_container.set_user_defined_bond_colours(imol, colourMap)
+      // molecules_container.set_user_defined_atom_colour_by_selection(imol, indexedResiduesVec, applyColourToNonCarbonAtoms)
+      // const bonds = molecules_container.get_bonds_mesh_for_selection_instanced(imol, '//', 'COLOUR-BY-CHAIN-AND-DICTIONARY')
+
+   auto close_float = [] (float a, float b) {
+      return fabsf(a - b) < 0.001;
+   };
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol = mc.read_pdb(reference_data("pdb4ri2.ent"));
+
+   if (mc.is_valid_model_molecule(imol)) {
+      std::map<unsigned int, std::array<float, 3> > colour_map;
+      colour_map[51] = {0.627, 0.529, 0.400};
+      colour_map[52] = {0.424, 0.627, 0.400};
+      colour_map[53] = {0.957, 0.263, 0.212};
+      bool C_only = false;
+      std::vector<std::pair<std::string, unsigned int> > indexed_residues_cids;
+      indexed_residues_cids.push_back(std::make_pair("//A", 51));
+      indexed_residues_cids.push_back(std::make_pair("//B", 52));
+      indexed_residues_cids.push_back(std::make_pair("//",  53));
+      mc.set_user_defined_bond_colours(imol, colour_map);
+      mc.set_user_defined_atom_colour_by_selection(imol, indexed_residues_cids, C_only);
+      std::string mode = "COLOUR-BY-CHAIN-AND-DICTIONARY";
+
+      // now test the colours:
+      auto bonds = mc.get_bonds_mesh_for_selection_instanced(imol, "/", mode, false, 0.2, 1.0, 1);
+      auto &geom = bonds.geom;
+      auto &vb   = geom[1].instancing_data_B; // bonds
+      colour_analysis(bonds);
+   }
+
+   return status;
+}
+
+
+
 int test_is_em_map(molecules_container_t &mc) {
 
    auto close_float = [] (float a, float b) {
@@ -3831,7 +3884,7 @@ int test_is_em_map(molecules_container_t &mc) {
 
    starting_test(__FUNCTION__);
    int status = 0;
-   int imol_map = mc.read_ccp4_map("emd_25074.map", 0);
+   int imol_map = mc.read_ccp4_map(reference_data("emd_25074.map"), 0);
    bool is_EM_map = mc.is_EM_map(imol_map);
    float cl = mc.get_suggested_initial_contour_level(imol_map);
    float rmsd = mc.get_map_rmsd_approx(imol_map);
@@ -3949,7 +4002,7 @@ int test_colour_map_by_other_map(molecules_container_t &mc) {
    starting_test(__FUNCTION__);
    int status = 0;
 
-   int imol_map_1 = mc.read_ccp4_map("emd_16890.map", false);
+   int imol_map_1 = mc.read_ccp4_map(reference_data("emd_16890.map"), false);
    int imol_map_2 = mc.read_ccp4_map("scale_res_emd_16890.mrc", false);
    if (mc.is_valid_map_molecule(imol_map_1)) {
       if (mc.is_valid_map_molecule(imol_map_2)) {
@@ -4258,6 +4311,78 @@ int test_disappearing_ligand(molecules_container_t &mc) {
    return status;
 }
 
+int test_gltf_export(molecules_container_t &mc) {
+
+   auto make_multi_cid = [] (const std::vector<coot::residue_spec_t> &neighbs) {
+
+      std::string multi_cid;
+      if (neighbs.size() == 1) {
+         multi_cid = "//" + neighbs[0].chain_id + "/" + std::to_string(neighbs[0].res_no);
+      }
+      if (neighbs.size() > 1) {
+         unsigned int m = neighbs.size() - 1;
+         for (unsigned int i=0; i<m; i++) {
+            const auto &n = neighbs[i];
+            std::string rs = "//" + n.chain_id + "/" + std::to_string(n.res_no);
+            multi_cid += rs;
+            multi_cid += "||";
+         }
+         multi_cid += "//" + neighbs.back().chain_id + "/" + std::to_string(neighbs.back().res_no);
+      }
+      return multi_cid;
+   };
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol     = mc.read_pdb(reference_data("2vtq.cif"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+   clipper::Coord_orth p(25, 4, 62);
+   float radius = 10;
+   float contour_level = 0.4;
+   std::cout << "-------------------------------------------------- map mesh " << std::endl;
+   coot::simple_mesh_t map_mesh = mc.get_map_contours_mesh(imol_map, p.x(), p.y(), p.z(), radius, contour_level);
+   map_mesh.export_to_gltf("map-around-ligand.glb", true);
+
+   std::cout << "-------------------------------------------------- ligand mesh " << std::endl;
+
+   std::string mode("COLOUR-BY-CHAIN-AND-DICTIONARY");
+   int imol_lig = mc.get_monomer("LZA");
+   int imol_frag = mc.copy_fragment_using_cid(imol, "//A/1299");
+   std::cout << "test_gltf_export() imol_frag " << imol_frag << std::endl;
+   coot::instanced_mesh_t im    = mc.get_bonds_mesh_instanced(imol_frag, mode, true, 0.1, 1.0, 1);
+   coot::simple_mesh_t sm_lig = coot::instanced_mesh_to_simple_mesh(im);
+   sm_lig.export_to_gltf("lig.glb", true);
+
+   std::cout << "-------------------------------------------------- neighbour mesh " << std::endl;
+   std::vector<coot::residue_spec_t> neighbs = mc.get_residues_near_residue(imol, "//A/1299", 4.2);
+   std::string multi_cid = make_multi_cid(neighbs);
+   mc.set_draw_missing_residue_loops(false);
+   coot::instanced_mesh_t im_neighbs = mc.get_bonds_mesh_for_selection_instanced(imol, multi_cid, mode, true, 0.15, 1.0, 1);
+   coot::simple_mesh_t sm_neighbs = coot::instanced_mesh_to_simple_mesh(im_neighbs);
+   sm_neighbs.export_to_gltf("neighbs.glb", true);
+
+   return status;
+}
+
+int test_5char_ligand_merge(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   int imol_enc = coot::protein_geometry::IMOL_ENC_ANY;
+
+   int imol     = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+   mc.import_cif_dictionary(reference_data("acedrg-7z-new.cif"), imol_enc);
+   int imol_lig = mc.get_monomer("7ZTVU");
+   if (mc.is_valid_model_molecule(imol)) {
+      mc.merge_molecules(imol, std::to_string(imol_lig));
+      mc.write_coordinates(imol, "5-char-ligand-merged.cif");
+      status = 1;
+   }
+   return status;
+}
+
 int test_template(molecules_container_t &mc) {
 
    starting_test(__FUNCTION__);
@@ -4330,13 +4455,14 @@ int main(int argc, char **argv) {
       status += run_test(test_density_correlation_validation, "density correlation validation",          mc);
       status += run_test(test_pepflips_using_difference_map, "Pepflips from Difference Map",             mc);
       status += run_test(test_difference_map_contours, "difference map density mesh", mc);
+      status += run_test(test_rota_dodecs_mesh,      "rotamer dodecahedra mesh", mc);
       status += run_test(test_rsr_using_residue_range, "rsr using residue range", mc);
       status += run_test(test_copy_fragment_using_cid, "copy-fragment using cid", mc);
       status += run_test(test_no_dictionary_residues,  "no-dictionary residues", mc);
+      status += run_test(test_cis_trans,             "cis_trans conversion",     mc);
       status += run_test(test_rsr_using_atom_cid,    "rsr using atom cid",       mc);
       status += run_test(test_auto_fit_rotamer_1,    "auto-fit rotamer",         mc);
       status += run_test(test_auto_fit_rotamer_2,    "auto-fit rotamer t2",      mc);
-      status += run_test(test_rota_dodecs_mesh,      "rotamer dodecahedra mesh", mc);
       status += run_test(test_delete_molecule,       "delete_moelcule",          mc);
       status += run_test(test_rama_balls_mesh,       "rama balls mesh",          mc);
       status += run_test(test_density_mesh,          "density mesh",             mc);
@@ -4350,13 +4476,11 @@ int main(int argc, char **argv) {
       status += run_test(test_rsr,                   "rsr",                      mc);
       status += run_test(test_jed_flip,              "JED Flip",                 mc);
       status += run_test(test_add_water,             "add waters",               mc);
-      status += run_test(test_cis_trans,             "cis_trans conversion",     mc);
       status += run_test(test_bonds_mesh,            "bonds mesh",               mc);
       status += run_test(test_eigen_flip,            "Eigen Flip",               mc);
       status += run_test(test_read_a_map,            "read a map",               mc);
       status += run_test(test_add_compound,          "add compound",             mc);
       status += run_test(test_weird_delete,          "delete II",                mc);
-      status += run_test(test_fill_partial,    "fill partially-filled residues", mc);
       status += run_test(test_add_alt_conf,          "add alt conf",             mc);
       status += run_test(test_delete_literal,        "delete literal",           mc);
       status += run_test(test_side_chain_180,        "side-chain 180",           mc);
@@ -4369,26 +4493,33 @@ int main(int argc, char **argv) {
       status += run_test(test_gaussian_surface,      "Gaussian surface",         mc);
       status += run_test(test_missing_atoms_info,    "missing atom info",        mc);
       status += run_test(test_move_molecule_here,    "move_molecule_here",       mc);
-      status += run_test(test_sequence_generator,    "Make a sequence string",   mc);
       status += run_test(test_rotamer_validation,    "rotamer validation",       mc);
       status += run_test(test_ligand_fitting_here,   "Ligand fitting here",      mc);
       status += run_test(test_ligand_contact_dots,   "ligand contact dots",      mc);
+      status += run_test(test_difference_map_peaks,  "Difference Map Peaks",     mc);
       status += run_test(test_rama_validation,       "rama validation 2",        mc); // for the plot, not the graph
       status += run_test(test_ramachandran_analysis, "ramachandran analysis",    mc); // for the graph, not the plot
-      status += run_test(test_difference_map_peaks,  "Difference Map Peaks",     mc);
       status += run_test(test_non_standard_residues, "non-standard residues",    mc);
       status += run_test(test_import_cif_dictionary, "import cif dictionary",    mc);
       status += run_test(test_add_terminal_residue,  "add terminal residue",     mc);
+      status += run_test(test_sequence_generator,    "Make a sequence string",   mc);
       status += run_test(test_instanced_rota_markup, "instanced rotamer mesh",   mc);
       status += run_test(test_new_position_for_atoms,"new positions for atoms",  mc);
       status += run_test(test_molecular_representation, "molecular representation mesh", mc);
+      status += run_test(test_fill_partial,          "fill partially-filled residues", mc);
    }
 
    // status += run_test(test_disappearing_ligand, "disappearning ligand", mc);
 
    // status += run_test(test_long_name_ligand_cif_merge, "Long-name ligand cif merge", mc);
 
-   status += run_test(test_pdbe_dictionary_depiction, "PDBe dictionary depiction", mc);
+   // status += run_test(test_pdbe_dictionary_depiction, "PDBe dictionary depiction", mc);
+
+   // status += run_test(test_user_defined_bond_colours_v3, "user-defined colours v3", mc);
+
+   // status += run_test(test_gltf_export, "glTF export", mc);
+
+   // status += run_test(test_5char_ligand_merge, "5-char ligand merge", mc);
 
    // status += run_test(test_density_mesh,          "density mesh",             mc);
 

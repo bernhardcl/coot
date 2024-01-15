@@ -280,6 +280,7 @@ class molecules_container_t {
 
    void init() {
 
+      use_gemmi = true;
       imol_refinement_map = -1;
       imol_difference_map = -1;
       geometry_init_standard(); // do this by default now
@@ -299,6 +300,7 @@ class molecules_container_t {
       interrupt_long_term_job = false;
       mmdb::InitMatType();
       contouring_time = 0;
+      make_backups_flag = true;
       // debug();
    }
 
@@ -325,6 +327,8 @@ public:
    //! I am not sure that this is needed - or will ever be.
    int imol_difference_map; // direct access
 
+   bool use_gemmi; // for mmcif and PDB parsing. 20240112-PE set to true by default in init()
+ 
    // -------------------------------- Basic Utilities -----------------------------------
    //! \name Basic Utilities
 
@@ -333,7 +337,7 @@ public:
    //! @return the backup-enabled state
    bool get_make_backups() const { return make_backups_flag; }
    //! the backup-enable state (raw public if needed/prefered)
-   inline static bool make_backups_flag = false; // does this need to be static?
+   bool make_backups_flag;
 
    //! @return the string of the contents of the given file-name.
    std::string file_name_to_string(const std::string &file_name) const;
@@ -590,6 +594,12 @@ public:
                                                                  bool against_a_dark_background,
                                                                  float bond_width, float atom_radius_to_bond_width_ratio,
                                                                  int smoothness_factor);
+
+   //! export map molecule as glTF
+   void export_map_molecule_as_gltf(int imol, const std::string &file_name) const;
+
+   //! export model molecule as glTF - This API will change - we want to specify surfaces and ribbons too.
+   void export_model_molecule_as_gltf(int imol, const std::string &file_name) const;
 
    //! return the colur table (for testing)
    std::vector<glm::vec4> get_colour_table(int imol, bool against_a_dark_background) const;
@@ -1511,7 +1521,10 @@ public:
    //! get the time for conntouring in milliseconds
    double get_contouring_time() const { return contouring_time; }
 
-   //! set the maximum number of threads in a thread pool
+   //! set the maximum number of threads for both the thread pool and the vector of threads
+   void set_max_number_of_threads(unsigned int n_threads);
+
+   //! deprecated name for the above function
    void set_max_number_of_threads_in_thread_pool(unsigned int n_threads);
 
    //! get the time to run a test function in milliseconds

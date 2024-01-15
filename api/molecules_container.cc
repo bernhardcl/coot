@@ -256,7 +256,7 @@ molecules_container_t::read_standard_residues() {
          // unresolved (linking related?) startup bug here:
          std::cout << "------------------ read_standard_residues() C map_sampling_rate " << map_sampling_rate << std::endl;
          std::cout << "------------------ read_standard_residues() C " << std::endl;
-         atom_selection_container_t t_asc = get_atom_selection(standard_file_name, false, true, false);
+         atom_selection_container_t t_asc = get_atom_selection(standard_file_name, true, true, false);
          std::cout << "------------------ read_standard_residues() D map_sampling_rate " << map_sampling_rate << std::endl;
          // std::cout << "------------------ read_standard_residues() D " << std::endl;
          // standard_residues_asc = t_asc; // Here's the problem
@@ -286,13 +286,13 @@ molecules_container_t::read_standard_residues() {
 
          }
 #endif
-         // std::cout << "------------------ read_standard_residues() E " << std::endl;
+
       }
    } else {
-      std::cout << "------------------ read_standard_residues() F " << env_var_filename << std::endl;
-      standard_residues_asc = get_atom_selection(env_var_filename, false, true, false);
+      bool use_gemmi = true;
+      standard_residues_asc = get_atom_selection(env_var_filename, use_gemmi, true, false);
    }
-   // std::cout << "------------------ read_standard_residues() done " << std::endl;
+
 }
 
 
@@ -555,7 +555,6 @@ int
 molecules_container_t::read_pdb(const std::string &file_name) {
 
    int status = -1;
-   bool use_gemmi = false;
    atom_selection_container_t asc = get_atom_selection(file_name, use_gemmi, true, false);
    if (asc.read_success) {
 
@@ -3346,7 +3345,7 @@ molecules_container_t::generate_molecule_and_refine(int imol,  // needed for UDD
 
       std::vector<std::string> residue_types = coot::util::residue_types_in_residue_vec(residues);
       // use try_dynamic_add()
-      bool have_restraints = geom.have_dictionary_for_residue_types(residue_types, imol, cif_dictionary_read_number);
+      bool have_restraints = geom.have_restraints_dictionary_for_residue_types(residue_types, imol, cif_dictionary_read_number);
       cif_dictionary_read_number += residue_types.size();
 
       if (have_restraints) {
@@ -3435,8 +3434,13 @@ molecules_container_t::generate_molecule_and_refine(int imol,  // needed for UDD
             }
          }
       } else {
+
          // we didn't have restraints for everything.
          //
+         // If we are in this state, we need to make that apparent to the calling function
+         rr.found_restraints_flag = false;
+         rr.info_text = "Missing or incomplete dictionaries";
+
          std::pair<int, std::vector<std::string> > icheck =
             check_dictionary_for_residue_restraints(imol, residues);
          if (icheck.first == 0) {
@@ -4889,12 +4893,19 @@ molecules_container_t::get_hb_type(const std::string &compound_id, int imol_enc,
 
 #include "utils/coot-utils.hh"
 
-//! set the maximum number of threads in a thread pool
+//! set the maximum number of threads in a thread pool and vector of threads
 void
-molecules_container_t::set_max_number_of_threads_in_thread_pool(unsigned int n_threads) {
+molecules_container_t::set_max_number_of_threads(unsigned int n_threads) {
    coot::set_max_number_of_threads(n_threads);
    static_thread_pool.resize(n_threads);
 }
+
+// call the above function
+void
+molecules_container_t::set_max_number_of_threads_in_thread_pool(unsigned int n_threads) {
+   set_max_number_of_threads(n_threads);
+}
+
 
 //! get the time to run test test function in miliseconds
 double
@@ -4990,3 +5001,29 @@ molecules_container_t::get_gphl_chem_comp_info(const std::string &compound_id, i
    }
    return v;
 }
+
+
+//! export map molecule as glTF
+void
+molecules_container_t::export_map_molecule_as_gltf(int imol, const std::string &file_name) const {
+
+   if (is_valid_map_molecule(imol)) {
+      molecules[imol].export_map_molecule_as_gltf(file_name);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+
+
+}
+
+//! export model molecule as glTF - This API will change - we want to specify surfaces and ribbons too.
+void
+molecules_container_t::export_model_molecule_as_gltf(int imol, const std::string &file_name) const {
+
+   if (is_valid_map_molecule(imol)) {
+      molecules[imol].export_model_molecule_as_gltf(file_name);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+}
+

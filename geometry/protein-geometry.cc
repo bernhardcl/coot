@@ -1209,7 +1209,7 @@ coot::protein_geometry::have_dictionary_for_residue_type_no_dynamic_add(const st
       }
    }
    return ifound;
-} 
+}
 
 
 bool
@@ -1227,6 +1227,32 @@ coot::protein_geometry::have_dictionary_for_residue_types(const std::vector<std:
    }
    return have_all;
 }
+
+// Return false if there are no bond restraints
+bool
+coot::protein_geometry::have_restraints_dictionary_for_residue_types(const std::vector<std::string> &residue_types,
+                                                                     int imol_enc,
+                                                                     int read_number) {
+
+   bool have_all = true;
+   for (unsigned int i=0; i<residue_types.size(); i++) {
+      const std::string &rt = residue_types[i];
+      int idx = get_monomer_restraints_index(rt, imol_enc, false);
+      if (idx != -1) {
+         const coot::dictionary_residue_restraints_t &restraints = dict_res_restraints[idx].second;
+         if (restraints.bond_restraint.empty()) {
+            have_all = false;
+            break;
+         }
+      } else {
+         have_all = false;
+         break;
+      }
+      read_number++;
+   }
+   return have_all;
+}
+
 
 // this is const because there is no dynamic add
 //
@@ -2158,14 +2184,15 @@ coot::protein_geometry::get_group(mmdb::Residue *r) const {
 std::string
 coot::protein_geometry::get_group(const std::string &res_name_in) const {
    
-   bool found = 0;
+   bool found = false;
    std::string group;
    std::string res_name = res_name_in;
    if (res_name.length() > 3)
       res_name = res_name.substr(0,2);
-   for (unsigned int i=0; i<size(); i++) {
+   unsigned int s = size(); // fails if the protein_geometry pointer was not valid
+   for (unsigned int i=0; i<s; i++) {
       if (three_letter_code(i) == res_name) {
-	 found = 1;
+	 found = true;
 	 group = (*this)[i].second.residue_info.group;
 	 break;
       }
@@ -2173,7 +2200,7 @@ coot::protein_geometry::get_group(const std::string &res_name_in) const {
 
    for (unsigned int i=0; i<dict_res_restraints.size(); i++) { 
       if (dict_res_restraints[i].second.residue_info.comp_id == res_name) {
-	 found = 1;
+	 found = true;
 	 group = dict_res_restraints[i].second.residue_info.group;
 	 break;
       }

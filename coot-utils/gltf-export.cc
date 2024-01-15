@@ -1,5 +1,13 @@
 
-#include "simple-mesh.hh"
+
+// Define these only in *one* .cc file.
+
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
+
+#include "../coot-utils/simple-mesh.hh"
 #include "tiny_gltf.h"
 
 // pass the name (that should be visible in blender?)

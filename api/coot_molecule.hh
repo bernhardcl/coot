@@ -141,6 +141,7 @@ namespace coot {
 
       modification_info_t modification_info;
 
+      bool use_gemmi; // true now
       int imol_no; // this molecule's index in the container vector
       int ligand_flip_number;
       std::string name;
@@ -341,6 +342,7 @@ namespace coot {
       // ====================== init ======================================
 
       void init() {
+         use_gemmi = true; // 20240112-PE  woohoo! Let the bugs flow!
          // set the imol before calling this function.
          ligand_flip_number = 0;
          bonds_box_type = api_bond_colour_t::UNSET_TYPE;
@@ -664,6 +666,12 @@ namespace coot {
          bespoke_carbon_atoms_colour = col;
          // make_bonds_type_checked("set_bespoke_carbon_atom_colour");
       }
+
+      //! export map molecule as glTF
+      void export_map_molecule_as_gltf(const std::string &file_name) const;
+
+      //! export model molecule as glTF - This API will change - we want to specify surfaces and ribbons too.
+      void export_model_molecule_as_gltf(const std::string &file_name) const;
 
       void set_show_symmetry(bool f) { show_symmetry = f;}
       bool get_show_symmetry() { return show_symmetry;}

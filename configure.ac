@@ -26,7 +26,8 @@ dnl
 dnl Process this file with autoconf to produce a configure script.
 
 
-AC_INIT([coot],[1.x-pre])
+
+AC_INIT([coot],[1.1.04])
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -238,10 +239,6 @@ dnl =========================== GTK ===========================
 PKG_CHECK_MODULES(GTK, gtk4 >= 4.4)
 
 PKG_CHECK_MODULES(EPOXY, epoxy >= 1.5)
-
-dnl =========================== GLFWw =========================
-
-PKG_CHECK_MODULES(GLFW3, glfw3 >= 3.0)
 
 dnl =========================== Python =========================
 

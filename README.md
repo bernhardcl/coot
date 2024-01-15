@@ -18,3 +18,7 @@ Blog
 
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3114/)
 
+![Binary build Badge](https://github.com/pemsley/coot/actions/workflows/build-coot-ubuntu.yml/badge.svg)
+
+![Binary build Badge](https://github.com/pemsley/coot/actions/workflows/build-coot-macos.yml/badge.svg)
+
