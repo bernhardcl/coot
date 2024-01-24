@@ -2094,6 +2094,7 @@ molecules_container_t::delete_literal_using_cid(int imol, const std::string &cid
    int status = 0;
    if (is_valid_model_molecule(imol)) {
       status = molecules[imol].delete_literal_using_cid(cid);
+      set_updating_maps_need_an_update(imol);
    } else {
       std::cout << "debug:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -2382,7 +2383,6 @@ molecules_container_t::sfcalc_genmaps_using_bulk_solvent(int imol_model,
 
                         { // diff differenc map peaks
                            float base_level = 0.2; // this might need to be computed from the rmsd.
-                           float radius = 20.0; // 20240102-PE is this used? I think not - delete the argument.
                            const clipper::Xmap<float> &m1 = molecules[imol_map_fofc].updating_maps_previous_difference_map;
                            const clipper::Xmap<float> &m2 = xmap_fofc;
                            std::vector<std::pair<clipper::Coord_orth, float> > v1 = coot::diff_diff_map_peaks(m1, m2, base_level);
@@ -2414,10 +2414,10 @@ molecules_container_t::get_diff_diff_map_peaks(int imol_map_fofc,
 
    clipper::Coord_orth screen_centre(screen_centre_x, screen_centre_y, screen_centre_z); // also, is this used in this function?
    std::vector<std::pair<clipper::Coord_orth, float> > v;
-   if (is_valid_model_molecule(imol_map_fofc)) {
+   if (is_valid_map_molecule(imol_map_fofc)) {
       v = molecules[imol_map_fofc].get_updating_maps_diff_diff_map_peaks(screen_centre);
    } else {
-      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol_map_fofc << std::endl;
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid map molecule " << imol_map_fofc << std::endl;
    }
    return v;
 
@@ -2502,6 +2502,7 @@ molecules_container_t::refine_direct(int imol, std::vector<mmdb::Residue *> rv, 
       if (is_valid_map_molecule(imol_refinement_map)) {
          const clipper::Xmap<float> &xmap = molecules[imol_refinement_map].xmap;
          molecules[imol].refine_direct(rv, alt_loc, xmap, map_weight, n_cycles, geom, refinement_is_quiet);
+         set_updating_maps_need_an_update(imol);
       }
    }
    return status;
@@ -3513,7 +3514,7 @@ molecules_container_t::jed_flip(int imol, const std::string &atom_cid, bool inve
       coot::atom_spec_t atom_spec = atom_cid_to_atom_spec(imol, atom_cid);
       coot::residue_spec_t res_spec(atom_spec);
       std::string atom_name = atom_spec.atom_name;
-      std::string alt_conf = "";
+      std::string alt_conf  = atom_spec.alt_conf;
       message = molecules[imol].jed_flip(res_spec, atom_name, alt_conf, invert_selection, &geom);
       set_updating_maps_need_an_update(imol);
    } else {
@@ -4341,7 +4342,8 @@ molecules_container_t::make_masked_maps_split_by_chain(int imol, int imol_map) {
 //!
 //! @return the index of the new map - or -1 on failure
 int
-molecules_container_t::mask_map_by_atom_selection(int imol_coords, int imol_map, const std::string &cid, bool invert_flag) {
+molecules_container_t::mask_map_by_atom_selection(int imol_coords, int imol_map, const std::string &multi_cids,
+                                                  float radius, bool invert_flag) {
 
    int imol_map_new = -1;
    if (is_valid_model_molecule(imol_coords)) {
@@ -4353,7 +4355,15 @@ molecules_container_t::mask_map_by_atom_selection(int imol_coords, int imol_map,
          lig.set_map_atom_mask_radius(map_mask_atom_radius);
 
          int selectionhandle = molecules[imol_coords].atom_sel.mol->NewSelection();
-         molecules[imol_coords].atom_sel.mol->Select(selectionhandle, mmdb::STYPE_ATOM, cid.c_str(), mmdb::SKEY_NEW);
+         // molecules[imol_coords].atom_sel.mol->Select(selectionhandle, mmdb::STYPE_ATOM, cid.c_str(), mmdb::SKEY_NEW);
+
+         std::vector<std::string> parts = coot::util::split_string(multi_cids, "||");
+         for (const auto &part : parts) {
+            std::cout << "-------------------------- selecting part: " << part << std::endl;
+            molecules[imol_coords].atom_sel.mol->Select(selectionhandle, mmdb::STYPE_ATOM, part.c_str(), mmdb::SKEY_OR);
+         }
+
+         if (radius > 0.0) lig.set_map_atom_mask_radius(radius);
          lig.mask_map(molecules[imol_coords].atom_sel.mol, selectionhandle, invert_flag);
          imol_map_new = molecules.size();
          std::string name = get_molecule_name(imol_map);
@@ -4361,6 +4371,7 @@ molecules_container_t::mask_map_by_atom_selection(int imol_coords, int imol_map,
          bool is_em_map_flag = molecules[imol_map].is_EM_map();
          coot::molecule_t cm(new_name, imol_map_new, lig.masked_map(), is_em_map_flag);
          molecules.push_back(cm);
+         molecules[imol_coords].atom_sel.mol->DeleteSelection(selectionhandle);
       } else {
          std::cout << "WARNING:: molecule " << imol_map << " is not a valid map molecule"
                    << std::endl;
@@ -5005,12 +5016,14 @@ molecules_container_t::get_gphl_chem_comp_info(const std::string &compound_id, i
 
 //! export map molecule as glTF
 void
-molecules_container_t::export_map_molecule_as_gltf(int imol, const std::string &file_name) const {
+molecules_container_t::export_map_molecule_as_gltf(int imol, float pos_x, float pos_y, float pos_z, float radius, float contour_level,
+                                                   const std::string &file_name) {
 
    if (is_valid_map_molecule(imol)) {
-      molecules[imol].export_map_molecule_as_gltf(file_name);
+      clipper::Coord_orth pos(pos_x, pos_y, pos_z);
+      molecules[imol].export_map_molecule_as_gltf(pos, radius, contour_level, file_name);
    } else {
-      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid map molecule " << imol << std::endl;
    }
 
 
@@ -5018,12 +5031,36 @@ molecules_container_t::export_map_molecule_as_gltf(int imol, const std::string &
 
 //! export model molecule as glTF - This API will change - we want to specify surfaces and ribbons too.
 void
-molecules_container_t::export_model_molecule_as_gltf(int imol, const std::string &file_name) const {
+molecules_container_t::export_model_molecule_as_gltf(int imol,
+                                                     const std::string &selection_cid,
+                                                     const std::string &mode,
+                                                     bool against_a_dark_background,
+                                                     float bonds_width, float atom_radius_to_bond_width_ratio, int smoothness_factor,
+                                                     bool draw_hydrogen_atoms_flag, bool draw_missing_residue_loops,
+                                                     const std::string &file_name) {
 
-   if (is_valid_map_molecule(imol)) {
-      molecules[imol].export_model_molecule_as_gltf(file_name);
+   if (is_valid_model_molecule(imol)) {
+      molecules[imol].export_model_molecule_as_gltf(mode, selection_cid, &geom, against_a_dark_background,
+                                                    bonds_width, atom_radius_to_bond_width_ratio, smoothness_factor,
+                                                    draw_hydrogen_atoms_flag, draw_missing_residue_loops, file_name);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
+}
+
+
+//! get density at position
+//! @return density value
+float
+molecules_container_t::get_density_at_position(int imol_map, float x, float y, float z) const {
+
+   float f = -1;
+   if (is_valid_map_molecule(imol_map)) {
+      clipper::Coord_orth pt(x,y,z);
+      f = molecules[imol_map].get_density_at_position(pt);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid map molecule " << imol_map << std::endl;
+   }
+   return f;
 }
 

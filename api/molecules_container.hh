@@ -328,6 +328,12 @@ public:
    int imol_difference_map; // direct access
 
    bool use_gemmi; // for mmcif and PDB parsing. 20240112-PE set to true by default in init()
+
+   //! Set the state of using gemmi for coordinates parsing. The default is false.
+   void set_use_gemmi(bool state) { use_gemmi = state; }
+
+   //! get the state of using GEMMI for coordinates parsing
+   bool get_use_gemmi() { return use_gemmi; }
  
    // -------------------------------- Basic Utilities -----------------------------------
    //! \name Basic Utilities
@@ -596,10 +602,18 @@ public:
                                                                  int smoothness_factor);
 
    //! export map molecule as glTF
-   void export_map_molecule_as_gltf(int imol, const std::string &file_name) const;
+   //  (not const because maps might update?)
+   void export_map_molecule_as_gltf(int imol, float pos_x, float pos_y, float pos_z, float radius, float contour_level,
+                                    const std::string &file_name);
 
    //! export model molecule as glTF - This API will change - we want to specify surfaces and ribbons too.
-   void export_model_molecule_as_gltf(int imol, const std::string &file_name) const;
+   void export_model_molecule_as_gltf(int imol,
+                                      const std::string &selection_cid,
+                                      const std::string &mode,
+                                      bool against_a_dark_background,
+                                      float bonds_width, float atom_radius_to_bond_width_ratio, int smoothness_factor,
+                                      bool draw_hydrogen_atoms_flag, bool draw_missing_residue_loops,
+                                      const std::string &file_name);
 
    //! return the colur table (for testing)
    std::vector<glm::vec4> get_colour_table(int imol, bool against_a_dark_background) const;
@@ -836,12 +850,14 @@ public:
 
    //! mask map by atom selection (note the argument order is reversed compared to the coot api).
    //!
+   //! ``atom_radius`` is the atom radius (funnily enough). Use a negative number to mean "default".
+   //!
    //! the ``invert_flag`` changes the parts of the map that are masked, so to highlight the density
    //! for a ligand one would pass the ``cid`` for the ligand and invert_flag as true, so that the
    //! parts of the map that are not the ligand are suppressed.
    //!
    //! @return the index of the new map - or -1 on failure
-   int mask_map_by_atom_selection(int imol_coords, int imol_map, const std::string &cid, bool invert_flag);
+   int mask_map_by_atom_selection(int imol_coords, int imol_map, const std::string &cid, float atom_radius, bool invert_flag);
 
    //! generate a new map which is the hand-flipped version of the input map.
    //! @return the molecule index of the new map, or -1 on failure.
@@ -1361,10 +1377,14 @@ public:
                                      int imol_updating_difference_map,
                                      int imol_map_with_data_attached);
 
+   //! get density at position
+   //! @return density value
+   float get_density_at_position(int imol_map, float x, float y, float z) const;
+
    //! @return a vector the position where the differenc map has been flattened.
    //! The associated float value is the ammount that the map has been flattened.
    //!
-   //! This is a light-weight fetch, the values have already been computed, heree
+   //! This is a light-weight fetch, the values have already been computed, here
    //! were are merely copying them.
    std::vector<std::pair<clipper::Coord_orth, float> > get_diff_diff_map_peaks(int imol_diff_map,
                                                                                float screen_centre_x,
@@ -1535,6 +1555,8 @@ public:
 
    //! @return time in microsections
    double test_thread_pool_threads(unsigned int n_threads) const;
+
+   coot::protein_geometry &get_geom() { return geom; }
 
    // -------------------------------- Other ---------------------------------------
 

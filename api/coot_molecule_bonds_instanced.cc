@@ -379,7 +379,7 @@ coot::molecule_t::get_bonds_mesh_instanced(const std::string &mode, coot::protei
       Bond_lines_container bonds(geom);
       float min_dist = 2.4;
       float max_dist = 4.7;
-      bonds.do_Ca_plus_ligands_bonds(atom_sel, imol_no, geom, min_dist, max_dist, draw_hydrogen_atoms_flag, draw_missing_residue_loops_flag);
+      bonds.do_Ca_plus_ligands_bonds(atom_sel, imol_no, geom, min_dist, max_dist, draw_missing_residue_loops_flag, draw_hydrogen_atoms_flag);
       bonds_box = bonds.make_graphical_bonds_no_thinning();
       std::vector<glm::vec4> colour_table = make_colour_table(against_a_dark_background);
       make_instanced_graphical_bonds_bonds(m, bonds_box, bond_radius, n_slices, n_stacks, colour_table);
@@ -550,7 +550,8 @@ coot::molecule_t::get_bonds_mesh_for_selection_instanced(const std::string &mode
    if (mode == "COLOUR-BY-CHAIN-AND-DICTIONARY") {
       Bond_lines_container bonds(geom, no_bonds_to_these_atoms, draw_hydrogen_atoms_flag);
       bonds.do_colour_by_chain_bonds(atom_sel_ligand, false, imol_no, draw_hydrogen_atoms_flag,
-                                     draw_missing_residue_loops, change_c_only_flag, goodsell_mode, do_rota_markup);
+                                     draw_missing_residue_loops, change_c_only_flag, goodsell_mode,
+                                     do_rota_markup);
 
       // 20240108-PE We need to fill the bonds box before making the colour table.
       //             Why was this not here before?
