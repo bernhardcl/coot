@@ -529,6 +529,8 @@ namespace coot {
       // returns either the specified residue or null if not found
       mmdb::Residue *get_residue(const residue_spec_t &residue_spec) const;
 
+      std::string get_residue_name(const residue_spec_t &residue_spec) const;
+
       bool have_unsaved_changes() const { return modification_info.have_unsaved_changes(); }
       int undo(); // 20221018-PE return status not yet useful
       int redo(); // likewise
@@ -951,7 +953,10 @@ namespace coot {
 
       //! real space refinement
       int refine_direct(std::vector<mmdb::Residue *> rv, const std::string &alt_loc, const clipper::Xmap<float> &xmap,
-                        float map_weight, int n_cycles, const coot::protein_geometry &geom, bool refinement_is_quiet);
+                        float map_weight, int n_cycles, const coot::protein_geometry &geom,
+                        bool do_rama_plot_restraints, float rama_plot_weight,
+                        bool do_torsion_restraints, float torsion_weight,
+                        bool refinement_is_quiet);
 
       void fix_atom_selection_during_refinement(const std::string &atom_selection_cid);
 

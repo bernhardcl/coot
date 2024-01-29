@@ -24,6 +24,17 @@ moorhen: does the map masking take a multi-cid for the atom selection?
 
 moorhen: search monomer library for ARG with methyl (for example)
 
+libcootapi: bundle the reference structures into the source code.
+
+libcootapi: add label_seq_id etc for the residue added in add_terminal_residue
+
+libcootapi: add refinement control parameters to molecules_container,
+       torsion weight, rama weight, gm weight and whatever others.
+
+libcootapi: how do I turn on Rama refinement?
+
+libcootapi: work out the arguments for MT2 mesh as glTF.
+
 libcootapi: add a function to copy a map (and a model molecule I guess) for figure making.
 
 libcootapi: replace_molecule_by_model_from_file() should be passed the use_gemmi argument.
@@ -41,6 +52,8 @@ Coot: Fix this in pyrogen Makefile:
       SWIG_FLAGS = -DSWIG -DCOOT_USE_GTK2_INTERFACE
       Is -DSWIG already on, because it's parsed by swig?
 * Done.
+
+libcootapi: what are the headers? Including Remark records?
 
 libcootapi:
    //! generate GM self restraints for the given residues.
@@ -93,6 +106,8 @@ libcootapi: Have a look at this when compiling with emscripten
    #ifdef HAVE_BOOST
    #define HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 * Done.
+
+libcootapi: Bring HOLE to the api - and possibly map carving.
 
 libcootapi: cif parsing: let's have the acedrg version of gphl_chem_comp_info
 
@@ -272,6 +287,11 @@ Libcootapi: add lib for gesamt
 
 Libcootapi: from ligands meeting: Note to self: pdb header information:
         CAVEAT, from Gemmi to mmdb.
+
+libcootapi: bring regularization to the api
+
+libcootapi: bring conformer generation to the api. Do energy minimization and discard the
+     high energy conformers
 
 Fun: flattening difference map peaks animation:
         find peak and negative peaks in the

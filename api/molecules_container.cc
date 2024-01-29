@@ -234,7 +234,7 @@ molecules_container_t::read_standard_residues() {
       std::string dir = coot::package_data_dir();
       std::string standard_file_name = coot::util::append_dir_file(dir, "standard-residues.pdb");
 
-      std::cout << "------------------ read_standard_residues() B " << standard_file_name << std::endl;
+      // std::cout << "------------------ read_standard_residues() B " << standard_file_name << std::endl;
       struct stat buf;
       int status = stat(standard_file_name.c_str(), &buf);
       if (status != 0) { // standard-residues file was not found in
@@ -720,6 +720,12 @@ molecules_container_t::write_png(const std::string &compound_id, int imol_enc,
 
 int
 molecules_container_t::write_coordinates(int imol, const std::string &file_name) const {
+
+   if (true) {
+      mmdb::Manager *mol = get_mol(imol);
+      mol->WriteCIFASCII("write_coords_molecules_container_fn_start.cif");
+   }
+
    int status = 0;
    if (is_valid_model_molecule(imol)) {
       status = molecules[imol].write_coordinates(file_name);
@@ -927,43 +933,6 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
    auto_mtz_pairs.push_back(coot::mtz_column_trials_info_t("F_ano",        "PHI_ano",   true));
    auto_mtz_pairs.push_back(coot::mtz_column_trials_info_t("F_early-Flate","PHI_early-late", true));
 
-   for (unsigned int i=0; i<auto_mtz_pairs.size(); i++) {
-      const coot::mtz_column_trials_info_t &b = auto_mtz_pairs[i];
-      if (valid_labels(mtz_file_name.c_str(), b.f_col.c_str(), b.phi_col.c_str(), "", 0)) {
-         int imol = read_mtz(mtz_file_name, b.f_col, b.phi_col, "", 0, b.is_diff_map);
-	 if (is_valid_map_molecule(imol))
-	    mol_infos.push_back(auto_read_mtz_info_t(imol, b.f_col, b.phi_col));
-      }
-   }
-
-   // 20221001-PE if there is one F and one PHI col, read that also (and it is not a difference map)
-   coot::mtz_column_types_info_t r = coot::get_mtz_columns(mtz_file_name);
-
-   if (r.f_cols.size() == 1) {
-      if (r.phi_cols.size() == 1) {
-         int imol = read_mtz(mtz_file_name, r.f_cols[0].column_label, r.phi_cols[0].column_label, "", false, false);
-         mol_infos.push_back(auto_read_mtz_info_t(imol, r.f_cols[0].column_label, r.phi_cols[0].column_label));
-      }
-   }
-
-   for (unsigned int i=0; i<r.f_cols.size(); i++) {
-      std::string s = r.f_cols[i].column_label;
-      std::string::size_type idx = s.find(".F_phi.F");
-      if (idx != std::string::npos) {
-	 std::string prefix = s.substr(0, idx);
-	 std::string trial_phi_col = prefix + ".F_phi.phi";
-	 for (unsigned int j=0; j<r.phi_cols.size(); j++) {
-	    if (r.phi_cols[j].column_label == trial_phi_col) {
-	       std::string f_col   = r.f_cols[i].column_label;
-	       std::string phi_col = r.phi_cols[j].column_label;
-               int imol = read_mtz(mtz_file_name, f_col, phi_col, "", false, false);
-               if (is_valid_map_molecule(imol))
-                  mol_infos.push_back(auto_read_mtz_info_t(imol, f_col, phi_col));
-	    }
-	 }
-      }
-   }
-
    auto add_r_free_column_label = [] (auto_read_mtz_info_t *a, const coot::mtz_column_types_info_t &r) {
       for (unsigned int i=0; i<r.r_free_cols.size(); i++) {
          const std::string &l = r.r_free_cols[i].column_label;
@@ -974,9 +943,21 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
       }
    };
 
+   auto add_Fobs = [] (auto_read_mtz_info_t *armi_p, const auto_read_mtz_info_t &aFobs) {
+      if (!aFobs.F_obs.empty()) {
+         armi_p->F_obs = aFobs.F_obs;
+         armi_p->sigF_obs = aFobs.sigF_obs;
+         armi_p->Rfree = aFobs.Rfree;
+      }
+   };
+
+   // 20221001-PE if there is one F and one PHI col, read that also (and it is not a difference map)
+   coot::mtz_column_types_info_t r = coot::get_mtz_columns(mtz_file_name);
+
    // and now the observed data, this relies on the column label being of the form
    // /crystal/dataset/label
    //
+   auto_read_mtz_info_t armi_fobs;
    for (unsigned int i=0; i<r.f_cols.size(); i++) {
       const std::string &f = r.f_cols[i].column_label;
       // example f: "/2vtq/1/FP"
@@ -990,7 +971,52 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
             armi.set_fobs_sigfobs(f, sf);
             add_r_free_column_label(&armi, r); // modify armi possibly
             mol_infos.push_back(armi);
+            if (armi_fobs.F_obs.empty())
+               armi_fobs = armi;
          }
+      }
+   }
+
+
+   for (unsigned int i=0; i<auto_mtz_pairs.size(); i++) {
+      const coot::mtz_column_trials_info_t &b = auto_mtz_pairs[i];
+      if (valid_labels(mtz_file_name.c_str(), b.f_col.c_str(), b.phi_col.c_str(), "", 0)) {
+         int imol = read_mtz(mtz_file_name, b.f_col, b.phi_col, "", 0, b.is_diff_map);
+	      if (is_valid_map_molecule(imol)) {
+            auto_read_mtz_info_t armi(imol, b.f_col, b.phi_col);
+            add_Fobs(&armi, armi_fobs);
+	         mol_infos.push_back(armi);
+         }
+      }
+   }
+
+   if (r.f_cols.size() == 1) {
+      if (r.phi_cols.size() == 1) {
+         int imol = read_mtz(mtz_file_name, r.f_cols[0].column_label, r.phi_cols[0].column_label, "", false, false);
+         auto_read_mtz_info_t armi(imol, r.f_cols[0].column_label, r.phi_cols[0].column_label);
+         add_Fobs(&armi, armi_fobs);
+         mol_infos.push_back(auto_read_mtz_info_t(armi));
+      }
+   }
+
+   for (unsigned int i=0; i<r.f_cols.size(); i++) {
+      std::string s = r.f_cols[i].column_label;
+      std::string::size_type idx = s.find(".F_phi.F");
+      if (idx != std::string::npos) {
+	      std::string prefix = s.substr(0, idx);
+	      std::string trial_phi_col = prefix + ".F_phi.phi";
+	      for (unsigned int j=0; j<r.phi_cols.size(); j++) {
+	         if (r.phi_cols[j].column_label == trial_phi_col) {
+	            std::string f_col   = r.f_cols[i].column_label;
+	            std::string phi_col = r.phi_cols[j].column_label;
+               int imol = read_mtz(mtz_file_name, f_col, phi_col, "", false, false);
+               if (is_valid_map_molecule(imol)) {
+                  auto_read_mtz_info_t armi(imol, f_col, phi_col);
+                  add_Fobs(&armi, armi_fobs);
+                  mol_infos.push_back(armi);
+               }
+	         }
+	      }
       }
    }
 
@@ -2501,7 +2527,10 @@ molecules_container_t::refine_direct(int imol, std::vector<mmdb::Residue *> rv, 
    if (is_valid_model_molecule(imol)) {
       if (is_valid_map_molecule(imol_refinement_map)) {
          const clipper::Xmap<float> &xmap = molecules[imol_refinement_map].xmap;
-         molecules[imol].refine_direct(rv, alt_loc, xmap, map_weight, n_cycles, geom, refinement_is_quiet);
+         molecules[imol].refine_direct(rv, alt_loc, xmap, map_weight, n_cycles, geom,
+                                       use_rama_plot_restraints, rama_plot_restraints_weight,
+                                       use_torsion_restraints, torsion_restraints_weight,
+                                       refinement_is_quiet);
          set_updating_maps_need_an_update(imol);
       }
    }
@@ -5064,3 +5093,19 @@ molecules_container_t::get_density_at_position(int imol_map, float x, float y, f
    return f;
 }
 
+
+   //! get residue name
+std::string
+molecules_container_t::get_residue_name(int imol, const std::string &chain_id, int res_no, const std::string &ins_code) const {
+
+   std::string n;
+   if (is_valid_model_molecule(imol)) {
+      coot::residue_spec_t res_spec(chain_id, res_no, ins_code);
+      n = molecules[imol].get_residue_name(res_spec);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return n;
+
+
+}
