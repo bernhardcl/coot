@@ -76,6 +76,17 @@ molecules_container_t::close_molecule(int imol) {
    return status;
 }
 
+//! delete the most recent/last molecule in the molecule vector
+void
+molecules_container_t::pop_back() {
+
+   if (! molecules.empty()) {
+      molecules.pop_back();
+   }
+}
+
+
+
 
 void
 molecules_container_t::debug() const {
@@ -183,6 +194,7 @@ molecules_container_t::get_number_of_hydrogen_atoms(int imol) const {
 
 void
 molecules_container_t::set_draw_missing_residue_loops(bool state) {
+   std::cout << "****** in set_draw_missing_residue_loops() with state " << state << std::endl;
    draw_missing_residue_loops_flag = state;
 }
 
@@ -1756,7 +1768,7 @@ molecules_container_t::get_bonds_mesh_instanced(int imol, const std::string &mod
                                                 float bond_width, float atom_radius_to_bond_width_ratio,
                                                 int smoothness_factor) {
 
-   //   std::cout << " ==================================== get_bonds_mesh_instanced() start" << std::endl;
+   std::cout << " ==================================== get_bonds_mesh_instanced() start" << std::endl;
 
    bool draw_hydrogen_atoms_flag = true; // pass this
 
@@ -2523,6 +2535,11 @@ molecules_container_t::thread_for_refinement_loop_threaded() {
 int
 molecules_container_t::refine_direct(int imol, std::vector<mmdb::Residue *> rv, const std::string &alt_loc, int n_cycles) {
 
+   if (false)
+      std::cout << "starting mc::refine_direct() with imol " << imol
+                << " and imol_refinement_map " << imol_refinement_map
+                << std::endl;
+
    int status = 0;
    if (is_valid_model_molecule(imol)) {
       if (is_valid_map_molecule(imol_refinement_map)) {
@@ -2540,8 +2557,9 @@ molecules_container_t::refine_direct(int imol, std::vector<mmdb::Residue *> rv, 
 int
 molecules_container_t::refine_residues_using_atom_cid(int imol, const std::string &cid, const std::string &mode, int n_cycles) {
 
-   // std::cout << "starting refine_residues_using_atom_cid() with imol_refinement_map " << imol_refinement_map
-   // << std::endl;
+   std::cout << "starting refine_residues_using_atom_cid() with imol " << imol
+             << " and imol_refinement_map " << imol_refinement_map
+             << std::endl;
 
    auto debug_selected_residues = [cid] (const std::vector<mmdb::Residue *> &rv) {
       std::cout << "refine_residues_using_atom_cid(): selected these " << rv.size() << " residues "
@@ -2551,7 +2569,6 @@ molecules_container_t::refine_residues_using_atom_cid(int imol, const std::strin
          std::cout << "   " << coot::residue_spec_t(*it) << std::endl;
       }
    };
-
 
    int status = 0;
    if (is_valid_model_molecule(imol)) {
@@ -2563,6 +2580,7 @@ molecules_container_t::refine_residues_using_atom_cid(int imol, const std::strin
          // debug_selected_residues(rv);
          std::string alt_conf = "";
          status = refine_direct(imol, rv, alt_conf, n_cycles);
+         set_updating_maps_need_an_update(imol);
       } else {
          std::cout << "WARNING:: " << __FUNCTION__ << " Not a valid map molecule " << imol_refinement_map << std::endl;
       }
@@ -2604,6 +2622,7 @@ molecules_container_t::refine_residue_range(int imol, const std::string &chain_i
       if (! rv.empty()) {
          std::string alt_conf = "";
          status = refine_direct(imol, rv, alt_conf, n_cycles);
+         set_updating_maps_need_an_update(imol);
       } else {
          std::cout << "WARNING:: in refine_residues() - empty residues." << std::endl;
       }

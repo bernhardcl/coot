@@ -204,6 +204,7 @@ class molecules_container_t {
    //! If n_cycles is negative, this means "refine to completion."
    //!
    //! @return success/progress status
+public:
    int refine_direct(int imol, std::vector<mmdb::Residue *> rv, const std::string &alt_loc, int n_cycles);
 
    double phi_psi_probability(const coot::util::phi_psi_t &phi_psi, const ramachandrans_container_t &rc) const;
@@ -383,6 +384,9 @@ public:
    //! they took to run. Setting this will write the time to taken (in milliseconds) to stdout.
    //! The default is `true`.
    void set_show_timings(bool s) { show_timings = s; }
+   coot::protein_geometry & get_geom() {
+      return geom;
+   }
 
    // -------------------------------- generic utils -----------------------------------
    //! \name Generic Utils
@@ -400,6 +404,9 @@ public:
    //! close the molecule (and delete dynamically allocated memory)
    //! @return 1 on successful closure and 0 on failure to close
    int close_molecule(int imol);
+
+   //! delete the most recent/last molecule in the molecule vector
+   void pop_back();
 
    //! @return the eigenvalues of the atoms in the specified residue
    std::vector<double> get_eigenvalues(int imol, const std::string &chain_id, int res_no, const std::string &ins_code);
@@ -1601,8 +1608,12 @@ public:
    //! @return time in microsections
    double test_thread_pool_threads(unsigned int n_threads) const;
 
-   coot::protein_geometry &get_geom() { return geom; }
-
+   // get acces to protein geometry
+   coot::protein_geometry & get_geometry() {
+      return geom;
+   }
+   
+   
    // -------------------------------- Other ---------------------------------------
 
 #ifdef SWIG

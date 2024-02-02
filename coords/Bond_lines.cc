@@ -302,9 +302,9 @@ Bond_lines_container::Bond_lines_container(atom_selection_container_t asc,
 // all-atom user-define colouring too
 //
 Bond_lines_container::Bond_lines_container(const atom_selection_container_t &SelAtom,
-					   int imol,
+					                            int imol,
                                            const coot::protein_geometry *protein_geom,
-					   Bond_lines_container::bond_representation_type br_type) {
+					                            Bond_lines_container::bond_representation_type br_type) {
 
    // std::cout << "*************************** Bond_lines_container() constructor with geom and type " << br_type << std::endl;
 
@@ -327,11 +327,11 @@ Bond_lines_container::Bond_lines_container(const atom_selection_container_t &Sel
    } else {
       if (br_type == Bond_lines_container::COLOUR_BY_B_FACTOR) {
          set_b_factor_colours(SelAtom.mol);
-	 try_set_b_factor_scale(SelAtom.mol);
-	 construct_from_asc(SelAtom, imol, 0.01, max_dist, coot::COLOUR_BY_B_FACTOR, 0, model_number, do_rama_markup);
+	      try_set_b_factor_scale(SelAtom.mol);
+	      construct_from_asc(SelAtom, imol, 0.01, max_dist, coot::COLOUR_BY_B_FACTOR, 0, model_number, do_rama_markup);
       } else {
-	 if (br_type == Bond_lines_container::COLOUR_BY_USER_DEFINED_COLOURS) {
-	    construct_from_asc(SelAtom, imol, 0.01, max_dist, coot::COLOUR_BY_USER_DEFINED_COLOURS, 0, model_number, do_rama_markup);
+	      if (br_type == Bond_lines_container::COLOUR_BY_USER_DEFINED_COLOURS) {
+	         construct_from_asc(SelAtom, imol, 0.01, max_dist, coot::COLOUR_BY_USER_DEFINED_COLOURS, 0, model_number, do_rama_markup);
          }
       }
    }
@@ -408,12 +408,12 @@ Bond_lines_container::construct_from_atom_selection(const atom_selection_contain
    if (false) {
       std::cout << "Seeking contact: selection 1 " << std::endl;
       for (int ii=0; ii<n_selected_atoms_1; ii++)
-	 std::cout << "   " << ii << " " << atom_selection_1[ii] << " :"
-		   << atom_selection_1[ii]->isTer() << ":" << std::endl;
+	      std::cout << "   " << ii << " " << atom_selection_1[ii] << " :"
+		             << atom_selection_1[ii]->isTer() << ":" << std::endl;
       std::cout << "Seeking contact: selection 2 " << std::endl;
       for (int ii=0; ii<n_selected_atoms_2; ii++)
-	 std::cout << "   " << ii << " " << atom_selection_2[ii] << " :"
-		   << atom_selection_2[ii]->isTer() << ":" << std::endl;
+	      std::cout << "   " << ii << " " << atom_selection_2[ii] << " :"
+		             << atom_selection_2[ii]->isTer() << ":" << std::endl;
    }
 
    asc.mol->SeekContacts(atom_selection_1, n_selected_atoms_1,
@@ -829,14 +829,14 @@ Bond_lines_container::mark_atoms_as_bonded(mmdb::Atom *atom_p_1, mmdb::Atom *ato
 
 void
 Bond_lines_container::add_half_bonds(const coot::Cartesian &atom_1_pos,
-				     const coot::Cartesian &atom_2_pos,
-				     mmdb::Atom *at_1,
-				     mmdb::Atom *at_2,
+                                     const coot::Cartesian &atom_2_pos,
+                                     mmdb::Atom *at_1,
+                                     mmdb::Atom *at_2,
                                      graphics_line_t::cylinder_class_t cc,
-				     int model_number,
-				     int atom_index_1,
-				     int atom_index_2,
-				     int atom_colour_type,
+                                     int model_number,
+                                     int atom_index_1,
+                                     int atom_index_2,
+                                     int atom_colour_type,
                                      int udd_user_defined_atom_colour_index_handle,
                                      coot::my_atom_colour_map_t *atom_colour_map_p,
                                      bool add_begin_end_cap,
@@ -993,19 +993,22 @@ Bond_lines_container::draw_trp_rings(const std::vector<mmdb::Atom *> &ring_atoms
       coot::Cartesian p2(ring_atoms[jat]->x, ring_atoms[jat]->y, ring_atoms[jat]->z);
       std::string ele_1(at_1->element);
       std::string ele_2(at_2->element);
-      graphics_line_t::cylinder_class_t cc = graphics_line_t::SINGLE;
       if (ele_1 == ele_2) {
          ring_atoms[iat]->GetUDData(udd_atom_index_handle, atom_1_index);
          ring_atoms[jat]->GetUDData(udd_atom_index_handle, atom_2_index);
          graphics_line_t::cylinder_class_t cc = graphics_line_t::SINGLE;
          addBond(col, p1, p2, cc, imodel, atom_1_index, atom_2_index, false, false);
       } else {
+         ring_atoms[iat]->GetUDData(udd_atom_index_handle, atom_1_index);
+         ring_atoms[jat]->GetUDData(udd_atom_index_handle, atom_2_index);
+         graphics_line_t::cylinder_class_t cc = graphics_line_t::SINGLE;
          add_half_bonds(p1, p2, at_1, at_2, cc, imodel, atom_1_index, atom_2_index,
                         atom_colour_type, udd_user_defined_atom_colour_index_handle, atom_colour_map_p, false, false);
       }
    }
 
    for (unsigned int i=0; i<inner_doubles.size(); i++) {
+
       int iat_1 = inner_doubles[i].index2;
       int iat_2 = inner_doubles[i].index3;
       int iat_3 = inner_doubles[i].index4;
@@ -1040,7 +1043,7 @@ Bond_lines_container::draw_trp_rings(const std::vector<mmdb::Atom *> &ring_atoms
       } else {
          bool add_end_cap = true;
          add_half_bonds(ip1, ip2, at_1, at_2, cc, imodel, atom_1_index, atom_2_index, atom_colour_type,
-                        udd_user_defined_atom_colour_index_handle, atom_colour_map_p, add_end_cap, add_end_cap);
+                         udd_user_defined_atom_colour_index_handle, atom_colour_map_p, add_end_cap, add_end_cap);
       }
    }
 
@@ -4483,10 +4486,10 @@ Bond_lines_container::addBond(int colour_index,
    //
    if (no_bonds_to_these_atoms.find(atom_index_1) != no_bonds_to_these_atoms.end()) {
       if (no_bonds_to_these_atoms.find(atom_index_2) != no_bonds_to_these_atoms.end()) {
-	 if (false)
-	    std::cout << "debug::: addBond() ducking out with " << atom_index_1 << " " << atom_index_2
+	      if (false)
+	         std::cout << "debug::: addBond() ducking out with " << atom_index_1 << " " << atom_index_2
                       << " set size: " << no_bonds_to_these_atoms.size() << std::endl;
-	 return;
+	      return;
       }
    }
 
@@ -4834,7 +4837,7 @@ Bond_lines_container::do_Ca_loop(int imod, int ires, int nres,
                   if (C_and_N_are_close)
                      loop_is_possible = false;
                }
-               
+
 
                if (loop_is_possible) {
 
@@ -4889,6 +4892,7 @@ Bond_lines_container::do_Ca_or_P_bonds_internal(atom_selection_container_t SelAt
 						float min_dist, float max_dist,
                                                 bool draw_missing_loops_flag,
                                                 int bond_colour_type) {
+
 
    graphics_line_t::cylinder_class_t cc = graphics_line_t::SINGLE;
 
@@ -5742,7 +5746,7 @@ Bond_lines_container::do_Ca_plus_ligands_bonds(atom_selection_container_t SelAto
 					       coot::protein_geometry *pg,
 					       float min_dist,
 					       float max_dist,
-                                               bool draw_missing_loops_flag,
+                      bool draw_missing_loops_flag,
 					       bool do_bonds_to_hydrogens_in) {
 
    do_bonds_to_hydrogens = do_bonds_to_hydrogens_in;
@@ -5757,7 +5761,7 @@ Bond_lines_container::do_Ca_plus_ligands_bonds(atom_selection_container_t SelAto
 
 void
 Bond_lines_container::do_Ca_plus_ligands_and_sidechains_bonds(atom_selection_container_t SelAtom,
-							      int imol,
+							                                         int imol,
                                                               coot::protein_geometry *pg,
                                                               float min_dist_ca, float max_dist_ca,
                                                               float min_dist, float max_dist,
@@ -5771,7 +5775,7 @@ Bond_lines_container::do_Ca_plus_ligands_and_sidechains_bonds(atom_selection_con
    }
    //do_Ca_plus_ligands_bonds(SelAtom, min_dist, max_dist, coot::COLOUR_BY_ATOM_TYPE);
    do_Ca_plus_ligands_and_sidechains_bonds(SelAtom, imol,
-					   pg, min_dist_ca, max_dist_ca, min_dist, max_dist,
+					                            pg, min_dist_ca, max_dist_ca, min_dist, max_dist,
                                            draw_missing_loops_flag,
                                            coot::COLOUR_BY_CHAIN, do_bonds_to_hydrogens);
 }
@@ -5782,9 +5786,12 @@ Bond_lines_container::do_Ca_plus_ligands_bonds(atom_selection_container_t SelAto
 					       coot::protein_geometry *pg,
 					       float min_dist,
 					       float max_dist,
-                                               bool draw_missing_loops_flag,
+                      bool draw_missing_loops_flag,
 					       int atom_colour_type,
 					       bool do_bonds_to_hydrogens_in) {
+
+   std::cout << "***************************** here in do_Ca_plus_ligands_bonds() with draw_missing_loops_flag"
+              << draw_missing_loops_flag << std::endl;
 
     if (false)
        std::cout << "---- in do_Ca_plus_ligands_bonds with atom_colour_type "
@@ -6204,20 +6211,22 @@ Bond_lines_container::draw_trp_ring_outer(mmdb::Residue *residue_p, int model_nu
    // we need a ring atom vector for each of the alt confs
    std::set<std::string> residue_alt_confs;
 
-   mmdb::Atom **residue_atoms = 0;
-   int n_residue_atoms = 0;
-   residue_p->GetAtomTable(residue_atoms, n_residue_atoms);
-   for (int iat=0; iat<n_residue_atoms; iat++) {
-      mmdb::Atom *at = residue_atoms[iat];
-      if (! at->isTer()) {
-         std::string a(at->altLoc);
-         residue_alt_confs.insert(a);
+   { // don't shadow residue_atoms
+      mmdb::Atom **residue_atoms = 0;
+      int n_residue_atoms = 0;
+      residue_p->GetAtomTable(residue_atoms, n_residue_atoms);
+      for (int iat=0; iat<n_residue_atoms; iat++) {
+         mmdb::Atom *at = residue_atoms[iat];
+         if (! at->isTer()) {
+            std::string a(at->altLoc);
+            residue_alt_confs.insert(a);
+         }
       }
    }
 
 
    std::set<std::string>::const_iterator it;
-   for(it=residue_alt_confs.begin(); it!=residue_alt_confs.end(); it++) {
+   for(it=residue_alt_confs.begin(); it!=residue_alt_confs.end(); ++it) {
       const std::string &alt_loc(*it);
       unsigned int n_found = 0;
       for (unsigned int i=0; i<trp_rings_atom_names.size(); i++) {
@@ -6721,7 +6730,7 @@ Bond_lines_container::add_residue_monomer_bonds(const std::map<std::string, std:
 
                                  // if (br.aromaticity == coot::dict_bond_restraint_t::AROMATIC)
                                     // std::cout << "double and aromatic and same-ele!" << std::endl;
-                              
+
                                  add_double_bond(imol, model_number, iat, jat, residue_atoms, n_residue_atoms,
                                                  atom_colour_type, atom_colour_map,
                                                  udd_atom_index_handle,
