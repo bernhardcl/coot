@@ -61,7 +61,7 @@ libcoot_api_la_LDFLAGS = $(SHARED_LDFLAGS)            \
    $(top_builddir)/mini-mol/libcoot-mini-mol.la       \
    $(top_builddir)/coords/libcoot-coords.la	      \
    $(top_builddir)/utils/libcoot-utils.la             \
-   $(CLIPPER_LIBS) $(LIBSSM_LIBS) $(MMDB_LIBS) $(SQLITE3_LIBS) $(GSL_LIBS) $(RDKIT_LIBS) -lpthread
+   $(CLIPPER_LIBS) $(LIBSSM_LIBS) $(MMDB_LIBS) $(SQLITE3_LIBS) $(GSL_LIBS) $(RDKIT_LIBS) $(CAIRO_LIBS) -lpthread
 
 check_PROGRAMS = test-molecules-container
 
@@ -97,6 +97,6 @@ _coot_headless_api_la_SOURCES = wrap-coot-api.cc molecules_container_swig.cc
 
 _coot_headless_api_la_CXXFLAGS = -DUSE_PYTHON -DSWIG
 
-_coot_headless_api_la_LIBADD = libcoot-api.la
+_coot_headless_api_la_LIBADD = libcoot-api.la $(PYTHON_LIBS)
 
 _coot_headless_api_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined
