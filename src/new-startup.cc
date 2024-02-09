@@ -866,7 +866,11 @@ void window_removed(GtkApplication* self,GtkWindow* window, gpointer user_data) 
 
    // std::cout << "quit here" << std::endl;
    // g_application_quit(self);
-
+#ifdef WINDOWS_MINGW
+   g_application_quit(G_APPLICATION(self));
+   // BL says:: it doesnt quit but maybe not bad to call it anyway...
+   coot_save_state_and_exit(0, 0);
+#endif
 }
 
 int do_no_graphics_mode(command_line_data& cld, int argc, char** argv) {

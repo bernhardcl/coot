@@ -1498,6 +1498,125 @@ coot_no_state_real_exit(int retval) {
    coot_save_state_and_exit(retval, 0);
 }
 
+#include <Windows.h>
+#include <tlhelp32.h>
+#include <signal.h>
+#include <unistd.h>
+
+DWORD GetParentPID() {
+    DWORD parentPID = 0;
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+
+    if (hSnapshot != INVALID_HANDLE_VALUE) {
+        PROCESSENTRY32 pe32;
+        pe32.dwSize = sizeof(PROCESSENTRY32);
+
+        if (Process32First(hSnapshot, &pe32)) {
+            do {
+                if (pe32.th32ProcessID == GetCurrentProcessId()) {
+                    parentPID = pe32.th32ParentProcessID;
+                    break;
+                }
+            } while (Process32Next(hSnapshot, &pe32));
+        }
+
+        CloseHandle(hSnapshot);
+    }
+
+    return parentPID;
+}
+
+// find process ID by process name
+int findMyProc(const char *procname) {
+
+  HANDLE hSnapshot;
+  PROCESSENTRY32 pe;
+  int pid = 0;
+  BOOL hResult;
+
+  // snapshot of all processes in the system
+  hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (INVALID_HANDLE_VALUE == hSnapshot) return 0;
+
+  // initializing size: needed for using Process32First
+  pe.dwSize = sizeof(PROCESSENTRY32);
+
+  // info about first process encountered in a system snapshot
+  hResult = Process32First(hSnapshot, &pe);
+
+  // retrieve information about the processes
+  // and exit if unsuccessful
+  while (hResult) {
+    // if we find the process: return process ID
+    if (strcmp(procname, pe.szExeFile) == 0) {
+      pid = pe.th32ProcessID;
+      break;
+    }
+    hResult = Process32Next(hSnapshot, &pe);
+  }
+
+  // closes an open handle (CreateToolhelp32Snapshot)
+  CloseHandle(hSnapshot);
+  return pid;
+}
+std::string ProcessIdToName(DWORD processId)
+{
+    std::string ret;
+    HANDLE handle = OpenProcess(
+        PROCESS_QUERY_LIMITED_INFORMATION,
+        FALSE,
+        processId /* This is the PID, you can find one from windows task manager */
+    );
+    if (handle)
+    {
+        DWORD buffSize = 1024;
+        CHAR buffer[1024];
+        if (QueryFullProcessImageNameA(handle, 0, buffer, &buffSize))
+        {
+            ret = buffer;
+        }
+        else
+        {
+            printf("Error GetModuleBaseNameA : %lu", GetLastError());
+        }
+        CloseHandle(handle);
+    }
+    else
+    {
+        printf("Error OpenProcess : %lu", GetLastError());
+    }
+    return ret;
+}
+
+#ifdef WINDOWS_MINGW
+void
+exit_win(int retval) {
+   // BL says:: somehow on Windows we cannot exit. It hangs infinately so we just
+   // kill the process. Not elegant but it works for now...
+   // can it fail? What then?
+   int pid;
+   int err;
+   HANDLE handy;
+   BOOL ret;
+   DWORD status;
+   pid = getpid();
+   handy = OpenProcess(SYNCHRONIZE|PROCESS_TERMINATE, TRUE, pid);
+   ret = TerminateProcess(handy, 0);
+   // assume it didnt exit!?
+   err = GetLastError();
+   if (!ret) {
+      CloseHandle(handy);
+      }
+   if (err == ERROR_ACCESS_DENIED &&
+       GetExitCodeProcess(handy, &status) &&
+       status != STILL_ACTIVE) {
+      std::cout<< "BL ERROR:: cannot exit. Oh dear...." <<std::endl;
+      // lets try a normal exit!?
+      exit(retval);
+   }
+}
+#endif // WINDOWS_MINGW
+
 void
 coot_save_state_and_exit(int retval, int save_state_flag) {
 
@@ -1531,9 +1650,11 @@ coot_save_state_and_exit(int retval, int save_state_flag) {
 
 #ifdef WINDOWS_MINGW
    clipper::ClipperInstantiator::instance().destroy();
-#endif
+   exit_win(retval);
+#else
 
    exit(retval);
+#endif
 }
 
 // This is called by when the save coordinates menu item is pressed,
