@@ -1058,7 +1058,7 @@ molecules_container_t::read_ccp4_map(const std::string &file_name, bool is_a_dif
          std::cout << "::::: read_ccp4_map() returns false for is_basic_em_map_file() " << std::endl;
       }
    }
-   
+
 
    if (coot::util::is_basic_em_map_file(file_name)) {
 
@@ -1129,6 +1129,7 @@ molecules_container_t::read_ccp4_map(const std::string &file_name, bool is_a_dif
       } catch (const clipper::Message_base &exc) {
          std::cout << "WARNING:: failed to open " << file_name << std::endl;
          // bad_read = true;
+         imol = -3; // clipper error
       }
    }
    return imol;
@@ -1767,8 +1768,6 @@ molecules_container_t::get_bonds_mesh_instanced(int imol, const std::string &mod
                                                 bool against_a_dark_background,
                                                 float bond_width, float atom_radius_to_bond_width_ratio,
                                                 int smoothness_factor) {
-
-   std::cout << " ==================================== get_bonds_mesh_instanced() start" << std::endl;
 
    bool draw_hydrogen_atoms_flag = true; // pass this
 
@@ -4690,7 +4689,9 @@ molecules_container_t::refine(int imol, int n_cycles) {
    if (is_valid_model_molecule(imol)) {
       status = molecules[imol].refine_using_last_restraints(n_cycles);
       std::string mode = "COLOUR-BY-CHAIN-AND-DICTIONARY";
-      im = molecules[imol].get_bonds_mesh_instanced(mode, &geom, true, 0.1, 1.4, 1, true, true);
+      bool draw_hydrogen_atoms_flag = true; // use data member as we do for draw_missing_residue_loops_flag?
+      im = molecules[imol].get_bonds_mesh_instanced(mode, &geom, true, 0.12, 1.4, 1,
+                                                    draw_hydrogen_atoms_flag, draw_missing_residue_loops_flag);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
