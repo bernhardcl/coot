@@ -184,6 +184,7 @@ coot::ligand::ligand() {
 
    // gets set later, hopefully
    map_rms = -1.0;
+
 }
 
 // coot::ligand::~ligand() {
@@ -1321,11 +1322,15 @@ coot::ligand::calculate_cluster_centres_and_eigens() {
       cluster[i].eigenvalues = eigens;
    }
 
-//    for (int i=0; i<cluster.size(); i++) {
-//       std::cout << "cluster score, points, eigen trn " << i << " "
-// 		<< cluster[i].score << " " << cluster[i].map_grid.size()
-// 		<< " " << cluster[i].eigenvectors_and_centre.trn().format() << std::endl;
-//    }
+   if (true) {
+      for (unsigned int i=0; i<cluster.size(); i++) {
+         std::cout << "cluster score, n-grid-points, eigen, trn: " << i << " "
+                   << cluster[i].score << " " << cluster[i].map_grid.size()
+            //                   << " " << cluster[i].eigenvectors_and_centre.rot().format()
+                   << " " << cluster[i].eigenvectors_and_centre.trn().format()
+                   << std::endl;
+      }
+   }
 
 }
 
@@ -1384,6 +1389,22 @@ coot::ligand::print_cluster_details(bool show_grid_points) const {
       }
    }
 }
+
+float
+coot::ligand::get_cluster_volume(unsigned int iclust) const {
+
+   float r = -1;
+   if (iclust < cluster.size()) {
+      const auto &c(cluster[iclust]);
+      float vol = xmap_pristine.cell().volume();
+      float ngrid = xmap_pristine.grid_sampling().nu() * xmap_pristine.grid_sampling().nv() * xmap_pristine.grid_sampling().nw();
+      float grid_vol = vol/ngrid;
+      float cluster_vol = grid_vol * c.map_grid.size();
+      r = cluster_vol;
+   }
+   return r;
+}
+
 
 
 void
@@ -1805,9 +1826,8 @@ coot::ligand::fit_ligands_to_clusters(int max_n_clusters) {
    final_ligand.resize(max_n_clusters);
    save_ligand_score.resize(max_n_clusters);
 
-   for (int iclust=0; iclust<int(cluster.size()) && iclust<max_n_clusters; iclust++) {
-     fit_ligands_to_cluster(iclust);
-   }
+   for (int iclust=0; iclust<int(cluster.size()) && iclust<max_n_clusters; iclust++)
+      fit_ligands_to_cluster(iclust, max_n_clusters);
 }
 
 #include <atomic>
@@ -1821,7 +1841,7 @@ coot::ligand::fit_ligands_to_clusters(int max_n_clusters) {
 // Surely n_lig_max is the maximum *cluster* index?
 //
 void
-coot::ligand::fit_ligands_to_cluster(int iclust) {
+coot::ligand::fit_ligands_to_cluster(int iclust, unsigned int max_n_clusters) {
 
    // for debugging
    write_orientation_solutions = 0;
@@ -1835,6 +1855,8 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
    clipper::Mat33<double> no_rotation    (1, 0,  0, 0, 1,  0, 0, 0, 1);
    clipper::Mat33<double> y_axis_rotation(0, 0, -1, 0, 1,  0, 1, 0, 0);
    clipper::Mat33<double> x_axis_rotation(1, 0,  0, 0, 0, -1, 0, 1, 0);
+   clipper::Mat33<double> z_axis_rotation(-1,  0,  0,   0, -1,  0,   0, 0,  1);
+
    clipper::RTop_orth no_rotation_op(no_rotation, clipper::Coord_orth(0,0,0));
    clipper::RTop_orth  y_axis_op(y_axis_rotation, clipper::Coord_orth(0,0,0));
    clipper::RTop_orth  x_axis_op(x_axis_rotation, clipper::Coord_orth(0,0,0));
@@ -1858,15 +1880,26 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
 
    // I wasn't sure how to make these functions static, so we have a local versions.
 
-   auto cluster_ligand_size_match = [] (const map_point_cluster &cluster, const minimol::molecule &ligand, float grid_vol) {
-                                       float cluster_vol = grid_vol * cluster.map_grid.size();
-                                       unsigned int n_atoms = ligand.count_atoms();
-                                       float ligand_vol = (4.0 * 3.14159/3.0) * 1.78 * static_cast<float>(n_atoms);
-                                       return ((ligand_vol/cluster_vol < 7.0) && (ligand_vol/cluster_vol > 0.8));
-                                    };
+   auto cluster_ligand_size_match = [get_results_lock, release_results_lock] (const map_point_cluster &cluster,
+                                                                              const minimol::molecule &ligand,
+                                                                              float grid_vol) {
+
+      float cluster_vol = grid_vol * cluster.map_grid.size();
+      unsigned int n_atoms = ligand.count_atoms();
+      float ligand_vol = (4.0 * 3.14159/3.0) * 1.78 * static_cast<float>(n_atoms);
+      get_results_lock();
+      if (false)
+         std::cout << "in cluster_ligand_size_match() ligand has "
+                   << " n_atoms " << n_atoms << " and volume " << ligand_vol
+                   << " cluster has " << cluster.map_grid.size() << " grid-points and"
+                   << " cluster-volume " << cluster_vol
+                   << std::endl;
+      release_results_lock();
+      return ((ligand_vol/cluster_vol < 7.0) && (ligand_vol/cluster_vol > 0.8));
+   };
 
    auto transform_ligand_atom = [] (const clipper::Coord_orth &position,
-                                    const clipper::RTop_orth &cluster_rtop,
+                                    const clipper::RTop_orth &cluster_eigenvectors_and_centre_rtop,
                                     const clipper::Mat33<double> &initial_ligand_eigenvector,
                                     const clipper::Coord_orth &initial_ligand_model_centre,
                                     const clipper::Mat33<double> &origin_rotation) {
@@ -1876,7 +1909,13 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
                                    clipper::RTop_orth origin_rotation_op(origin_rotation, zero);
                                    clipper::Coord_orth a = position.transform(lopi);
                                    a = a.transform(origin_rotation_op);
-                                   a = a.transform(cluster_rtop);
+                                   if (true) {
+                                      clipper::RTop_orth synth_rtop(clipper::Mat33<double>::identity(),
+                                                                    cluster_eigenvectors_and_centre_rtop.trn());
+                                      a = a.transform(synth_rtop);
+                                   } else {
+                                      a = a.transform(cluster_eigenvectors_and_centre_rtop);
+                                   }
                                    return a;
                                 };
 
@@ -1900,8 +1939,9 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
                                                                          initial_ligand_eigenvector, initial_ligand_model_centre,
                                                                          eigen_orientation.rot());
 
-                             rigid_body_refine_ligand(&atoms_p, std::cref(xmap_masked), std::cref(xmap_pristine),
-                                                      rotation_component, gradient_scale); // ("rigid body") move atoms.
+                             // rigid_body_refine_ligand(&atoms_p, std::cref(xmap_masked), std::cref(xmap_pristine),
+                             // rotation_component, gradient_scale); // ("rigid body") move atoms.
+
                              float fit_fraction = 0.1;
                              ligand_score_card lsc = score_orientation(atoms_p, std::cref(xmap_pristine), fit_fraction);
                              lsc.set_ligand_number(ilig);
@@ -1930,15 +1970,20 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
 
       if (!do_size_match_test || cluster_ligand_size_match(cluster, ligand, grid_vol)) {
          if (debug)
-            std::cout << "ligand " << ilig << " passes the size match test " << "for cluster number "
+            std::cout << "fit_ligands_to_cluster(): fit_ligand_to_cluster(): ligand "
+                      << ilig << " passes the size match test " << "for cluster number "
                       << iclust << std::endl;
 
          int n_rot = origin_rotations.size();
-         int n_eigen_oris = 3;
+         // int n_eigen_oris = 3;
+         int n_eigen_oris = 4; // 20240209-PE new style!
          if (dont_test_rotations) {
             n_rot = 1;  // the first one is the identity matrix
             n_eigen_oris = 1;
          }
+
+         n_rot = 1; // 20240209-PE now that we have 4 n_eigen_oris, we don't need to test the rotations
+                    // (because they are all the same solution)
 
          for (int i_eigen_ori=0; i_eigen_ori<n_eigen_oris; i_eigen_ori++) {
             for (int ior=0; ior<n_rot; ior++) {
@@ -1951,12 +1996,25 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
                                   std::cref(xmap_pristine),
                                   rotation_component, gradient_scale);
                get_results_lock();
+               if (true)
+                  std::cout << "fit_ligands_to_cluster(): fit_ligand_to_cluster():"
+                            << " i_clust " << iclust
+                            << " i_eigen_ori " << i_eigen_ori << " ior " << ior
+                            << " ilig " << ilig << " score " << scored_ligand.second.get_score()
+                            << std::endl;
                results.push_back(scored_ligand);
                release_results_lock();
+               if (true) {
+                  std::string fn("fit-ligand-copy:" + std::to_string(ilig) + ":" +
+                                 std::to_string(i_eigen_ori) + ":" + std::to_string(ior) + ".pdb");
+                  scored_ligand.first.write_file(fn, 20.0);
+               }
             }
          }
       } else {
-         // std::cout << "-------------- fails size test match" << std::endl;
+         if (debug)
+            std::cout << "-------------- fails size test match iclust " << iclust
+                      << " ilig " << ilig << std::endl;
       }
    };
 
@@ -1968,12 +2026,16 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
    // remember to add back the code for debugging solutions post-generation after multithreading
 
    unsigned int n_ligands = initial_ligand.size();
-   std::cout << "INFO:: fitting " << n_ligands << " ligands into cluster " << iclust << std::endl;
+
+   if (debug)
+      std::cout << "DEBUG:: fitting " << n_ligands << " ligands into cluster " << iclust << std::endl;
 
    // 20221119-PE if we are fitting ligand "right here" then we don't want to do a size match.
    //             But is this the right test for "fitting ligand right here?"
-   if (iclust == 0)
+   if (iclust == 0 && max_n_clusters == 1)
       do_size_match_test = false;
+   else
+      do_size_match_test = true;
 
    std::vector<std::pair<minimol::molecule, ligand_score_card> > big_vector_of_results;
 
@@ -1984,7 +2046,7 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
    std::vector<std::vector<unsigned int> > indices;
    unsigned int n_per_batch = 10;
    unsigned int n_batches = n_ligands / n_per_batch + 1;
-   coot::split_indices(&indices, n_ligands, n_batches);
+   coot::split_indices(&indices, n_ligands, n_batches); // vec, n_items, n_threads
 
    for (unsigned int ii=0; ii<indices.size(); ii++) {
       const std::vector<unsigned int> &ligand_indices = indices[ii];
@@ -2011,9 +2073,10 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
                                        debug,
                                        std::ref(big_vector_of_results)));
       }
-      for (unsigned int ilig=0; ilig<ligand_indices.size(); ilig++) {
-         threads[ilig].join();
-         // debugging: std::cout << "  ilig " << ilig << " joined" << std::endl;
+      for (unsigned int jj=0; jj<ligand_indices.size(); jj++) {
+         threads[jj].join();
+         if (debug)
+            std::cout << "  thread " << jj << " joined" << std::endl;
       }
    }
 
@@ -2025,10 +2088,11 @@ coot::ligand::fit_ligands_to_cluster(int iclust) {
       // old-function: write_orientation_solution(iclust, ilig, i_eigen_ori, ior, fitted_ligand_vec[ilig][iclust]);
    }
 
-   if (false)
-      std::cout << "::::::::::::: final_ligand " << iclust
+   if (debug)
+      std::cout << "::::::::::::: fit_ligands_to_cluster(): final_ligand " << iclust
                 << " big_vector_of_results size " << big_vector_of_results.size()
                 << std::endl;
+
    final_ligand[iclust] = big_vector_of_results;
 
    sort_final_ligand(iclust);
@@ -2104,13 +2168,19 @@ coot::ligand::n_ligands_for_cluster(unsigned int iclust,
    if (final_ligand[iclust].size() > 0) {
       top_score = final_ligand[iclust][0].second.get_score();
       for (unsigned int i=0; i<final_ligand[iclust].size(); i++) {
-	 if (final_ligand[iclust][i].second.get_score() > frac_limit_of_peak_score * top_score)
+	 if (final_ligand[iclust][i].second.get_score() > frac_limit_of_peak_score * top_score) {
+            if (false)
+               std::cout << "n_ligands_for_cluster() iclust " << iclust << " i " << i << " "
+                         << final_ligand[iclust][i].second.get_score() << " " << frac_limit_of_peak_score << " "<< top_score
+                         << std::endl;
 	    n++;
+         }
       }
    }
-   std::cout << "debug:: n_ligands_for_cluster() top_score " << top_score << " and "
-	     << n << " are decent out of " << final_ligand[iclust].size()
-	     << std::endl;
+   if (false)
+      std::cout << "debug:: n_ligands_for_cluster() top_score " << top_score << " and "
+                << n << " are decent out of " << final_ligand[iclust].size()
+                << std::endl;
    return n;
 }
 

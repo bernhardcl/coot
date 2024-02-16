@@ -7,6 +7,7 @@ AM_CPPFLAGS = \
 	$(LIBSSM_CXXFLAGS)                  \
 	$(CLIPPER_CXXFLAGS)                 \
 	$(MMDB_CXXFLAGS)                    \
+	$(GEMMI_CXXFLAGS)                   \
 	$(PYTHON_CPPFLAGS)                  \
 	$(CAIRO_CFLAGS)                     \
 	$(RDKIT_CXXFLAGS) $(BOOST_CPPFLAGS) \
@@ -38,7 +39,8 @@ molecules_container.cc       make-a-dodec.cc	                              molec
 phi-psi-prob.cc              coot_molecule_moltris.cc                         coot_molecule_replace_fragment.cc \
 coot_molecule_backup.cc      coot_molecule_bonds_instanced.cc                 molecules_container_mmrrcc.cc \
 coot_molecule_refine.cc      molecules_container_superpose.cc                 rigid-body-fit.cc \
-moorhen-h-bonds.cc           molecules_container_bucca_ml_growing.cc          instancing.cc
+moorhen-h-bonds.cc           molecules_container_bucca_ml_growing.cc          instancing.cc  \
+coot_molecule_change_chain_id.cc
 
 libcoot_api_la_LDFLAGS = $(SHARED_LDFLAGS)            \
    $(top_builddir)/MoleculesToTriangles/CXXClasses/libMoleculesToTrianglesCXXClasses.la \

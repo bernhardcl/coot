@@ -638,7 +638,13 @@ public:
 
    // Used by various CA-mode bonds
    //
-   explicit Bond_lines_container(coot::protein_geometry *protein_geom, bool do_bonds_to_hydrogens_in=true) {
+   explicit Bond_lines_container(coot::protein_geometry *protein_geom,
+                                 std::string dummy_flag_for_CA_mode,  // 20240210-PE this makes this constructor different to the next one
+                                                                      // now that we want no_bonds_to_these_atoms to be used in CA mode
+                                 const std::set<int> &no_bonds_to_these_atoms_in,
+                                 bool do_bonds_to_hydrogens_in=true) :
+      no_bonds_to_these_atoms(no_bonds_to_these_atoms_in) {
+
       init();
       verbose_reporting = false;
       do_bonds_to_hydrogens = do_bonds_to_hydrogens_in;
@@ -659,6 +665,7 @@ public:
    }
 
    // Used by make_colour_by_chain_bonds() - and others in the future?
+   // Used by get_bonds_mesh_for_selection_instanced() in coot_molecule_bonds_instanced.cc
    //
    Bond_lines_container(coot::protein_geometry *protein_geom,
                         const std::set<int> &no_bonds_to_these_atoms_in,
