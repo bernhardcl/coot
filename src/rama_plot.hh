@@ -251,7 +251,7 @@ class rama_plot {
 				 // no, then we have sticky labels.
 
    double rama_threshold_allowed;   // 0.05 
-   double rama_threshold_preferred; // 0.002
+   double rama_threshold_preferred; // 0.0005
    void init_internal(const std::string &mol_name,
 		      float level_prefered, float level_allowed,
 		      float block_size,
@@ -271,6 +271,7 @@ class rama_plot {
    int dialog_position_y;
    float current_level_prefered;
    float current_level_allowed;
+   float gamma_correction;
    bool kleywegt_plot_uses_chain_ids;
    void hide_stats_frame();
    void counts_to_stats_frame(const rama_stats_container_t &sc);
@@ -333,7 +334,6 @@ public:
    void make_kleywegt_plot(int on_off);
    void plot_type_changed();
    void update_kleywegt_plot();
-
    GtkWidget *dynawin;
    GtkWidget *about_dialog;
    GtkWidget *rama_export_as_pdf_filechooserdialog;
@@ -344,6 +344,8 @@ public:
    GtkWidget *selection_hbox;
    GtkWidget *selection_entry;
    GtkWidget *selection_checkbutton;
+   static float default_level_prefered;
+   static float default_level_allowed;
 
    rama_plot() {
 #ifdef HAVE_GOOCANVAS
@@ -369,6 +371,9 @@ public:
       resize_canvas_with_window = 0;
       dialog_position_x = -100; dialog_position_y = -100;
       psi_axis_mode = PSI_CLASSIC;
+      current_level_prefered = 0.02;
+      current_level_allowed = 0.0005;
+      gamma_correction = 2.5;
    }
 
    rama_stats_container_t saved_counts;
@@ -386,7 +391,7 @@ public:
    // consider destructor where we should
    // gtk_object_destroy(big_box_item) if it is non-zero.
    void init(const std::string &type, short int psi_axis=PSI_CLASSIC);
-   // typically level_prefered = 0.02, level_allowed is 0.002, block_size is 10.0;
+   // typically level_prefered = 0.02, level_allowed is 0.0005, block_size is 2.0;
    void init(int imol_no, const std::string &mol_name, float level_prefered, float level_allowed,
              float block_size_for_background, short int is_kleywegt_plot_flag,
              short int psi_axis=PSI_CLASSIC);
@@ -413,7 +418,7 @@ public:
    void draw_it(int imol1, int imol2,
                 mmdb::Manager *mol1, mmdb::Manager *mol2,
                 const std::string &chain_id_1, const std::string &chain_id_2);
-   
+
    void draw_it(const util::phi_psi_t &phipsi);
    void draw_it(const std::vector<util::phi_psi_t> &phipsi);
 
@@ -627,6 +632,9 @@ public:
 
    void psi_axis_changed();
    void set_rama_psi_axis(int state);
+   void set_gamma_correction(float gamma) {
+      gamma_correction = gamma;
+   };
    void show_selection_widget(int state);
    void apply_selection_from_widget();
    void debug() const;
