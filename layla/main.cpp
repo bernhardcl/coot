@@ -33,6 +33,10 @@ int main(int argc, char** argv) {
 
     using namespace coot::layla;
 
+#ifdef WINDOWS_MINGW
+    LaylaState* global_instance = nullptr;
+    GtkBuilder* global_layla_gtk_builder = nullptr;
+#endif
     // std::thread python_init_thread([argc,argv](){
     //     setup_python_basic(argc, argv);
     //     setup_python_module("coot");

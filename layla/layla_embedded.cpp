@@ -26,6 +26,11 @@
 
 using namespace coot::layla;
 
+#ifdef WINDOWS_MINGW
+LaylaState* global_instance = nullptr;
+GtkBuilder* global_layla_gtk_builder = nullptr;
+#endif
+
 bool coot::is_layla_initialized() {
     return coot::layla::global_layla_gtk_builder != nullptr;
 }

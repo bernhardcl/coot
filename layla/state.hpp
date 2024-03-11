@@ -112,12 +112,22 @@ class LaylaState {
 
 /// Let this be the singleton used by the editor executable.
 /// Could by used by Coot as well.
+#ifdef WINDOWS_MINGW
+extern "C" G_MODULE_EXPORT
+LaylaState* global_instance;
+#else
 inline LaylaState* global_instance = nullptr;
+#endif
 
 /// Global GtkBuilder created from `layla.ui`.
 /// Used for accessing widgets inside dialogs 
 /// from within signal handlers.
+#ifdef WINDOWS_MINGW
+extern "C" G_MODULE_EXPORT
+GtkBuilder* global_layla_gtk_builder;
+#else
 inline GtkBuilder* global_layla_gtk_builder = nullptr;
+#endif
 
 void initialize_global_instance(CootLigandEditorCanvas* canvas, GtkWindow* win, GtkLabel* status_label = nullptr);
 
