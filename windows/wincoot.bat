@@ -1,7 +1,8 @@
+REM Windows Batch script to run WinCoot 1
 @set LANG=en
 @set LC_ALL=en
 @set LC_NUMERIC=en
-title WinCoot
+title WinCoot-1
 
 REM First try to find a dictionary. Search in the registry for a
 REM CCP4 installation and then setup CCP4.
@@ -18,7 +19,7 @@ set COOT_GUILE_PREFIX=%COOT_PREFIX:\=/%
 
 REM New COOT_HOME is in User directory now
 set COOT_HOME=%USERPROFILE%\COOT
-set COOT_BACKUP_DIR=%COOT_PREFIX%\coot-backup
+set COOT_BACKUP_DIR=%COOT_HOME%\coot-backup
 
 set COOT_SHARE=%COOT_PREFIX%\share
 
@@ -33,10 +34,8 @@ set COOT_PIXMAPS_DIR=%COOT_SHARE%\coot\pixmaps
 set COOT_RESOURCES_FILE=%COOT_SHARE%\coot\cootrc
 set COOT_DATA_DIR=%COOT_SHARE%\coot
 set COOT_REF_STRUCTS=%COOT_SHARE%\coot\reference-structures
-set COOT_PYTHON_DIR=%COOT_PREFIX%\lib\python2.7\site-packages\coot
-REM set PYTHONHOME=%COOT_PREFIX%\python27
-
-set GUILE_LOAD_PATH=%COOT_GUILE_PREFIX%/share/guile/1.8;%COOT_GUILE_PREFIX%/share/guile;%COOT_GUILE_PREFIX%/share/guile/gtk-2.0;%COOT_GUILE_PREFIX%/share/guile/gui;%COOT_GUILE_PREFIX%/share/guile/www;%COOT_GUILE_PREFIX%/share/guile/site
+set COOT_PYTHON_DIR=%COOT_PREFIX%\lib\python3.11\site-packages\coot
+set PYTHONHOME=%COOT_PREFIX%
 
 set SYMINFO=%COOT_SHARE%\coot\syminfo.lib
 

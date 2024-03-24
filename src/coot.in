@@ -72,6 +72,11 @@ if [ "$systype" != "${systype/MINGW32_NT/}" ] ; then
    coot_bin=$COOT_PREFIX/bin/coot-bin
    PYTHONHOME=$COOT_PREFIX/python$python_major_minor
    PATH=$PATH:$PYTHONHOME
+elif [[ ( "$systype" != "${systype/MINGW64_NT/}" )
+  || ( "$systype" != "${systype/MSYS/}" ) ]] ; then
+   coot_bin=$COOT_PREFIX/bin/coot-bin
+   PYTHONHOME=$COOT_PREFIX
+   PATH=$COOT_PREFIX/lib:$PATH:$PYTHONHOME
 else
    coot_bin=$COOT_PREFIX/libexec/coot-bin
    PYTHONHOME=$COOT_PREFIX
