@@ -1,3 +1,28 @@
+/*
+ * src/TextureMesh.cc
+ *
+ * Copyright 2020 by Medical Research Council
+ * Author: Paul Emsley
+ *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copies of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
+ * See http://www.gnu.org/licenses/
+ *
+ */
 
 #ifdef USE_PYTHON
 #include "Python.h"
@@ -7,7 +32,10 @@
 #include <iomanip>
 
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/ext.hpp>
+// #include <glm/ext.hpp> // 20240326-PE
+#include <glm/gtx/string_cast.hpp> // for to_string()
+#include <glm/gtc/type_ptr.hpp>  // for value_ptr() 20240326-PE
+
 
 #include "ft-character.hh"
 #include "TextureMesh.hh"
@@ -65,6 +93,31 @@ TextureMesh::setup_camera_facing_quad(float scale_x, float scale_y, float offset
 }
 
 void
+TextureMesh::setup_tomo_quad(float scale_x, float scale_y, float z_pos) {
+
+  draw_this_mesh = true;
+
+   glm::vec3 n(0,0,1);
+   glm::vec4 col(1.0, 1.0, 1.0, 1.0);
+
+   vertices.clear();
+   triangles.clear();
+
+   // the indexing might well be wrong here - I'm sort of guessing
+   vertices.push_back(TextureMeshVertex(glm::vec3(0.0f,    0.0f,    z_pos), n, col, glm::vec2(0,0)));
+   vertices.push_back(TextureMeshVertex(glm::vec3(scale_x, 0.0f,    z_pos), n, col, glm::vec2(0,1)));
+   vertices.push_back(TextureMeshVertex(glm::vec3(scale_x, scale_y, z_pos), n, col, glm::vec2(1,1)));
+   vertices.push_back(TextureMeshVertex(glm::vec3(0.0f,    scale_y, z_pos), n, col, glm::vec2(1,0)));
+
+   triangles.push_back(g_triangle(0,1,2));
+   triangles.push_back(g_triangle(2,3,0));
+
+   setup_buffers();
+
+}
+
+
+void
 TextureMesh::set_colour(const glm::vec4 &col_in) {
 
    for (unsigned int i=0; i<vertices.size(); i++) {
@@ -72,14 +125,35 @@ TextureMesh::set_colour(const glm::vec4 &col_in) {
    }
 }
 
+// static
+std::string
+TextureMesh::_(int err) {
+
+   std::string s = std::to_string(err);
+   if (err == GL_INVALID_ENUM)      s = "GL_INVALID_ENUM";
+   if (err == GL_INVALID_OPERATION) s = "GL_INVALID_OPERATION";
+   if (err == GL_INVALID_VALUE)     s = "GL_INVALID_VALUE";
+   return s;
+}
+
 void
 TextureMesh::setup_buffers() {
+
+   GLenum err = glGetError();
+   if (err) std::cout << "GL ERROR:: TextureMesh::setup_buffers() --- start --- " << _(err) << "\n";
+   err = glGetError();
+   if (err) std::cout << "GL ERROR:: TextureMesh::setup_buffers() --- start --- " << _(err) << "\n";
+   err = glGetError();
+   if (err) std::cout << "GL ERROR:: TextureMesh::setup_buffers() --- start --- " << _(err) << "\n";
 
    if (triangles.empty()) return;
    if (vertices.empty()) return;
 
    glGenVertexArrays(1, &vao);
    glBindVertexArray(vao);
+
+   err = glGetError();
+   if (err) std::cout << "GL ERROR:: TextureMesh::setup_buffers() A" << _(err) << std::endl;
 
    setup_tbn(vertices.size());
 
@@ -91,6 +165,9 @@ TextureMesh::setup_buffers() {
                 << " buffer_id " << buffer_id << std::endl;
    glBufferData(GL_ARRAY_BUFFER, n_vertices * sizeof(TextureMeshVertex), &(vertices[0]), GL_STATIC_DRAW);
    // std::cout << "in TextureMesh::setup_buffers() " << name << " done glBufferData() " << std::endl;
+
+   err = glGetError();
+   if (err) std::cout << "GL ERROR:: TextureMesh::setup_buffers() B\n";
 
    // position
    glEnableVertexAttribArray(0);
@@ -123,9 +200,9 @@ TextureMesh::setup_buffers() {
 
 
    glGenBuffers(1, &index_buffer_id);
-   GLenum err = glGetError(); if (err) std::cout << "GL ERROR:: setup_simple_triangles()\n";
+   err = glGetError(); if (err) std::cout << "GL ERROR:: TextureMesh::setup_buffers()" << _(err) << std::endl;
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_id);
-   err = glGetError(); if (err) std::cout << "GL ERROR:: setup_simple_triangles()\n";
+   err = glGetError(); if (err) std::cout << "GL ERROR:: TextureMesh::setup_buffers()" << _(err) << std::endl;
    unsigned int n_triangles = triangles.size();
    unsigned int n_bytes = n_triangles * 3 * sizeof(unsigned int);
    if (false)
@@ -134,7 +211,7 @@ TextureMesh::setup_buffers() {
                 << " n_triangles: " << n_triangles
                 << " allocating with size: " << n_bytes << " bytes" << std::endl;
    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_bytes, &triangles[0], GL_STATIC_DRAW);
-   err = glGetError(); if (err) std::cout << "GL error setup_simple_triangles()\n";
+   err = glGetError(); if (err) std::cout << "GL ERROR TextureMesh::setup_buffers()" << _(err) << std::endl;
 
    glDisableVertexAttribArray(0);
    glDisableVertexAttribArray(1);
@@ -910,11 +987,11 @@ TextureMesh::update_instancing_buffer_data_for_happy_faces(const std::vector<glm
                                    float f1 = static_cast<float>(draw_count_in)/static_cast<float>(draw_count_max);
                                    float f2 = f1 * f1 * 2.5f;
                                    glm::vec3 f_uv = f2 * screen_y_uv;
-                                   glm::vec3 tp = glm::normalize(glm::vec3(0.1, 0.2, 0.3));
+                                   glm::vec3 tp = glm::normalize(glm::vec3(0.1f, 0.2f, 0.3f));
                                    glm::vec3 cp_1 = glm::cross(screen_y_uv, tp);
                                    glm::vec3 cp_2 = glm::cross(screen_y_uv, cp_1);
                                    float phase = 0.1 * static_cast<float>(index);
-                                   f_uv += 0.9 * sinf(9.0 * f1 + phase) * cp_2;
+                                   f_uv += 0.9f * sinf(9.0f * f1 + phase) * cp_2;
                                    return f_uv;
                                 };
 

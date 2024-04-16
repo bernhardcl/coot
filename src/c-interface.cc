@@ -12,12 +12,12 @@
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA
+ * You should have received a copy of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
  */
 
 // $Id: c-interface.cc 1458 2007-01-26 20:20:18Z emsley $
@@ -360,8 +360,7 @@ PyObject *molecule_name_stub_py(int imol, int include_path_flag) {
 
 void set_molecule_name(int imol, const char *new_name) {
 
-   if (is_valid_model_molecule(imol) ||
-       is_valid_map_molecule(imol)) {
+   if (is_valid_model_molecule(imol) || is_valid_map_molecule(imol)) {
       graphics_info_t::molecules[imol].set_name(new_name);
    }
 }
@@ -2093,13 +2092,16 @@ set_density_size_em_from_widget(const char *text) {
          std::string ss(text);
          float f = coot::util::string_to_float(ss);
          if (f > 0.0) {
-            if (f < 1999.9) {
+            // example tomo is 21000x16000x3000
+            if (f < 19999.9) {
                graphics_info_t g;
                g.box_radius_em = f;
                for (int ii=0; ii<g.n_molecules(); ii++) {
                   if (is_valid_map_molecule(ii))
                      g.molecules[ii].update_map(true);
                }
+            } else {
+               std::cout << "over the limit: " << f << std::endl;
             }
          }
       }
@@ -3144,8 +3146,8 @@ get_show_unit_cell(int imol) {
 void
 set_show_unit_cell(int imol, short int state) {
 
-   if (is_valid_model_molecule(imol)) {
-      graphics_info_t::molecules[imol].show_unit_cell_flag = state;
+   if (is_valid_model_molecule(imol) || is_valid_map_molecule(imol)) {
+      graphics_info_t::molecules[imol].set_show_unit_cell(state);
    }
 
    graphics_draw();
@@ -4388,11 +4390,8 @@ skel_greer_off() {
 
 void test_fragment() {
 
-#ifdef HAVE_GSL
    graphics_info_t g;
    g.rotamer_graphs(0);
-
-#endif // HAVE_GSL
 }
 
 // we redefine TRUE here somewhere...
@@ -5821,8 +5820,7 @@ void set_map_displayed(int imol, int state) {
    graphics_info_t g;
    if (is_valid_map_molecule(imol)) {
       graphics_info_t::molecules[imol].set_map_is_displayed(state);
-      if (g.display_control_window())
-	      set_display_control_button_state(imol, "Displayed", state);
+      set_display_control_button_state(imol, "Displayed", state);
       graphics_draw();
    }
 }

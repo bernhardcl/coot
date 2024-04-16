@@ -5,19 +5,19 @@
  * Copyright 2014, 2016 by Medical Research Council
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or (at
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA
+ * You should have received a copy of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
  */
 
 
@@ -4779,4 +4779,79 @@ graphics_info_t::add_shortcuts_to_window(GtkWidget *shortcuts_window) {
    }
 #endif
 
+}
+
+
+// gui stuff
+void
+graphics_info_t::set_tomo_section_view_section(int imol, int section_index) {
+
+   auto _ = [] (int err) {
+      std::string s = std::to_string(err);
+      if (err == GL_INVALID_ENUM)      s = "GL_INVALID_ENUM";
+      if (err == GL_INVALID_OPERATION) s = "GL_INVALID_OPERATION";
+      if (err == GL_INVALID_VALUE)     s = "GL_INVALID_VALUE";
+      return s;
+   };
+
+   bool use_z_translation = true;
+
+   if (is_valid_map_molecule(imol)) {
+
+      // auto tp_start = std::chrono::high_resolution_clock::now();
+      const auto &xmap = molecules[imol].xmap;
+      clipper::Cell c_cell = xmap.cell();
+      coot::Cell cell(c_cell.a(), c_cell.b(), c_cell.c(), c_cell.alpha(), c_cell.beta(), c_cell.gamma());
+      int axis = 0; // for now
+      tomo_view_info = tomo_view_info_t(imol, cell, section_index, axis);
+
+      float mean =    molecules[imol].map_mean();
+      float std_dev = molecules[imol].map_sigma();
+      float data_value_for_top    = mean + 2.5f * std_dev;
+      float data_value_for_bottom = mean - std_dev;
+
+      // maybe I should replace the texture rather than delete all and create a new one.
+      texture_meshes.clear();
+
+      // auto tp_1 = std::chrono::high_resolution_clock::now();
+      mini_texture_t m(xmap, section_index, data_value_for_bottom, data_value_for_top); // 128 for 11729
+      // auto tp_2 = std::chrono::high_resolution_clock::now();
+
+      float x_len = m.x_size;
+      float y_len = m.y_size;
+      float z_pos = 0.0f;
+
+      if (use_z_translation) z_pos = m.z_position;
+
+      attach_buffers();
+      GLenum err = glGetError();
+      if (err) std::cout << "GL ERROR:: tomo_section() A " << _(err) << "\n";
+      Texture t(m);
+      err = glGetError();
+      if (err) std::cout << "GL ERROR:: tomo_section() B " << _(err) << "\n";
+      TextureInfoType ti(t, "mini-texture");
+      err = glGetError();
+      if (err) std::cout << "GL ERROR:: tomo_section() C " << _(err) << "\n";
+      ti.unit = 0; // what is this?
+      err = glGetError();
+      if (err) std::cout << "GL ERROR:: tomo_section() D " << _(err) << "\n";
+      TextureMesh tm("mini-texture mesh");
+      tm.add_texture(ti);
+      err = glGetError();
+      if (err) std::cout << "GL ERROR:: tomo_section() E " << _(err) << "\n";
+      tm.setup_tomo_quad(x_len, y_len, z_pos);
+      // auto tp_2 = std::chrono::high_resolution_clock::now();
+      err = glGetError();
+      if (err) std::cout << "GL ERROR:: tomo_section() F " << _(err) << "\n";
+      texture_meshes.push_back(tm);
+      m.clear();
+
+      // auto tp_now = std::chrono::high_resolution_clock::now();
+      // auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(tp_now - tp_start);
+      // auto td    = std::chrono::duration_cast<std::chrono::milliseconds>(tp_2 - tp_1);
+      // std::cout << "graphics_info_t::tomo_section() all  " << delta.count() << " ms" << std::endl;
+      // std::cout << "graphics_info_t::tomo_section() test " <<    td.count() << " ms" << std::endl;
+
+      graphics_draw();
+   };
 }

@@ -44,7 +44,7 @@ pkginclude_HEADERS = peak-search.hh coot-trim.hh \
         atom-tree.hh jed-flip.hh atom-vertex.hh merge-C-and-N-terminii.hh simple-mesh.hh vertex.hh g_triangle.hh \
 	cylinder.hh cylinder-with-rotation-translation.hh oct.hh prideout-octasphere.hh cmtz-interface.hh mtz-column-auto-read.hh \
 	pugixml.hpp pugiconfig.hpp find-water-baddies.hh voidp-buffer.hh parse-pisa.hh diff-diff-map-peaks.hh tiny_gltf.h json.hpp \
-	stb_image.h stb_image_write.h
+	stb_image.h stb_image_write.h glyco-tree.hh positron.hh mini-texture.hh texture-as-floats.hh
 
 
 pkgincludedir = $(includedir)/coot/coot-utils
@@ -55,13 +55,13 @@ AM_CPPFLAGS = \
 	$(CLIPPER_CXXFLAGS) 		\
 	$(GEMMI_CXXFLAGS)               \
 	$(MMDB_CXXFLAGS) 		\
-	$(GSL_CFLAGS)			\
+	$(gsl_CFLAGS)			\
 	$(WITH_GUILE_CFLAGS)		\
 	$(RDKIT_CXXFLAGS) 		\
 	$(BOOST_CPPFLAGS) 		\
 	$(WITH_PYTHON_CFLAGS)
 
-AM_CXXFLAGS = $(COOT_GSL_FLAGS) $(COOT_WINDOWS_CFLAGS) \
+AM_CXXFLAGS = $(COOT_WINDOWS_CFLAGS) \
 	-DPKGDATADIR='"$(pkgdatadir)"'
 
 
@@ -94,7 +94,7 @@ libcoot_coord_utils_la_LIBADD = \
     $(top_builddir)/utils/libcoot-utils.la           \
     $(top_builddir)/mini-mol/libcoot-mini-mol.la     \
     $(CLIPPER_LIBS) $(GEMMI_LIBS) $(MMDB_LIBS) \
-    $(GSL_LIBS) $(RDKIT_LIBS) $(BOOST_LDFLAGS) -lpthread
+    $(gsl_LIBS) $(RDKIT_LIBS) $(BOOST_LDFLAGS) -lpthread
 
 libcoot_coord_utils_la_LDFLAGS = $(SHARED_LDFLAGS)
 
@@ -131,7 +131,8 @@ libcoot_coord_extras_la_LDFLAGS = $(SHARED_LDFLAGS)
 # for (map) things that need to link mmdb and clipper:
 libcoot_map_utils_la_SOURCES = coot-map-utils.cc peak-search.cc peak-search-from-list.cc trim.cc \
 	xmap-stats.cc maps-spherical.cc pepflip-using-difference-map.cc exp-fit.cc blob-line.cc \
-        slurp-map.cc find-water-baddies.cc diff-diff-map-peaks.cc
+        slurp-map.cc find-water-baddies.cc diff-diff-map-peaks.cc mini-texture.cc positron.cc \
+        texture-as-floats.cc
 
 
 # should libcoot-coord-utils link $CLIPPER_LIBS directly? (Hence CLIPPER_LIBS is not needed here)
@@ -140,7 +141,7 @@ libcoot_map_utils_la_LIBADD = \
    $(top_builddir)/lidia-core/libcoot-lidia-core.la \
    $(top_builddir)/geometry/libcoot-geometry.la \
    $(top_builddir)/utils/libcoot-utils.la \
-   $(CLIPPER_LIBS) $(GSL_LIBS) -lpthread -lz
+   $(CLIPPER_LIBS) $(gsl_LIBS) -lpthread -lz
 
 libcoot_map_utils_la_LDFLAGS = \
    $(SHARED_LDFLAGS) -lpthread
@@ -157,7 +158,7 @@ libcoot_map_heavy_la_LIBADD = \
    $(top_builddir)/lidia-core/libcoot-lidia-core.la \
    $(top_builddir)/mini-mol/libcoot-mini-mol.la \
    $(top_builddir)/utils/libcoot-utils.la \
-   $(CLIPPER_LIBS) $(GSL_LIBS) -lpthread
+   $(CLIPPER_LIBS) $(gsl_LIBS) -lpthread
 
 libcoot_map_heavy_la_LDFLAGS = $(SHARED_LDFLAGS)
 
@@ -167,12 +168,13 @@ check_PROGRAMS = test-h-bonds testshelxreader test-hole test-elastic \
 		 test-spherical glyco-torsions test-tt-morph test-coot-probe test-chem-feat \
 		 test-cod-atom-types dictionary-atom-types cod-db-access \
 		 test-5-residue-fragments test-diff-diff-map-peaks \
-		 make-cablam-like-stats test-cod-atom-types-from-sm-cif test-parse-pisa
+		 make-cablam-like-stats test-cod-atom-types-from-sm-cif test-parse-pisa \
+		 test-coot-utils
 
 # wrong build order - delete from make check for now.
 # test-emma test-convolute test-coot-utils test-segmap
 
-bin_PROGRAMS = mmrrcc test-coot-utils
+bin_PROGRAMS = mmrrcc
 
 
 # test_zo_chi_table_SOURCES = test-zo-chi-table.cc
@@ -280,7 +282,7 @@ test_elastic_LDADD   = ./libcoot-coord-utils.la      \
 	$(GLOB_LIBS) $(MMDB_LIBS)
 
 test_spherical_SOURCES = test-spherical.cc
-test_spherical_LDADD   = ./libcoot-coord-utils.la $(CLIPPER_LIBS) $(GSL_LIBS)
+test_spherical_LDADD   = ./libcoot-coord-utils.la $(CLIPPER_LIBS) $(gsl_LIBS)
 
 glyco_torsions_SOURCES = test-glyco-torsions.cc
 glyco_torsions_LDADD   = ./libcoot-coord-utils.la    \

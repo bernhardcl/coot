@@ -6,19 +6,19 @@
  * Author: Paul Emsley
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or (at
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA
+ * You should have received a copy of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
  */
 
 #include <string.h> // for strcmp
@@ -2494,7 +2494,7 @@ Bond_lines_container::construct_from_asc(const atom_selection_container_t &SelAt
 
                            std::string ele = non_Hydrogen_atoms[i]->element;
                            if (ele == "CL" || ele == "BR" || ele == " S" ||  ele == " I"
-                               || ele == "Cl" || ele == "Br"  || ele == "MO" || ele == "AL"
+                               || ele == "Cl" || ele == "Br" || ele == "MO" || ele == "Mo" || ele == "AL"
                                || ele == "PT" || ele == "RU" || ele == " W"
                                || ele == "AS" || ele == " P" || ele == "AU" || ele == "HG"
                                || ele == "PD" || ele == "PB" || ele == "AG") {
@@ -2728,7 +2728,9 @@ Bond_lines_container::handle_long_bonded_atom(mmdb::PAtom atom,
    if (element == "HG")
       bond_limit = 2.4;
    if (element == "MO")
-      bond_limit = 2.3; // Oxygen to Molybdenum, guess from 8M0
+      bond_limit = 2.55; // was 0.23 Oxygen to Molybdenum, guess from 8M0
+   if (element == "Mo")
+      bond_limit = 2.55; // 4077716
    if (element == " I")
       bond_limit = 2.3; // C-I is 2.13 according to wikipedia
    float  bl2 = bond_limit * bond_limit;
@@ -6428,9 +6430,10 @@ Bond_lines_container::add_residue_monomer_bonds(const std::map<std::string, std:
 
 
    // std::cout << "in add_residue_monomer_bonds() goodsell_colour_mode: " << do_goodsell_colour_mode
-   // << " atom_colour_type " << atom_colour_type << std::endl;
+   //           << " atom_colour_type " << atom_colour_type << std::endl;
 
    bool is_het = false;
+   if (!geom) return;
 
    std::map<std::string, std::vector<mmdb::Residue *> >::const_iterator it;
    class atom_string_bits_t {
@@ -7444,6 +7447,25 @@ Bond_lines_container::do_colour_by_chain_bonds_carbons_only(const atom_selection
                                                             int atom_colour_type,
                                                             int draw_hydrogens_flag) {
 
+   auto _ = [] (int atom_colour_type) {
+      std::string s = std::to_string(atom_colour_type);
+
+      if (atom_colour_type == coot::COLOUR_BY_CHAIN)          s = "COLOUR_BY_CHAIN";
+      if (atom_colour_type == coot::COLOUR_BY_CHAIN_C_ONLY)   s = "COLOUR_BY_CHAIN_C_ONLY";
+      if (atom_colour_type == coot::COLOUR_BY_CHAIN_GOODSELL) s = "COLOUR_BY_CHAIN_GOODSELL";
+      if (atom_colour_type == coot::COLOUR_BY_ATOM_TYPE)      s = "COLOUR_BY_ATOM_TYPE";
+      if (atom_colour_type == coot::COLOUR_BY_SEC_STRUCT)     s = "COLOUR_BY_SEC_STRUCT";
+      if (atom_colour_type == coot::DISULFIDE_COLOUR)         s = "DISULFIDE_COLOUR";
+      if (atom_colour_type == coot::COLOUR_BY_MOLECULE)       s = "COLOUR_BY_MOLECULE";
+      if (atom_colour_type == coot::COLOUR_BY_RAINBOW)        s = "COLOUR_BY_RAINBOW";
+      if (atom_colour_type == coot::COLOUR_BY_OCCUPANCY)      s = "COLOUR_BY_OCCUPANCY";
+      if (atom_colour_type == coot::COLOUR_BY_B_FACTOR)       s = "COLOUR_BY_B_FACTOR";
+      if (atom_colour_type == coot::COLOUR_BY_USER_DEFINED_COLOURS)   s = "COLOUR_BY_USER_DEFINED_COLOURS";
+      if (atom_colour_type == coot::COLOUR_BY_HYDROPHOBIC_SIDE_CHAIN) s = "COLOUR_BY_HYDROPHOBIC_SIDE_CHAIN";
+
+      return s;
+   };
+
    // std::cout << "in do_colour_by_chain_bonds_carbons_only() atom_colour_type " << atom_colour_type << std::endl;
 
    graphics_line_t::cylinder_class_t cc = graphics_line_t::SINGLE;
@@ -7716,7 +7738,7 @@ Bond_lines_container::do_colour_by_chain_bonds_carbons_only(const atom_selection
    // atom_colour_type = coot::COLOUR_BY_CHAIN;
    // atom_colour_type == coot::COLOUR_BY_CHAIN_GOODSELL;
 
-   std::cout << "in " << __FUNCTION__ << " with atom_colour_type " << atom_colour_type << std::endl;
+   // std::cout << "DEBUG:: in " << __FUNCTION__ << " with atom_colour_type " << _(atom_colour_type) << std::endl;
    add_atom_centres(imol, asc, atom_colour_type, &atom_colour_map);
 
    int udd_fixed_during_refinement_handle = asc.mol->GetUDDHandle(mmdb::UDR_ATOM, "FixedDuringRefinement");

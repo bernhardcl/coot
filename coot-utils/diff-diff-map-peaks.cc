@@ -1,14 +1,39 @@
+/*
+ * coot-utils/diff-diff-map-peaks.cc
+ *
+ * Copyright 2023 by Medical Research Council
+ * Author: Paul Emsley
+ *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copies of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
+ * See http://www.gnu.org/licenses/
+ *
+ */
 
 #include <clipper/core/map_interp.h>
 #include <clipper/contrib/skeleton.h>
 
 #include "diff-diff-map-peaks.hh"
 
-std::vector<std::pair<clipper::Coord_orth, float>> coot::diff_diff_map_peaks(const clipper::Xmap<float> &m1,
+std::vector<std::pair<clipper::Coord_orth, float> > coot::diff_diff_map_peaks(const clipper::Xmap<float> &m1,
                                                                              const clipper::Xmap<float> &m2,
                                                                              float base_level) {
-   std::vector<std::pair<clipper::Coord_orth, float> > v_plus;
-   std::vector<std::pair<clipper::Coord_orth, float> > v_neg;
+
+   std::vector<std::pair<clipper::Coord_orth, float> > v;
 
    clipper::Skeleton_basic::Neighbours neighb(m1, 0.25, 1.75); // 3x3x3 cube, not centre
 
@@ -35,8 +60,8 @@ std::vector<std::pair<clipper::Coord_orth, float>> coot::diff_diff_map_peaks(con
                // std::cout << ix.coord().format() << " d pos " << d << std::endl;
                clipper::Coord_frac cf = ix.coord().coord_frac(m1.grid_sampling());
                clipper::Coord_orth co = cf.coord_orth(m1.cell());
-               std::pair p = std::make_pair(co, d);
-               v_plus.push_back(p);
+               std::pair<clipper::Coord_orth, float> p = std::make_pair(co, d);
+               v.push_back(p);
             }
          }
       }
@@ -58,13 +83,13 @@ std::vector<std::pair<clipper::Coord_orth, float>> coot::diff_diff_map_peaks(con
                // std::cout << ix.coord().format() << " d neg " << d << std::endl;
                clipper::Coord_frac cf = ix.coord().coord_frac(m1.grid_sampling());
                clipper::Coord_orth co = cf.coord_orth(m1.cell());
-               std::pair p = std::make_pair(co, d);
-               v_plus.push_back(p);
+               std::pair<clipper::Coord_orth, float> p = std::make_pair(co, d);
+               v.push_back(p);
             }
          }
       }
    }
-   return v_plus;
+   return v;
 }
 
 #include "coot-coord-utils.hh"

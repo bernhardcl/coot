@@ -31,20 +31,20 @@ ACLOCAL_AMFLAGS=-I macros
 
 # also: coords depends on ligand because now we do rotamer markup.
 #       so ligand functions must not use coot::Cartesian
-if COND_LIDIA_ONLY
-   SUBDIRS = compat utils protein_db mini-mol geometry lidia-core coot-utils lbg
+if COND_LAYLA_ONLY
+   SUBDIRS = compat utils protein_db mini-mol geometry lidia-core coot-utils layla
 else
 if COND_LIBCOOTAPI_ONLY
    SUBDIRS = auxil scheme python pdb-templates macros compat utils protein_db mini-mol geometry  \
         lidia-core coot-utils angles ccp4mg-utils db-main analysis cootaneer ideal ligand coords \
 	density-contour skeleton  high-res build MoleculesToTriangles pli \
-	python-tests cootilus fonts pyrogen lbg data buccaneer_ml_growing \
+	python-tests cootilus fonts pyrogen data \
 	man rama-data glTF pixmaps textures api
 else
    # rcrane is not included yet.
    SUBDIRS = auxil scheme python pdb-templates macros compat utils protein_db mini-mol geometry  \
         lidia-core coot-utils angles ccp4mg-utils db-main analysis cootaneer ideal ligand coords \
-	density-contour skeleton high-res build MoleculesToTriangles pli buccaneer_ml_growing greg-tests \
+	density-contour skeleton high-res build MoleculesToTriangles pli greg-tests \
 	python-tests cootilus fonts pyrogen data \
 	man rama-data doc glTF pixmaps textures sounds api layla validation-graphs src ui
 endif
@@ -70,7 +70,6 @@ EXTRA_DIST = 		\
 	count-loc 	\
 	a6.glade        \
 	single-map-properties-dialog.glade \
-	colours.def	\
 	my.supp		\
 	guile.supp	\
 	windows/syminfo.lib	\
@@ -115,7 +114,7 @@ EXTRA_DIST = 		\
 
 # packdatadir is xxx/share/coot
 subpkgdatadir = $(pkgdatadir)
-subpkgdata_DATA = standard-residues.pdb colours.def
+subpkgdata_DATA = standard-residues.pdb
 
 
 appdatadir = ${datarootdir}/appdata

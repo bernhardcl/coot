@@ -5,19 +5,19 @@
  * Author: Paul Emsley
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or (at
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA
+ * You should have received a copy of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
  */
 
 #ifndef GTK_MANUAL_H
@@ -170,7 +170,7 @@ void on_skeleton_col_sel_cancel_button_clicked (GtkButton       *button,
 
 GtkWidget *get_radio_button_in_scroll_group(int imol_this);
 
-void update_name_in_display_control_molecule_combo_box(GtkWidget *display_control_window_glade, const gchar *name, int n); 
+void update_name_in_display_control_molecule_combo_box(int imol, const char *new_name);
 void simple_display_control_mol_menu_item(GtkWidget *model_menu, int imol_no, int map_coords_mol_flag);
 
 void render_as_bonds_button_select(int imol);

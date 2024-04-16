@@ -26,8 +26,7 @@ dnl
 dnl Process this file with autoconf to produce a configure script.
 
 
-
-AC_INIT([coot],[1.1.07])
+AC_INIT([coot],[1.x-pre])
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -226,13 +225,23 @@ else
    AC_SUBST(COOT_USE_GUILE)
 fi
 
-
 dnl =========================== GSL ================================
 
-dnl test for GSL
-# min_gsl_version=1.3
-AX_PATH_GSL([1.3],[COOT_GSL_FLAGS=-DHAVE_GSL],[COOT_GSL_FLAGS=""])
-AC_SUBST(COOT_GSL_FLAGS)
+PKG_CHECK_MODULES([gsl], [gsl])
+
+save_libs="$LIBS"
+LIBS="$gsl_LIBS"
+save_cflags="$CFLAGS"
+CFLAGS="$gsl_CFLAGS"
+AC_CHECK_LIB([m],[cos])
+AC_CHECK_LIB([gslcblas],[cblas_dgemm])
+AC_CHECK_LIB([gsl],[gsl_blas_dgemm])
+LIBS="$save_libs"
+CFLAGS="$save_cflags"
+
+# I don't understand how this test works
+# AX_PATH_GSL(GSL_VERSION, [], [AC_MSG_ERROR(could not find required version of GSL)])
+
 
 dnl =========================== GLM ================================
 
@@ -343,10 +352,10 @@ fi
 
 echo ENHANCED_LIGAND_TOOLS_CPPFLAGS $ENHANCED_LIGAND_TOOLS_CPPFLAGS
 
-AC_ARG_ENABLE(lidia-only, [  --enable-lidia-only build lidia only (not coot) ],
- lidia_only="yes",
- lidia_only="no")
-AM_CONDITIONAL([COND_LIDIA_ONLY], [test "$lidia_only" = yes])
+AC_ARG_ENABLE(layla-only, [  --enable-layla-only build layla only (not coot) ],
+ layla_only="yes",
+ layla_only="no")
+AM_CONDITIONAL([COND_LAYLA_ONLY], [test "$layla_only" = yes])
 
 AC_ARG_ENABLE(libcootapi-only, [  --enable-libcootapi-only build libcootapi only (not coot) ],
 [case "${enableval}" in
@@ -372,11 +381,6 @@ AC_SUBST(MOLTRIANGLES_LIBS)
 AC_SUBST(COOT_BUILD_INFO_STRING)
 
 dnl check for guile modules www and gtk here.
-
-dnl check for GSL
-dnl AC_CHECK_LIB(m,main)
-dnl AC_CHECK_LIB(gslcblas,main)
-dnl AC_CHECK_LIB(gsl,main)
 
 # gemmi doesn't have a pkgconfig file. Frustrating.
 AC_ARG_WITH([gemmi], AS_HELP_STRING([--with-gemmi location of the GEMMI package]), with_gemmi="$withval", with_gemmi=false)
@@ -486,7 +490,6 @@ cootilus/Makefile
 greg-tests/Makefile
 python-tests/Makefile
 lidia-core/Makefile
-buccaneer_ml_growing/Makefile
 doc/Makefile
 validation-graphs/Makefile
 python/coot_load_modules.py
@@ -519,7 +522,6 @@ auxil/rama/Makefile
 auxil/sec-str/Makefile
 auxil/strand-analysis/Makefile
 auxil/vectors/Makefile
-lbg/Makefile
 src/Makefile
 src/coot
 ui/Makefile
@@ -530,7 +532,6 @@ AC_OUTPUT
 # po/Makefile.in
 
 # 2022-10-28
-# lbg/Makefile
 # rcrane/Makefile
 # src/Makefile
 # src/coot

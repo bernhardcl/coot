@@ -1,3 +1,28 @@
+/*
+ * src/create-menu-item-actions.cc
+ *
+ * Copyright 2022 by Medical Research Council
+ * Author: Paul Emsley
+ *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copies of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
+ * See http://www.gnu.org/licenses/
+ *
+ */
 
 #include <iostream>
 #include <gtk/gtk.h>
@@ -2206,6 +2231,27 @@ screenshot_action(G_GNUC_UNUSED GSimpleAction *simple_action,
     check_for_dark_blue_density(); /* give a dialog if density it too dark (blue) */
 }
 
+void
+scene_preset_model_building_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                                   G_GNUC_UNUSED GVariant *parameter,
+                                   G_GNUC_UNUSED gpointer user_data) {
+
+   graphics_info_t g;
+   g.clipping_front = 1.0;
+   g.clipping_back  = 1.0;
+   g.graphics_draw();
+}
+
+void
+scene_preset_figure_making_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                                  G_GNUC_UNUSED GVariant *parameter,
+                                  G_GNUC_UNUSED gpointer user_data) {
+   graphics_info_t g;
+   g.clipping_front = 4.5;
+   g.clipping_back  = 1.3;
+   g.graphics_draw();
+
+}
 
 
 void
@@ -3300,6 +3346,42 @@ mutate_to_type(GSimpleAction *simple_action,
 }
 
 void
+mutate_base_to_type(GSimpleAction *simple_action,
+                    GVariant *parameter,
+                    gpointer user_data) {
+
+   if (parameter) {
+      gchar *result;
+      g_variant_get(parameter, "s", &result);
+      std::string type(result);
+      graphics_info_t g;
+      std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+      if (pp.first) {
+         const auto &atom_spec =  pp.second.second;
+         int imol = pp.second.first;
+         if (is_valid_model_molecule(imol)) {
+            coot::residue_spec_t res_spec(atom_spec.chain_id, atom_spec.res_no, atom_spec.ins_code);
+            mmdb::Residue *r = g.molecules[imol].get_residue(res_spec);
+            if (r) {
+               std::string cbn;
+               if (coot::util::nucleotide_is_DNA(r)) {
+                  cbn = coot::util::canonical_base_name(type, coot::DNA);
+               } else {
+                  cbn = coot::util::canonical_base_name(type, coot::RNA);
+               }
+               if (cbn != "") {
+                  int istat = graphics_info_t::molecules[imol].mutate_base(res_spec, cbn, false);
+                  graphics_draw();
+               }
+            }
+         }
+      }
+   }
+}
+
+
+
+void
 delete_item(GSimpleAction *simple_action,
             GVariant *parameter,
             gpointer user_data) {
@@ -3585,6 +3667,9 @@ create_actions(GtkApplication *application) {
 
    add_action( "toggle_display_frames_per_second_action", toggle_display_frames_per_second_action);
 
+   add_action("scene_preset_model_building_action", scene_preset_model_building_action);
+   add_action("scene_preset_figure_making_action",  scene_preset_figure_making_action);
+
    // Measures
 
    add_action(    "clear_atom_labels_action",     clear_atom_labels_action);
@@ -3655,6 +3740,7 @@ create_actions(GtkApplication *application) {
 
    // Mutate menu
    add_action_with_param("mutate_to_type", mutate_to_type);
+   add_action_with_param("mutate_base_to_type", mutate_base_to_type);
 
    // Delete menu
    add_action_with_param("delete_item", delete_item);

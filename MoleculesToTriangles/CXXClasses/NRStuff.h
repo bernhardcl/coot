@@ -1,10 +1,25 @@
 /*
- *  NRStuff.h
- *  MMDBRibbons
+ * MoleculesToTriangles/CXXClasses/NRStuff.h
  *
- *  Created by Martin Noble on 17/07/2008.
- *  Copyright 2008 LMB, Oxford University. All rights reserved.
+ * Copyright 2009 by Martin Noble, University of Oxford
+ * Author: Martin Noble
  *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA
  */
 
 #ifndef NRStuff_h
@@ -12,66 +27,37 @@
 
 #include <vector>
 #include <iostream>
+
 #include "MoleculesToTriangles/CXXSurface/CXXCoord.h"
 
-class NRSpline {
-private:
-    std::vector<float> x;
-    std::vector<float> y;
-    std::vector<float> y2;
-    bool yDoublePrimeCalculated;
-public:
-    NRSpline() : yDoublePrimeCalculated(false) {};
-	void clearSpline(){
-        x.clear();
-        y.clear();
-        y2.clear();
-	};
-	~NRSpline(){
-		clearSpline();
-    }
-    void addPair(float xVal, float yVal){
-        x.push_back(xVal);
-        y.push_back(yVal);
-    }
-    void calculateYDoublePrime(float ypLow, float ypHigh);
-    float yForXEquals(const float xVal) ;
-};
-
 class CoordSpline {
-public:
-    NRSpline xSpline;
-    NRSpline ySpline;
-    NRSpline zSpline;
-    NRSpline rSpline;
-public:
-    CoordSpline(){};
-    void addPair(float xVal, const FCXXCoord  &coord) {
-        xSpline.addPair(xVal, (float)coord[0]);
-        ySpline.addPair(xVal, (float)coord[1]);
-        zSpline.addPair(xVal, (float)coord[2]);
-        rSpline.addPair(xVal, (float)coord[3]);
-    };
-    void calculateYDoublePrimes(float ypLow, float ypHigh) {
-        xSpline.calculateYDoublePrime(ypLow, ypHigh);
-        ySpline.calculateYDoublePrime(ypLow, ypHigh);
-        zSpline.calculateYDoublePrime(ypLow, ypHigh);
-        rSpline.calculateYDoublePrime(ypLow, ypHigh);
+    std::vector<FCXXCoord> ctlPts;
+    std::vector<FCXXCoord> spline;
+    void DialASpline(float t, const std::vector<float> &a,  const std::vector<FCXXCoord> &p, int Cn, int interp, std::vector<FCXXCoord> &output, const int idx, std::vector<FCXXCoord> &work);
+    std::vector <FCXXCoord> SplineCurve(const std::vector<FCXXCoord> &ctlPts, int nsteps, int Cn, int iinterp);
+  public:
+    CoordSpline(){
     };
     FCXXCoord  coordForXEquals(const float xVal) {
-        FCXXCoord  result;
-        result[0] = xSpline.yForXEquals(xVal);
-        result[1] = ySpline.yForXEquals(xVal);
-        result[2] = zSpline.yForXEquals(xVal);
-        result[3] = rSpline.yForXEquals(xVal);
-        return result;
-    };
-	void clearSpline(){
-		xSpline.clearSpline();
-		ySpline.clearSpline();
-		zSpline.clearSpline();
-		rSpline.clearSpline();
-	};
+        int idx = int((xVal+1.0)/ctlPts.size() * spline.size()-1);
+        int spline_size = spline.size();
+        if (idx < 0)
+            idx = 0;
+        if (idx >= spline_size)
+            idx = spline_size -1;
+        return spline[idx];
+    }
+    void clearSpline(){
+        ctlPts.clear();
+        spline.clear();
+    }
+    void calculateYDoublePrimes(float ypLow, float ypHigh) {
+        int accu = 6;
+        spline = SplineCurve(ctlPts,(ctlPts.size()-1)*accu,3,1);
+    }
+    void addPair(float xVal, const FCXXCoord  &coord) {
+        ctlPts.push_back(coord);
+    }
 };
 
 #endif

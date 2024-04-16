@@ -1,8 +1,34 @@
+/*
+ * api/coot-molecule-blender.cc
+ * 
+ * Copyright 2020 by Medical Research Council
+ * Author: Paul Emsley
+ *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA
+ */
 
-#include "coot_molecule.hh"
+
+#include "coot-molecule.hh"
 
 void
-coot::molecule_t::make_mesh_for_bonds_for_blender(const std::string &mode, protein_geometry *geom) {
+coot::molecule_t::make_mesh_for_bonds_for_blender(const std::string &mode, protein_geometry *geom, bool against_a_dark_background,
+                                      float bond_width, float atom_radius_to_bond_width_ratio,
+                                      int smoothness_factor) {
 
    // from the swig version:
    // PyList_SetItem(r_py, 0, vertices_py);
@@ -12,10 +38,6 @@ coot::molecule_t::make_mesh_for_bonds_for_blender(const std::string &mode, prote
    // where a tri_py is PyList_New(4);
    // with PyList_SetItem(tri_py, 3, PyLong_FromLong(colour_index));
 
-   bool against_a_dark_background = false;
-   float bond_width = 0.12;
-   float atom_radius_to_bond_width_ratio = 1.0;
-   int smoothness_factor = 1;
    bool draw_hydrogen_atoms_flag = true;
    bool draw_missing_loops_flag = true;
 
@@ -46,6 +68,27 @@ coot::molecule_t::make_mesh_for_map_contours_for_blender(Cartesian position, flo
    ctpl::thread_pool *thread_pool_p = nullptr; // pass this
    clipper::Coord_orth pos_co(position.x(), position.y(), position.z());
    simple_mesh_t sm = get_map_contours_mesh(pos_co, radius, contour_level, use_thread_pool, thread_pool_p);
+   blender_mesh_t bm(sm);
+   blender_mesh = std::move(bm);
+}
+
+void
+coot::molecule_t::make_mesh_for_goodsell_style_for_blender(coot::protein_geometry *geom_p,
+                                                           float colour_wheel_rotation_step,
+                                                           float saturation,
+                                                           float goodselliness) {
+
+   simple_mesh_t sm = get_goodsell_style_mesh(geom_p, colour_wheel_rotation_step, saturation, goodselliness);
+   blender_mesh_t bm(sm);
+   blender_mesh = std::move(bm);
+}
+
+
+
+void
+coot::molecule_t::make_mesh_for_gaussian_surface_for_blender(float sigma, float contour_level, float box_radius, float grid_scale,float b_factor) {
+
+   simple_mesh_t sm = get_gaussian_surface(sigma, contour_level, box_radius, grid_scale, b_factor);
    blender_mesh_t bm(sm);
    blender_mesh = std::move(bm);
 }

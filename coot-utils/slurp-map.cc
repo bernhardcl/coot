@@ -116,26 +116,33 @@ coot::util::slurp_fill_xmap_from_map_file(const std::string &file_name,
          // this can fail (at the moment) if the axes are not in X,Y,Z order
          status = slurp_fill_xmap_from_gz_map_file(file_name, xmap_p, check_only);
       } else {
-         // 20231006-PE as it used to be.
          struct stat s;
          int fstat = stat(file_name.c_str(), &s);
          if (fstat == 0) {
             FILE *fptr = fopen(file_name.c_str(), "rb");
-            int st_size = s.st_size;
-            void *space = malloc(st_size+1);
-            // Happy Path
-            size_t st_size_2 = fread(space, st_size, 1, fptr);
-            char *data = static_cast<char *>(space);
-            fclose(fptr);
-            if (st_size_2 == 1) {
+            off_t st_size = s.st_size;
+            std::cout << "st_size: " << st_size << std::endl;
+            try {
+               // 20231006-PE as it used to be.
+               char *space = new char[st_size+1];
                // Happy Path
-               if (st_size > 1024) {
-                  status = slurp_parse_xmap_data(data, xmap_p, check_only); // fill xmap
+               size_t st_size_2 = fread(space, st_size, 1, fptr);
+               char *data = static_cast<char *>(space);
+               fclose(fptr);
+               if (st_size_2 == 1) {
+                  // Happy Path
+                  if (st_size > 1024) {
+                     status = slurp_parse_xmap_data(data, xmap_p, check_only); // fill xmap
+                  } else {
+                     std::cout << "WARNING:: bad read " << file_name << std::endl;
+                  }
                } else {
                   std::cout << "WARNING:: bad read " << file_name << std::endl;
                }
-            } else {
-               std::cout << "WARNING:: bad read " << file_name << std::endl;
+               delete [] space;
+            }
+            catch (const std::bad_alloc &e) {
+               std::cout << "WARNING:: out-of-memory " << st_size+1 << " " << e.what() << std::endl;
             }
          }
       }
@@ -475,7 +482,7 @@ int main(int argc, char **argv) {
             std::cout << "size " << st_size << " bytes" << std::endl;
             auto tp_2 = std::chrono::high_resolution_clock::now();
             FILE *fptr = fopen(file_name.c_str(), "rb");
-            void *space = malloc(st_size);
+            void *space = new void [st_size+1];
             auto tp_3 = std::chrono::high_resolution_clock::now();
             size_t st_size_2 = fread(space, st_size, 1, fptr);
             char *data = static_cast<char *>(space);
@@ -506,7 +513,7 @@ int main(int argc, char **argv) {
                   std::cout << "File " << file_name << " was not a map" << std::endl;
                }
             }
-            free(space);
+            delete [] space;
          } else {
             std::cout << "stat() failed for " << file_name << std::endl;
          }

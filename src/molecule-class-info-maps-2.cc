@@ -5,23 +5,23 @@
  * Author: Paul Emsley
  * 
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or (at
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
  * 
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA
+ * You should have received a copy of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
  */
 
 #define GLM_ENABLE_EXPERIMENTAL // # for to_string
-#include <glm/ext.hpp>
+// #include <glm/ext.hpp>
 
 #include "molecule-class-info.h"
 
@@ -899,5 +899,16 @@ molecule_class_info_t::recolour_ribbon_by_map(const clipper::Xmap<float> &xmap, 
    }
    std::cout << "sampling done: " << n_sampled << " points" << std::endl;
 
+
+}
+
+
+void
+molecule_class_info_t::reverse_map() {
+
+   if (has_xmap()) {
+      coot::util::reverse_map(&xmap);
+      update_map_internal();
+   }
 
 }

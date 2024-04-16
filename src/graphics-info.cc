@@ -5,19 +5,19 @@
  * Copyright 2014, 2015, 2016 by Medical Research Council
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or (at
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA
+ * You should have received a copy of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
  */
 
 
@@ -2200,8 +2200,6 @@ graphics_info_t::clear_up_moving_atoms() {
                             // OK, so let the test be on moving_atoms_asc->mol
                             // moving_atoms_asc is set in init()
 
-#ifdef HAVE_GSL
-
    if (last_restraints) {
       last_restraints->clear();
       delete last_restraints;
@@ -2210,9 +2208,6 @@ graphics_info_t::clear_up_moving_atoms() {
    }
 
    release_restraints_lock(__FUNCTION__); // refinement ended and cleared up.
-
-#endif // HAVE_GSL
-
 
    moving_atoms_lock  = false;
 
@@ -5965,12 +5960,13 @@ graphics_info_t::clear_diff_map_peaks() {
 void
 graphics_info_t::rotamer_dialog_neighbour_rotamer(int istep) {
 
-#ifndef EMSCRIPTEN
    graphics_info_t g;
-   if (g.rotamer_dialog) {
+
+   GtkWidget *rotamer_dialog = widget_from_builder("rotamer_selection_dialog");
+   if (rotamer_dialog) {
       // void *t  = (void *) (gtk_object_get_user_data(GTK_OBJECT(g.rotamer_dialog)));
       // std::cout << "user data: " << t << std::endl;
-      int n_rotamers = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(g.rotamer_dialog), "n_rotamers"));
+      int n_rotamers = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(rotamer_dialog), "n_rotamers"));
       // std::cout << "We find " << n_rotamers << " rotamers in the widget\n";
       GtkWidget *button;
       short int ifound_active_button = 0;
@@ -6015,7 +6011,7 @@ graphics_info_t::rotamer_dialog_neighbour_rotamer(int istep) {
          std::cout << "ERROR:: not active rotamer button found " << std::endl;
       }
    }
-#endif
+
 }
 
 void

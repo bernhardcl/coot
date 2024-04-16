@@ -2,10 +2,12 @@
 #
 # Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007 by The University of York
 # Copyright 2007, 2008, 2009, 2010, 2011, 2012 by The University of Oxford
+# Copyright 2013, 2014, 2015, 2018, 2020, 2021 by Medical Research Council
+# Author: Paul Emsley
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or (at
+# it under the terms of the GNU Lesser General Public License as published
+# by the Free Software Foundation; either version 3 of the License, or (at
 # your option) any later version.
 #
 # This program is distributed in the hope that it will be useful, but
@@ -13,9 +15,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+# You should have received a copy of the GNU General Public License and
+# the GNU Lesser General Public License along with this program; if not,
+# write to the Free Software Foundation, Inc., 51 Franklin Street,
 # 02110-1301, USA
 
 # if coot.py is called __init.py and goes in site-packages/coot/
@@ -151,7 +153,7 @@ coot_wrap_guile_pre.cc:      $(top_srcdir)/src/c-interface.h    \
                              $(top_srcdir)/src/validation.hh \
                              $(top_srcdir)/src/cmtz-interface.hh \
                              $(top_srcdir)/src/c-interface-mogul.hh
-	swig -o $@ $(CPPFLAGS) $(MOLTRIANGLES_CPPFLAGS) -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CPPFLAGS) $(WITH_GUILE_CFLAGS) $(USE_LIBCURL) -I$(top_srcdir)/src -I$(top_srcdir) -guile -c++  $(top_srcdir)/src/coot.i
+	swig -o $@ $(MOLTRIANGLES_CPPFLAGS) -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CPPFLAGS) $(WITH_GUILE_CFLAGS) $(USE_LIBCURL) -I$(top_srcdir)/src -I$(top_srcdir) -guile -c++  $(top_srcdir)/src/coot.i
 
 # For GOOPS support: -proxy -Linkage module (or passive), however, doing that makes SWIG_init() go away.
 # -proxy  exports the GOOPS wrapper definitions into module.scm
@@ -173,12 +175,13 @@ coot_wrap_python_pre.cc: $(top_srcdir)/src/c-interface.h      \
                          $(top_srcdir)/src/lbg-interface.hh   \
                          $(top_srcdir)/src/c-interface-refine.hh \
                          $(top_srcdir)/src/c-interface-ligands-swig.hh \
+                         $(top_srcdir)/src/c-interface-generic-objects.h \
                          $(top_srcdir)/src/cfc.hh \
                          $(top_srcdir)/src/curlew.h \
                          $(top_srcdir)/src/curlew.hh \
                          $(top_srcdir)/src/validation.hh \
                          $(top_srcdir)/src/c-interface-mogul.hh
-	swig -o $@ $(CPPFLAGS) $(MOLTRIANGLES_CPPFLAGS) -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CPPFLAGS) $(PYTHON_CPPFLAGS)  -DUSE_PYTHON $(USE_LIBCURL) -I$(top_srcdir)/src  -I$(top_srcdir) -shadow -python -c++ $(top_srcdir)/src/coot.i
+	swig -o $@ $(MOLTRIANGLES_CPPFLAGS) -DCOOT_USE_GTK2_INTERFACE $(ENHANCED_LIGAND_TOOLS_CPPFLAGS) $(PYTHON_CPPFLAGS)  -DUSE_PYTHON $(USE_LIBCURL) -I$(top_srcdir)/src  -I$(top_srcdir) -shadow -python -c++ $(top_srcdir)/src/coot.i
 
 coot_wrap_python.cc: coot_wrap_python_pre.cc
 	$(MAKE_COOT_WRAP_PYTHON_XXX) gtk2 $^ $@
@@ -234,7 +237,7 @@ AM_CXXFLAGS = \
 	$(PYTHON_CPPFLAGS)	\
 	$(PYTHON_CFLAGS)	\
 	$(COOT_WINDOWS_CFLAGS)	\
-	$(COOT_GSL_FLAGS) $(OPENMP_CFLAGS)
+	$(OPENMP_CFLAGS)
 
 
 if USE_BACKWARD
@@ -261,7 +264,7 @@ AM_CPPFLAGS = \
 	$(LIBSSM_CXXFLAGS)		\
 	$(MMDB_CXXFLAGS)		\
 	$(CCP4SRS_CXXFLAGS)		\
-	$(GSL_CFLAGS)			\
+	$(gsl_CFLAGS)			\
 	$(CLIPPER_CXXFLAGS)		\
 	$(PYGTK_CFLAGS)                 \
 	$(GLOB_CFLAGS)                  \
@@ -604,6 +607,7 @@ libcootsumo_la_SOURCES = \
 	ligand-check.hh          \
 	Model.cc Model.hh        \
 	make-a-dodec.cc make-a-dodec.hh \
+	map-statistics.hh               \
 	matrix-utils.hh          \
 	matrix-utils.cc          \
 	map-statistics.hh        \
@@ -616,7 +620,6 @@ libcootsumo_la_SOURCES = \
 	meshed-generic-display-object.hh \
 	meshed-generic-display-object.cc \
 	meshed-particle-container.hh     \
-	map-statistics.hh                \
 	model-composition-statistics.hh  \
 	model-molecule-meshes.hh         \
 	model-molecule-meshes.cc         \
@@ -655,6 +658,8 @@ libcootsumo_la_SOURCES = \
 	pisa-interface.hh	 \
 	pick.hh pick.cc	 \
 	positioned-widgets.h     \
+	positron-plot.hh         \
+	positron-plot.cc         \
 	pre-load.hh              \
 	probe-clash-score.cc     \
 	probe-clash-score.hh     \
@@ -710,6 +715,7 @@ libcootsumo_la_SOURCES = \
 	testing.hh               \
 	Texture.cc Texture.hh    \
 	TextureMesh.cc TextureMesh.hh \
+	tomo-tools.cc \
 	trackball.c trackball.h  \
 	triangle-extras.h        \
 	user-mods.hh user-mods.cc\
@@ -825,7 +831,7 @@ libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
 		$(GUILE_LDFLAGS)      \
 		$(GLOB_LIBS)	      \
 		$(EPOXY_LIBS)         \
-		$(GSL_LIBS) -lblas    \
+		$(gsl_LIBS) -lblas    \
 		$(MYSQL_LIBS)	      \
 		$(CURL_LIBS)	      \
 	  	$(RDKIT_LIBS)	      \
@@ -852,7 +858,7 @@ test_cholesky_LDADD =	\
         $(top_builddir)/lidia-core/libcoot-lidia-core.la  \
 	$(top_builddir)/utils/libcoot-utils.la            \
         $(RDKIT_LIBS) \
-	$(CLIPPER_LIBS) $(MMDB_LIBS) $(GSL_LIBS)
+	$(CLIPPER_LIBS) $(MMDB_LIBS) $(gsl_LIBS)
 
 # testmap_SOURCES = testmap.cc xmap-interface.cc
 # testmap_LDADD = $(COOT_EXTRA_LIBS) $(SURFACE_LIB) $(CLIPPER_LIBS)
@@ -907,5 +913,5 @@ coot_density_score_by_residue_bin_LDADD  =	\
         $(RDKIT_LIBS) 		\
 	$(CLIPPER_LIBS) 	\
 	$(MMDB_LIBS)		\
-	$(GSL_LIBS)
+	$(gsl_LIBS)
 

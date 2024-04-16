@@ -2,7 +2,6 @@
 * @author Filomeno Sanchez
 * 
 * Copyright 2023, University of York
-* All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU Lesser General Public License as published
@@ -59,45 +58,48 @@ int test_something_filo(molecules_container_t &mc) {
       }
    }
    mc.close_molecule(imol);
+   mc.close_molecule(imol_map);
    return status;
 }
 
 
 int test_get_diff_map_peaks(molecules_container_t &mc) {
 
-   int status = 1;
-
    // this test needs a different mtz file. Come back later.
 
-#if 0
    starting_test(__FUNCTION__);
    int status = 0;
 
-   int coordMolNo   = mc.read_pdb("./5a3h.pdb");
-   int mapMolNo     = mc.read_mtz("./5a3h_sigmaa.mtz", "FWT",    "PHWT",    "FOM", false, false);
-   int diffMapMolNo = mc.read_mtz("./5a3h_sigmaa.mtz", "DELFWT", "PHDELWT", "FOM", false, true);
+   int coordMolNo   = mc.read_pdb(reference_data("5a3h.pdb"));
+   int mapMolNo     = mc.read_mtz(reference_data("5a3h_sigmaa.mtz"), "FWT",    "PHWT",    "FOM", false, false);
+   int diffMapMolNo = mc.read_mtz(reference_data("5a3h_sigmaa.mtz"), "DELFWT", "PHDELWT", "FOM", false, true);
 
-   mc.associate_data_mtz_file_with_map(mapMolNo, "./5a3h_sigmaa.mtz", "FP", "SIGFP", "FREE");
+   mc.associate_data_mtz_file_with_map(mapMolNo, reference_data("5a3h_sigmaa.mtz"), "FP", "SIGFP", "FREE");
+
    mc.connect_updating_maps(coordMolNo, mapMolNo, mapMolNo, diffMapMolNo);
    // if sfcalc_genmaps_using_bulk_solvent() fails stats.r_factor is -1
-   coot::util::sfcalc_genmap_stats_t stats = mc.sfcalc_genmaps_using_bulk_solvent(coordMolNo, mapMolNo, diffMapMolNo, mapMolNo);
 
-   mc.get_r_factor_stats();
+   coot::util::sfcalc_genmap_stats_t stats = mc.sfcalc_genmaps_using_bulk_solvent(coordMolNo, mapMolNo, diffMapMolNo, mapMolNo);
+   std::cout << "   stats 0 : r_factor " << stats.r_factor << std::endl;
+
+   molecules_container_t::r_factor_stats rfs_1 = mc.get_r_factor_stats();
+   std::cout << "   stats 1 : r_factor " << rfs_1.r_factor << std::endl;
    mc.get_map_contours_mesh(mapMolNo,  77.501,  45.049,  22.663,  13,  0.48);
 
    mc.delete_using_cid(coordMolNo, "/1/A/300/*", "LITERAL");
    mc.get_map_contours_mesh(mapMolNo,  77.501,  45.049,  22.663,  13,  0.48);
-   mc.get_r_factor_stats();
+   molecules_container_t::r_factor_stats rfs_2 = mc.get_r_factor_stats();
+   std::cout << "   stats 2 : r_factor " << rfs_2.r_factor << std::endl;
 
    auto diff_diff_map_peaks = mc.get_diff_diff_map_peaks(diffMapMolNo,  77.501,  45.049,  22.663);
 
    if (diff_diff_map_peaks.size() >  0) {
-      std::cout << "Test passed." << std::endl;
       status = 1;
-   } else {
-      std::cerr << "Test failed." << std::endl;
    }
-#endif
+
+   mc.close_molecule(coordMolNo);
+   mc.close_molecule(mapMolNo);
+   mc.close_molecule(diffMapMolNo);
 
    return status;
 
@@ -110,7 +112,7 @@ int test_non_drawn_bond_multi_cid_2(molecules_container_t &mc) {
    int status = 0;
 
    mc.set_use_gemmi(false);
-   int coordMolNo = mc.read_pdb("./5a3h.pdb");
+   int coordMolNo = mc.read_pdb(reference_data("5a3h.pdb"));
    if (mc.is_valid_model_molecule(coordMolNo)) {
       auto instanceMesh_1 = mc.get_bonds_mesh_for_selection_instanced(
          coordMolNo, "//A/10-20||//A/25-30", "COLOUR-BY-CHAIN-AND-DICTIONARY", false, 0.1, 1, 1);
@@ -155,7 +157,7 @@ int test_change_chain_id_1(molecules_container_t &molecules_container) {
    int status = 0;
 
    molecules_container.set_use_gemmi(false);
-   int coordMolNo = molecules_container.read_pdb("./5a3h.pdb");
+   int coordMolNo = molecules_container.read_pdb(reference_data("5a3h.pdb"));
    molecules_container.delete_colour_rules(coordMolNo);
 
    // let colourMap = new cootModule.MapIntFloat3();
@@ -257,8 +259,9 @@ int test_change_chain_id_1(molecules_container_t &molecules_container) {
    //    instanceMesh_1.geom.get(1).instancing_data_B.size()
    // )
 
-   if (instanceMesh_2.geom.at(1).instancing_data_B.size() == instanceMesh_1.geom.at(1).instancing_data_B.size())
-      status = 1;
+   if (instanceMesh_2.geom.size() > 1)
+      if (instanceMesh_2.geom.at(1).instancing_data_B.size() == instanceMesh_1.geom.at(1).instancing_data_B.size())
+         status = 1;
 
    return status;
 }

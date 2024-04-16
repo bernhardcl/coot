@@ -1,3 +1,28 @@
+/*
+ * src/meshed-generic-display-object.hh
+ *
+ * Copyright 2020 by Medical Research Council
+ * Author: Paul Emsley
+ *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copies of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
+ * See http://www.gnu.org/licenses/
+ *
+ */
 
 #ifndef MESHED_GENERIC_DISPLAY_OBJECT_HH
 #define MESHED_GENERIC_DISPLAY_OBJECT_HH
@@ -132,6 +157,13 @@ public:
       clipper::Coord_orth position;
       coot::colour_holder col;
    };
+
+   class object_info_t {
+   public:
+      coot::colour_holder colour;
+      clipper::Coord_orth position;
+   };
+
    enum {UNDEFINED = -1, INTERMEDIATE_ATOMS=-9};
    meshed_generic_display_object() : mesh(Mesh("init_meshed_generic_display_object-A"))
       { imol = UNDEFINED; wireframe_mode = false; }
@@ -151,6 +183,9 @@ public:
    bool is_valid_imol() { return imol != INTERMEDIATE_ATOMS && imol != UNDEFINED; }
    bool is_intermediate_atoms_object() const { return imol == INTERMEDIATE_ATOMS; }
    Mesh mesh;
+   std::vector<object_info_t> info; // a place to store the positions and colours
+                                    // so that they can be retrieved in a python function
+                                    // get_generic_object_info()
 
    bool wireframe_mode;
    void attach_to_intermediate_atoms() { imol = INTERMEDIATE_ATOMS; }

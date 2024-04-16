@@ -1,3 +1,28 @@
+/*
+ * src/graphics-info-draw.cc
+ *
+ * Copyright 2020 by Medical Research Council
+ * Author: Paul Emsley
+ *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copies of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
+ * See http://www.gnu.org/licenses/
+ *
+ */
 
 #ifdef USE_PYTHON
 #include <Python.h>
@@ -6,9 +31,10 @@
 #include "compat/coot-sysdep.h"
 
 #define GLM_ENABLE_EXPERIMENTAL // # for norm things
-#include <glm/ext.hpp>
+// #include <glm/ext.hpp>
 #include <glm/gtx/string_cast.hpp>  // to_string()
 #include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtc/type_ptr.hpp>  // for value_ptr() 20240326-PE
 
 #include <iostream>
 #include <iomanip>
@@ -374,7 +400,7 @@ graphics_info_t::mouse_zoom(double delta_x_drag, double delta_y_drag) {
    double fy = 1.0 + delta_y/300.0;
    if (fx > 0.0) graphics_info_t::zoom /= fx;
    if (fy > 0.0) graphics_info_t::zoom /= fy;
-   if (false)
+   if (true)
       std::cout << "zooming with perspective_projection_flag "
                 << graphics_info_t::perspective_projection_flag
                 << " " << graphics_info_t::zoom << std::endl;
@@ -1552,7 +1578,21 @@ graphics_info_t::draw_texture_meshes() {
          if (! tm.textures.empty()) {
             // std::cout << "Binding and drawing the texture mesh" << std::endl;
 
-            std::cout << "............ get crow texture drawing code" << std::endl;
+            // std::cout << "............ get crow texture drawing code" << std::endl;
+
+            bool do_depth_fog = true;
+            int idx_start = tm.textures.size() - 1;
+            for (int idx_texture=idx_start; idx_texture>=0; idx_texture--) {
+               const auto &texture = tm.textures[idx_texture];
+               if (false)
+                  std::cout << "binding texture " << idx_texture << " to unit " << texture.unit << std::endl;
+               tm.textures[idx_texture].texture.Bind(texture.unit);
+            }
+            glEnable(GL_BLEND);
+            // we need some user control over the map section opacity
+            tm.draw(&shader, mvp, model_rotation, lights, eye_position, bg_col, do_depth_fog);
+            glDisable(GL_BLEND);
+
 #if 0
             //
             // 20211018-PE it matters that these get called in the right order!
@@ -1868,7 +1908,6 @@ graphics_info_t::draw_molecules_with_shadows() {
 
             glEnable(GL_BLEND);
             // good idea to not use shadows on atom labels?
-
             // 20220226-PE not here.
             // draw_molecule_atom_labels(m, mvp, model_rotation_matrix);
          }
@@ -4892,7 +4931,7 @@ graphics_info_t::translate_in_screen_x(float step_size) {
    // The step size is good when were zoomed in but too big when we are zoomed out.
 
    glm::vec3 screen_x_uv = get_screen_x_uv();
-   glm::vec3 step = 0.005 * step_size * zoom * screen_x_uv;
+   glm::vec3 step = 0.005f * step_size * zoom * screen_x_uv;
    add_to_rotation_centre(step);
 }
 
@@ -5128,7 +5167,7 @@ graphics_info_t::get_happy_face_residue_marker_positions() {
       glm::vec3 sc = get_rotation_centre();
       std::vector<clipper::Coord_orth> cv = coot::fibonacci_sphere(80);
       for (auto p : cv)
-         v.push_back(sc + 5.0 * clipper_to_glm(p));
+         v.push_back(sc + 5.0f * clipper_to_glm(p));
    } else {
 
       // This is just a bit of fun... actually, I will need to ask something like
@@ -6059,7 +6098,7 @@ graphics_info_t::make_extra_distance_restraints_objects() {
       // for colouring, limit the delta_length)
       if (delta_length >  1.0) delta_length =  1.0;
       if (delta_length < -1.0) delta_length = -1.0;
-      glm::vec4 colour = colour_base + delta_length * glm::vec4(-0.8f, 0.8f, -0.8, 0.0f);
+      glm::vec4 colour = colour_base + static_cast<float>(delta_length) * glm::vec4(-0.8f, 0.8f, -0.8f, 0.0f);
       edrmid.colour = 0.8f * colour;
       extra_distance_restraints_markup_data.push_back(edrmid);
    }

@@ -5,7 +5,7 @@ on:
 
 jobs:
 
-  build-for-macos:
+  build-coot-for-macos:
 
     runs-on: macos-latest
 
@@ -18,12 +18,6 @@ jobs:
     #   with:
     #      path: /usr/local
     #      key: usr_local_homebrew
-
-    - name: download test data
-      run:  wget https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/data/test-molecule-container-test-data.tar.gz
-
-    - name: untar test data
-      run:  tar xvf test-molecule-container-test-data.tar.gz
 
     - name: Which brew?
       run:  which brew
@@ -66,24 +60,42 @@ jobs:
 
     - name: brew update
       run:  |
+        brew uninstall kotlin
+        brew uninstall xcbeautify
         brew update
         brew upgrade
 
+    # I don't think that glfw is needed now (it is in the coot.rb file though)
     - name: Install Homebrew dependencies
       run:  >
          brew install boost boost-python3 brewsci/bio/clipper4coot
          brewsci/bio/raster3d brewsci/bio/ssm brewsci/bio/gemmi
-         dwarfutils gsl rdkit pygobject3
+         dwarfutils gsl rdkit pygobject3 gtk4 glm automake gmp glfw
+         py3cairo pygobject3
+
+    - name: Install Homebrew python-requests
+      run:  brew install python-requests
 
     - name: Get coot.rb file
-      # run:  wget https://raw.githubusercontent.com/YoshitakaMo/homebrew-bio/coot/Formula/coot.rb
       # try this modified version for now:
-      run:  wget https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/files/coot.rb
+      # run:  wget https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/files/coot.rb
+      run:  wget https://raw.githubusercontent.com/YoshitakaMo/homebrew-bio/coot/Formula/coot.rb
 
+    # this doesn't work - currently a failure in compiling M2T
     - name: Compile Homebrew coot HEAD
       # don't stall waiting for user input to resolve the failed patch
-      run:  NONINTERACTIVE=1 brew install ./coot.rb --HEAD
+      run:  NONINTERACTIVE=1 brew install ./coot.rb --HEAD || true > $HOME/brew.log >&2
+
+    # - name: cat the brew log
+    #   run:  cat /Users/runner/Library/Logs/Homebrew/coot/*.make
+
+    - name: Upload brew log
+      uses: actions/upload-artifact@v4
+      with:
+        name: brew-log-package
+        path: /Users/runner/Library/Logs/Homebrew/coot
+        retention-days: 3
 
     - name: Does it run?
-      run: coot --no-graphics < /dev/null
+      run: /usr/local/bin/coot --no-graphics < /dev/null
 

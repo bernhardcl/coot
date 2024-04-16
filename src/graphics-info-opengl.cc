@@ -1,3 +1,28 @@
+/*
+ * src/graphics-info-opengl.cc
+ *
+ * Copyright 2020 by Medical Research Council
+ * Author: Paul Emsley
+ *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copies of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
+ * See http://www.gnu.org/licenses/
+ *
+ */
 
 #ifdef USE_PYTHON
 #include <Python.h>
@@ -6,7 +31,7 @@
 #include <random>
 
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/ext.hpp>
+// #include <glm/ext.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 #define ENABLE_NLS // 20220606-PE fixes weird dcgettext() compiler errors
@@ -484,6 +509,8 @@ graphics_info_t::adjust_clipping(float d) {
       clipping_front = clipping_front * (1.0 + d);
       clipping_back  = clipping_back  * (1.0 + d);
 
+      // std::cout << "now clipping_front" << clipping_front << " clipping_back " << clipping_back << std::endl;
+
    } else {
 
       // --- perspective ---
@@ -545,6 +572,7 @@ graphics_info_t::increase_clipping_front() {
       float d = 0.05;
       clipping_front = clipping_front * (1.0 - d);
    }
+   // std::cout << "in increase_clipping_front() clipping_fron now " << clipping_front << std::endl;
 
    graphics_draw();
 }
@@ -555,11 +583,12 @@ graphics_info_t::increase_clipping_back() {
    if (perspective_projection_flag) {
       float szfp_start = screen_z_far_perspective;
       screen_z_far_perspective *= 1.02;
-      std::cout << "increase_clipping_back() was " << szfp_start << " now " << screen_z_far_perspective << std::endl;
+      // std::cout << "increase_clipping_back() was " << szfp_start << " now " << screen_z_far_perspective << std::endl;
    } else {
       float d = 0.05;
       clipping_back = clipping_back * (1.0 + d);
    }
+   // std::cout << "in increase_clipping_back() clipping_back now " << clipping_back << std::endl;
    graphics_draw();
 }
 
@@ -580,6 +609,7 @@ graphics_info_t::decrease_clipping_front() {
    } else {
       float d = 0.05;
       clipping_front = clipping_front * (1.0 + d);
+      // std::cout << "in decrease_clipping_front() clipping_front now " << clipping_front << std::endl;
    }
    graphics_draw();
 }
@@ -600,6 +630,7 @@ graphics_info_t::decrease_clipping_back() {
       float d = 0.05;
       clipping_back = clipping_back * (1.0 - d);
    }
+   // std::cout << "in decrease_clipping_ack() clipping_back now " << clipping_back << std::endl;
    graphics_draw();
 }
 

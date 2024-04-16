@@ -6,19 +6,19 @@
  * Author: Paul Emsley
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or (at
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * You should have received a copy of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
  * Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
  */
 
 #include "validation-graphs/validation-graphs.hh"
@@ -1127,7 +1127,6 @@ graphics_info_t::geometric_distortion(int imol) {
 #endif
 }
 
-#ifdef HAVE_GSL
 coot::geometry_distortion_info_container_t
 graphics_info_t::geometric_distortions(int imol, mmdb::Residue *residue_p, bool with_nbcs) {
 
@@ -1149,11 +1148,6 @@ graphics_info_t::geometric_distortions(int imol, mmdb::Residue *residue_p, bool 
    }
    return gdc;
 }
-#endif // HAVE_GSL
-
-
-// #ifdef HAVE_GSL
-// #if defined(HAVE_GNOME_CANVAS) || defined(HAVE_GTK_CANVAS)
 
 std::vector<coot::geometry_distortion_info_container_t>
 graphics_info_t::geometric_distortions_from_mol(int imol, const atom_selection_container_t &asc,
@@ -1344,8 +1338,6 @@ graphics_info_t::geometric_distortions_from_mol(int imol, const atom_selection_c
 #endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    return dcv;
 }
-// #endif // HAVE_GSL
-// #endif // defined(HAVE_GNOME_CANVAS) || defined(HAVE_GTK_CANVAS)
 
 void
 graphics_info_t::print_geometry_distortion(const std::vector<coot::geometry_distortion_info_container_t> &v) const {

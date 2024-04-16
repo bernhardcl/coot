@@ -5,18 +5,18 @@
  * Copyright 2014 by Medical Research Council
 1 * 
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or (at
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
  * 
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ * You should have received a copy of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,  02110-1301, USA
  */
 
 
@@ -510,19 +510,10 @@ int generic_object_is_displayed_p(int object_number) {
 
 int new_generic_object_number(const std::string &name_string) {
 
+   std::cout << "--------------- new_generic_object_number() " << name_string << std::endl;
+
    graphics_info_t g;
    int n_new = g.new_generic_object_number(name_string);
-
-   if (g.generic_objects_dialog) {
-      GtkWidget *grid = widget_from_builder("generic_objects_dialog_grid"); // changed 20211020-PE
-      if (grid) {
-         const meshed_generic_display_object &gdo = g.generic_display_objects[n_new];
-         generic_objects_dialog_grid_add_object_internal(gdo,
-                                                         g.generic_objects_dialog,
-                                                         grid,
-                                                         n_new);
-      }
-   }
    return n_new;
 }
 
@@ -536,7 +527,7 @@ int new_generic_object_number_for_molecule(const std::string &name, int imol) {
 
 
 // return the index of the object with name name, if not, return -1;
-// 
+//
 int generic_object_index(const std::string &name) {
 
    return graphics_info_t::generic_object_index(name);
@@ -545,7 +536,7 @@ int generic_object_index(const std::string &name) {
 
 // OLD code passing back a const char (yeuch)
 //
-// /*! \brief what is the name of generic object number obj_number? 
+// /*! \brief what is the name of generic object number obj_number?
 
 // return 0 (NULL) #f  on obj_number not available */
 // const char *generic_object_name(int obj_number) {
@@ -757,6 +748,44 @@ void generic_object_info() {
       std::cout << "No Generic Display Objects" << std::endl;
    }
 }
+
+#ifdef USE_PYTHON
+/*! \brief get generic display objects */
+PyObject *get_generic_object_info(int obj_number) {
+
+   PyObject *o = Py_None;
+   graphics_info_t g;
+   int n_obs = g.generic_display_objects.size();
+   if (obj_number < n_obs) {
+      if (obj_number >= 0) {
+
+         const auto &info = g.generic_display_objects[obj_number].info;
+         o = PyList_New(info.size());
+         for (unsigned int i=0; i<info.size(); i++) {
+
+            PyObject *d = PyDict_New();
+            PyObject *colour_py = PyList_New(3);
+            const auto &col = info[i].colour;
+            PyList_SetItem(colour_py, 0, PyFloat_FromDouble(static_cast<double>(col.red)));
+            PyList_SetItem(colour_py, 1, PyFloat_FromDouble(static_cast<double>(col.green)));
+            PyList_SetItem(colour_py, 2, PyFloat_FromDouble(static_cast<double>(col.blue)));
+            PyDict_SetItemString(d, "colour", colour_py);
+            const auto &pos = info[i].position;
+            PyObject *position_py = PyList_New(3);
+            PyList_SetItem(position_py, 0, PyFloat_FromDouble(pos.x()));
+            PyList_SetItem(position_py, 1, PyFloat_FromDouble(pos.y()));
+            PyList_SetItem(position_py, 2, PyFloat_FromDouble(pos.z()));
+            PyDict_SetItemString(d, "position", position_py);
+
+            PyList_SetItem(o, i, d);
+         }
+      }
+   }
+   return o;
+
+}
+#endif /* USE_PYTHON */
+
 
 // generic object obj_no has things to display?
 // Return 0 or 1.
