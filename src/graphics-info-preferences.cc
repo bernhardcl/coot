@@ -1022,16 +1022,15 @@ graphics_info_t::update_main_toolbar_icons(GtkTreeModel *model) {
 std::string
 graphics_info_t::get_preferences_directory() const {
 
-   std::string home = coot::get_home_dir();
+   std::string preferences_dir = coot::preferences_dir();
    std::string pkgdatadir = coot::package_data_dir();
 
    std::string fn;
 
-   if (!home.empty()) {
-      fn = coot::util::append_dir_file(home, ".coot");
-   }
-   if (fn.empty()) {
-      fn = coot::util::append_dir_file(pkgdatadir, ".coot");
+   if (preferences_dir.empty()) {
+      fn = coot::util::append_dir_dir(pkgdatadir, ".coot");
+   } else {
+      fn = preferences_dir;
    }
 
    return fn;
@@ -1041,7 +1040,8 @@ void
 graphics_info_t::add_to_preferences(const std::string &file_name, const std::string &contents) const {
 
    std::string pref_dir = get_preferences_directory();
-   std::string fn = coot::util::append_dir_file(pref_dir, file_name);
+   std::string pref_subdir = coot::util::append_dir_dir(pref_dir, "preferences");
+   std::string fn = coot::util::append_dir_file(pref_subdir, file_name);
 
    std::ofstream f(fn.c_str());
    if (f) {

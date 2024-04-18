@@ -230,7 +230,7 @@ if True:  # test for python
                                 if (button_label == toolbar[0]):
                                     coot_gui_api.main_toolbar().remove(toolbar[1])
                                     # remove from save
-                                    remove_toolbar_from_init_file(button_label)
+                                    remove_toolbar_button_from_init_file(button_label)
 
                 window.destroy()
                 return False
@@ -350,7 +350,7 @@ if True:  # test for python
                         button_label = toolbar_child.get_label()
                         if (button_label == entry_text):
                             coot_main_toolbar.remove(toolbar_child)
-                            remove_toolbar_from_init_file(button_label)
+                            remove_toolbar_button_from_init_file(button_label)
                             break
             coot_gui.generic_single_entry("Remove toolbar button",
                                           "button label",
@@ -580,10 +580,9 @@ if True:  # test for python
         # remove this for now.
         # coot_main_toolbar.connect("button-press-event", show_pop_up_menu)
 
-# save a toolbar button to ~/.coot-preferences/coot_toolbuttons.py
+
+# save a toolbar button to preferences subdir
 #
-
-
 def save_toolbar_to_init_file(button_label, callback_function,
                               icon=None, tooltip=None,
                               toggle_button=False, use_button=False):
@@ -605,34 +604,28 @@ def save_toolbar_to_init_file(button_label, callback_function,
         save_str += (", use_button=" + str(use_button))
     save_str += ")"
 
-    home = os.getenv('HOME')
-    if (not home and os.name == 'nt'):
-        home = os.getenv('COOT_HOME')
-    if not home:
-        print("BL ERROR:: could not find a home directory")
+    pref_dir = coot_utils.get_coot_preferences_dir("preferences")
+    if not pref_dir:
+       print("BL ERROR:: could not save the toolbutton file to preferences.")
     else:
-        filename = os.path.join(
-            home, ".coot-preferences", "coot_toolbuttons.py")
-        coot_utils.remove_line_containing_from_file(["coot_toolbar_button", button_label],
-                                                    filename)
-        coot_utils.save_string_to_file(save_str, filename)
+       filename = os.path.join(pref_dir, "coot_toolbuttons.py")
+       coot_utils.remove_line_containing_from_file(["coot_toolbar_button", button_label],
+                                                   filename)
+       coot_utils.save_string_to_file(save_str, filename)
 
 
-# remove a toolbar from  ~/.coot-preferences/coot_toolbuttons.py
+# remove a toolbar button from  coot_preferences dir/preferences/coot_toolbuttons.py
 #
-def remove_toolbar_from_init_file(button_label):
-    home = os.getenv('HOME')
-    if (not home and os.name == 'nt'):
-        home = os.getenv('COOT_HOME')
-    if not home:
-        print("BL ERROR:: could not find a home directory")
-    else:
-        filename = os.path.join(
-            home, ".coot-preferences", "coot_toolbuttons.py")
-        remove_str_ls = ["coot_toolbar_button", button_label]
-        if (os.path.isfile(filename)):
-            coot_utils.remove_line_containing_from_file(
-                remove_str_ls, filename)
+def remove_toolbar_button_from_init_file(button_label):
+
+   pref_dir = coot_utils.get_coot_preferences_dir("preferences")
+   if not pref_dir:
+      print("BL ERROR:: could not save the toolbutton file to preferences.")
+   else:
+      filename = os.path.join(pref_dir, "coot_toolbuttons.py")
+      remove_str_ls = ["coot_toolbar_button", button_label]
+      if (os.path.isfile(filename)):
+         coot_utils.remove_line_containing_from_file(remove_str_ls, filename)
 
 
 # returns a list with pre-defined toolbar-functions (stock-id is optional,

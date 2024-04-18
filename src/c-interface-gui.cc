@@ -1248,24 +1248,26 @@ void set_graphics_window_position(int x_pos, int y_pos) {
 void graphics_window_size_and_position_to_preferences() {
 
    // Note to self: is there a "get preferences dir" function?
-   std::string h = coot::get_home_dir();
+   // BL says:: there is now...
+   std::string h = coot::preferences_dir();
    if (!h.empty()) {
       // 20220507-PE pref_dir is now .coot
-      std::string pref_dir = coot::util::append_dir_dir(h, ".coot");
+      // 20240223-BL: now there is a subdirectory xenops within .coot
+      std::string pref_dir = coot::util::append_dir_dir(h, "xenops");
       if (! coot::is_directory_p(pref_dir)) {
          // make it
-	 // pref_dir = coot::get_directory(pref_dir); // oops not in this branch.
-	 struct stat s;
-	 int fstat = stat(pref_dir.c_str(), &s);
-	 if (fstat == -1 ) { // file not exist
-	    int status = coot::util::create_directory(pref_dir);
+         // pref_dir = coot::get_directory(pref_dir); // oops not in this branch.
+         struct stat s;
+         int fstat = stat(pref_dir.c_str(), &s);
+         if (fstat == -1 ) { // file not exist
+            int status = coot::util::create_directory(pref_dir);
             if (status != 0) {
                std::cout << "status " << status << std::endl;
                std::string m("WARNING:: failed to create directory ");
                m += pref_dir;
                info_dialog(m.c_str()); // 20220507-PE make this argument a string one rainy day
             }
-	 }
+         }
       }
       if (coot::is_directory_p(pref_dir)) {
          graphics_info_t g;
@@ -1278,6 +1280,8 @@ void graphics_window_size_and_position_to_preferences() {
          if (main_window) {
 #if (GTK_MAJOR_VERSION >= 4)
             std::cout << "in graphics_window_size_and_position_to_preferences() find the window position and size" << std::endl;
+            gtk_window_get_default_size(GTK_WINDOW(main_window), &xs, &ys);
+
 #else
             gtk_window_get_position(GTK_WINDOW(main_window), &x, &y);
             gtk_window_get_size(GTK_WINDOW(main_window), &xs, &ys);

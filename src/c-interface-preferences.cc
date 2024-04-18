@@ -711,12 +711,12 @@ void save_preferences() {
   if (! g.run_startup_scripts_flag)
      return;
   
-  std::string tmp_directory = coot::get_home_dir();
+  std::string tmp_directory = coot::preferences_dir();
   if (!tmp_directory.empty()) {
     directory = tmp_directory;
+  } else {
+     directory += "/.coot/";
   }
-
-  directory += "/.coot/";
 
   int status = make_directory_maybe(directory.c_str());
   if (status != 0) {
@@ -724,21 +724,29 @@ void save_preferences() {
       "        Will not be able to save preferences"<<std::endl;
   } else {
 
+     // need to make another subdirectory
+     directory += "/preferences/";
+     status = make_directory_maybe(directory.c_str());
+     if (status != 0) {
+       std::cout<<"ERROR:: Cannot find directory "<< directory <<
+         "        Will not be able to save preferences"<<std::endl;
+     } else {
+
 #ifdef USE_GUILE
-    preferences_name = "coot-preferences.scm";
-    file_name = directory + preferences_name;
-    il = 1;
-    istat = g.save_preference_file(file_name, il);
+        preferences_name = "coot-preferences.scm";
+        file_name = directory + preferences_name;
+        il = 1;
+        istat = g.save_preference_file(file_name, il);
 #endif // USE_GUILE
 
-    preferences_name = "coot_preferences.py";
-    file_name = directory + preferences_name;
-    il = 2;
-    istat = g.save_preference_file(file_name, il);
+        preferences_name = "coot_preferences.py";
+        file_name = directory + preferences_name;
+        il = 2;
+        istat = g.save_preference_file(file_name, il);
 
+     }
   }
 }
- 
 
 void preferences_internal_change_value_int(int preference_type, int ivalue) {
   graphics_info_t g;

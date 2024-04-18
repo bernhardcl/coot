@@ -49,56 +49,52 @@ curlew_install_extension_file_gtk4(const std::string &script_here_file_name) {
    bool success = false;
    std::string failure_message;
    if (coot::file_exists_and_non_empty(script_here_file_name)) {
-      std::string home_directory = coot::get_home_dir();
-      if (!home_directory.empty()) {
-         std::string file_name = coot::util::file_name_non_directory(script_here_file_name);
-         std::string preferences_dir = coot::util::append_dir_dir(home_directory, ".coot");
-         std::string preferences_file_name = coot::util::append_dir_file(preferences_dir, file_name);
-         // std::cout << "debug:: attempting to copy \"" << script_here_file_name << "\" as \"" << preferences_file_name
-         // << "\"" << std::endl;
-         int status = coot::copy_file(script_here_file_name, preferences_file_name); // it returns a bool actually
-         if (status == false) {
-            // std::cout << "WARNING:: Copy file script failed: " << script_here_file_name << std::endl;
-            FILE *fp = fopen(script_here_file_name.c_str(), "r");
-            PyRun_SimpleFile(fp, script_here_file_name.c_str());
-            fclose(fp);
-            failure_message = "WARNING:: Copy file script failed: " + script_here_file_name;
+      std::string prefs_directory = coot::preferences_dir();
+      int state = coot::util::create_directory(prefs_directory);
+      if (state != 0) {
+         failure_message = "WARNING:: failed to create preferences directory: " + script_here_file_name;
+      } else {
+         // success, we have or created preferences dir
+         // now make/check a curlew directory
+         std::string curlew_directory = coot::util::append_dir_dir(prefs_directory, "curlew");
+         state = coot::util::create_directory(curlew_directory);
+         if (state != 0) {
+            failure_message = "WARNING:: failed to create curlew directory: " + script_here_file_name;
          } else {
-            // cool.
-            // std::cout << "debug:: run_script() called on " << preferences_file_name << std::endl;
-            FILE *fp = fopen(script_here_file_name.c_str(), "r");
-            PyRun_SimpleFile(fp, preferences_file_name.c_str());
-            fclose(fp);
-            success = true;
+            // success, have/created curlew
+            std::string file_name = coot::util::file_name_non_directory(script_here_file_name);
+            std::string preferences_file_name = coot::util::append_dir_file(curlew_directory, file_name);
+            // std::cout << "debug:: attempting to copy \"" << script_here_file_name << "\" as \"" << preferences_file_name
+            // << "\"" << std::endl;
+            state = coot::copy_file(script_here_file_name, preferences_file_name); // it returns a bool actually
+            if (state == false) {
+               // std::cout << "WARNING:: Copy file script failed: " << script_here_file_name << std::endl;
+               FILE *fp = fopen(script_here_file_name.c_str(), "r");
+               PyRun_SimpleFile(fp, script_here_file_name.c_str());
+               fclose(fp);
+               failure_message = "WARNING:: Copy file script failed: " + script_here_file_name;
+            } else {
+               // cool.
+               // std::cout << "debug:: run_script() called on " << preferences_file_name << std::endl;
+               FILE *fp = fopen(script_here_file_name.c_str(), "r");
+               PyRun_SimpleFile(fp, preferences_file_name.c_str());
+               fclose(fp);
+               success = true;
+            }
          }
       }
    }
    return std::make_pair(success, failure_message);
 }
 
-// put this in coot utils
-int coot_rename(const std::string &f1, const std::string &f2) {
-
-   // return 0 on success
-
-   // std::cout << "coot_rename \"" << f1 << "\" to \"" << f2 << "\"" << std::endl;
-
-#ifndef WINDOWS_MINGW
-   int status = rename(f1.c_str(), f2.c_str());
-#else
-   int status = coot::rename_win(f1.c_str(), f2.c_str());
-#endif
-   return status;
-}
-
 int
 curlew_uninstall_extension_file_gtk4(const std::string &script_file_name) {
 
-   std::string home_directory = coot::get_home_dir();
-   std::string preferences_dir = coot::util::append_dir_dir(home_directory, ".coot");
+   std::string preferences_dir = coot::preferences_dir();
+   std::string curlew_dir = coot::util::append_dir_dir(preferences_dir, "curlew");
    std::string preferences_file_name = coot::util::append_dir_file(preferences_dir, script_file_name);
    std::string renamed_file = preferences_file_name + "_uninstalled";
-   int status = coot_rename(preferences_file_name, renamed_file);
+   int status = coot::rename(preferences_file_name, renamed_file);
    return status;
 }
 

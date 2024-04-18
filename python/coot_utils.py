@@ -3046,37 +3046,61 @@ def print_molecule_names():
     list(map(lambda molecule_number: printf("    %s    %s\n" % (molecule_number, coot.molecule_name(molecule_number))),
              molecule_number_list()))
 
-# save the dialog positions to the coot_dialog_positions.py file in ./coot-preferences
+
+def get_coot_preferences_dir(subdir=False):
+   """return the location of the coot preferences dir or
+   subdir subdirectory within the coot
+   preferences location, i.e. ($HOME/.coot/subdir
+   or %USERPROFILE%/COOT/subdir...
+   make the directory if it doesnt exist
+   return False if there is a problem."""
+
+   home = os.getenv('HOME')
+   if (not home and os.name == 'nt'):
+      # windows
+      home = os.getenv('USERPROFILE')
+      pref_dir = os.path.join(home, "COOT")
+   else:
+      pref_dir = os.path.join(home, ".coot")
+   status = coot.make_directory_maybe(pref_dir)
+   if (status != 0):
+      print("BL ERROR:: could not find/make preferences directory %s." %pref_dir)
+      return False
+   else:
+      if not subdir:
+         return pref_dir
+      else:
+         pref_pref_dir = os.path.join(pref_dir, subdir)
+         status = coot.make_directory_maybe(pref_pref_dir)
+         if (status != 0):
+            print("BL ERROR:: could not find/make preferences sub directory %s." %subdir)
+            return False
+         else:
+            return pref_pref_dir
+   # shouldnt get here but if return False
+   return False
+
+# save the dialog positions to the coot_dialog_positions.py file in $/.coot/preferences
 #
-
-
 def save_dialog_positions_to_init_file():
 
     import os
-    # return False on failure to find .coot.py (or .coot-preferences)
+    # return False on failure to find coot preferences dir
 
     def dump_positions_to_file(positions, preferences=False):
-        home = 'HOME'
         port = False
-        if (os.name == 'nt'):
-            home = 'COOT_HOME'
         if preferences:
-            init_dir = os.path.join(os.getenv(home),
-                                    ".coot-preferences")
+            init_dir = get_coot_preferences_dir("preferences")
             init_file = os.path.join(init_dir,
                                      "saved_dialog_positions.py")
             if (not os.path.isdir(init_dir)):
                 return False
             port = open(init_file, 'w')
             print(
-                "BL INFO:: writing dialog positions to .coot-preferences/saved_dialog_positions.py")
+                "BL INFO:: writing dialog positions to $/preferences/saved_dialog_positions.py")
         else:
-            init_file = os.path.join(os.getenv(home),
-                                     ".coot.py")
-            if (not os.path.isfile(init_file)):
-                return False
-            port = open(init_file, 'a')
-            print("BL INFO:: writing dialog positions to .coot.py")
+           # there is no else...
+           pass
 
         if port:
 
@@ -3734,17 +3758,11 @@ def file_to_preferences(filename):
     """
 
     import shutil
+    import site
 
     coot_python_dir = os.getenv("COOT_PYTHON_DIR")
     if not coot_python_dir:
-        coot_python_dir = os.path.join(sys.prefix, 'lib', 'python2.7', 'site-packages', 'coot')
-        if not os.path.isdir(coot_python_dir) and is_windows():
-            # maybe its old an in another place!?!
-            coot_python_dir = os.path.normpath(os.path.join(sys.prefix,
-                                                            'lib', 'site-packages', 'coot'))
-        else:
-            coot_python_dir = os.path.join(
-                sys.prefix, 'lib', 'python2.7', 'site-packages', 'coot')
+        coot_python_dir = site.getsitepackages()   # maybe rather the prefered way
 
     if not os.path.isdir(coot_python_dir):
         coot.add_status_bar_text("Missing COOT_PYTHON_DIR")
@@ -3755,38 +3773,21 @@ def file_to_preferences(filename):
             coot.add_status_bar_text("Missing reference template key bindings.")
         else:
             # happy path
-            home = os.getenv("HOME")
-            if is_windows():
-                home = os.getenv("COOT_HOME")
-                if not home:
-                    # try HOME
-                    home = os.getenv("HOME")
-                else:
-                    # fallback
-                    home = os.getenv("USERPROFILE")
-            if isinstance(home, str):
-                pref_dir = os.path.join(home, ".coot-preferences")
-                if not os.path.isdir(pref_dir):
-                    coot.make_directory_maybe(pref_dir)
-                if not os.path.isdir(pref_dir):
-                    coot.add_status_bar_text(
-                        "No preferences dir, no keybindings. Sorry")
-                else:
-                    pref_file = os.path.join(pref_dir, filename)
-                    # don't install it if it is already in place.
-                    if os.path.isfile(pref_file):
-                        s = "keybinding file " + pref_file + \
-                            " already exists. Not overwritten."
-                        coot.add_status_bar_text(s)
-                    else:
-                        # check the directory first
-                        if not os.path.isdir(pref_dir):
-                            coot.make_directory_maybe(pref_dir)
-                        shutil.copyfile(ref_py, pref_file)
-                        if os.path.isfile(pref_file):
-                            exec(compile(open(pref_file, "rb").read(),
-                                         pref_file, 'exec'), globals())
-
+            pref_dir = get_coot_preferences_dir("user_scripts")
+            if not os.path.isdir(pref_dir):
+               coot.add_status_bar_text("No preferences dir, no keybindings. Sorry")
+            else:
+               pref_file = os.path.join(pref_dir, filename)
+               # don't install it if it is already in place.
+               if os.path.isfile(pref_file):
+                  s = "keybinding file " + pref_file + \
+                      " already exists. Not overwritten."
+                  coot.add_status_bar_text(s)
+               else:
+                  shutil.copyfile(ref_py, pref_file)
+                  if os.path.isfile(pref_file):
+                     exec(compile(open(pref_file, "rb").read(),
+                          pref_file, 'exec'), globals())
 
 
 # something like this for intermediate atoms also?

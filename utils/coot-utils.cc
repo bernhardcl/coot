@@ -57,6 +57,7 @@
 #endif
 
 #include "coot-utils.hh"
+#include "win-compat.hh"
 
 
 std::string
@@ -65,11 +66,26 @@ coot::util::append_dir_dir (const std::string &s1, const std::string &dir) {
    std::string s;
 
    s = s1;
-   s += "/";
+   if (is_dos()) {
+      s += "\\";
+   } else {
+      s += "/";
+   }
    s += dir;
 
    return s;
 
+}
+
+// true if DOS shell, false if msys2;
+bool
+coot::util::is_dos() {
+   const char* s = getenv("MSYSTEM");
+   if (!s) {
+      return TRUE;
+   } else {
+      return FALSE;
+   }
 }
 
 std::string
@@ -920,17 +936,62 @@ coot::prefix_dir() {
 
 std::string
 coot::get_home_dir() {
-   const char *s = getenv("HOME");
+   const char* home;
+   const char* alt_home;
+   const char* s;
+#ifdef WINDOWS_MINGW
+   home = "COOT_HOME";
+   alt_home = "HOME";
+#else
+   home = "HOME";
+   alt_home = "COOT_HOME";
+#endif
+
+   s = getenv(home);
    if (s) {
       return std::string(s);
    } else {
-      s = getenv("COOT_HOME");
+      s = getenv(alt_home);
       if (s)
          return std::string(s);
    }
    return ""; //empty
 }
 
+// this will be $HOME/.coot on Linux (and Mac) and %USERPROFILE%/COOT on Windows
+std::string
+coot::preferences_dir() {
+
+   const char* s;
+
+#ifdef WINDOWS_MINGW
+   if (coot::util::is_dos()) {
+      // DOS
+      s = getenv("USERPROFILE");
+      if (s) {
+         return coot::util::append_dir_dir(std::string(s), "COOT");
+      } else {
+         // oh dear no %USERPROFILE% folder defined?
+         std::cout<<"BL WARNING:: no %USERPROFILE% defined. \n"
+                    "Wont be able to get a preferences directory!" <<std::endl;
+      }
+   } else {
+      // MSYS2 case - like linux
+      s = getenv("HOME");
+      if (s) {
+         return coot::util::append_dir_dir(std::string(s), ".coot");
+      }
+   }
+
+#else
+   s = getenv("HOME");
+   if (s) {
+      return coot::util::append_dir_dir(std::string(s), ".coot");
+   }
+#endif
+
+   return ""; //empty
+}
 
 // The user can set COOT_DATA_DIR (in fact this is the usual case
 // when using binaries) and that should over-ride the built-in
@@ -979,9 +1040,8 @@ coot::get_directory(const std::string &dir) {
 	 return dir;
       } else {
 	 // try to create in $HOME
-	 const char *e = getenv("HOME");
-	 if (e) {
-	    std::string home(e);
+         std::string home = get_home_dir();
+	 if (!home.empty()) {
 	    const std::string d = util::append_dir_dir(home, dir);
 	    fstat = stat(d.c_str(), &s);
 	    if (fstat == -1) {
@@ -1729,3 +1789,17 @@ coot::copy_file(const std::string &from_file, const std::string &to_file) {
 
    return success;
 }
+
+// return 0 on success
+int coot::rename(const std::string &f1, const std::string &f2) {
+
+   // std::cout << "coot_rename \"" << f1 << "\" to \"" << f2 << "\"" << std::endl;
+
+#ifndef WINDOWS_MINGW
+   int status = rename(f1.c_str(), f2.c_str());
+#else
+   int status = coot::rename_win(f1.c_str(), f2.c_str());
+#endif
+   return status;
+}
+

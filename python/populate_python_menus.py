@@ -294,9 +294,9 @@ if coot_gui_api.main_menubar():
             coot_utils.file_to_preferences("template_key_bindings.py") # copy and evaluate
             coot_gui.key_bindings_gui()
 
-            coot_gui.add_simple_coot_menu_menuitem(
-                submenu_settings, "Python: Install Template Keybindings",
-                lambda func: install_and_show_key_bindings())
+        coot_gui.add_simple_coot_menu_menuitem(
+            submenu_settings, "Python: Install Template Keybindings",
+            lambda func: install_and_show_key_bindings())
 
         def quick_save_func(txt):
             try:

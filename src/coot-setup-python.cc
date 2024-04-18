@@ -227,10 +227,11 @@ setup_python_classes() {
 
 }
 
-void try_load_dot_coot_py_and_python_scripts(const std::string &home_directory) {
+// BL says:: maybe a different name now?
+void try_load_dot_coot_py_and_python_scripts(const std::string &pref_directory) {
 
    std::cout << "--------------- try_load_dot_coot_py_and_python_scripts from "
-             << home_directory << " " << graphics_info_t::run_startup_scripts_flag << std::endl;
+             << pref_directory << " " << graphics_info_t::run_startup_scripts_flag << std::endl;
 
    if (graphics_info_t::run_startup_scripts_flag) {
 
@@ -240,77 +241,73 @@ void try_load_dot_coot_py_and_python_scripts(const std::string &home_directory) 
       // std::string preferences_dir = graphics_info_t::add_dir_file(home_directory, ".coot-preferences");
       //
       // now coot startup scripts will be read from and written to the ~/.coot directory
-      // (if it is not a file already)
+      // and it's subdirectories:
+      // preferences/      for coot preferences etc
+      // curlew/           for curlew scripts
+      // user_scripts/     whatever the user has...
+      // xenops/           whatever to load in the end
       //
-      std::string startup_scripts_dir = graphics_info_t::add_dir_file(home_directory, ".coot");
+      std::vector<std::string> startup_scripts_subdirs;
+      startup_scripts_subdirs.push_back("preferences");
+      startup_scripts_subdirs.push_back("curlew");
+      startup_scripts_subdirs.push_back("user_scripts");
+      startup_scripts_subdirs.push_back("xenops");
+      std::string startup_scripts_dir;
+      std::vector<std::string> all_preferences_scripts;
+      glob_t myglob;
+      int flags = 0;
+      std::string glob_file;
+      std::set<std::string> exclude_py_files;
+      std::string pref_sub_dir_full;
+      // dont load the coot_toolbuttons.py if no graphics
+      // same for key_bindings (and potentially others)
+      if (! use_graphics_flag) {
+         exclude_py_files.insert("coot_toolbuttons.py");
+         exclude_py_files.insert("template_key_bindings.py");
+      }
+
       struct stat buff;
-      int preferences_dir_status = stat(startup_scripts_dir.c_str(), &buff);
+      int preferences_dir_status = stat(pref_directory.c_str(), &buff);
 
       if (preferences_dir_status != 0) {
          std::cout << "INFO:: preferences directory " << startup_scripts_dir
                    << " does not exist. Won't read preferences." << std::endl;;
       } else {
-	 // load all .py files
-	 glob_t myglob;
-	 int flags = 0;
-	 //std::string glob_patt = "/*.py";
-	 std::string glob_file = startup_scripts_dir;
-	 glob_file += "/*.py";
-	 glob(glob_file.c_str(), flags, 0, &myglob);
-	 // dont load the coot_toolbuttons.py if no graphics
-	 // same for key_bindings (and potentially others)
-	 std::set<std::string> exclude_py_files;
-         if (! use_graphics_flag) {
-            exclude_py_files.insert("coot_toolbuttons.py");
-            exclude_py_files.insert("template_key_bindings.py");
-         }
-
-         // make this split so that we can run curlew scripts after, and xenops scripts after that.
-         //
-         std::vector<std::string> basic_scripts;
-         std::vector<std::string> xenops_scripts;
-         std::vector<std::string> curlew_scripts;
-         std::string coot_preferences_py_script;
-
-         for (char **p = myglob.gl_pathv, count = myglob.gl_pathc; count; p++, count--) {
-            std::string preferences_script(*p);
-            std::string psf = coot::util::file_name_non_directory(preferences_script);
-            if (exclude_py_files.find(psf) == exclude_py_files.end()) {
-               bool done = false;
-               if (preferences_script.length() > 6) {
-                  if (psf.substr(0,6) == "xenops") {
-                     done = true;
-                     xenops_scripts.push_back(preferences_script);
+         // go through all directories and read the containing py files
+         for (int i=0; i < startup_scripts_subdirs.size(); i++) {
+            pref_sub_dir_full = coot::util::append_dir_dir(pref_directory, startup_scripts_subdirs[i]);
+            std::cout << "BL DEBUG:: preferences directory " << pref_sub_dir_full
+                      << " will be read now." << std::endl;
+            preferences_dir_status = stat(pref_sub_dir_full.c_str(), &buff);
+            if (preferences_dir_status != 0) {
+               std::cout << "INFO:: preferences sub directory " << startup_scripts_subdirs[i]
+                         << " does not exist. Won't read these preferences." << std::endl;
+            } else {
+               // load all .py files
+               glob_file = pref_sub_dir_full;
+               glob_file += "/*.py";
+               glob(glob_file.c_str(), flags, 0, &myglob);
+               for (char **p = myglob.gl_pathv, count = myglob.gl_pathc; count; p++, count--) {
+                  std::string preferences_script(*p);
+                  std::string psf = coot::util::file_name_non_directory(preferences_script);
+                  std::cout << "BL DEBUG:: checking file " << psf <<std::endl;
+                  if (exclude_py_files.find(psf) == exclude_py_files.end()) {
+                     all_preferences_scripts.push_back(preferences_script);
                   }
                }
-               if (psf.length() > 6) {
-                  if (preferences_script.substr(0,6) == "curlew") {
-                     done = true;
-                     curlew_scripts.push_back(preferences_script);
-                  }
-               }
-               if (! done)
-                  basic_scripts.push_back(preferences_script);
-               if (preferences_script == "coot_preferences.py")
-                  coot_preferences_py_script = preferences_script;
+               globfree(&myglob);
             }
-         }
-         globfree(&myglob);
-
-         for(const auto &script_fn : basic_scripts)
-            run_python_script(script_fn.c_str()); // bleugh
-         if (! coot_preferences_py_script.empty())
-            run_python_script(coot_preferences_py_script.c_str());
-         for(const auto &script_fn : curlew_scripts)
-            run_python_script(script_fn.c_str());
-         for(const auto &script_fn : xenops_scripts) {
-            run_python_script(script_fn.c_str());
          }
       }
 
-#if 0
+      for(const auto &script_fn : all_preferences_scripts) {
+         std::cout << "BL DEBUG:: running file " << script_fn <<std::endl;
+         run_python_script(script_fn.c_str()); // bleugh
+      }
+
       // load personal coot file .coot.py
       std::string filename = ".coot.py";
+      std::string home_directory = coot::get_home_dir();
       if (! home_directory.empty()) {
 	 std::string coot_py_file_name = graphics_info_t::add_dir_file(home_directory, filename);
 	 if (coot::file_exists(coot_py_file_name)) {
@@ -318,6 +315,5 @@ void try_load_dot_coot_py_and_python_scripts(const std::string &home_directory) 
 	    run_python_script(coot_py_file_name.c_str());
 	 }
       }
-#endif
    }
 }

@@ -32,6 +32,11 @@ namespace coot {
 
    std::string get_home_dir();
 
+   // return the directory where the preferences are found:
+   // Linux (Mac): $HOME\.coot
+   // Windows:     %USERPROFILE%\COOT
+   std::string preferences_dir();
+
    // The user can set COOT_DATA_DIR (in fact this is the usual case
    // when using binaries) and that should over-ride the built-in
    // PKGDATADIR.
@@ -63,6 +68,8 @@ namespace coot {
 
    // return true for success - Use to copy text files with new lines.
    bool copy_file(const std::string &from_file, const std::string &to_file);
+   // return 0 for success
+   int rename(const std::string &f1, const std::string &f2);
 
    namespace sequence {
 
@@ -88,6 +95,7 @@ namespace coot {
       std::string current_working_dir();
       std::string append_dir_dir (const std::string &s1, const std::string &dir);
       std::string append_dir_file(const std::string &s1, const std::string &file);
+      bool is_dos();
 
       // If cwd is a substring of f, then return the basename of f (i.e. cwd
       // stripped from f).  If cwd is not a substring of f, then return f;

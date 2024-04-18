@@ -847,6 +847,9 @@ new_startup_application_activate(GtkApplication *application,
       setup_gui_components();
       setup_go_to_residue_keyboarding_mode_entry_signals();
 
+      std::string preferences_directory = coot::preferences_dir();
+      try_load_dot_coot_py_and_python_scripts(preferences_directory);
+
       // now we are ready to show graphical objects made from reading files:
       handle_command_line_data(activate_data->cld);
 
@@ -859,7 +862,7 @@ new_startup_application_activate(GtkApplication *application,
          return G_SOURCE_REMOVE;
       }, splash_screen);
 
-      g_idle_add([](gpointer user_data) { run_command_line_scripts(); return FALSE; }, nullptr);
+      g_idle_add([](gpointer user_data) { run_command_line_scripts(); run_state_file_maybe(); return FALSE; }, nullptr);
       return G_SOURCE_REMOVE;
    }, activate_data);
 
