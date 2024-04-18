@@ -31,6 +31,7 @@
 #include <atomic>
 #include <array>
 
+
 #include "compat/coot-sysdep.h"
 
 #include <clipper/core/xmap.h>
@@ -47,6 +48,10 @@
 #include "ideal/extra-restraints.hh"
 #include "coot-utils/simple-mesh.hh"
 #include "ghost-molecule-display.hh"
+
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+#include "lidia-core/rdkit-interface.hh"
+#endif
 
 #include "density-contour/CIsoSurface.h"
 #include "gensurf.hh"
@@ -826,6 +831,12 @@ namespace coot {
       coot::atom_overlaps_dots_container_t get_overlap_dots_for_ligand(const std::string &cid_ligand,
                                                                        protein_geometry *geom_p);
 
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+      //! if the ligand cid specifies more than one residue, only the first is returned.
+      //! @return nullptr on error or failure to specify a ligand.
+      RDKit::ROMol *rdkit_mol(const std::string &ligand_cid);
+#endif
+
       // ------------------------ model-changing functions
 
       int move_molecule_to_new_centre(const coot::Cartesian &new_centre);
@@ -1268,6 +1279,10 @@ namespace coot {
 
       texture_as_floats_t get_map_section_texture(int section_index, int axis) const;
 
+      //! @return the number of section in the map along the give axis.
+      //! (0 for X-axis, 1 for y-axis, 2 for Z-axis).
+      //! return -1 on failure.
+      int get_number_of_map_sections(int axis_id) const;
 
       // ---------------------------------- blender --------------------------------------
 
