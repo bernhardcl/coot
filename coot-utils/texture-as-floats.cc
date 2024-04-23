@@ -1,8 +1,33 @@
+/*
+ * coot-utils/texture-as-floats.cc
+ *
+ * Copyright 2024 by Medical Research Council
+ * Author: Paul Emsley
+ *
+ * This file is part of Coot
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copies of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin Street,
+ * Fifth Floor, Boston, MA, 02110-1301, USA.
+ * See http://www.gnu.org/licenses/
+ *
+ */
 
 #include "coot-map-utils.hh"
 #include "texture-as-floats.hh"
 
-texture_as_floats_t::texture_as_floats_t(const clipper::Xmap<float> &xmap, int section_index) {
+texture_as_floats_t::texture_as_floats_t(const clipper::Xmap<float> &xmap, int section_index, int axis) {
 
    // Things we need to fill:
    // int width;
@@ -42,6 +67,10 @@ texture_as_floats_t::texture_as_floats_t(const clipper::Xmap<float> &xmap, int s
    
    clipper::Coord_grid cg_0(0,0,section_index);
    clipper::Coord_grid cg_1(gs.nu()-1, gs.nv()-1, section_index);
+ 
+   if (axis == 0) cg_1 = clipper::Coord_grid(section_index, gs.nv()-1, gs.nw()-1); // X
+   if (axis == 1) cg_1 = clipper::Coord_grid(gs.nu()-1, section_index, gs.nw()-1); // Y
+
    clipper::Grid_map grid(cg_0, cg_1);
    clipper::Xmap_base::Map_reference_coord ix( xmap, grid.min()), iu, iv, iw;
    int nv = gs.nv();

@@ -69,7 +69,7 @@ if [ "$systype" != "${systype/MINGW32_NT/}" ] ; then
    # BL says:: is there some better cleverness possible?!
    # I could use (if we have new bash)
    # if [[ $systype == MINGW* ]] ; then
-   coot_bin=$COOT_PREFIX/bin/coot-bin
+   coot_bin=$COOT_PREFIX/bin/Coot
    PYTHONHOME=$COOT_PREFIX/python$python_major_minor
    PATH=$PATH:$PYTHONHOME
 elif [[ ( "$systype" != "${systype/MINGW64_NT/}" )
@@ -78,7 +78,7 @@ elif [[ ( "$systype" != "${systype/MINGW64_NT/}" )
    PYTHONHOME=$COOT_PREFIX
    PATH=$COOT_PREFIX/lib:$PATH:$PYTHONHOME
 else
-   coot_bin=$COOT_PREFIX/libexec/coot-bin
+   coot_bin=$COOT_PREFIX/libexec/Coot
    PYTHONHOME=$COOT_PREFIX
 fi
 
