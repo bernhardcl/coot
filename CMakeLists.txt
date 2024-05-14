@@ -178,6 +178,7 @@ add_library(cootapi SHARED
             ${coot_src}/api/coot-molecule-blender.cc
             ${coot_src}/api/molecules-container-blender.cc
             ${coot_src}/api/molecules-container.cc
+            ${coot_src}/api/molecules-container-gltf.cc
             ${coot_src}/api/molecules-container-bucca-ml-growing.cc
             ${coot_src}/api/molecules-container-maps.cc
             ${coot_src}/api/molecules-container-mmrrcc.cc
@@ -298,6 +299,7 @@ add_library(cootapi SHARED
             ${coot_src}/coot-utils/helix-like.cc
             ${coot_src}/coot-utils/polar-atoms.cc
             ${coot_src}/coot-utils/plane-utils.cc
+            ${coot_src}/coot-utils/pae.cc
             ${coot_src}/coot-utils/coot-tree-extras.cc
             ${coot_src}/coot-utils/coot-map-heavy.cc
             ${coot_src}/coot-utils/jed-flip.cc

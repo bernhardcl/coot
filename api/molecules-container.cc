@@ -2328,6 +2328,18 @@ molecules_container_t::non_standard_residue_types_in_model(int imol) const {
    return v;
 }
 
+//! @return the mean of the map or -1 is `imol_map` is not a map molecule index
+float
+molecules_container_t::get_map_mean(int imol) const {
+   float m = -1.1;
+   if (is_valid_map_molecule(imol)) {
+      m = molecules[imol].get_map_mean();
+   } else {
+      std::cout << "debug:: " << __FUNCTION__ << "(): not a valid map molecule " << imol << std::endl;
+   }
+   return m;
+}
+
 float
 molecules_container_t::get_map_rmsd_approx(int imol) const {
    float rmsd = -1.1;
@@ -5565,5 +5577,24 @@ molecules_container_t::copy_dictionary(const std::string &monomer_name, int imol
 
    bool status = geom.copy_monomer_restraints(monomer_name, imol_current, imol_new);
    return status;
+
+}
+
+
+#include "coot-utils/pae.hh"
+//! @return a string of a png
+std::string
+molecules_container_t::pae_png(const std::string &pae_file_name) const {
+
+// This test acts the way we want it to, but it's not a good name
+// something like "HAVE_CAIRO" would be prefered.
+//
+#if RDKIT_HAS_CAIRO_SUPPORT // Cairo is not allowed in Moorhen.
+   int n_pixels = 600;
+   pae_t pae(pae_file_name, n_pixels);
+   return pae.get_image();
+#else
+   return "no-cairo";
+#endif
 
 }

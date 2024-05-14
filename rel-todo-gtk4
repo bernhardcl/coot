@@ -1,17 +1,66 @@
 
 ----
 
+Coot Bug: turn on rotamer restraints, turn on torsion restraints - has the trans restraints restraints been removed?
+
+Coot: add something so that I can look down the axes - particularly z.
+
+Coot: I want a slider to scrub through the map molecules in positron interface.
+
 Coot: Pull in Bernhard's Rama plots
+* Done.
+
+"I didn't merge the SO4" - more than once in the tutorial
+
+Don't allow FLEV if the protein doesn't have hydrogen atoms.
+
+Moorhen: Add search monomer library.
+
+libcootapi: import gltf (from Mol*, say!)
+
+ligand fitting tutorial - turn aroundd the tail of the fish so that it is the wrong way
+adn look for environment distances - the O-O interaction should not be purple!
+
+Coot: generic objects are not drawn with depth fog
+
+Coot: update molecule when input model file have updates?
+   set_update_model_when_file_updates() - only for unmodified models of course.
+
+libcootapi: search monomer library names - needs to pull the mon_lib_list.cif - or the new version of this
+   non-proirity.
+
+mmdb: atom selection with alt conformer - write a test and fix mmdb.
 
 Coot: Why do we need requests? Can't it be done by libcurl or internal python module urllib?
       See fetch_drug_via_wikipedia() in coot_utils.
 
+Coot: rsr_refine_all_atoms() only refines the chain
+* Done.
+
 Coot: (refinement) martin maly bug: transpose map by lsq superpose failed.
       Bring the lsq map function to libcootapi and chapi
+* Done
+
+Coot: I want to be able to add a DNA base to the end of a fragment, with or without density.
+      (Restore functionality).
+* Done.
+
+Coot: 4qpq: It is making DNA base pair restraints as I hoped?
+* Seems so from the behaviour, but I don't see it in the terminal
 
 Coot: Ribbons mode needs (an option?) to add ligands 6zxa.cif
 
 Coot: for sound, look at tw/cootsound.c
+
+Coot: on the command line, coot --dict thing.cif should give a molecule, not just read in the cif
+      if there are no coordinates arguments.
+
+Coot: add a means to say that P1 maps can have symmetry:
+   https://github.com/pemsley/coot/issues/67
+
+Layla: Garib: I want the ability to change charge and bond orders.
+    Also: See this: http://rdkit.blogspot.com/2019/11/introducing-new-rdkit-javascript.html
+    which points to this: https://rdkit.org/rdkitjs/beta/demo.html
 
 Test ligand fitting of fitligand binary. Using conformation variation and not.
 

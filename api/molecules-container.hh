@@ -917,6 +917,8 @@ public:
    //! write a map. This function was be renamed from ``writeMap``
    //! @return 1 on a successful write, return 0 on failure.
    int write_map(int imol, const std::string &file_name) const;
+   //! @return the mean of the map or -1 is `imol_map` is not a map molecule index
+   float get_map_mean(int imol) const;
    //! @return the map rmsd (epsilon testing is not used). -1 is returned if `imol_map` is not a map molecule index.
    float get_map_rmsd_approx(int imol_map) const;
 
@@ -1699,14 +1701,26 @@ public:
    //! in the `string_user_data` data item of the residue specifier
    std::vector<coot::residue_spec_t> get_non_standard_residues_in_molecule(int imol) const;
 
+   //! The new arguments, `data_value_for_top`, `data_value_for_bottom` should be pre-calculated (don't
+   //! calculate them for every call to this function).
    //! @return a texture_as_floats_t object for the given section
    //! On failure, the image_data vector is empty.
-   texture_as_floats_t get_map_section_texture(int imol, int section_id, int axis) const;
+   texture_as_floats_t get_map_section_texture(int imol, int section_id, int axis,
+                                               float data_value_for_bottom, float data_value_for_top) const;
 
    //! @return the number of section in the map along the give axis.
    //! (0 for X-axis, 1 for y-axis, 2 for Z-axis).
    //! return -1 on failure.
    int get_number_of_map_sections(int imol_map, int axis_id) const;
+
+   // -------------------------------- Others -------------------------------------
+   //! \name Other Features
+
+   //! @return a `simple_mesh_t` from the give file.
+   coot::simple_mesh_t make_mesh_from_gltf_file(const std::string &file_name);
+
+   //! @return a string of a png
+   std::string pae_png(const std::string &pae_file_name) const;
 
    // -------------------------------- Testing -------------------------------------
    //! \name Testing functions
