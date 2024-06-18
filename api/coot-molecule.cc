@@ -1347,7 +1347,7 @@ coot::molecule_t::get_atom(const coot::atom_spec_t &atom_spec) const {
 
 glm::vec4
 coot::molecule_t::colour_holder_to_glm(const coot::colour_holder &ch) const {
-   return glm::vec4(ch.red, ch.green, ch.blue, 1.0f);
+   return glm::vec4(ch.red, ch.green, ch.blue, ch.alpha);
 }
 
 #include "utils/dodec.hh"
@@ -3572,7 +3572,7 @@ coot::molecule_t::get_gaussian_surface(float sigma, float contour_level,
                                        float box_radius, float grid_scale, float b_factor) const {
 
    auto colour_holder_to_glm = [] (const coot::colour_holder &ch) {
-      return glm::vec4(ch.red, ch.green, ch.blue, 1.0f);
+      return glm::vec4(ch.red, ch.green, ch.blue, ch.alpha);
    };
 
    coot::simple_mesh_t mesh;
@@ -3586,13 +3586,24 @@ coot::molecule_t::get_gaussian_surface(float sigma, float contour_level,
          const auto &chain_id = chain_ids[i_ch];
          coot::gaussian_surface_t gauss_surf(mol, chain_id, sigma, contour_level, box_radius, grid_scale, b_factor);
          coot::simple_mesh_t gs_mesh = gauss_surf.get_surface();
-         // if get_chain_ids() adds chain_ids in the same way as
-         // fill_default_colour_rules then this will work:
-         if (i_ch < colour_rules.size()) {
-            const std::string &colour = colour_rules[i_ch].second;
-            coot::colour_holder ch(colour); // this is a hex string.
-            glm::vec4 col = colour_holder_to_glm(ch);
-            gs_mesh.change_colour(col);
+
+         // do we have a colour rule to change the colour of that surface?
+         //
+         // This is hacky because in general colour rules are for selection (even down to the atom)
+         // but here we are interested only in colour rules that apply to just a chain
+         // So... I am looking only for colour rules that are for this chain
+         //
+         for (unsigned int icr=0; icr<colour_rules.size(); icr++) {
+            const std::string &colour_rule_cid = colour_rules[icr].first;
+            const std::string &colour          = colour_rules[icr].second;
+            if (std::string("//" + chain_id) == colour_rule_cid ||
+                colour_rule_cid == "/"    ||
+                colour_rule_cid == "//"   ||
+                colour_rule_cid == "/*/*/*/*") {
+               coot::colour_holder ch(colour);
+               glm::vec4 col = colour_holder_to_glm(ch);
+               gs_mesh.change_colour(col);
+            }
          }
          mesh.add_submesh(gs_mesh);
       }
@@ -3827,7 +3838,9 @@ coot::molecule_t::get_symmetry(float symmetry_search_radius, const coot::Cartesi
 coot::molecule_t::rotamer_change_info_t
 coot::molecule_t::change_to_next_rotamer(const coot::residue_spec_t &res_spec, const std::string &alt_conf,
                                          const coot::protein_geometry &pg) {
-   return change_rotamer_number(res_spec, alt_conf, 1, pg);
+
+   auto crni = change_rotamer_number(res_spec, alt_conf, 1, pg);
+   return crni;
 }
 
 //
@@ -3896,6 +3909,7 @@ coot::molecule_t::change_rotamer_number(const coot::residue_spec_t &res_spec, co
             rci.rank = rotamer_number;
             rci.name = rotamers[rotamer_number].rotamer_name();
             rci.richardson_probability = rotamers[rotamer_number].Probability_rich();
+
          }
       } else {
          std::cout << "WARNING:: change_rotamer_number() Failed to get monomer restraints for " << res_type << std::endl;
@@ -3945,11 +3959,14 @@ coot::molecule_t::set_residue_to_rotamer_move_atoms(mmdb::Residue *res, mmdb::Re
       }
    }
 
-   if (i_done) {
-      atom_sel.mol->PDBCleanup(mmdb::PDBCLEAN_SERIAL|mmdb::PDBCLEAN_INDEX);
-      atom_sel.mol->FinishStructEdit();
-      atom_sel = make_asc(atom_sel.mol);
-   }
+   // 20240516-PE I aom only moving atoms - so I don't need any of this:
+   // (it destroys atom_sel and atom_sel.UDDOldAtomIndexHandle)
+   //
+   // if (i_done) {
+      // atom_sel.mol->PDBCleanup(mmdb::PDBCLEAN_SERIAL|mmdb::PDBCLEAN_INDEX);
+      // atom_sel.mol->FinishStructEdit();
+      // atom_sel = make_asc(atom_sel.mol);
+   // }
    return i_done;
 }
 
@@ -4436,6 +4453,37 @@ coot::molecule_t::transform_by(const clipper::RTop_orth &rtop, mmdb::Residue *re
 
 
 void
+coot::molecule_t::transform_by(const clipper::RTop_orth &rtop) {
+
+   for(int imod = 1; imod<=atom_sel.mol->GetNumberOfModels(); imod++) {
+      mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
+      if (model_p) {
+         int n_chains = model_p->GetNumberOfChains();
+         for (int ichain=0; ichain<n_chains; ichain++) {
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
+            int n_res = chain_p->GetNumberOfResidues();
+            for (int ires=0; ires<n_res; ires++) {
+               mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+               if (residue_p) {
+                  int n_atoms = residue_p->GetNumberOfAtoms();
+                  for (int iat=0; iat<n_atoms; iat++) {
+                     mmdb::Atom *at = residue_p->GetAtom(iat);
+                     if (! at->isTer()) {
+                        clipper::Coord_orth pos = coot::co(at);
+                        clipper::Coord_orth p2 = pos.transform(rtop);
+                        at->x = p2.x();
+                        at->y = p2.y();
+                        at->z = p2.z();
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+}
+
+void
 coot::molecule_t::print_secondary_structure_info() const {
 
    for(int imod = 1; imod<=atom_sel.mol->GetNumberOfModels(); imod++) {
@@ -4459,3 +4507,13 @@ coot::molecule_t::rdkit_mol(const std::string &ligand_cid) {
 }
 #endif
 
+
+//! get the median temperature factor for the model
+//! @return a negative number on failure.
+float
+coot::molecule_t::get_median_temperature_factor() const {
+
+   float b = coot::util::median_temperature_factor(atom_sel.atom_selection, atom_sel.n_selected_atoms, 2.0, 2222.2, false, false);
+   return b;
+
+}

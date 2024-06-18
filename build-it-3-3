@@ -1088,7 +1088,7 @@ if test $OS = Linux ; then
    if [ -e /bin/rpm ] ; then
       if rpm -a ; then
          if test -e /etc/os-release ; then
-             dist_name=$(grep ^ID /etc/os-release | sed -e 's/ID=//')
+             dist_name=$(grep ^ID= /etc/os-release | sed -e 's/ID=//')
              dist_ver=$(grep ^VERSION_ID /etc/os-release | sed -e 's/VERSION_ID=//')
          else
              for i in fedora-release redhat-release redhat-release-workstation centos-release sl-release openSUSE-release ; do
@@ -1134,7 +1134,7 @@ if test $OS = Linux ; then
     esac
     ;;
 
-    fedora | centos | openSUSE )
+    fedora | centos | openSUSE | rocky)
       systype=${architecture}-${dist_name}-${dist_ver}
     ;;
 
@@ -2308,8 +2308,8 @@ fi
 #
 # libccp4: (not fortran)
 if test -n "$build_ccp4c" ; then
-    echo BUILDING: libccp4
     libccp4_version=6.5.1
+    echo BUILDING libccp4: $libccp4_version
     # ${WGET} http://www.ysbl.york.ac.uk/~emsley/software/extras/libccp4c-5.0.2-ysbl-2.tar.gz
     # ${WGET} http://www.ysbl.york.ac.uk/~emsley/software/extras/libccp4c-5.0.2-ysbl-3.tar.gz
     #${WGET} http://www.ysbl.york.ac.uk/~emsley/software/extras/martyn-extras.tar.gz
@@ -2371,7 +2371,6 @@ mmdb_version=2.0.20
 mmdb_version=2.0.22
     # mmdb_server_dir=ftp://ftp.ccp4.ac.uk/opensource
     mmdb_server_dir=$extras_place
-    echo ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
     ${WGET} $mmdb_server_dir/mmdb2-$mmdb_version.tar.gz
     echo BUILDING mmdb $mmdb_version >&2
     (
@@ -2766,6 +2765,7 @@ if [ $OS = Darwin ] ; then
       build_openssl=true
    fi
 else
+   # what about rocky here also?
    if test "$dist_name" = fedora ; then
        if [ -e $install_top_dir/include/openssl ] ; then
            build_openssl=false
@@ -3814,8 +3814,9 @@ if [ "$build_rdkit" = true ] ; then
          python_arch=darwin
       fi
 
-      echo will configure with cmake like this:
+      export LDFLAGS="-L$install_top_dir/lib -lintl"
 
+      # echo will configure with cmake like this:
       # DBoost_PYTHON39_LIBRARY_RELEASE needs to be extracted?
       # probblem: $install_top_dir/include/boost/python/detail/wrap_python.hpp:57:23: fatal error: pyconfig.h: No such file or directory
       # solution: https://github.com/rdkit/rdkit/issues/3884

@@ -43,15 +43,21 @@ EMSCRIPTEN_BINDINGS(lhasa) {
   // TODO: RDKit typedefinitions
   // function("remove_non_polar_hydrogens", &coot::layla::remove_non_polar_hydrogens);
   function("append_from_smiles", &lhasa::append_from_smiles);
+  function("append_from_pickle", &lhasa::append_from_pickle);
   // TODO: RDKit typedefinitions
   // function("rdkit_mol_from_smiles", &lhasa::rdkit_mol_from_smiles);
   // TODO: RDKit typedefinitions
   // function("rdkit_mol_to_smiles", &lhasa::rdkit_mol_to_smiles);
+  // TODO: RDKit typedefinitions
+  // function("rdkit_mol_from_pickle", &lhasa::rdkit_mol_from_pickle);
+  // TODO: RDKit typedefinitions
+  // function("rdkit_mol_to_pickle", &lhasa::rdkit_mol_to_pickle);
   enum_<DisplayMode>("DisplayMode")
     .value("Standard", DisplayMode::Standard)
     .value("AtomIndices", DisplayMode::AtomIndices)
     .value("AtomNames", DisplayMode::AtomNames);
   register_vector<impl::Renderer::DrawingCommand>("DrawingCommandVector");
+  register_vector<impl::Renderer::PathElement>("PathElementVector");
   class_<impl::Renderer>("Renderer")
     .constructor<emscripten::val>()
     .function("get_commands", &impl::Renderer::get_commands);
@@ -68,22 +74,23 @@ EMSCRIPTEN_BINDINGS(lhasa) {
     .field("y", &graphene_point_t::y);
   value_object<impl::Renderer::Line>("Line")
     .field("start", &impl::Renderer::Line::start)
-    .field("end", &impl::Renderer::Line::end)
-    .field("style", &impl::Renderer::Line::style);
+    .field("end", &impl::Renderer::Line::end);
   value_object<impl::Renderer::Arc>("Arc")
     .field("origin", &impl::Renderer::Arc::origin)
     .field("radius", &impl::Renderer::Arc::radius)
     .field("angle_one", &impl::Renderer::Arc::angle_one)
-    .field("angle_two", &impl::Renderer::Arc::angle_two)
-    .field("has_fill", &impl::Renderer::Arc::has_fill)
-    .field("fill_color", &impl::Renderer::Arc::fill_color)
-    .field("has_stroke", &impl::Renderer::Arc::has_stroke)
-    .field("stroke_style", &impl::Renderer::Arc::stroke_style);
+    .field("angle_two", &impl::Renderer::Arc::angle_two);
+  class_<impl::Renderer::PathElement>("PathElement")
+    .function("is_arc", &impl::Renderer::PathElement::is_arc)
+    .function("as_arc", &impl::Renderer::PathElement::as_arc)
+    .function("as_line", &impl::Renderer::PathElement::as_line)
+    .function("is_line", &impl::Renderer::PathElement::is_line);
   class_<impl::Renderer::Path>("Path")
     .property("fill_color", &impl::Renderer::Path::fill_color)
     .property("has_fill", &impl::Renderer::Path::has_fill)
     .property("stroke_style", &impl::Renderer::Path::stroke_style)
-    .property("commands", &impl::Renderer::Path::commands);
+    .property("has_stroke", &impl::Renderer::Path::has_stroke)
+    .function("get_elements", &impl::Renderer::Path::get_elements);
   enum_<impl::Renderer::TextPositioning>("TextPositioning")
     .value("Normal", impl::Renderer::TextPositioning::Normal)
     .value("Sub", impl::Renderer::TextPositioning::Sub)
@@ -114,12 +121,8 @@ EMSCRIPTEN_BINDINGS(lhasa) {
     .constructor();
   class_<impl::Renderer::DrawingCommand>("DrawingCommand")
     .function("is_path", &impl::Renderer::DrawingCommand::is_path)
-    .function("is_arc", &impl::Renderer::DrawingCommand::is_arc)
-    .function("is_line", &impl::Renderer::DrawingCommand::is_line)
-    .function("is_text", &impl::Renderer::DrawingCommand::is_text)
     .function("as_path", &impl::Renderer::DrawingCommand::as_path)
-    .function("as_arc", &impl::Renderer::DrawingCommand::as_arc)
-    .function("as_line", &impl::Renderer::DrawingCommand::as_line)
+    .function("is_text", &impl::Renderer::DrawingCommand::is_text)
     .function("as_text", &impl::Renderer::DrawingCommand::as_text);
   class_<DeleteTool>("DeleteTool")
     .constructor<>();
@@ -131,7 +134,8 @@ EMSCRIPTEN_BINDINGS(lhasa) {
     .constructor<>();
   class_<RemoveHydrogensTool>("RemoveHydrogensTool")
     .constructor<>();
-  enum_<ElementInsertion::Element>("Element")
+  // I had to rename it to "LhasaElement" due to name clash in Moorhen
+  enum_<ElementInsertion::Element>("LhasaElement")
     .value("C", ElementInsertion::Element::C)
     .value("N", ElementInsertion::Element::N)
     .value("O", ElementInsertion::Element::O)
@@ -150,7 +154,8 @@ EMSCRIPTEN_BINDINGS(lhasa) {
     .constructor<ElementInsertion::Element>();
   // Workaround for constructor overload not being available:
   function("element_insertion_from_symbol", &lhasa::element_insertion_from_symbol);
-  enum_<StructureInsertion::Structure>("Structure")
+  // I had to rename it to "LhasaStructure" due to name clash in Moorhen
+  enum_<StructureInsertion::Structure>("LhasaStructure")
     .value("CycloPropaneRing", StructureInsertion::Structure::CycloPropaneRing)
     .value("CycloButaneRing", StructureInsertion::Structure::CycloButaneRing)
     .value("CycloPentaneRing", StructureInsertion::Structure::CycloPentaneRing)
@@ -212,6 +217,7 @@ EMSCRIPTEN_BINDINGS(lhasa) {
     .function("set_display_mode", &CootLigandEditorCanvas::set_display_mode)
     .function("get_smiles", &CootLigandEditorCanvas::get_smiles)
     .function("get_smiles_for_molecule", &CootLigandEditorCanvas::get_smiles_for_molecule)
+    .function("get_pickled_molecule", &CootLigandEditorCanvas::get_pickled_molecule)
     .function("clear_molecules", &CootLigandEditorCanvas::clear_molecules)
     .function("on_hover", &CootLigandEditorCanvas::on_hover)
     .function("on_scroll", &CootLigandEditorCanvas::on_scroll)

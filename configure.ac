@@ -26,7 +26,7 @@ dnl
 dnl Process this file with autoconf to produce a configure script.
 
 
-AC_INIT([coot],[1.1.08])
+AC_INIT([coot],[1.1.09-pre])
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -105,6 +105,16 @@ dnl
 dnl So, let's check GLIB here, should be harmless.
 dnl
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
+
+uname_s=$(uname -s)
+AM_CONDITIONAL([OS_DARWIN], [test x$uname_s = xDarwin ])
+
+# this variable is used by the bin/coot script:
+COOT_BINARY_NAME=Coot
+if test x$uname_s = xDarwin ; then
+   COOT_BINARY_NAME=MacCoot
+fi
+AC_SUBST(COOT_BINARY_NAME)
 
 
 dnl test for WINDOWS_MINGW
@@ -365,7 +375,7 @@ AC_ARG_ENABLE(libcootapi-only, [  --enable-libcootapi-only build libcootapi only
 esac],[libcootapi_only=false])
 AM_CONDITIONAL([COND_LIBCOOTAPI_ONLY], [test "$libcootapi_only" = true])
 
-AC_ARG_ENABLE(relocatable, [  --relocatable try to make the binaries work independent of the installation directory],
+AC_ARG_ENABLE(relocatable-binaries, [  --enable-relocatable-binaries try to make the binaries work independent of the installation directory],
    relocatable=yes, relocatable=no)
 AM_CONDITIONAL([RELOCATABLE_BINARIES], [test "$relocatable" =  yes])
 
@@ -528,6 +538,7 @@ auxil/strand-analysis/Makefile
 auxil/vectors/Makefile
 src/Makefile
 src/coot
+src/coot-relocatable-binaries
 ui/Makefile
 ])
 AC_OUTPUT

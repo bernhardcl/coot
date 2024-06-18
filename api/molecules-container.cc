@@ -33,10 +33,11 @@
 #include "ideal/pepflip.hh"
 #include "coot-utils/coot-coord-utils.hh"
 #include "coot-utils/coot-map-utils.hh"
+#include "coot-utils/secondary-structure-headers.hh"
+#include "coot-utils/oct.hh"
 
 #include "coords/Bond_lines.h"
-
-#include "coot-utils/oct.hh"
+#include "coords/mmdb.hh"
 
 // statics
 std::atomic<bool> molecules_container_t::restraints_lock(false);
@@ -89,6 +90,17 @@ molecules_container_t::is_a_difference_map(int imol) const {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
    return status;
+}
+
+
+//! create an empty molecule
+//! @return the index of the new molecule
+int
+molecules_container_t::new_molecule(const std::string &name) {
+
+   int n_mol = molecules.size();
+   molecules.push_back(coot::molecule_t(name, n_mol));
+   return n_mol;
 }
 
 
@@ -326,7 +338,6 @@ molecules_container_t::read_standard_residues() {
       std::string dir = coot::package_data_dir();
       std::string standard_file_name = coot::util::append_dir_file(dir, "standard-residues.pdb");
 
-      std::cout << "------------------ read_standard_residues() B " << standard_file_name << std::endl;
       struct stat buf;
       int status = stat(standard_file_name.c_str(), &buf);
       if (status != 0) { // standard-residues file was not found in
@@ -810,11 +821,9 @@ molecules_container_t::write_png(const std::string &compound_id, int imol_enc,
    std::pair<bool, coot::dictionary_residue_restraints_t> r_p =
       geom.get_monomer_restraints(compound_id, imol_enc);
 
-   std::cout << ":::::::::::::::::::::::::: r_p.first " << r_p.first << std::endl;
    if (r_p.first) {
       const auto &restraints = r_p.second;
       std::pair<int, RDKit::RWMol> mol_pair = coot::rdkit_mol_with_2d_depiction(restraints);
-      std::cout << ":::::::::::::::::::::::::: mol_pair.first " << mol_pair.first << std::endl;
       int conf_id = mol_pair.first;
       if (conf_id >= 0) {
          const auto &rdkit_mol(mol_pair.second);
@@ -1779,6 +1788,97 @@ molecules_container_t::get_residue_using_cid(int imol, const std::string &cid) c
 }
 
 
+//! get header info.
+//! @return an object with header info. Sparce at the moment.
+moorhen::header_info_t
+molecules_container_t::get_header_info(int imol) const {
+
+   auto get_author_info = [] (mmdb::Manager *mol) {
+
+      std::vector<std::string> author_lines;
+      access_mol *am = static_cast<access_mol *>(mol);
+      const mmdb::Title *tt = am->GetTitle();
+      mmdb::Title *ttmp = const_cast<mmdb::Title *>(tt);
+      access_title *at = static_cast<access_title *> (ttmp);
+      mmdb::TitleContainer *author_container = at->GetAuthor();
+      unsigned int al = author_container->Length();
+      for (unsigned int i=0; i<al; i++) {
+         mmdb::Author *a_line = mmdb::PAuthor(author_container->GetContainerClass(i));
+         if (a_line) {
+            std::string line(a_line->Line);
+            author_lines.push_back(line);
+         }
+      }
+      return author_lines;
+   };
+
+   auto get_journal_info = [] (mmdb::Manager *mol) {
+
+      std::vector<std::string> journal_lines;
+      access_mol *am = static_cast<access_mol *>(mol);
+
+      const mmdb::Title *tt = am->GetTitle();
+      mmdb::Title *ttmp = const_cast<mmdb::Title *>(tt);
+      access_title *at = static_cast<access_title *> (ttmp);
+      mmdb::TitleContainer *journal_container = at->GetJournal();
+      unsigned int al = journal_container->Length();
+      for (unsigned int i=0; i<al; i++) {
+         mmdb::Journal *j_line = mmdb::PJournal(journal_container->GetContainerClass(i));
+         if (j_line) {
+            std::string line(j_line->Line);
+            journal_lines.push_back(line);
+         }
+      }
+      return journal_lines;
+   };
+
+   bool screen_output = false;
+   moorhen::header_info_t header;
+   if (is_valid_model_molecule(imol)) {
+      mmdb::Manager *mol = molecules[imol].atom_sel.mol;
+      if (mol) {
+
+         std::string title = coot::get_title(mol);
+         std::vector<std::string> compound_lines = coot::get_compound_lines(mol);
+         std::vector<std::string>   author_lines = get_author_info(mol);
+         std::vector<std::string>  journal_lines = get_journal_info(mol);
+
+         header.compound_lines = compound_lines;
+         header.author_lines   = author_lines;
+         header.journal_lines  = journal_lines;
+
+         coot::secondary_structure_header_records sshr(mol, false);
+         mmdb::Model *model_p = mol->GetModel(1);
+         if (model_p) {
+            coot::util::print_secondary_structure_info(model_p);
+            int nhelix = model_p->GetNumberOfHelices();
+            int nsheet = model_p->GetNumberOfSheets();
+            std::cout << "INFO:: There are " << nhelix << " helices and " << nsheet << " sheets\n";
+            for (int ih=1; ih<=nhelix; ih++) {
+               mmdb:: Helix *helix_p = model_p->GetHelix(ih);
+               if (helix_p) {
+                  if (screen_output)
+                     std::cout << helix_p->serNum      << " " << helix_p->helixID    << " "
+                               << helix_p->initChainID << " " << helix_p->initSeqNum << " "
+                               << helix_p->endChainID  << " " << helix_p->endSeqNum  << " "
+                               << helix_p->length      << " " << helix_p->comment    << std::endl;
+                  moorhen::helix_t helix(helix_p->serNum, helix_p->helixID,
+                                         helix_p->initResName, helix_p->initChainID, helix_p->initSeqNum, helix_p->initICode,
+                                         helix_p->endResName,  helix_p->endChainID,  helix_p->endSeqNum,  helix_p->endICode,
+                                         helix_p->helixClass, helix_p->comment, helix_p->length);
+                  header.helix_info.push_back(helix);
+               } else {
+                  std::cout << "ERROR: no helix!?" << std::endl;
+               }
+            }
+         }
+      }
+   }
+   return header;
+}
+
+
+
 int
 molecules_container_t::move_molecule_to_new_centre(int imol, float x, float y, float z) {
 
@@ -1975,7 +2075,7 @@ molecules_container_t::get_colour_table(int imol, bool against_a_dark_background
 
 //! user-defined colour-index to colour
 void
-molecules_container_t::set_user_defined_bond_colours(int imol, const std::map<unsigned int, std::array<float, 3> > &colour_map) {
+molecules_container_t::set_user_defined_bond_colours(int imol, const std::map<unsigned int, std::array<float, 4> > &colour_map) {
 
    if (is_valid_model_molecule(imol)) {
       molecules[imol].set_user_defined_bond_colours(colour_map);
@@ -3769,10 +3869,6 @@ molecules_container_t::add_waters(int imol_model, int imol_map) {
 
    int n_waters_added = -1;
    int ligand_water_n_cycles = 3;
-   float ligand_water_to_protein_distance_lim_max = 3.4;
-   float ligand_water_to_protein_distance_lim_min = 2.4;
-   float ligand_water_variance_limit = 0.1;
-   float sigma_cut_off = 1.75; // max moorhen points for tutorial 1.
 
    if (is_valid_model_molecule(imol_model)) {
       if (is_valid_map_molecule(imol_map)) {
@@ -3795,9 +3891,9 @@ molecules_container_t::add_waters(int imol_model, int imol_map) {
          lig.set_variance_limit(ligand_water_variance_limit);
          lig.mask_map(molecules[imol_model].atom_sel.mol, mask_waters_flag);
          // lig.output_map("masked-for-waters.map");
-         std::cout << "debug:: add_waters(): using n-sigma cut off " << sigma_cut_off << std::endl;
+         std::cout << "debug:: add_waters(): using n-sigma cut off " << ligand_water_sigma_cut_off << std::endl;
 
-         lig.water_fit(sigma_cut_off, n_cycles);
+         lig.water_fit(ligand_water_sigma_cut_off, n_cycles);
 
          coot::minimol::molecule water_mol = lig.water_mol();
          molecules[imol_model].insert_waters_into_molecule(water_mol);
@@ -5015,6 +5111,8 @@ molecules_container_t::find_water_baddies(int imol_model, int imol_map,
                                          min_dist, max_dist,
                                          ignore_part_occ_contact_flag,
                                          ignore_zero_occ_flag);
+
+         std::cout << "........... find_water_baddies_OR() returned " << v.size() << " water baddies " << std::endl;
       } else {
          std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid map molecule " << imol_model << std::endl;
       }
@@ -5598,3 +5696,20 @@ molecules_container_t::pae_png(const std::string &pae_file_name) const {
 #endif
 
 }
+
+
+//! get the median temperature factor for the model
+//! @return a negative number on failure.
+float
+molecules_container_t::get_median_temperature_factor(int imol) const {
+
+   float b_factor = -1.1;
+   if (is_valid_model_molecule(imol)) {
+      b_factor = molecules[imol].get_median_temperature_factor();
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return b_factor;
+}
+
+

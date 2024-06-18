@@ -6191,9 +6191,10 @@ void to_generic_object_add_mesh(int object_number, PyObject *mesh_py) {
                   int t0 = PyLong_AsLong(PyList_GetItem(tri, 0));
                   int t1 = PyLong_AsLong(PyList_GetItem(tri, 1));
                   int t2 = PyLong_AsLong(PyList_GetItem(tri, 2));
-                  if (t0 < vertices.size()) {
-                     if (t1 < vertices.size()) {
-                        if (t2 < vertices.size()) {
+                  int vertices_size = vertices.size();
+                  if (t0 < vertices_size) {
+                     if (t1 < vertices_size) {
+                        if (t2 < vertices_size) {
                            g_triangle t(t0, t1, t2);
                            triangles.push_back(t);
                         }
@@ -6203,11 +6204,12 @@ void to_generic_object_add_mesh(int object_number, PyObject *mesh_py) {
             }
          }
 
-         std::cout << "Debug:: to_generoric_object_add_mesh() found "
+         std::cout << "Debug:: to_generic_object_add_mesh() found "
                    << vertices.size() << " vertices and " << triangles.size() << " triangles\n";
          if (! vertices.empty()) {
             if (! triangles.empty()) {
                Mesh m(vertices, triangles);
+               m.set_material_specularity(1,64);
                m.setup_buffers();
                meshed_generic_display_object o(m);
                graphics_info_t g;
@@ -6217,4 +6219,17 @@ void to_generic_object_add_mesh(int object_number, PyObject *mesh_py) {
          }
       }
    }
+}
+
+
+void generic_object_mesh_calculate_normals(int object_number) {
+
+   graphics_info_t g;
+   unsigned int object_number_u(object_number);
+   if (object_number >= 0) {
+      if (object_number_u < g.generic_display_objects.size()) {
+         g.generic_display_objects[object_number].mesh.calculate_normals();
+      }
+   }
+
 }

@@ -42,12 +42,32 @@ molecules_container_t::get_rdkit_mol(const std::string &residue_name, int imol_e
       if (r_p.first) {
          const auto &restraints = r_p.second;
          m = coot::rdkit_mol(restraints);
+         std::string prop_string = "ligand-from-dictionary-" + residue_name + "-" + std::to_string(imol_enc);
+         m.setProp("moorhen-id", prop_string);
       }
    }
    catch (const std::runtime_error &rte) {
       std::cout << rte.what() << std::endl;
    }
    return m;
+}
+#endif
+
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+#undef VERSION
+#include <GraphMol/MolPickler.h>
+std::string
+molecules_container_t::get_rdkit_mol_pickle(const std::string &residue_name, int imol_enc) {
+
+   RDKIT_GRAPHMOL_EXPORT RDKit::MolPickler mp;
+   std::string pickle_string;
+   RDKit::RWMol mol = get_rdkit_mol(residue_name, imol_enc);
+   mp.pickleMol(mol, pickle_string);
+
+   std::ofstream f("test-mol.pickle");
+   f << pickle_string;
+   f.close();
+   return pickle_string;
 }
 #endif
 

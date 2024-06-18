@@ -437,6 +437,12 @@ namespace coot {
 
    public:
 
+      // ---------------------------------------------------------------------------------------------------------------
+      // ---------------------------------------------------------------------------------------------------------------
+      //                                 public
+      // ---------------------------------------------------------------------------------------------------------------
+      // ---------------------------------------------------------------------------------------------------------------
+
       // enum refine_residues_mode {SINGLE, TRIPLE, QUINTUPLE, HEPTUPLE, SPHERE, BIG_SPHERE, CHAIN, ALL};
 
       atom_selection_container_t atom_sel;
@@ -463,6 +469,8 @@ namespace coot {
                                             atom_sel.n_selected_atoms,
                                             99999.9, 0.0, false, false);
       }
+
+      float get_median_temperature_factor() const;
 
       // ------------------------ close
 
@@ -653,7 +661,7 @@ namespace coot {
       //! user-defined colour-index to colour
       //! (internallly, this converts the `colour_map` to the above vector of colour holders, so it's probably a good idea
       //! if the colour (index) keys are less than 200 or so.
-      void set_user_defined_bond_colours(const std::map<unsigned int, std::array<float, 3> > &colour_map);
+      void set_user_defined_bond_colours(const std::map<unsigned int, std::array<float, 4> > &colour_map);
 
       //! user-defined atom selection to colour index.
       // make this static?
@@ -764,6 +772,7 @@ namespace coot {
       bool get_show_symmetry() { return show_symmetry;}
       void transform_by(mmdb::mat44 SSMAlign_TMatrix);
       void transform_by(const clipper::RTop_orth &rtop, mmdb::Residue *res);
+      void transform_by(const clipper::RTop_orth &rtop);
 
       symmetry_info_t get_symmetry(float symmetry_search_radius, const Cartesian &symm_centre) const;
 

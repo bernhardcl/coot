@@ -30,6 +30,24 @@
 #include <vector>
 #include <memory>
 
+
+// Prevents preprocessor substitution of `VERSION` in `MolPickler.h`
+#ifndef RD_MOLPICKLE_H
+
+#ifdef VERSION
+#define __COOT_VERSION_VALUE VERSION
+#undef VERSION
+#endif
+
+#include <rdkit/GraphMol/MolPickler.h>
+
+#ifdef __COOT_VERSION_VALUE
+#define VERSION __COOT_VERSION_VALUE
+#undef __COOT_VERSION_VALUE
+#endif
+
+#endif //RD_MOLPICKLE_H
+
 #ifndef __EMSCRIPTEN__
 #include <cairo.h>
 #include <pango/pango-font.h>
@@ -172,10 +190,10 @@ CootLigandEditorCanvas::SizingInfo CootLigandEditorCanvas::measure(CootLigandEdi
             break;
     }
     #ifdef __EMSCRIPTEN__
-    if(ret.requested_size == 0) {
-        g_warning("FIXME: Overriding zeroed 'requested_size' with 600.");
-        ret.requested_size = 600;
-    }
+    // if(ret.requested_size == 0) {
+    //     g_warning("FIXME: Overriding zeroed 'requested_size' with 600.");
+    //     ret.requested_size = 600;
+    // }
     return ret;
     #endif
 }
@@ -621,6 +639,14 @@ std::string coot_ligand_editor_canvas_get_smiles_for_molecule(CootLigandEditorCa
     } else {
         return "";
     }
+}
+
+std::string coot_ligand_editor_canvas_get_pickled_molecule(CootLigandEditorCanvas* self, unsigned int molecule_idx) noexcept {
+    std::string ret = "";
+    if(molecule_idx < self->rdkit_molecules->size()) {
+        RDKit::MolPickler::pickleMol(*(*self->rdkit_molecules)[molecule_idx].get(), ret);
+    }
+    return ret;
 }
 
 #ifndef __EMSCRIPTEN__

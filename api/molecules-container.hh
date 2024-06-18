@@ -26,6 +26,7 @@
 #include "atom-pull.hh"
 #include "validation-information.hh"
 #include "superpose-results.hh"
+#include "lsq-results.hh"
 #include "coot-utils/simple-mesh.hh"
 #include "coot-utils/texture-as-floats.hh"
 #include "phi-psi-prob.hh"
@@ -34,6 +35,7 @@
 #include "saved-strand-info.hh"
 #include "svg-store-key.hh"
 #include "moorhen-h-bonds.hh"
+#include "header-info.hh"
 
 //! the container of molecules. The class for all **libcootapi** functions.
 class molecules_container_t {
@@ -289,6 +291,12 @@ class molecules_container_t {
    int valid_labels(const std::string &mtz_file_name, const std::string &f_col, const std::string &phi_col,
                     const std::string &weight_col, int use_weights) const;
 
+   // water fitting
+   float ligand_water_to_protein_distance_lim_max;
+   float ligand_water_to_protein_distance_lim_min;
+   float ligand_water_variance_limit;
+   float ligand_water_sigma_cut_off;
+
    // --------------------- init --------------------------
 
    void init() {
@@ -324,6 +332,11 @@ class molecules_container_t {
 
       map_is_contoured_using_thread_pool_flag = false;
 
+      ligand_water_to_protein_distance_lim_max = 3.4;
+      ligand_water_to_protein_distance_lim_min = 2.4;
+      ligand_water_variance_limit = 0.1;
+      ligand_water_sigma_cut_off = 1.75; // max moorhen points for tutorial 1.
+
       // debug();
    }
 
@@ -354,7 +367,7 @@ public:
 
    bool use_gemmi; // for mmcif and PDB parsing. 20240112-PE set to true by default in init()
 
-   //! Set the state of using gemmi for coordinates parsing. The default is false.
+   //! Set the state of using gemmi for coordinates parsing. The default is true.
    void set_use_gemmi(bool state) { use_gemmi = state; }
 
    //! get the state of using GEMMI for coordinates parsing
@@ -403,6 +416,10 @@ public:
 
    coot::protein_geometry & get_geom() { return geom; }
 
+   //! get header info.
+   //! @return an object with header info. Sparce at the moment.
+   moorhen::header_info_t get_header_info(int imol) const;
+
    // -------------------------------- generic utils -----------------------------------
    //! \name Generic Utils
 
@@ -418,6 +435,11 @@ public:
    bool is_valid_map_molecule(int imol_map) const;
    //! @return is this a difference map?
    bool is_a_difference_map(int imol_map) const;
+
+   //! create an empty molecule
+   //! @return the index of the new molecule
+   int new_molecule(const std::string &name);
+
    //! close the molecule (and delete dynamically allocated memory)
    //! @return 1 on successful closure and 0 on failure to close
    int close_molecule(int imol);
@@ -521,6 +543,7 @@ public:
    //! Extract ligand restraints from the dictionary store and make an rdkit molecule
    //! @return a null pointer on failure.
    RDKit::RWMol get_rdkit_mol(const std::string &residue_name, int imol_enc);
+   std::string get_rdkit_mol_pickle(const std::string &residue_name, int imol_enc);
 #endif
 #endif
 
@@ -718,7 +741,7 @@ public:
    void print_non_drawn_bonds(int imol) const;
 
    //! user-defined colour-index to colour
-   void set_user_defined_bond_colours(int imol, const std::map<unsigned int, std::array<float, 3> > &colour_map);
+   void set_user_defined_bond_colours(int imol, const std::map<unsigned int, std::array<float, 4> > &colour_map);
 
    //! set the user-defined residue selections (CIDs) to colour index
    void set_user_defined_atom_colour_by_selection(int imol, const std::vector<std::pair<std::string, unsigned int> > &indexed_residues_cids,
@@ -839,6 +862,26 @@ public:
    // std::pair<std::string, std::string>
    superpose_results_t SSM_superpose(int imol_ref, const std::string &chain_id_ref,
                                      int imol_mov, const std::string &chain_id_mov);
+
+   //! superpose using LSQ - setup the matches
+   //! @params `match_type` 0: all, 1: main, 2: CAs
+   void add_lsq_superpose_match(const std::string &chain_id_ref, int res_no_ref_start, int res_no_ref_end,
+                                const std::string &chain_id_mov, int res_no_mov_start, int res_no_mov_end,
+                                int match_type);
+
+   //! clear any existing lsq matchers
+   void clear_lsq_matches();
+
+   std::vector<coot::lsq_range_match_info_t> lsq_matchers;
+
+   //! apply the superposition using LSQ
+   void lsq_superpose(int imol_ref, int imol_mov);
+
+   //! return the transformation matrix in a simple class - dont apply it to the coordinates
+   lsq_results_t get_lsq_matrix(int imol_ref, int imol_mov) const;
+
+   //! make this private
+   std::pair<short int, clipper::RTop_orth> get_lsq_matrix_internal(int imol_ref, int imol_mov) const;
 
    //! symmetry
    //! now comes in a simple container that also includes the cell
@@ -1095,6 +1138,26 @@ public:
 
    //! buccaneer building, called by the above
    int add_terminal_residue_directly_using_bucca_ml_growing(int imol, const coot::residue_spec_t &spec);
+
+   //! parameter for `add_waters()` default  2.4
+   void set_add_waters_water_to_protein_distance_lim_min(float d) {
+      ligand_water_to_protein_distance_lim_min = d;
+   }
+
+   //! parameter for `add_waters()` default 3.4
+   void set_add_waters_water_to_protein_distance_lim_max(float d) {
+      ligand_water_to_protein_distance_lim_max = d;
+   }
+
+   //! parameter for `add_waters()` - default 0.1
+   void set_add_waters_variance_limit(float d) {
+      ligand_water_variance_limit = d;
+   }
+
+   //! parameter for `add_waters()` - default 1.75
+   void set_add_waters_sigma_cutoff(float d) {
+      ligand_water_sigma_cut_off = d;
+   }
 
    //! add waters, updating imol_model (of course)
    //! @return the number of waters added on a success, -1 on failure.
@@ -1464,6 +1527,10 @@ public:
    //! @returns a `coot::validation_information_t`
    coot::validation_information_t peptide_omega_analysis(int imol_model) const;
 
+   //! get the median temperature factor for the model
+   //! @return a negative number on failure.
+   float get_median_temperature_factor(int imol) const;
+
    //! get interesting places (does not work yet)
    //! @return a vector of `coot::validation_information_t`
    std::vector<coot::molecule_t::interesting_place_t> get_interesting_places(int imol, const std::string &mode) const;
@@ -1718,6 +1785,10 @@ public:
 
    //! @return a `simple_mesh_t` from the give file.
    coot::simple_mesh_t make_mesh_from_gltf_file(const std::string &file_name);
+
+   //! @params `n_divisions` is a number divisble by 2, at least 4 (typically 16)
+   //! @return a unit-vector end-cap octohemisphere mesh
+   coot::simple_mesh_t get_octahemisphere(unsigned int n_divisions) const;
 
    //! @return a string of a png
    std::string pae_png(const std::string &pae_file_name) const;
