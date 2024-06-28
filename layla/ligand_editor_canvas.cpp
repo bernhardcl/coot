@@ -31,6 +31,8 @@
 #include <memory>
 
 
+#include "utils/base64-encode-decode.hh"
+
 // Prevents preprocessor substitution of `VERSION` in `MolPickler.h`
 #ifndef RD_MOLPICKLE_H
 
@@ -556,6 +558,11 @@ void coot_ligand_editor_canvas_set_active_tool(CootLigandEditorCanvas* self, std
 }
 
 void coot_ligand_editor_canvas_append_molecule(CootLigandEditorCanvas* self, std::shared_ptr<RDKit::RWMol> rdkit_mol) noexcept {
+    if(rdkit_mol->getNumAtoms() == 0) {
+        self->update_status("Attempted to add an empty molecule!");
+        g_warning("Attempted to add an empty molecule!");
+        return;
+    }
     try {
         g_debug("Appending new molecule to the widget...");
         // Might throw if the constructor fails.
@@ -647,6 +654,11 @@ std::string coot_ligand_editor_canvas_get_pickled_molecule(CootLigandEditorCanva
         RDKit::MolPickler::pickleMol(*(*self->rdkit_molecules)[molecule_idx].get(), ret);
     }
     return ret;
+}
+
+std::string coot_ligand_editor_canvas_get_pickled_molecule_base64(CootLigandEditorCanvas* self, unsigned int molecule_idx) noexcept {
+    std::string raw = coot_ligand_editor_canvas_get_pickled_molecule(self, molecule_idx);
+    return moorhen_base64::base64_encode((const unsigned char*) raw.c_str(), raw.size());
 }
 
 #ifndef __EMSCRIPTEN__
