@@ -73,10 +73,14 @@ for /f "skip=1 tokens=3" %%A in (
 ) do set CCP4DIR=%%~A
 if not exist "%CCP4DIR%" (Exit /B 0)
 
-REM find latest dir
-for /f " tokens=*" %%i in (
-  'dir "%CCP4DIR%\%CCP4_MAJOR%.*" /b /ad-h /t:c /od'
-) do set SETUPFILE=%CCP4DIR%\%%i\ccp4.setup.bat
+REM for ccp4 9.x
+set SETUPFILE=%CCP4DIR%\CCP4\ccp4.setup.bat
+if not exist "%SETUPFILE%" (
+  REM find latest dir
+  for /f " tokens=*" %%i in (
+    'dir "%CCP4DIR%\%CCP4_MAJOR%.*" /b /ad-h /t:c /od'
+  ) do set SETUPFILE=%CCP4DIR%\%%i\ccp4.setup.bat
+)
 if not exist "%SETUPFILE%" (Exit /B 0)
 
 REM Finally, setup CCP4
