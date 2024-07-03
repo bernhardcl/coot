@@ -111,7 +111,7 @@ coot::rama_plot::init(const std::string &type, short int psi_axis) {
       init_status = create_dynarama_window();
       if (init_status) {
          psi_axis_mode = psi_axis; // or should this be in init_internal?!
-         init_internal("Ramachandran Plot (Phi/Psi Edit Mode)", 0.02, 0.002, 1);
+         init_internal("Ramachandran Plot (Phi/Psi Edit Mode)", 0.02, 0.0005, 2);
          hide_stats_frame();
          gtk_widget_hide(selection_hbox);
          gtk_widget_set_sensitive(rama_view_menu, FALSE);
@@ -127,7 +127,7 @@ coot::rama_plot::init(const std::string &type, short int psi_axis) {
       init_status = create_dynarama_window();
       if (init_status) {
          psi_axis_mode = psi_axis; // or should this be in init_internal?!
-         init_internal("Ramachandran Plot (Backbone Edit Mode)", 0.02, 0.002, 1, hide_buttons);
+         init_internal("Ramachandran Plot (Backbone Edit Mode)", 0.02, 0.0005, 2, hide_buttons);
          hide_stats_frame();
          gtk_widget_hide(selection_hbox);
          gtk_widget_set_sensitive(rama_view_menu, FALSE);
