@@ -21,6 +21,7 @@
 
 #include "model.hpp"
 #include "render.hpp"
+#include "../qed.hpp"
 #include <exception>
 #include <iterator>
 #include <memory>
@@ -29,10 +30,6 @@
 #include <stdexcept>
 #include <algorithm>
 #include <set>
-// #include <rdkit/GraphMol/MolDraw2D/MolDraw2D.h>
-// // #include <rdkit/GraphMol/MolDraw2D/MolDraw2DCairo.h>
-// // #include <rdkit/GraphMol/MolDraw2D/MolDraw2DSVG.h>
-// #include <rdkit/GraphMol/MolDraw2D/MolDraw2DUtils.h>
 #include <rdkit/GraphMol/Depictor/RDDepictor.h>
 #include <rdkit/GraphMol/Substruct/SubstructMatch.h>
 #include <rdkit/Geometry/point.h>
@@ -166,6 +163,10 @@ graphene_rect_t CanvasMolecule::get_on_screen_bounding_rect() const noexcept {
     ret.size.width = (this->bounding_atom_coords.second.x - this->bounding_atom_coords.first.x) * scale + x_offset;
     ret.size.height = (this->bounding_atom_coords.second.y - this->bounding_atom_coords.first.y) * scale + y_offset;
     return ret;
+}
+
+std::optional<CanvasMolecule::QEDInfo> CanvasMolecule::get_qed_info() const noexcept {
+    return this->qed_info;
 }
 
 
@@ -561,9 +562,10 @@ void CanvasMolecule::process_alignment_in_rings() {
         int j = 1;
 
         // Go over every bond
-        while(i!=ring.size()) {
-            int atom_one_idx = ring[i];
-            int atom_two_idx = ring[j];
+        int ring_size = ring.size();
+        while (i != ring_size) {
+            unsigned int atom_one_idx = ring[i];
+            unsigned int atom_two_idx = ring[j];
             auto bonds_of_atom_one = this->bond_map.find(atom_one_idx);
             if(bonds_of_atom_one == this->bond_map.end()) {
                 throw std::runtime_error("Critical internal error: Could not find a bond while processing rings.");
@@ -573,19 +575,19 @@ void CanvasMolecule::process_alignment_in_rings() {
                 return (bond->first_atom_idx == atom_one_idx && bond->second_atom_idx == atom_two_idx) 
                     || (bond->first_atom_idx == atom_two_idx && bond->second_atom_idx == atom_one_idx);
             });
-            if(bond == bonds_of_atom_one->second.end()) {
+            if (bond == bonds_of_atom_one->second.end()) {
                 throw std::runtime_error("Critical internal error: Could not find a bond while processing rings.");
             }
             auto bond_ptr = *bond;
-            if(bond_ptr->type == BondType::Double) {
+            if (bond_ptr->type == BondType::Double) {
                 float x_offset_from_center = (bond_ptr->first_atom_x + bond_ptr->second_atom_x) / 2.f - ring_center_x;
                 // negative y on screen is actually "higher" so we need to flip the sign
                 float y_offset_from_center = ring_center_y - (bond_ptr->first_atom_y + bond_ptr->second_atom_y) / 2.f;
                 bool sign_of_x_offset_from_center = x_offset_from_center > 0.f;
                 bool sign_of_y_offset_from_center = y_offset_from_center > 0.f;
-                bool x_requirement = bond_ptr->second_atom_x > bond_ptr->first_atom_x == sign_of_y_offset_from_center;
+                bool x_requirement = (bond_ptr->second_atom_x > bond_ptr->first_atom_x) == sign_of_y_offset_from_center;
                 // negative y on screen is actually "higher" so we need to flip the sign
-                bool y_requirement = bond_ptr->second_atom_y <= bond_ptr->first_atom_y != sign_of_x_offset_from_center;
+                bool y_requirement = (bond_ptr->second_atom_y <= bond_ptr->first_atom_y) != sign_of_x_offset_from_center;
                 bool bond_direction = x_requirement && y_requirement;
                 // g_debug(
                 //     "Bond: %i->%i DeltaX: %f DeltaY: %f CX: %f CY: %f XO: %f SignXO: %i YO: %f SignYO: %i ReqX: %i ReqY: %i DIR: %i",
@@ -605,25 +607,24 @@ void CanvasMolecule::process_alignment_in_rings() {
             }
             // Lastly, process appendices' alignment relative to ring center
             auto& atom = this->atoms.at(atom_one_idx);
-            if(atom.appendix.has_value()) {
+            if (atom.appendix.has_value()) {
                 bool should_reverse = atom.x < ring_center_x;
                 atom.appendix->reversed = should_reverse;
             }
             i++;
             j++;
             // Process the last bond
-            if(j==ring.size()) {
+            if (j == ring_size) {
                 // Loop j to point to the first atom in the ring
                 j = 0;
             }
         }
-
     }
 }
 
 void CanvasMolecule::shorten_double_bonds() {
     typedef std::pair<const Bond*,float> bond_ptr_and_angle;
-    for(auto& bond: this->bonds) {
+    for (auto& bond: this->bonds) {
         if(bond->type != BondType::Double) {
             continue;
         }
@@ -735,7 +736,8 @@ void CanvasMolecule::build_internal_molecule_representation(const RDGeom::INT_PO
     std::set<unsigned int> processed_atoms_indices;
     
     // 1. Process atoms and compute bonds
-    for(const auto& [atom_idx,plane_point]: coordinate_map) {
+    for (const auto& [atom_idx_i, plane_point] : coordinate_map) {
+        unsigned int atom_idx = atom_idx_i; // just changing signedness
         const auto* rdkit_atom = this->rdkit_molecule->getAtomWithIdx(atom_idx);
         auto canvas_atom = CanvasMolecule::Atom();
         canvas_atom.color = atom_color_from_rdkit(rdkit_atom);
@@ -777,13 +779,13 @@ void CanvasMolecule::build_internal_molecule_representation(const RDGeom::INT_PO
         // Used to determine if the 'appendix' should be 'reversed'
         std::optional<float> x_coordinate_of_bonded_atom;
 
-        for(const auto& bond: boost::make_iterator_range(this->rdkit_molecule->getAtomBonds(rdkit_atom))) {
+        for (const auto& bond: boost::make_iterator_range(this->rdkit_molecule->getAtomBonds(rdkit_atom))) {
             // Based on `getAtomBonds` documentation.
             // Seems weird but we have to do it that way.
             const auto* bond_ptr = (*this->rdkit_molecule)[bond];
-            auto first_atom_idx = bond_ptr->getBeginAtomIdx();
+            auto  first_atom_idx = bond_ptr->getBeginAtomIdx();
             auto second_atom_idx = bond_ptr->getEndAtomIdx();
-            auto the_other_atom_idx = first_atom_idx == atom_idx ? second_atom_idx : first_atom_idx;
+            auto the_other_atom_idx = (first_atom_idx == atom_idx) ? second_atom_idx : first_atom_idx;
             const auto* the_other_atom =  this->rdkit_molecule->getAtomWithIdx(the_other_atom_idx);
             if(the_other_atom->getSymbol() != "H") {
                 surrounding_non_hydrogen_count++;
@@ -830,7 +832,7 @@ void CanvasMolecule::build_internal_molecule_representation(const RDGeom::INT_PO
         }
 
         auto cached_bonds_for_this_atom = this->bond_map.find(atom_idx);
-        if(cached_bonds_for_this_atom == this->bond_map.end()) {
+        if (cached_bonds_for_this_atom == this->bond_map.end()) {
             this->bond_map.emplace(std::pair(atom_idx,std::move(bonds_to_be_cached)));
         } else {
             // In the for-loop above,
@@ -840,8 +842,8 @@ void CanvasMolecule::build_internal_molecule_representation(const RDGeom::INT_PO
             std::move(bonds_to_be_cached.begin(),bonds_to_be_cached.end(),std::back_inserter(cached_bonds_for_this_atom->second));
         }
 
-        bool terminus = surrounding_non_hydrogen_count < 2;
-        if(canvas_atom.symbol != "H" && (canvas_atom.symbol != "C" || terminus)) {
+        bool terminus = (surrounding_non_hydrogen_count < 2);
+        if (canvas_atom.symbol != "H" && (canvas_atom.symbol != "C" || terminus)) {
             //todo: oxygens I guess?
             if(surrounding_hydrogen_count > 0) {
                 Atom::Appendix ap = canvas_atom.appendix.value_or(Atom::Appendix());
@@ -856,21 +858,23 @@ void CanvasMolecule::build_internal_molecule_representation(const RDGeom::INT_PO
                 canvas_atom.appendix = ap;
             }
         }
-        auto setup_potential_centered_double_bond = [&](const int atom_idx){
+
+        auto setup_potential_centered_double_bond = [&] (const unsigned int &atom_idx) {
+
             auto bonds_of_this_atom = this->bond_map.find(atom_idx);
-            if(bonds_of_this_atom == this->bond_map.end()) {
+            if (bonds_of_this_atom == this->bond_map.end()) {
                 return;
             }
-            if(!terminus || bonds_of_this_atom->second.empty()) {
+            if (!terminus || bonds_of_this_atom->second.empty()) {
                 return;
             }
             // This means that we only have one bond
             Bond* bond = bonds_of_this_atom->second.front().get();
-            if(bond->type != BondType::Double) {
+            if (bond->type != BondType::Double) {
                 return;
             }
-            unsigned int the_other_atom_idx = bond->first_atom_idx == atom_idx ? bond->second_atom_idx : bond->first_atom_idx;
-            if(this->rdkit_molecule->getAtomWithIdx(the_other_atom_idx)->getAtomicNum() == 6) {
+            unsigned int the_other_atom_idx = (bond->first_atom_idx == atom_idx) ? bond->second_atom_idx : bond->first_atom_idx;
+            if (this->rdkit_molecule->getAtomWithIdx(the_other_atom_idx)->getAtomicNum() == 6) {
                 // This should always be a valid iterator at this point
                 auto bonds_of_the_other_atom = this->bond_map.find(the_other_atom_idx);
                 if(bonds_of_the_other_atom->second.size() != 3 && bonds_of_the_other_atom->second.size() != 1) {
@@ -894,7 +898,7 @@ void CanvasMolecule::build_internal_molecule_representation(const RDGeom::INT_PO
     this->shorten_double_bonds();
 }
 
-void CanvasMolecule::lower_from_rdkit(bool sanitize_after) {
+void CanvasMolecule::lower_from_rdkit(bool sanitize_after, bool with_qed) {
 
     // 2. Do the lowering
 
@@ -905,13 +909,59 @@ void CanvasMolecule::lower_from_rdkit(bool sanitize_after) {
     auto geometry = this->compute_molecule_geometry();
 
     // 2.2 Build internal repr
-    this->build_internal_molecule_representation(geometry);    
+    this->build_internal_molecule_representation(geometry);
     this->cached_atom_coordinate_map = std::move(geometry);
 
     // 2.3 Reverse kekulization on the original molecule after lowering.
     if (sanitize_after) {
         RDKit::MolOps::sanitizeMol(*this->rdkit_molecule);
     }
+
+    // QED update
+    if (with_qed) {
+        this->update_qed_info();
+    }
+}
+
+void CanvasMolecule::update_qed_info() {
+
+    using QED = layla::RDKit::QED;
+
+    coot::layla::RDKit::QED::QEDproperties raw_props = QED::properties(*this->rdkit_molecule);
+    auto qed_score_and_ads = QED::qed(*this->rdkit_molecule, raw_props);
+    QEDInfo new_info;
+
+    new_info.alogp                             = raw_props.ALOGP;
+    new_info.molecular_polar_surface_area      = raw_props.PSA;
+    new_info.molecular_weight                  = raw_props.MW;
+    new_info.number_of_alerts                  = raw_props.ALERTS;
+    new_info.number_of_aromatic_rings          = raw_props.AROM;
+    new_info.number_of_hydrogen_bond_acceptors = raw_props.HBA;
+    new_info.number_of_hydrogen_bond_donors    = raw_props.HBD;
+    new_info.number_of_rotatable_bonds         = raw_props.ROTB;
+    new_info.qed_score = qed_score_and_ads.qed_score;
+    new_info.ads_mw = qed_score_and_ads.ads_mw;
+    new_info.ads_alogp = qed_score_and_ads.ads_alogp;
+    new_info.ads_hba = qed_score_and_ads.ads_hba;
+    new_info.ads_hbd = qed_score_and_ads.ads_hbd;
+    new_info.ads_psa = qed_score_and_ads.ads_psa;
+    new_info.ads_rotb = qed_score_and_ads.ads_rotb;
+    new_info.ads_arom = qed_score_and_ads.ads_arom;
+    new_info.ads_alert = qed_score_and_ads.ads_alerts;
+
+    g_debug("Updated QED: ALOGP=%f PSA=%f MW=%f ALERTS=%u AROM=%u HBA=%u HBD=%u ROTB=%u QED=%f",
+        new_info.alogp,
+        new_info.molecular_polar_surface_area,
+        new_info.molecular_weight,
+        new_info.number_of_alerts,
+        new_info.number_of_aromatic_rings,
+        new_info.number_of_hydrogen_bond_acceptors,
+        new_info.number_of_hydrogen_bond_donors,
+        new_info.number_of_rotatable_bonds,
+        new_info.qed_score
+    );
+
+    this->qed_info = new_info;
 }
 
 void CanvasMolecule::highlight_atom(int atom_idx) {
@@ -919,14 +969,15 @@ void CanvasMolecule::highlight_atom(int atom_idx) {
     this->atoms.at(atom_idx).highlighted = true;
 }
 
-void CanvasMolecule::highlight_bond(int atom_a, int atom_b) {
+void CanvasMolecule::highlight_bond(unsigned int atom_a, unsigned int atom_b) {
+
     //g_debug("Highlighted bond between atoms with indices %i and %i",atom_a,atom_b);
     auto bonds_for_atom_a = this->bond_map.find(atom_a);
-    if(bonds_for_atom_a == this->bond_map.end()) {
+    if (bonds_for_atom_a == this->bond_map.end()) {
         throw std::runtime_error("Bond doesn't exist");
     }
-    auto target = std::find_if(bonds_for_atom_a->second.begin(),bonds_for_atom_a->second.end(),[=](const auto& bond){
-        return bond->second_atom_idx == atom_b && bond->first_atom_idx == atom_a;
+    auto target = std::find_if(bonds_for_atom_a->second.begin(), bonds_for_atom_a->second.end(), [=](const auto& bond) {
+          return (bond->second_atom_idx == atom_b) && (bond->first_atom_idx == atom_a);
     });
     if (target == this->bonds.end()) {
         throw std::runtime_error("Bond doesn't exist");
@@ -972,7 +1023,7 @@ void CanvasMolecule::update_cached_atom_coordinate_map_after_atom_removal(unsign
         // greater than its' index have to be decremented.
         //
         // Now, I don't want to mess around with iterator invalidation.
-        // So the easiest course of action is to just copy away all 
+        // So the easiest course of action is to just copy away all
         // of the affected elements, change them, remove them from the original map
         // and put them back there again.
         std::vector<std::pair<int,RDGeom::Point2D>> altered_elements;

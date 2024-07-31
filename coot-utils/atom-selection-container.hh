@@ -109,6 +109,8 @@ public:
       return (mol == NULL);
    }
 
+   void regen_atom_selection();
+
    //! fill links
    void fill_links_using_mol(mmdb::Manager *mol_other) {
       fill_links(mol_other);
@@ -206,7 +208,7 @@ int fix_wrapped_names(atom_selection_container_t asc);
 // #include "lidia-core/lbg-molfile.hh"
 // #include "lidia-core/lig-build.hh"
 
-namespace coot { 
+namespace coot {
    bool is_hydrogen(const std::string &ele);
    bool is_deuterium(const std::string &ele);
 

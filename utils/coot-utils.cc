@@ -57,7 +57,18 @@
 #endif
 
 #include "coot-utils.hh"
-#include "win-compat.hh"
+
+// bellow function sets this:
+static std::string real_path_for_coot_executable;
+
+//! do this on startup
+void coot::set_realpath_for_coot_executable(const std::string &argv0) {
+
+   char *exec_path = realpath(argv0.c_str(), NULL);
+   if (exec_path) {
+      real_path_for_coot_executable = exec_path;
+   }
+}
 
 
 std::string
@@ -958,40 +969,7 @@ coot::get_home_dir() {
    return ""; //empty
 }
 
-// this will be $HOME/.coot on Linux (and Mac) and %USERPROFILE%/COOT on Windows
-std::string
-coot::preferences_dir() {
-
-   const char* s;
-
-#ifdef WINDOWS_MINGW
-   if (coot::util::is_dos()) {
-      // DOS
-      s = getenv("USERPROFILE");
-      if (s) {
-         return coot::util::append_dir_dir(std::string(s), "COOT");
-      } else {
-         // oh dear no %USERPROFILE% folder defined?
-         std::cout<<"BL WARNING:: no %USERPROFILE% defined. \n"
-                    "Wont be able to get a preferences directory!" <<std::endl;
-      }
-   } else {
-      // MSYS2 case - like linux
-      s = getenv("HOME");
-      if (s) {
-         return coot::util::append_dir_dir(std::string(s), ".coot");
-      }
-   }
-
-#else
-   s = getenv("HOME");
-   if (s) {
-      return coot::util::append_dir_dir(std::string(s), ".coot");
-   }
-#endif
-
-   return ""; //empty
-}
+#include <filesystem>
 
 // The user can set COOT_DATA_DIR (in fact this is the usual case
 // when using binaries) and that should over-ride the built-in
@@ -1010,6 +988,24 @@ coot::package_data_dir() {
       char *env = getenv("COOT_PREFIX");
       if (env)
          pkgdatadir = std::string(env) + std::string("/share/coot");
+   }
+   if (std::filesystem::exists(pkgdatadir)) {
+      // good - we are (probably) not using relocated binaries
+   } else {
+      // let set pkgdatadir relative to the binary we are running (which was set
+      // using set_realpath_for_coot_executable())
+      // std::cout << "................. real_path_for_coot_executable " << real_path_for_coot_executable << std::endl;
+      if (real_path_for_coot_executable.empty()) {
+         std::cout << "OOPS:: real_path_for_coot_executable is empty " << std::endl;
+      } else {
+         std::filesystem::path p(real_path_for_coot_executable);
+         std::filesystem::path p_1 =   p.parent_path();
+         std::filesystem::path p_2 = p_1.parent_path();
+         std::cout << "here with p_2 " << p_2.string() << std::endl;
+         std::filesystem::path p_3 = p_2 / "share";
+         std::filesystem::path p_4 = p_3 / "coot";
+         pkgdatadir = p_4.string();
+      }
    }
    return pkgdatadir;
 }
@@ -1065,6 +1061,18 @@ coot::get_directory(const std::string &dir) {
    } else {
       return dir;
    }
+}
+
+// Let's use C++-17 filesystem rather than stat()
+#include "xdg-base.hh"
+
+//!  Use XDG Base Directory to get the download directory
+std::string
+coot::get_download_directory() {
+
+   xdg_t xdg;
+   std::filesystem::path p = xdg.get_cache_home();
+   return p.string();
 }
 
 

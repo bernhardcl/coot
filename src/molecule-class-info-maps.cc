@@ -505,6 +505,8 @@ molecule_class_info_t::update_map(bool do_it) {
 void
 molecule_class_info_t::update_map_internal() {
 
+   // std::cout << "debug:: update_map_internal() --- start --- with contour_level " << contour_level << std::endl;
+
    // duck out of doing map OpenGL map things if we are not in gui mode
    //
    // if (! graphics_info_t::use_graphics_interface_flag) return;
@@ -675,7 +677,7 @@ molecule_class_info_t::fill_fobs_sigfobs() {
 void
 molecule_class_info_t::update_map_triangles(float radius, coot::Cartesian centre) {
 
-   // std::cout   << "DEBUG:: update_map_triangles() at center: " << centre << std::endl;
+   // std::cout   << "DEBUG:: update_map_triangles() at center: " << centre << " contour level " << contour_level << std::endl;
    // std::cout   << "DEBUG:: update_map_triangles() g.zoom: " << g.zoom << std::endl;
 
    // duck out of doing map OpenGL map things if we are not in gui mode
@@ -746,6 +748,7 @@ molecule_class_info_t::update_map_triangles(float radius, coot::Cartesian centre
       if (n_reams < 1) n_reams = 1;
 
       for (int ii=0; ii<n_reams; ii++) {
+         // std::cout << "thread map mol-no: " << imol_no << " is_em_map: " << is_em_map << " contour_level: " << contour_level << std::endl;
          threads.push_back(std::thread(gensurf_and_add_vecs_threaded_workpackage,
                                        &xmap, contour_level, dy_radius, centre,
                                        isample_step, ii, n_reams, is_em_map,
@@ -1973,22 +1976,23 @@ molecule_class_info_t::set_initial_contour_level() {
 
    float level = 1.0;
    if (xmap_is_diff_map) {
-      if (map_sigma_ > 0.05) {
-	      level = nearest_step(map_mean_ +
-			      graphics_info_t::default_sigma_level_for_fofc_map*map_sigma_, 0.01);
+      // if (map_sigma_ > 0.05) { // what what I trying to do here?
+      if (true) {
+         level = nearest_step(map_mean_ + graphics_info_t::default_sigma_level_for_fofc_map*map_sigma_, 0.01);
       } else {
-	      level = 3.0*map_sigma_;
+	 level = 3.0*map_sigma_;
       }
    } else {
-      if (map_sigma_ > 0.05) {
+      // if (map_sigma_ > 0.05) {
+      if (true) {
 	      level = nearest_step(map_mean_ + graphics_info_t::default_sigma_level_for_map*map_sigma_, 0.01);
       } else {
 	      level = graphics_info_t::default_sigma_level_for_map * map_sigma_;
       }
    }
 
-   if (0)
-      std::cout << "..... in set_initial_contour_level() xmap_is_diff_map is " << xmap_is_diff_map
+   if (false)
+      std::cout << "DEBUG:: ..... in set_initial_contour_level() xmap_is_diff_map is " << xmap_is_diff_map
 		<< " and map_sigma_ is " << map_sigma_ << " and default sigma leve is "
 		<< graphics_info_t::default_sigma_level_for_fofc_map << " and map_mean is "
 		<< map_mean_ << std::endl;
@@ -2393,6 +2397,8 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
       if (em)
          contour_level = 4.5*sqrt(var);
 
+      set_initial_contour_level();
+
       std::cout << "INFO:: ------  em " << em << " contour_level " << contour_level << std::endl;
 
       std::cout << "      Map extents: ..... "
@@ -2501,20 +2507,26 @@ molecule_class_info_t::install_new_map(const clipper::Xmap<float> &map_in, std::
    // sets name_ to name_in:
    initialize_map_things_on_read_molecule(name_in, false, false, false); // not a diff_map
 
-   bool ipz = graphics_info_t::ignore_pseudo_zeros_for_map_stats;
-   bool write_output_flag = false;
-   mean_and_variance<float> mv = map_density_distribution(xmap, 40, write_output_flag, ipz);
+   // 20240702-PE now we can install empty maps (which get quickly overwritten by sensible maps)
+   // (adding servalcat interface)
+   //
+   if (! xmap.is_null()) {
 
-   float mean = mv.mean;
-   float var = mv.variance;
-   contour_level  = nearest_step(mean + 1.5*sqrt(var), 0.05);
-   update_map_in_display_control_widget();
+      bool ipz = graphics_info_t::ignore_pseudo_zeros_for_map_stats;
+      bool write_output_flag = false;
+      mean_and_variance<float> mv = map_density_distribution(xmap, 40, write_output_flag, ipz);
 
-   // fill class variables
-   map_mean_ = mv.mean;
-   map_sigma_ = sqrt(mv.variance);
+      float mean = mv.mean;
+      float var = mv.variance;
+      contour_level  = nearest_step(mean + 1.5*sqrt(var), 0.05);
+      update_map_in_display_control_widget();
 
-   update_map(true);
+      // fill class variables
+      map_mean_ = mv.mean;
+      map_sigma_ = sqrt(mv.variance);
+
+      update_map(true);
+   }
 }
 
 void

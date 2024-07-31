@@ -44,7 +44,7 @@ pkginclude_HEADERS = peak-search.hh coot-trim.hh \
         atom-tree.hh jed-flip.hh atom-vertex.hh merge-C-and-N-terminii.hh simple-mesh.hh vertex.hh g_triangle.hh \
 	cylinder.hh cylinder-with-rotation-translation.hh oct.hh prideout-octasphere.hh cmtz-interface.hh mtz-column-auto-read.hh \
 	pugixml.hpp pugiconfig.hpp find-water-baddies.hh voidp-buffer.hh parse-pisa.hh diff-diff-map-peaks.hh tiny_gltf.h json.hpp \
-	stb_image.h stb_image_write.h glyco-tree.hh positron.hh mini-texture.hh texture-as-floats.hh pae.hh
+	stb_image.h stb_image_write.h glyco-tree.hh positron.hh mini-texture.hh texture-as-floats.hh pae.hh q-score.hh
 
 
 pkgincludedir = $(includedir)/coot/coot-utils
@@ -170,7 +170,7 @@ check_PROGRAMS = test-h-bonds testshelxreader test-hole test-elastic \
 		 test-cod-atom-types dictionary-atom-types cod-db-access \
 		 test-5-residue-fragments test-diff-diff-map-peaks \
 		 make-cablam-like-stats test-cod-atom-types-from-sm-cif test-parse-pisa \
-		 test-coot-utils test-pae
+		 test-coot-utils test-pae test-q-score servalcat-tracker test-zd
 
 # wrong build order - delete from make check for now.
 # test-emma test-convolute test-coot-utils test-segmap
@@ -212,6 +212,10 @@ test_coot_probe_LDADD =          \
 	./libcoot-coord-utils.la \
 	$(top_builddir)/geometry/libcoot-geometry.la \
 	$(MMDB_LIBS)
+
+servalcat_tracker_SOURCES = servalcat-tracker.cc
+
+# servalcat_tracker_LDADD = 
 
 test_parse_pisa_SOURCES = test-parse-pisa.cc
 test_parse_pisa_LDADD = \
@@ -303,6 +307,10 @@ test_chem_feat_LDADD = \
 	$(top_builddir)/lidia-core/libcoot-lidia-core.la \
 	$(MMDB_LIBS) $(RDKIT_LIBS)
 
+test_zd_SOURCES = test-zd.cc
+
+test_zd_LDADD = libcoot-map-utils.la $(CLIPPER_LIBS)
+
 test_cod_atom_types_SOURCES = test-cod-atom-types.cc
 
 test_cod_atom_types_LDADD = \
@@ -333,6 +341,15 @@ test_5_residue_fragments_LDADD = \
 	$(top_builddir)/utils/libcoot-utils.la \
 	$(CLIPPER_LIBS) \
 	$(RDKIT_LIBS)
+
+test_q_score_SOURCES = test-q-score.cc
+
+test_q_score_LDADD = libcoot-map-utils.la \
+                     libcoot-coord-utils.la \
+                     $(top_builddir)/geometry/libcoot-geometry.la \
+                     $(top_builddir)/analysis/libcoot-analysis.la \
+                     $(top_builddir)/utils/libcoot-utils.la \
+                     $(CLIPPER_LIBS)
 
 test_diff_diff_map_peaks_SOURCES = test-diff-diff-map-peaks.cc
 

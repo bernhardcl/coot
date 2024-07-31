@@ -55,11 +55,6 @@
 #include "c-interface-python.hh"
 #endif // USE_PYTHON
 
-#if defined (WINDOWS_MINGW)
-#ifdef DATADIR
-#undef DATADIR
-#endif // DATADIR
-#endif /* MINGW */
 #include "compat/sleep-fixups.h"
 
 // Here we used to define GTK_ENABLE_BROKEN if defined(WINDOWS_MINGW)
@@ -140,6 +135,8 @@
 #include "lbg/wmolecule.hh"
 #include "goograph/goograph.hh"
 #endif
+
+#include "curl-utils.hh"
 
 #include "ideal/simple-restraint.hh"  // for multi-residue torsion map fitting.
 #include "ideal/torsion-bonds.hh"     // for multi-residue torsion map fitting.
@@ -336,11 +333,10 @@ int test_function(int i, int j) {
 
    if (0) {
       // atom_selection_container_t asc = get_atom_selection("double.pdb");
-      atom_selection_container_t asc = get_atom_selection("test-frag.pdb", true, false, false);
-      coot::dots_representation_info_t dots;
+      atom_selection_container_t asc = get_atom_selection("test-frag.pdb", false, true, false);
+      pli::dots_representation_info_t dots;
       int sel_hnd = asc.SelectionHandle;
-      std::vector<std::pair<mmdb::Atom *, float> > v =
-	 dots.solvent_exposure(sel_hnd, asc.mol);
+      std::vector<std::pair<mmdb::Atom *, float> > v = dots.solvent_exposure(sel_hnd, asc.mol);
 
    }
 
@@ -1262,9 +1258,8 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
    std::cout << "--------- prefix_dir " << d << std::endl;
 
 
-#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+#if 0
    if (true) {
-
       auto qed_stuff = [] (RDKit::RWMol &rdkm) {
          PyObject *pName = PyUnicode_FromString("rdkit.Chem"); // 20230513-PE merge: was just "silicos_it" - hmm.
          // Load the module object
@@ -1404,7 +1399,7 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
          }
       }
    }
-#endif  // MAKE_ENHANCED_LIGAND_TOOLS
+#endif
 
 #if 0
    // There are lots of items in the list, but they don't seem to be toplevels - hmm.
@@ -1644,7 +1639,7 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
 
    if (false) {
 #ifdef USE_MOLECULES_TO_TRIANGLES
-      Mesh mesh("Dummy");
+      Mesh mesh("test-molecule-to-triangle");
       // mesh.load_from_glTF("blue-eyelashes-1.glb");
       // mesh.load_from_glTF("augmented-box.glb");
       // mesh.load_from_glTF("Triangle.gltf");
@@ -1726,7 +1721,8 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
       if (is_valid_model_molecule(imol)) {
             molecule_class_info_t &m = g.molecules[imol];
             gl_rama_plot_t rama;
-            rama.setup_from(imol, m.atom_sel.mol, "//");
+            gl_rama_plot_t::draw_mode_t draw_mode = gl_rama_plot_t::draw_mode_t::CHECK_IF_PICKED;
+            rama.setup_from(imol, m.atom_sel.mol, "//", draw_mode);
       }
    }
 

@@ -3975,7 +3975,7 @@ molecule_class_info_t::make_colour_table() const {
    for (int icol=0; icol<bonds_box.num_colours; icol++) {
       if (bonds_box_type == coot::COLOUR_BY_RAINBOW_BONDS) {
          glm::vec4 col = get_bond_colour_by_colour_wheel_position(icol, coot::COLOUR_BY_RAINBOW_BONDS);
-         std::cout << "rainbow " << icol << glm::to_string(col) << std::endl;
+         // std::cout << "rainbow " << icol << " " << glm::to_string(col) << std::endl;
          colour_table[icol] = col;
       } else {
          // this is the old way of doing user-defined colours. Now we use
@@ -7813,7 +7813,7 @@ molecule_class_info_t::save_coordinates(const std::string &filename,
       // Now we have updated the molecule name, how shall we restore
       // this from the state file?
       std::vector<std::string> strings;
-      strings.push_back("handle-read-draw-molecule");
+      strings.push_back("coot.handle-read-draw-molecule");
       strings.push_back(single_quote(coot::util::intelligent_debackslash(filename)));
       save_state_command_strings_ = strings;
 
@@ -10120,6 +10120,7 @@ molecule_class_info_t::get_contour_level_by_sigma() const {
 
 void
 molecule_class_info_t::set_contour_level(float f) {
+
    if (has_xmap()  || has_nxmap()) {
       contour_level = f;
       update_map(true);
@@ -10704,6 +10705,30 @@ molecule_class_info_t::update_self_from_file(const std::string &pdb_file_name) {
 
 void
 molecule_class_info_t::update_self(const coot::mtz_to_map_info_t &mmi) {
+
+   // 20240702-PE make this part of mmi?
+   float n_sd = 12.0f; // number of suggested standard deviations for the contour level of a newly-created map
+
+   bool previous_map_was_sane = true;
+   if (xmap.is_null()) previous_map_was_sane = false;
+
+   std::cout << "############### --- start --- update_self() xmap is sane: " << previous_map_was_sane << std::endl;
+
+   float sr = graphics_info_t::map_sampling_rate;
+   std::string cwd = coot::util::current_working_dir(); // why is this needed?
+   map_fill_from_mtz(mmi.mtz_file_name, cwd, mmi.f_col, mmi.phi_col, mmi.w_col, mmi.use_weights, mmi.is_difference_map, sr, true);
+
+   bool ipz = true; // ignore_pseudo zeros
+   mean_and_variance<float> mv = map_density_distribution(xmap, 20, false, ipz);
+
+   if (! previous_map_was_sane) {
+      contour_level = mv.mean + n_sd * std::sqrt(mv.variance);
+      std::cout << "-------- new map contour level " << contour_level << std::endl;
+      update_map_in_display_control_widget();
+   } else {
+      std::cout << "--------- using old map contour level " << contour_level << std::endl;
+   }
+   update_map_internal();
 
 }
 

@@ -495,6 +495,8 @@ fetch_map_from_emdb_action(G_GNUC_UNUSED GSimpleAction *simple_action,
 }
 
 
+#include "curl-utils.hh"
+
 void
 fetch_pdbe_ligand_description_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                                      G_GNUC_UNUSED GVariant *parameter,
@@ -506,14 +508,19 @@ fetch_pdbe_ligand_description_action(G_GNUC_UNUSED GSimpleAction *simple_action,
       coot::residue_spec_t res_spec(pp.second.second);
       const auto &m = graphics_info_t::molecules[imol];
       std::string comp_id = m.get_residue_name(res_spec);
-      // python-function: coot_utils.get_SMILES_for_comp_id_from_pdbe arg: comp_id
-      std::cout << "run python function coot_utils.get_SMILES_for_comp_id_from_pdbe " << comp_id << std::endl;
-      short int lang = coot::STATE_PYTHON;
-      std::vector<coot::command_arg_t> args = { coot::command_arg_t(comp_id) };
-      std::string sc = g.state_command("coot_utils", "get_SMILES_for_comp_id_from_pdbe", args, lang);
-      std::cout << ":::::::::::::::::::::: python command: " << sc << std::endl;
-      safe_python_command("import coot_utils"); // Hack. This has already happened, but python has forgotten.
-      safe_python_command(sc);
+
+      // 20240706-PE old python function was get_SMILES_for_comp_id_from_pdbe()
+      //             and that calls get_pdbe_cif_for_comp_id()
+      xdg_t xdg;
+      std::string file_name = comp_id + ".cif";
+      std::filesystem::path data_home = xdg.get_data_home();
+      std::filesystem::path file_path = data_home / file_name;
+      // maybe check that the file exists first?
+      std::string url = std::string("https://www.ebi.ac.uk/pdbe/static/files/pdbechem_v2/") + file_name;
+      int status = coot_get_url(url, file_path.string());
+      if (status == 0) {
+         read_cif_dictionary(file_name.c_str());  // remove above include and put this function into cc-interface.hh
+      }
    }
 }
 
@@ -3339,13 +3346,13 @@ mutate_to_type(GSimpleAction *simple_action,
                GVariant *parameter,
                gpointer user_data) {
 
+   graphics_info_t g;
    if (parameter) {
       gchar *result;
       g_variant_get(parameter, "s", &result);
       std::string ss(result);
       std::cout << "mutate_to type parameter " << ss << std::endl;
-      graphics_info_t g;
-      std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+         std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
       if (pp.first) {
          int imol = pp.second.first;
          g.mutate_residue_imol = imol;
@@ -3354,6 +3361,7 @@ mutate_to_type(GSimpleAction *simple_action,
          g.do_mutation(imol, res_spec, ss, false); // not stub
       }
    }
+   g.graphics_grab_focus();
 }
 
 void
@@ -3387,6 +3395,7 @@ mutate_base_to_type(GSimpleAction *simple_action,
             }
          }
       }
+      g.graphics_grab_focus();
    }
 }
 
@@ -3431,6 +3440,9 @@ delete_item(GSimpleAction *simple_action,
          if (par == "residue") {
             g.delete_active_residue(); // does a redraw
          }
+         if (par == "residue-atoms-with-alt-conf") {
+            g.delete_active_residue_alt_conf_atoms(); // does a redraw
+         }
          if (par == "chain") {
             auto &m = g.molecules[imol];
             m.delete_chain(atom_spec.chain_id);
@@ -3474,6 +3486,7 @@ delete_item(GSimpleAction *simple_action,
             graphics_draw();
          }
       }
+      g.graphics_grab_focus();
    }
 }
 

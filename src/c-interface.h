@@ -603,6 +603,10 @@ int do_GL_lighting_state();
 */
 short int use_graphics_interface_state();
 
+/*! \brief set the GUI dark mode state
+ */
+void set_use_dark_mode(short int state);
+
 /*! \brief is the python interpreter at the prompt?
 
 @return 1 for yes, 0 for no.*/
@@ -2271,7 +2275,7 @@ void set_colour_map_rotation_for_map(float f); /* "global"/default */
 /*! \brief set the colour map rotation for molecule number imol
 
 theta is in degrees */
-void  set_molecule_bonds_colour_map_rotation(int imol, float theta);
+void set_molecule_bonds_colour_map_rotation(int imol, float theta);
 
 /*! \brief Get the colour map rotation for molecule number imol */
 float get_molecule_bonds_colour_map_rotation(int imol);
@@ -3344,6 +3348,8 @@ void set_refinement_immediate_replacement(int istate);
 
 /*! \brief query the state of the immediate replacement mode */
 int  refinement_immediate_replacement_state();
+
+void set_refine_use_noughties_physics(short int state);
 
 /*! \brief set the number of frames for which the selected residue
   range flashes

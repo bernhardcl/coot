@@ -103,6 +103,18 @@ int show_paths_in_display_manager_state() {
    return graphics_info_t::show_paths_in_display_manager_flag;
 }
 
+/*! \brief set the GUI dark mode state
+ */
+void set_use_dark_mode(short int state) {
+
+   if (state)
+      g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", TRUE, NULL);
+   else
+      g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", FALSE, NULL);
+
+}
+
+
 
 /*! \brief display the open coordinates dialog */
 void open_coords_dialog() {
@@ -2146,11 +2158,108 @@ const char *coot_file_chooser_file_name(GtkWidget *widget) {
 /*                  get by accession code:                                  */
 /*  ----------------------------------------------------------------------- */
 
+#include "read-molecule.hh" // move this up
 
 /* Accession code, and dispatch guile command to download and display
    the model.  Hmmm.  */
 void handle_get_accession_code(GtkWidget *frame, GtkWidget *entry) {
 
+   auto join = [] (const std::string &d, const std::string &f) {
+      return d + std::string("/") + f;
+   };
+
+   auto join_2d = [] (const std::string &d1, const std::string &d2, const std::string &f) {
+      return d1 + std::string("/") + d2 + std::string("/") + f;
+   };
+
+   auto network_get_accession_code_entity = [join, join_2d] (const std::string &text, int mode) {
+
+      // 20240630-PE need to check that the file already exists before downloading it
+      xdg_t xdg;
+      std::string download_dir = join(xdg.get_cache_home().string(), "coot-download");
+      std::string down_id = coot::util::downcase(text);
+      std::string pdbe_server = "https://www.ebi.ac.uk";
+      std::string pdbe_pdb_file_dir = "pdbe/entry-files/download";
+      std::string pdb_url_dir = pdbe_server + "/" + pdbe_pdb_file_dir;
+
+      std::string pdb_file_name = std::string("pdb") + down_id + std::string(".ent");
+      std::string cif_file_name = std::string("pdb") + down_id + std::string(".cif");
+      std::string pdb_filepath = coot::util::append_dir_file(download_dir, pdb_file_name);
+      std::string cif_filepath = coot::util::append_dir_file(download_dir, cif_file_name);
+
+      std::string pdb_url = join(pdb_url_dir, pdb_file_name);
+      std::string cif_url = join(pdb_url_dir, cif_file_name);
+
+      if (mode == 1) { // mtz mode
+         std::string mtz_file_name = down_id + std::string("_map.mtz");
+         std::string mtz_filepath = coot::util::append_dir_file(download_dir, mtz_file_name);
+         std::string mtz_url = join_2d(pdbe_server, pdbe_pdb_file_dir, mtz_file_name);
+         int status = coot_get_url(mtz_url, mtz_filepath);
+         if (status == 0) {
+            auto_read_make_and_draw_maps(mtz_filepath.c_str());
+         }
+      } else {
+         // blocking!
+         int status = coot_get_url(pdb_url, pdb_file_name);
+         if (status == 0) {
+            read_pdb(pdb_file_name);
+         } else {
+            status = coot_get_url(cif_url, cif_file_name);
+            if (status == 0) {
+               read_pdb(cif_file_name);
+            }
+         }
+      }
+   };
+
+   auto fetch_pdb_redo = [join] (const std::string &code) {
+
+      // 20240630-PE need to check that the file already existss before downloading it
+      xdg_t xdg;
+      std::string download_dir = join(xdg.get_cache_home().string(), "coot-download");
+      std::string down_id = coot::util::downcase(code);
+      std::string server = "https://pdb-redo.eu";
+      std::string server_dir = std::string("db") + "/" + code;
+      std::string pdb_file_name = code + "_final.pdb";
+      std::string mtz_file_name = code + "_final.mtz";
+      // make a "join()" function
+      std::string pdb_url = server + "/" + server_dir + "/" + pdb_file_name;
+      std::string mtz_url = server + "/" + server_dir + "/" + mtz_file_name;
+      std::string pdb_filepath = coot::util::append_dir_dir(download_dir, pdb_file_name);
+      std::string mtz_filepath = coot::util::append_dir_dir(download_dir, mtz_file_name);
+      int status = coot_get_url(pdb_url, pdb_filepath);
+      if (status == 0) {
+         read_pdb(pdb_filepath);
+         status = coot_get_url(mtz_url, mtz_filepath);
+         if (status == 0) {
+            // why is auto_read_mtz() not a thing? Use a std::string arg
+            auto_read_make_and_draw_maps(mtz_filepath.c_str());
+         }
+      }
+
+   };
+
+   auto network_get = [network_get_accession_code_entity, fetch_pdb_redo] (const std::string &text, int n) {
+
+      if (n == COOT_ACCESSION_CODE_WINDOW_OCA) {
+         network_get_accession_code_entity(text, 0); // coords
+      }
+      if (n == COOT_ACCESSION_CODE_WINDOW_EDS) {
+         network_get_accession_code_entity(text, 0); // coords
+         network_get_accession_code_entity(text, 1); // mtz
+      }
+      if (n == COOT_ACCESSION_CODE_WINDOW_OCA_WITH_SF) {
+         std::cout << "WARNING:: OCA+SF no longer supported" << std::endl;
+      }
+      if (n == COOT_ACCESSION_CODE_WINDOW_PDB_REDO) {
+         fetch_pdb_redo(text);
+      }
+      if (n == COOT_UNIPROT_ID) {
+         fetch_alphafold_model_for_uniprot_id(text);
+      }
+   };
+
+   // 20240630-PE no longer used - can be deleted.
    auto python_network_get = [] (const std::string &text, int n) {
 
                                 std::string python_command;
@@ -2205,7 +2314,7 @@ void handle_get_accession_code(GtkWidget *frame, GtkWidget *entry) {
          if (n == COOT_COD_CODE) {
             fetch_cod_entry(text);
          } else {
-            python_network_get(text_c, n);
+            network_get(text_c, n);
          }
       }
    }
@@ -2714,7 +2823,7 @@ void hide_main_toolbar() {
       // GtkWidget *w = lookup_widget(graphics_info_t::get_main_window(), "main_toolbar");
       GtkWidget *w = widget_from_builder("main_toolbar");
       if (!w) {
-	 std::cout << "failed to lookup main toolbar" << std::endl;
+	 std::cout << "hide_main_toolbar(): failed to lookup main toolbar" << std::endl;
       } else {
 	 graphics_info_t::main_toolbar_show_hide_state = 0;
 	 gtk_widget_set_visible(w, FALSE);
@@ -2725,11 +2834,13 @@ void hide_main_toolbar() {
 /*! \brief show the horizontal maub toolbar in the GTK2 version
   (the toolbar is shown by default) */
 void show_main_toolbar() {
+
+   // main_toolbar no longer exists - do I still want this function?
    if (graphics_info_t::use_graphics_interface_flag) {
       GtkWidget *w = widget_from_builder("main_toolbar");
 
       if (!w) {
-	 std::cout << "failed to lookup main toolbar" << std::endl;
+	 std::cout << "show_main_toolbar(): failed to lookup main toolbar" << std::endl;
       } else {
 	 graphics_info_t::main_toolbar_show_hide_state = 1;
 	 gtk_widget_set_visible(w, TRUE);
@@ -2741,20 +2852,14 @@ void show_main_toolbar() {
 // should be generic!? FIXME BL
 void set_main_toolbar_style(int istate) {
 
+   // main_toolbar no longer exists - do I still want this function?
+
    graphics_info_t::main_toolbar_style_state = istate;
    if (graphics_info_t::use_graphics_interface_flag) {
       GtkWidget *toolbar = widget_from_builder("main_toolbar");
-      // may have to keep text somewhere?!?! FIXME
-#if (GTK_MAJOR_VERSION >= 4)
-#else
-      if (istate <= 1) {
-          gtk_toolbar_set_style(GTK_TOOLBAR (toolbar), GTK_TOOLBAR_ICONS);
-      } else if (istate == 2) {
-          gtk_toolbar_set_style(GTK_TOOLBAR (toolbar), GTK_TOOLBAR_BOTH_HORIZ);
-      } else {
-         std::cout << "ERROR:: no toolbar in set_main_toolbar_style()" << std::endl;
+      if (!toolbar) {
+	 std::cout << "set_main_toolbar_style(): failed to lookup main toolbar" << std::endl;
       }
-#endif
    }
 }
 
@@ -3750,11 +3855,14 @@ GtkWidget *wrapped_create_bond_parameters_dialog() {
 
 void apply_bond_parameters(GtkWidget *w) {
 
-   // 20211018-PE  Old, no longer used. Delete?
-
    graphics_info_t g;
-   int imol = g.bond_parameters_molecule;
 
+   int imol = -1; // 20240713-PE was g.bond_parameters_molecule;
+
+   GtkWidget *bond_parameters_molecule_comboboxtext = widget_from_builder("bond_parameters_molecule_comboboxtext");
+   if (bond_parameters_molecule_comboboxtext) {
+      imol = g.combobox_get_imol(GTK_COMBO_BOX(bond_parameters_molecule_comboboxtext));
+   }
 
    if (imol >= 0) {
       if (imol < g.n_molecules()) {

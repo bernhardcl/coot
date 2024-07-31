@@ -1,18 +1,11 @@
 
 #include <clipper/ccp4/ccp4_map_io.h> // debugging mapout
 
+#include "utils/base64-encode-decode.hh"
 #include "ligand/wligand.hh"
 
 #include "molecules-container.hh"
 
-// This must not be here because it will cause a linker error
-// #define TINYGLTF_IMPLEMENTATION
-// #include "../coot-utils/tiny_gltf.h"
-// ..and so we have to do a forward declaration
-namespace tinygltf {
-    std::string base64_encode(unsigned char const *bytes_to_encode, unsigned int in_len);
-    std::string base64_decode(std::string const &encoded_string);
-}
 
 // Give this ex-lambda function a home?
 std::string get_first_residue_name(mmdb::Manager *mol) {
@@ -89,12 +82,14 @@ molecules_container_t::get_rdkit_mol_pickle_base64(const std::string &residue_na
    RDKIT_GRAPHMOL_EXPORT RDKit::MolPickler mp;
    std::string pickle_string;
    RDKit::RWMol mol = get_rdkit_mol(residue_name, imol_enc);
-   mp.pickleMol(mol, pickle_string);
-
-   return tinygltf::base64_encode((const unsigned char*)pickle_string.c_str(), pickle_string.size());
-   // std::ofstream f("test-mol.pickle");
-   // f << pickle_string;
-   // f.close();
+   if (mol.getNumAtoms() > 0) {
+      mp.pickleMol(mol, pickle_string);
+      return moorhen_base64::base64_encode((const unsigned char*)pickle_string.c_str(), pickle_string.size());
+      // std::ofstream f("test-mol.pickle");
+      // f << pickle_string;
+      // f.close();
+   }
+   return pickle_string;
 }
 #endif
 

@@ -30,6 +30,9 @@
 
 namespace coot {
 
+   //! do this on startup
+   void set_realpath_for_coot_executable(const std::string &argv0);
+
    std::string get_home_dir();
 
    // return the directory where the preferences are found:
@@ -59,12 +62,15 @@ namespace coot {
 
    void set_max_number_of_threads(unsigned int n_threads);
 
-   // if you can try to get the directoy dir in this directory.
+   //! if you can try to get the directoy dir in this directory.
    // if not, try to make it in this directory.
    // if not, try to find it in $HOME
    // if not try to make it in $HOME
    // if not, return the empty string
    std::string get_directory(const std::string &dir);
+
+   //!  Use XDG Base Directory to get the download directory
+   std::string get_download_directory();
 
    // return true for success - Use to copy text files with new lines.
    bool copy_file(const std::string &from_file, const std::string &to_file);

@@ -1041,7 +1041,7 @@ coot::animated_ligand_interactions_t::draw(mmdb::Manager *mol,
 }
 
 // add more variables :-)
-void molecule_class_info_t::add_animated_ligand_interaction(const coot::fle_ligand_bond_t &lb) {
+void molecule_class_info_t::add_animated_ligand_interaction(const pli::fle_ligand_bond_t &lb) {
 
    animated_ligand_interactions_vec.push_back(lb);
 }
@@ -1052,7 +1052,7 @@ molecule_class_info_t::draw_animated_ligand_interactions(const gl_context_info_t
 
    if (draw_animated_ligand_interactions_flag)
       for (unsigned int i=0; i<animated_ligand_interactions_vec.size(); i++) {
-	 if (0)
+	 if (true)
 	    std::cout << "---- interaction " << i << " of "
 		      << animated_ligand_interactions_vec.size() << std::endl;
 	 animated_ligand_interactions_vec[i].draw(atom_sel.mol, gl_info, start_time);

@@ -58,8 +58,11 @@ EMSCRIPTEN_BINDINGS(lhasa) {
     .value("AtomNames", DisplayMode::AtomNames);
   register_vector<impl::Renderer::DrawingCommand>("DrawingCommandVector");
   register_vector<impl::Renderer::PathElement>("PathElementVector");
+  class_<impl::Renderer::TextMeasurementCache>("TextMeasurementCache")
+    .constructor<>();
   class_<impl::Renderer>("Renderer")
     .constructor<emscripten::val>()
+    .constructor<emscripten::val, impl::Renderer::TextMeasurementCache&>()
     .function("get_commands", &impl::Renderer::get_commands);
   value_object<impl::Renderer::Color>("Color")
     .field("r", &impl::Renderer::Color::r)
@@ -200,7 +203,28 @@ EMSCRIPTEN_BINDINGS(lhasa) {
   enum_<CootLigandEditorCanvas::MeasurementDirection>("MeasurementDirection")
     .value("HORIZONTAL", CootLigandEditorCanvas::MeasurementDirection::HORIZONTAL)
     .value("VERTICAL", CootLigandEditorCanvas::MeasurementDirection::VERTICAL);
+  value_object<CanvasMolecule::QEDInfo>("QEDInfo")
+    .field("number_of_hydrogen_bond_acceptors", &CanvasMolecule::QEDInfo::number_of_hydrogen_bond_acceptors)
+    .field("number_of_hydrogen_bond_donors",&CanvasMolecule::QEDInfo:: number_of_hydrogen_bond_donors)
+    .field("number_of_rotatable_bonds", &CanvasMolecule::QEDInfo::number_of_rotatable_bonds)
+    .field("number_of_aromatic_rings", &CanvasMolecule::QEDInfo::number_of_aromatic_rings)
+    .field("number_of_alerts", &CanvasMolecule::QEDInfo::number_of_alerts)
+    .field("molecular_weight", &CanvasMolecule::QEDInfo::molecular_weight)
+    .field("alogp", &CanvasMolecule::QEDInfo::alogp)
+    .field("molecular_polar_surface_area", &CanvasMolecule::QEDInfo::molecular_polar_surface_area)
+    .field("ads_mw", &CanvasMolecule::QEDInfo::ads_mw)
+    .field("ads_alogp", &CanvasMolecule::QEDInfo::ads_alogp)
+    .field("ads_hba", &CanvasMolecule::QEDInfo::ads_hba)
+    .field("ads_hbd", &CanvasMolecule::QEDInfo::ads_hbd)
+    .field("ads_psa", &CanvasMolecule::QEDInfo::ads_psa)
+    .field("ads_rotb", &CanvasMolecule::QEDInfo::ads_rotb)
+    .field("ads_arom", &CanvasMolecule::QEDInfo::ads_arom)
+    .field("ads_alert", &CanvasMolecule::QEDInfo::ads_alert)
+    .field("qed_score", &CanvasMolecule::QEDInfo::qed_score);
   class_<impl::WidgetCoreData>("ImplWidgetCoreData");
+  register_map<unsigned int, std::string>("SmilesMap");
+  // Without this, Emscripten errors out
+  register_vector<unsigned int>("MoleculeIdVector");
   class_<CootLigandEditorCanvas, base<impl::WidgetCoreData>>("Canvas")
     .constructor<>()
     .function("set_active_tool", &CootLigandEditorCanvas::set_active_tool)
@@ -211,6 +235,8 @@ EMSCRIPTEN_BINDINGS(lhasa) {
     .function("undo_edition", &CootLigandEditorCanvas::undo)
     .function("redo_edition", &CootLigandEditorCanvas::redo)
     .function("get_molecule_count", &CootLigandEditorCanvas::get_molecule_count)
+    .function("get_idx_of_first_molecule", &CootLigandEditorCanvas::get_idx_of_first_molecule)
+    .function("get_max_molecule_idx", &CootLigandEditorCanvas::get_max_molecule_idx)
     .function("set_allow_invalid_molecules", &CootLigandEditorCanvas::set_allow_invalid_molecules)
     .function("get_allow_invalid_molecules", &CootLigandEditorCanvas::get_allow_invalid_molecules)
     .function("get_display_mode", &CootLigandEditorCanvas::get_display_mode)

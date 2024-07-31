@@ -284,16 +284,6 @@ graphics_info_t::save_preference_file(const std::string &filename, short int il)
        }
        break;
 
-     case PREFERENCES_MODEL_TOOLBAR_POSITION:
-       commands.push_back(state_command("coot", "set-model-toolbar-docked-position",
-					g.preferences_internal[i].ivalue1, il));
-       break;
-
-     case PREFERENCES_MODEL_TOOLBAR_STYLE:
-       commands.push_back(state_command("coot", "set-model-toolbar-style",
-					g.preferences_internal[i].ivalue1, il));
-       break;
-
      case PREFERENCES_MODEL_TOOLBAR_ICONS:
        if (g.preferences_internal[i].ivalue2 == 1) {
 	 commands.push_back(state_command("coot", "show-model-toolbar-icon",
@@ -928,9 +918,9 @@ graphics_info_t::show_hide_toolbar_icon_pos(int pos, int show_hide_flag, int too
       // icon_button = lookup_widget(graphics_info_t::get_main_window(), widget_name.c_str());
 
       icon_button = widget_from_builder(widget_name.c_str());
-      std::cout << "in show_hide_toolbar_icon_pos() " << pos << " " << widget_name << " " << icon_button << std::endl;
+      // std::cout << "in show_hide_toolbar_icon_pos() " << pos << " " << widget_name << " " << icon_button << std::endl;
 
-      if (icon_button) { 
+      if (icon_button) {
 
 	 if (show_hide_flag == 1) {
 	    preferences_internal_change_value_int2(preferences_index, pos, 1);
@@ -942,7 +932,6 @@ graphics_info_t::show_hide_toolbar_icon_pos(int pos, int show_hide_flag, int too
 	    gtk_widget_set_visible(icon_button, FALSE);
 	 }
          coot::preferences_icon_info_t item = (*pall_items)[pos];
-         
       }
    }
 }
@@ -963,7 +952,7 @@ graphics_info_t::get_model_toolbar_icons_list() {
     }
 
   }
-  
+
   return ivector;
 }
 
