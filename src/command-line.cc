@@ -258,11 +258,7 @@ parse_command_line(int argc, char ** argv ) {
 			       << "            [--no-graphics]\n"
 			       << "            [--no-guano]\n"
 			       << std::endl;
-#ifdef WINDOWS_MINGW
-                     exit_win(0);
-#else
 		     exit(0);
-#endif
 		  } else {
 		     
 			if (arg_str == "version") {
@@ -309,11 +305,7 @@ parse_command_line(int argc, char ** argv ) {
 			   std::string s = COOT_BUILD_INFO_STRING;
 			   if (s.length())
 			      std::cout << "Builder_info: " << s << std::endl;
-#ifdef WINDOWS_MINGW
-                           exit_win(0);
-#else
 			   exit(0);
-#endif
 			   
 			} else {
 			   if (arg_str == "python") {
