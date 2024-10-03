@@ -42,7 +42,6 @@
 // statics
 std::atomic<bool> molecules_container_t::restraints_lock(false);
 std::atomic<bool> molecules_container_t::on_going_updating_map_lock(false);
-ctpl::thread_pool molecules_container_t::static_thread_pool(8); // or so
 std::string molecules_container_t::restraints_locking_function_name; // I don't know why this needs to be static
 std::vector<atom_pull_info_t> molecules_container_t::atom_pulls;
 // 20221018-PE not sure that this needs to be static.
@@ -2113,7 +2112,7 @@ molecules_container_t::get_map_contours_mesh(int imol, double position_x, double
             update_updating_maps(updating_maps_info.imol_model);
          }
 
-         mesh = molecules[imol].get_map_contours_mesh(position, radius, contour_level, map_is_contoured_using_thread_pool_flag, &static_thread_pool);
+         mesh = molecules[imol].get_map_contours_mesh(position, radius, contour_level, map_is_contoured_using_thread_pool_flag, &thread_pool);
       } else {
          std::cout << "WARNING:: get_map_contours_mesh() Not a valid map molecule " << imol << std::endl;
       }
@@ -2484,7 +2483,7 @@ molecules_container_t::add_terminal_residue_directly(int imol, const std::string
          clipper::Xmap<float> &xmap = molecules[imol_refinement_map].xmap;
          coot::residue_spec_t residue_spec(chain_id, res_no, ins_code);
          std::pair<int, std::string> m = molecules[imol].add_terminal_residue_directly(residue_spec, new_res_type,
-                                                                                       geom, xmap, static_thread_pool);
+                                                                                       geom, xmap, thread_pool);
          status  = m.first;
          message = m.second;
          if (! message.empty())
@@ -3524,7 +3523,7 @@ molecules_container_t::make_last_restraints(const std::vector<std::pair<bool,mmd
 #ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
    unsigned int n_threads = coot::get_max_number_of_threads();
    if (n_threads > 0)
-      last_restraints->thread_pool(&static_thread_pool, n_threads);
+      last_restraints->thread_pool(&thread_pool, n_threads);
 
    all_atom_pulls_off();
    particles_have_been_shown_already_for_this_round_flag = false;
@@ -4876,7 +4875,7 @@ molecules_container_t::init_refinement_of_molecule_as_fragment_based_on_referenc
             std::cout << "debug:: in init_refinement_of_molecule_as_fragment_based_on_reference() "
                       << " cell " << xmap.cell().descr().format() << std::endl;
 #ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
-            molecules[imol_frag].init_all_molecule_refinement(mol_ref, geom, xmap, map_weight, &static_thread_pool);
+            molecules[imol_frag].init_all_molecule_refinement(mol_ref, geom, xmap, map_weight, &thread_pool);
 #endif  // HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
          } else {
             std::cout << "WARNING:: in init_refinement_of_molecule_as_fragment_based_on_reference()"
@@ -5038,7 +5037,7 @@ molecules_container_t::get_mesh_for_ligand_validation_vs_dictionary(int imol, co
 
    coot::simple_mesh_t m;
    if (is_valid_model_molecule(imol)) {
-      m = molecules[imol].get_mesh_for_ligand_validation_vs_dictionary(ligand_cid, geom, static_thread_pool);
+      m = molecules[imol].get_mesh_for_ligand_validation_vs_dictionary(ligand_cid, geom, thread_pool);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -5246,7 +5245,7 @@ molecules_container_t::get_hb_type(const std::string &compound_id, int imol_enc,
 void
 molecules_container_t::set_max_number_of_threads(unsigned int n_threads) {
    coot::set_max_number_of_threads(n_threads);
-   static_thread_pool.resize(n_threads);
+   thread_pool.resize(n_threads);
 }
 
 // call the above function
@@ -5312,7 +5311,7 @@ molecules_container_t::test_launching_threads(unsigned int n_threads_per_batch, 
 
 //! @return time in microsections
 double
-molecules_container_t::test_thread_pool_threads(unsigned int n_threads) const {
+molecules_container_t::test_thread_pool_threads(unsigned int n_threads) {
 
    auto sum = [] (unsigned int thread_index, unsigned int i, unsigned int j, std::atomic<unsigned int> &done_count_for_threads) {
       done_count_for_threads++;
@@ -5324,7 +5323,7 @@ molecules_container_t::test_thread_pool_threads(unsigned int n_threads) const {
    std::atomic<unsigned int> done_count_for_threads(0);
 
    for (unsigned int i=0; i<n_threads; i++) {
-      static_thread_pool.push(sum, i, i, std::ref(done_count_for_threads));
+      thread_pool.push(sum, i, i, std::ref(done_count_for_threads));
    }
    while (done_count_for_threads < n_threads)
       std::this_thread::sleep_for(std::chrono::nanoseconds(300));
