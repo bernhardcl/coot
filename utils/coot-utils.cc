@@ -45,6 +45,7 @@
 #include <unistd.h>
 #include <pwd.h>
 #endif // MINGW
+#include "win-compat.hh"
 #include <glob.h>
 #endif
 
@@ -64,10 +65,18 @@ static std::string real_path_for_coot_executable;
 //! do this on startup
 void coot::set_realpath_for_coot_executable(const std::string &argv0) {
 
+#ifdef WIN32
+   char exec_path[MAX_PATH];
+   GetModuleFileName(NULL, exec_path, MAX_PATH);
+   if (exec_path) {
+      real_path_for_coot_executable = std::string(exec_path);
+   }
+#else
    char *exec_path = realpath(argv0.c_str(), NULL);
    if (exec_path) {
       real_path_for_coot_executable = exec_path;
    }
+#endif
 }
 
 

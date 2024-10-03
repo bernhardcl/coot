@@ -43,6 +43,10 @@
 #ifdef PLANE
 #undef PLANE
 #endif
+#ifndef PATH_MAX
+#define PATH_MAX 260
+#endif
+#define realpath(N,R) _fullpath((R),(N),PATH_MAX)
 // for nomenclature errors
 #ifdef IGNORE
 #undef IGNORE
