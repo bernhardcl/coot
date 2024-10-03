@@ -47,9 +47,10 @@ std::pair<bool, std::string>
 curlew_install_extension_file_gtk4(const std::string &script_here_file_name) {
 
    bool success = false;
+   xdg_t xdg;
    std::string failure_message;
    if (coot::file_exists_and_non_empty(script_here_file_name)) {
-      std::string prefs_directory = coot::preferences_dir();
+      std::string prefs_directory = xdg.get_config_home().u8string();
       int state = coot::util::create_directory(prefs_directory);
       if (state != 0) {
          failure_message = "WARNING:: failed to create preferences directory: " + script_here_file_name;
@@ -90,7 +91,8 @@ curlew_install_extension_file_gtk4(const std::string &script_here_file_name) {
 int
 curlew_uninstall_extension_file_gtk4(const std::string &script_file_name) {
 
-   std::string preferences_dir = coot::preferences_dir();
+   xdg_t xdg;
+   std::string preferences_dir = xdg.get_config_home().u8string();
    std::string curlew_dir = coot::util::append_dir_dir(preferences_dir, "curlew");
    std::string preferences_file_name = coot::util::append_dir_file(preferences_dir, script_file_name);
    std::string renamed_file = preferences_file_name + "_uninstalled";

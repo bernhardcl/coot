@@ -1261,7 +1261,9 @@ void graphics_window_size_and_position_to_preferences() {
 
    // Note to self: is there a "get preferences dir" function?
    // BL says:: there is now...
-   std::string h = coot::preferences_dir();
+   // BL tmp hack
+   xdg_t xdg;
+   std::string h = xdg.get_config_home().u8string();
    if (!h.empty()) {
       // 20220507-PE pref_dir is now .coot
       // 20240223-BL: now there is a subdirectory xenops within .coot

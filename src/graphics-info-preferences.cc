@@ -1012,7 +1012,8 @@ graphics_info_t::update_main_toolbar_icons(GtkTreeModel *model) {
 std::string
 graphics_info_t::get_preferences_directory() const {
 
-   std::string preferences_dir = coot::preferences_dir();
+   xdg_t xdg;
+   std::string preferences_dir = xdg.get_config_home().u8string();
    std::string pkgdatadir = coot::package_data_dir();
 
    std::string fn;

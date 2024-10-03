@@ -23,9 +23,9 @@
 #ifndef UTILS_XDG_BASE_HH
 #define UTILS_XDG_BASE_HH
 
-#include <pwd.h>
-#ifdef WINDOWS
+#ifdef WINDOWS_MINGW
 #else
+#include <pwd.h>
 #include <unistd.h>
 #include <sys/types.h>
 #endif
@@ -48,7 +48,7 @@ class xdg_t {
 
    std::filesystem::path get_home_dir() {
       std::string home;
-#ifdef WINDOWS
+#ifdef WINDOWS_MINGW
 #else
       struct passwd *pw = getpwuid(getuid());
       const char *home_str = pw->pw_dir;
@@ -69,7 +69,12 @@ class xdg_t {
    }
 
 public:
+#ifdef WINDOWS_MINGW
+   // BL says:: not sure if we need this or if DOS will fix this!?
+   xdg_t() : package_name("COOT") {
+#else
    xdg_t() : package_name("Coot") {
+#endif
       init();
    }
    explicit xdg_t(const std::string &pn) : package_name(pn) {
@@ -92,6 +97,48 @@ public:
       e = std::getenv("XDG_RUNTIME_DIR"); if (e) runtime_dir = e;
       e = std::getenv("XDG_DATA_DIRS");   if (e)   data_dirs = e;
       e = std::getenv("XDG_CONFIG_DIRS"); if (e) config_dirs = e;
+// cleaner if we split the whole section for windows
+#ifdef WINDOWS_MINGW
+      const char* app_data = std::getenv("LOCALAPPDATA");
+      const char* prog_data = std::getenv("PROGRAMDATA");
+      if (prog_data == nullptr) {
+         prog_data = std::getenv("ALLUSERSPROFILE");
+      }
+      if (data_home.empty()) {
+         std::filesystem::path d = app_data;
+         d.append(package_name);
+         data_home = d;
+      }
+      if (config_home.empty()) {
+         std::filesystem::path d = app_data;
+         d.append(package_name);
+         d.append("config");
+         config_home = d;
+      }
+      if (state_home.empty()) {
+         std::filesystem::path d = app_data;
+         d.append(package_name);
+         d.append("state");
+         state_home = d;
+      }
+      if (cache_home.empty()) {
+         std::filesystem::path d = app_data;
+         d.append(package_name);
+         d.append("cache");
+         cache_home = d;
+      }
+      if (data_dirs.empty()) {
+         std::filesystem::path d = prog_data;
+         d.append(package_name);
+         //shoudl we use UTF8? I guess so
+         data_dirs = d.u8string();
+      }
+      if (config_dirs.empty()) {
+         std::filesystem::path d = prog_data;
+         d.append(package_name);
+         config_dirs = d.u8string();
+      }
+#else
       if (data_home.empty()) {
          std::filesystem::path d = get_home_dir();
          d.append(".local");
@@ -124,6 +171,7 @@ public:
       if (config_dirs.empty()) {
          config_dirs = "/etc/xdg";
       }
+#endif // WINDOWS
    }
    std::filesystem::path get_state_home() const {
       if (!std::filesystem::is_directory(state_home))
@@ -145,8 +193,26 @@ public:
          std::filesystem::create_directories(cache_home);
       return cache_home;
    }
+#ifdef WINDOWS_MINGW
+   // need to create the data dirs on windows as well
+   std::string get_data_dirs() const {
+      // make sure we have a corectly encoded path
+      const std::filesystem::path dd = std::filesystem::u8path(data_dirs);
+      if (!std::filesystem::is_directory(dd))
+         std::filesystem::create_directories(dd);
+      return data_dirs;
+   }
+   std::string get_config_dirs() const {
+      // make sure we have a corectly encoded path
+      const std::filesystem::path dd = std::filesystem::u8path(config_dirs);
+      if (!std::filesystem::is_directory(dd))
+         std::filesystem::create_directories(dd);
+      return config_dirs;
+   }
+#else
    std::string get_data_dirs() const { return data_dirs; }
    std::string get_config_dirs() const { return config_dirs; }
+#endif // WINDOWS
    std::vector<std::filesystem::path> get_python_config_scripts() const {
       return get_scripts_internal(get_config_home(), ".py"); }
    std::vector<std::filesystem::path> get_scheme_config_scripts() const{
