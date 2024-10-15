@@ -521,20 +521,28 @@ graphics_info_t::get_projection_matrix(bool do_orthographic_projection,
    float h = static_cast<float>(graphics_y_size);
    float screen_ratio = static_cast<float>(w)/static_cast<float>(h);
    if (do_orthographic_projection) {
+
+      // 20240814-PE if clipping front and back are somehow zero (I don't know
+      // how that happened, but those were the values in the state script)
+      // the we get nan and infs in matrices
+      //
+      if (clipping_front < 0.00001) clipping_front = 0.00001;
+      if (clipping_back  < 0.00001) clipping_back  = 0.00001;
+
       float sr = screen_ratio;
       GLfloat near =  -0.1 * zoom * clipping_front + eye_position.z;
       GLfloat far  =   0.3 * zoom * clipping_back  + eye_position.z;
 
-      if (false)
+      glm::mat4 projection_matrix = glm::ortho(-0.3f*zoom*sr, 0.3f*zoom*sr,
+                                               -0.3f*zoom,    0.3f*zoom,
+                                               near, far);
+      if (false) {
          std::cout << "debug:: get_projection_matrix() near " << near << " far " << far
                    << " clipping-front: " << clipping_front << " clipping_back: " << clipping_back << " "
                    << "eye_position " << glm::to_string(eye_position)
                    << " zoom " << zoom << std::endl;
-
-      glm::mat4 projection_matrix = glm::ortho(-0.3f*zoom*sr, 0.3f*zoom*sr,
-                                               -0.3f*zoom,    0.3f*zoom,
-                                               near, far);
-      // std::cout << "projection matrix ortho " << glm::to_string(projection_matrix) << std::endl;
+         std::cout << "projection matrix ortho " << glm::to_string(projection_matrix) << std::endl;
+      }
       return projection_matrix;
    } else {
       // perspective_fov is in degrees
@@ -2889,6 +2897,8 @@ on_glarea_scrolled(GtkEventControllerScroll *controller,
 // #include "event-controller-callbacks.hh"
 
 void print_opengl_info() {
+
+   std::cout << "----------------------- print_opengl_info() ----------" << std::endl;
 
    const char *s1 = reinterpret_cast<const char *>(glGetString(GL_VERSION));
    const char *s2 = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
@@ -7028,12 +7038,26 @@ graphics_info_t::setup_key_bindings() {
                     return gboolean(TRUE);
                  };
 
+   auto lc_toggle_validation_side_panel = [] () {
+      graphics_info_t g;
+      GtkWidget* pane = widget_from_builder("main_window_ramchandran_and_validation_pane");
+      if (pane) {
+         if (gtk_widget_get_visible(pane) == TRUE) {
+            gtk_widget_set_visible(pane, FALSE);
+         } else {
+            gtk_widget_set_visible(pane, TRUE);
+         }
+      }
+      return gboolean(TRUE);
+   };
+
    key_bindings_t ctrl_arrow_left_key_binding(lc4, "R/T Left");
    key_bindings_t ctrl_arrow_right_key_binding(lc5, "R/T Right");
    key_bindings_t ctrl_arrow_up_key_binding(lc6, "R/T Up");
    key_bindings_t ctrl_arrow_down_key_binding(lc7, "R/T Down");
    key_bindings_t ctrl_eigen_flip(l20, "Eigen-Flip");
    key_bindings_t ctrl_quick_save(lc_qsa, "Quick Save");
+   key_bindings_t ctrl_toggle_panel(lc_toggle_validation_side_panel, "Toggle Validation Panel");
 
    std::pair<keyboard_key_t, key_bindings_t> p4(keyboard_key_t(GDK_KEY_Left,  true), ctrl_arrow_left_key_binding);
    std::pair<keyboard_key_t, key_bindings_t> p5(keyboard_key_t(GDK_KEY_Right, true), ctrl_arrow_right_key_binding);
@@ -7041,6 +7065,7 @@ graphics_info_t::setup_key_bindings() {
    std::pair<keyboard_key_t, key_bindings_t> p7(keyboard_key_t(GDK_KEY_Down,  true), ctrl_arrow_down_key_binding);
    std::pair<keyboard_key_t, key_bindings_t> p8(keyboard_key_t(GDK_KEY_e,     true), ctrl_eigen_flip);
    std::pair<keyboard_key_t, key_bindings_t> p9(keyboard_key_t(GDK_KEY_s,     true), ctrl_quick_save);
+   std::pair<keyboard_key_t, key_bindings_t> p10(keyboard_key_t(GDK_KEY_b,     true), ctrl_toggle_panel);
 
    kb_vec.push_back(p4);
    kb_vec.push_back(p5);
@@ -7048,6 +7073,7 @@ graphics_info_t::setup_key_bindings() {
    kb_vec.push_back(p7);
    kb_vec.push_back(p8);
    kb_vec.push_back(p9);
+   kb_vec.push_back(p10);
 
    std::vector<std::pair<keyboard_key_t, key_bindings_t> >::const_iterator it;
    for (it=kb_vec.begin(); it!=kb_vec.end(); ++it)

@@ -1631,8 +1631,9 @@ exit_win(int retval) {
 void
 coot_save_state_and_exit(int retval, int save_state_flag) {
 
-   // wait for refinement to finish (c.f conditionally_wait_for_refinement_to_finish())
+   graphics_info_t::static_thread_pool.stop(true);
 
+   // wait for refinement to finish (c.f conditionally_wait_for_refinement_to_finish())
    while (graphics_info_t::restraints_lock) {
       std::this_thread::sleep_for(std::chrono::milliseconds(30));
    }
@@ -1642,9 +1643,11 @@ coot_save_state_and_exit(int retval, int save_state_flag) {
    }
 
    // save the history
-   graphics_info_t g;
-   if (! g.disable_state_script_writing)
-      g.save_history();
+   if (save_state_flag) {
+      graphics_info_t g;
+      if (! g.disable_state_script_writing)
+         g.save_history();
+   }
 
 #ifdef USE_MYSQL_DATABASE
    db_finish_up();

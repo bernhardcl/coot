@@ -2,15 +2,17 @@
 #include <iostream>
 #include <iomanip>
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/string_cast.hpp>
-#include "molecules-container.hh"
-#include "filo-tests.hh"
-#include "lucrezia-tests.hh"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+#include "MoleculesToTriangles/CXXClasses/MyMolecule.h"
+#include "molecules-container.hh"
+#include "coot-utils/acedrg-types-for-residue.hh"
+#include "filo-tests.hh"
+#include "lucrezia-tests.hh"
 
 void starting_test(const char *func) {
    std::cout << "\nStarting " << func << "()" << std::endl;
@@ -2609,13 +2611,13 @@ int test_molecular_representation(molecules_container_t &mc) {
       colour = "RampChains";
       // style  = "MolecularSurface";
 
-      coot::simple_mesh_t mesh = mc.get_molecular_representation_mesh(imol, selection, colour, style);
+      coot::simple_mesh_t mesh = mc.get_molecular_representation_mesh(imol, selection, colour, style, CALC_SECONDARY_STRUCTURE);
       if (mesh.vertices.size() > 10) {
 
          std::cout << "test_molecular_representation() Ribbons OK" << std::endl;
 
          style = "MolecularSurface";
-         coot::simple_mesh_t surface_mesh = mc.get_molecular_representation_mesh(imol, selection, colour, style);
+         coot::simple_mesh_t surface_mesh = mc.get_molecular_representation_mesh(imol, selection, colour, style, CALC_SECONDARY_STRUCTURE);
 
          status = true;
       }
@@ -2636,7 +2638,7 @@ int test_electro_molecular_representation(molecules_container_t &mc) {
       std::string colour = "ByOwnPotential";
       std::string style = "MolecularSurface";
 
-      coot::simple_mesh_t mesh = mc.get_molecular_representation_mesh(imol, selection, colour, style);
+      coot::simple_mesh_t mesh = mc.get_molecular_representation_mesh(imol, selection, colour, style, CALC_SECONDARY_STRUCTURE);
       if (mesh.vertices.size() > 10) {
          status = true;
       }
@@ -5830,6 +5832,156 @@ int test_assign_sequence(molecules_container_t &mc) {
    return status;
 }
 
+int test_dictionary_conformers(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   std::vector<int> new_mols = mc.get_dictionary_conformers("TYR", coot::protein_geometry::IMOL_ENC_ANY, true);
+
+   if (new_mols.size() == 108) status = 1;
+
+   return status;
+}
+
+int test_ligand_distortion(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   int imol = mc.get_monomer("ATP");
+
+   mc.get_ligand_validation_vs_dictionary(imol, "//A/1", true);
+
+   // needs more work
+
+   return status;
+}
+
+int test_for_long_bonds(molecules_container_t &mc, int imol) {
+
+   int state = -1; // unset
+   if (mc.is_valid_model_molecule(imol)) {
+      auto instanced_mesh = mc.get_bonds_mesh_instanced(imol, "COLOUR-BY-CHAIN-AND-DICTIONARY", false, 0.1f, 1.0f, 1);
+      const auto &geom_vec = instanced_mesh.geom;
+      unsigned int geom_vec_size = geom_vec.size();
+      for (unsigned int i = 0; i < geom_vec_size; i++) {
+         const auto &geom = geom_vec.at(i);
+         const auto &inst_data_B_vec = geom.instancing_data_B;
+         unsigned inst_data_B_vec_size = inst_data_B_vec.size();
+         unsigned int n_long = 0;
+         for (unsigned int j = 0; j < inst_data_B_vec_size; j++) {
+            float z = inst_data_B_vec[j].size.z;
+            if (z > 1.8f) {
+               std::cout << j << " " << z << std::endl;
+               n_long++;
+            }
+         }
+         if (n_long == 0) state = 0;
+         if (n_long > 0)  state = 1;
+      }
+   }
+   return state;
+}
+
+int test_import_LIG_dictionary(molecules_container_t &mc) {
+
+   int status = 0;
+   starting_test(__FUNCTION__);
+   mc.import_cif_dictionary("LIG.cif", coot::protein_geometry::IMOL_ENC_ANY);
+   int imol_pdb = mc.read_pdb("7vvl.pdb");
+   status = mc.import_cif_dictionary("LIG.cif", imol_pdb);
+   return status;
+}
+
+int test_tricky_ligand_problem(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol     = mc.read_pdb(reference_data("tutorial-1-with-nitrobenzene.pdb"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+
+   mc.set_imol_refinement_map(imol_map);
+   mc.import_cif_dictionary(reference_data("YXG-as-LIG.cif"), imol);
+   mc.import_cif_dictionary(reference_data("nitrobenzene.cif"), imol);
+   std::cout << "------------- nitrobenzene.cif had been read --------------" << std::endl;
+   mc.refine_residues_using_atom_cid(imol, "//A/301", "SPHERE", 1000);
+   mc.write_coordinates(imol, "nitrobenzene-refined.pdb");
+
+   int state = test_for_long_bonds(mc, imol);
+   if (state == 0) status = 1;
+
+   return status;
+}
+
+int test_dictionary_acedrg_atom_types(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   mc.import_cif_dictionary("YXG-as-LIG.cif", coot::protein_geometry::IMOL_ENC_ANY);
+   std::vector<std::pair<std::string, std::string> > v = mc.get_acedrg_atom_types("LIG", coot::protein_geometry::IMOL_ENC_ANY);
+
+   if (v.size() > 10) {
+      std::cout << "types vector size: " << v.size() << std::endl;
+      for (unsigned int i=0; i<v.size(); i++) {
+         if (v[i].first == "C21")
+            if (v[i].second == "C[6a](C[6a]C[6a]N[5a])(C[6a]C[6a]N[6a])(C[6a]C[6a]H){1|Cl<1>,1|N<2>,2|H<1>,4|C<3>}")
+               status = 1;
+         // std::cout << v[i].first << " " << v[i].second << std::endl;
+      }
+   }
+   return status;
+}
+
+int test_dictionary_acedrg_atom_types_for_ligand(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   mc.import_cif_dictionary("YXG-as-LIG.cif", coot::protein_geometry::IMOL_ENC_ANY);
+   int imol = mc.get_monomer_from_dictionary("LIG", coot::protein_geometry::IMOL_ENC_ANY, false);
+   coot::acedrg_types_for_residue_t types = mc.get_acedrg_atom_types_for_ligand(imol, "//A/1");
+
+   std::cout << "------------- types (bond) ----------- " << std::endl;
+   for (unsigned int i=0; i<types.bond_types.size(); i++) {
+      const auto &bond_types = types.bond_types[i];
+      std::cout << "bond_type "
+                << bond_types.atom_id_1 << " " << bond_types.atom_type_1 << " "
+                << bond_types.atom_id_2 << " " << bond_types.atom_type_2
+                << " bond-length: " << bond_types.bond_length << std::endl;
+   }
+   if (types.bond_types.size() > 10) status = 1;
+   return status;
+}
+
+
+int test_links_in_model_read_via_gemmi(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   mc.set_use_gemmi(true);
+   int imol = mc.read_pdb(reference_data("6dgd.cif"));
+   if (mc.is_valid_model_molecule(imol)) {
+      mmdb::Manager *mol = mc.get_mol(imol);
+      for (int imod = 1; imod <= mol->GetNumberOfModels(); imod++) {
+         mmdb::Model *model_p = mol->GetModel(imod);
+         if (model_p) {
+            int n_links = model_p->GetNumberOfLinks();
+            std::cout << "Found n_links: " << n_links << std::endl;
+            for (int i_link = 0; i_link < n_links; i_link++) {
+               mmdb::Link *link_p = model_p->GetLink(i_link);
+               // std::cout << "Link " << i_link << " " << link_p << std::endl;
+            }
+            if (n_links > 4) status = 1;
+         }
+      }
+   }
+
+   return status;
+}
+
 int test_template(molecules_container_t &mc) {
 
    starting_test(__FUNCTION__);
@@ -5959,7 +6111,7 @@ int main(int argc, char **argv) {
       // now check that the monomer library was read OK
       int imol = mc.get_monomer("ATP");
       if (! mc.is_valid_model_molecule(imol)) {
-         std::cout << "Failed to read the monomer library" << std::endl;
+         std::cout << "Failed to read the monomer library - exit now" << std::endl;
          exit(1);
       } else {
          mc.close_molecule(imol);
@@ -6135,7 +6287,15 @@ int main(int argc, char **argv) {
          // status += run_test(test_Q_Score, "Q Score", mc);
          // status += run_test(test_assign_sequence, "Assign Sequence", mc);
          // status += run_test(test_undo_and_redo_2, "Undo and redo 2", mc);
-         status += run_test(test_gltf_export_via_api,   "glTF via api", mc);
+         // status += run_test(test_gltf_export_via_api,   "glTF via api", mc);
+         // status += run_test(test_import_ligands_with_same_name_and_animated_refinement, "Test import ligands with same name and animated refinement", mc);
+         // status += run_test(test_dictionary_conformers,   "Dictionary Conformers", mc);
+         // status += run_test(test_ligand_distortion,   "Ligand Distortion", mc);
+         // status += run_test(test_import_LIG_dictionary,   "Import LIG.cif", mc);
+         // status += run_test(test_tricky_ligand_problem,   "Tricky Ligand import/refine", mc);
+         // status += run_test(test_dictionary_acedrg_atom_types, "Acedrg atom types", mc);
+         // status += run_test(test_dictionary_acedrg_atom_types_for_ligand, "Acedrg atom types for ligand", mc);
+         status += run_test(test_links_in_model_read_via_gemmi, "Acedrg atom types for ligand", mc);
 
          if (status == n_tests) all_tests_status = 0;
 

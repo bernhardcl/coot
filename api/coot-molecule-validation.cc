@@ -236,6 +236,26 @@ coot::molecule_t::all_molecule_contact_dots(const coot::protein_geometry &geom,
    return im;
 }
 
+// this function is a wrapper for the below function,
+// but returns something without expired pointers.
+//
+std::vector<coot::geometry_distortion_info_container_t>
+coot::molecule_t::geometric_distortions_from_mol(const std::string &ligand_cid, bool with_nbcs,
+                                                 coot::protein_geometry &geom,
+                                                 ctpl::thread_pool &static_thread_pool) {
+
+   std::vector<coot::geometry_distortion_info_container_t> v;
+   mmdb::Residue *residue_p = cid_to_residue(ligand_cid);
+   if (residue_p) {
+      mmdb::Manager *mol = coot::util::create_mmdbmanager_from_residue(residue_p);
+      if (mol) {
+         atom_selection_container_t asc = make_asc(mol);
+         v = geometric_distortions_from_mol(asc, with_nbcs, geom, static_thread_pool);
+      }
+   }
+   return v;
+}
+
 
 std::vector<coot::geometry_distortion_info_container_t>
 coot::molecule_t::geometric_distortions_from_mol(const atom_selection_container_t &asc, bool with_nbcs,

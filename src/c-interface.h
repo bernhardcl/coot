@@ -2531,6 +2531,20 @@ void set_draw_axes(int i);
 /*! \name  Atom Selection Utilities */
 /* \{ */
 
+#ifdef __cplusplus /* protection from use in callbacks.c, else compilation probs */
+#ifdef USE_PYTHON
+/* Get model molecule list */
+PyObject *get_model_molecule_list_py();
+#endif
+#endif
+
+#ifdef __cplusplus
+#ifdef USE_GUILE
+/* Get model molecule list */
+SCM get_model_molecule_list_scm();
+#endif
+#endif
+
 /* does not account for alternative conformations properly */
 /* return -1 if atom not found. */
 int atom_index(int imol, const char *chain_id, int iresno, const char *atom_id);
@@ -3350,6 +3364,8 @@ void set_refinement_immediate_replacement(int istate);
 int  refinement_immediate_replacement_state();
 
 void set_refine_use_noughties_physics(short int state);
+
+int get_refine_use_noughties_physics_state();
 
 /*! \brief set the number of frames for which the selected residue
   range flashes

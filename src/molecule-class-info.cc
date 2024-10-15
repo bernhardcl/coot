@@ -198,6 +198,8 @@ molecule_class_info_t::setup_internal() { // init
    pending_contour_level_change_count = 0;
    data_resolution_ = -1; // unset
 
+   use_vertex_gradients_for_map_normals_flag = false;
+
    // fourier (for phase recombination (potentially) in refmac:
    fourier_weight_label = ""; // unset initially.
 
@@ -449,8 +451,12 @@ molecule_class_info_t::handle_read_draw_molecule(int imol_no_in,
    if (atom_sel.read_success == 1) {
 
       // update the geometry as needed
-      geom_p->read_extra_dictionaries_for_molecule(atom_sel.mol, imol_no,
-                                                   &graphics_info_t::cif_dictionary_read_number);
+      if (geom_p) {
+         geom_p->read_extra_dictionaries_for_molecule(atom_sel.mol, imol_no,
+                                                      &graphics_info_t::cif_dictionary_read_number);
+      } else {
+         std::cout << "ERROR:: mci::handle_read_draw_molecule(): geom_p is null" << std::endl;
+      }
 
       // LINK info:
       int n_models = atom_sel.mol->GetNumberOfModels();
@@ -10911,8 +10917,7 @@ void
 molecule_class_info_t::add_ribbon_representation_with_user_defined_residue_colours(const std::vector<coot::colour_holder> &user_defined_colours,
                                                                                    const std::string &mesh_name) {
 
-#ifdef USE_MOLECULES_TO_TRIANGLES
-
+   int secondary_structure_usage_flag = CALC_SECONDARY_STRUCTURE;
    molecular_mesh_generator_t mmg;
    Material material;
 
@@ -10930,7 +10935,10 @@ molecule_class_info_t::add_ribbon_representation_with_user_defined_residue_colou
          if (n_res > 1) {
             // the indexing into the user_defined_colours vector is in the UDD data of the residue
             std::pair<std::vector<s_generic_vertex>, std::vector<g_triangle> > verts_and_tris =
-               mmg.get_molecular_triangles_mesh_for_ribbon_with_user_defined_residue_colours(atom_sel.mol, chain_p, user_defined_colours);
+               mmg.get_molecular_triangles_mesh_for_ribbon_with_user_defined_residue_colours(atom_sel.mol, chain_p,
+                                                                                             user_defined_colours,
+                                                                                             secondary_structure_usage_flag,
+                                                                                             M2T_float_params, M2T_int_params);
             Mesh mesh(verts_and_tris);
             mesh.set_name(mesh_name);
             meshes.push_back(mesh);
@@ -10938,6 +10946,5 @@ molecule_class_info_t::add_ribbon_representation_with_user_defined_residue_colou
          }
       }
    }
-#endif
 
 }

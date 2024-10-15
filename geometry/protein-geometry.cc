@@ -585,9 +585,16 @@ coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_num
 
    if (!s) {
 
-      std::cout << "debug:: try_dynamic_add() bad news - null s" << std::endl;
+      std::string pref_dir = coot::prefix_dir();
+      std::string ss = pref_dir + "/share/coot/lib/data";
+      if (ss.length() < 2048)
+         strcpy(cmld, ss.c_str());
+   }
 
-   } else {
+   // 20241001-PE hostage to fortune...
+   // when will I be back here?
+
+   {
       std::string filename(s);
       std::string beta_anomer_name;
       std::string alpha_anomer_name;
@@ -602,6 +609,10 @@ coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_num
       }
 
       filename = coot::util::intelligent_debackslash(filename);
+
+      if (false)
+         std::cout << "debug:: try_dynamic_add(): filename " << filename << std::endl;
+
       if (resname.length() > 0) {
 	 const char rs = resname[0];
 	 const char v = tolower(rs); // get the sub directory name
@@ -1540,6 +1551,10 @@ coot::protein_geometry::get_monomer_restraints_internal(const std::string &monom
 							int imol_enc,
 							bool allow_minimal_flag) const {
 
+   if (false)
+      std::cout << "debug:: get_monomer_restraints_internal() called with "
+                << monomer_type << " imol_enc: " << imol_enc << " allow-minimal: " << allow_minimal_flag << std::endl;
+
    // 20161028
    // Compiling with SRS causes a crash when we access dict_res_restraints.
    // Needs more testing.
@@ -1643,10 +1658,10 @@ coot::protein_geometry::get_monomer_restraints_index(const std::string &monomer_
    unsigned int nrest = dict_res_restraints.size();
    for (unsigned int i=0; i<nrest; i++) {
       if (debug)
-	 std::cout << "in get_monomer_restraints_index() comparing \""
-		   << dict_res_restraints[i].second.residue_info.comp_id << "\" vs \"" << monomer_type
-		   << "\" and " << dict_res_restraints[i].first << " " <<  imol_enc
-		   << " with allow_minimal_flag " << allow_minimal_flag << std::endl;
+	 std::cout << "in get_monomer_restraints_index() comparing dict: \""
+		   << dict_res_restraints[i].second.residue_info.comp_id << "\" vs mine: \"" << monomer_type
+		   << "\" and dict: " << dict_res_restraints[i].first << " vs mine: " <<  imol_enc
+		   << "     with allow_minimal_flag " << allow_minimal_flag << std::endl;
       if (dict_res_restraints[i].second.residue_info.comp_id == monomer_type) {
 	 if (matches_imol(dict_res_restraints[i].first, imol_enc)) {
 	    // if (dict_res_restraints[i].first == imol_enc) {
@@ -2314,8 +2329,6 @@ coot::protein_geometry::get_residue(const std::string &comp_id, int imol_enc,
       }
    };
 
-   // std::cout << "in get_residue() idealised_flag is " << idealised_flag << std::endl;
-
    // If the coordinates for the model are (0,0,0) then this function
    // returns a null.
 
@@ -2323,9 +2336,14 @@ coot::protein_geometry::get_residue(const std::string &comp_id, int imol_enc,
 
    // might use try_dynamic_add (if needed).
    bool r = have_dictionary_for_residue_type(comp_id, imol_enc, try_autoload_if_needed);
+   if (false)
+      std::cout << "------------------ in get_residue() have_dictionary_for_residue_type() returns  "
+                << r << std::endl;
    if (r) {
       for (unsigned int i=0; i<dict_res_restraints.size(); i++) {
          const dictionary_residue_restraints_t &rest = dict_res_restraints[i].second;
+         if (false)
+            std::cout << "   testing comp_id " << rest.residue_info.comp_id << std::endl;
          if (rest.residue_info.comp_id == comp_id) {
             int imol_for_dict = dict_res_restraints[i].first;
             if (imol_for_dict == imol_enc) {
@@ -2748,3 +2766,38 @@ void coot::protein_geometry::delete_plane_restraints() {
 
 }
 
+
+
+void
+coot::protein_geometry::print_dictionary_store() const {
+
+   for (unsigned int i=0; i<dict_res_restraints.size(); i++) {
+      int imol_enc = dict_res_restraints[i].first;
+      const auto &rest = dict_res_restraints[i].second;
+      std::cout << i << " " << rest.residue_info << " for imol-enc: " << imol_enc << std::endl;
+   }
+
+}
+
+
+std::vector<std::pair<std::string, std::string> >
+coot::protein_geometry::get_acedrg_atom_types(const std::string &comp_id,
+                                              int imol_enc) const {
+
+   std::vector<std::pair<std::string, std::string> > v;
+
+   std::pair<bool, dictionary_residue_restraints_t> r =
+      get_monomer_restraints_internal(comp_id, imol_enc, false);
+   if (r.first) {
+      const auto &restraints = r.second;
+      std::vector<dict_atom>::const_iterator it;
+      for (it=restraints.atom_info.begin(); it!=restraints.atom_info.end(); ++it) {
+         if (! it->acedrg_atom_type.empty()) {
+            auto pair = std::make_pair(it->atom_id, it->acedrg_atom_type);
+            v.push_back(pair);
+         }
+      }
+   }
+   return v;
+
+}

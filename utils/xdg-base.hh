@@ -23,7 +23,12 @@
 #ifndef UTILS_XDG_BASE_HH
 #define UTILS_XDG_BASE_HH
 
-#ifdef WINDOWS_MINGW
+// 20240902-PE Tweak from Charles
+#if defined(WINDOWS_MINGW) || defined(_MSC_VER)
+#define WINDOWS
+#endif
+
+#ifdef WINDOWS
 #else
 #include <pwd.h>
 #include <unistd.h>
@@ -48,7 +53,7 @@ class xdg_t {
 
    std::filesystem::path get_home_dir() {
       std::string home;
-#ifdef WINDOWS_MINGW
+#ifdef WINDOWS
 #else
       struct passwd *pw = getpwuid(getuid());
       const char *home_str = pw->pw_dir;

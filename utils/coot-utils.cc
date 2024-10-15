@@ -65,7 +65,12 @@ static std::string real_path_for_coot_executable;
 //! do this on startup
 void coot::set_realpath_for_coot_executable(const std::string &argv0) {
 
-#ifdef WIN32
+  // 20240902-PE patch from Charles - compiling on Windows
+#ifdef _MSC_VER
+   char *exec_path = _fullpath(NULL, argv0.c_str(), MAX_PATH);
+#else
+#ifdef WINDOWS_MINGW
+   // above does not work properly on DOS only msys
    char exec_path[MAX_PATH];
    GetModuleFileName(NULL, exec_path, MAX_PATH);
    if (exec_path) {
@@ -76,7 +81,8 @@ void coot::set_realpath_for_coot_executable(const std::string &argv0) {
    if (exec_path) {
       real_path_for_coot_executable = exec_path;
    }
-#endif
+#endif // WINDOWS_MINGW
+#endif // MSC
 }
 
 
