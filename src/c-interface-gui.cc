@@ -1628,15 +1628,32 @@ exit_win(int retval) {
 }
 #endif // WINDOWS_MINGW
 
+// Function to always stop all threads and empty the threadpool upon exit,
+// irrespective if from coot or python
 void
-coot_save_state_and_exit(int retval, int save_state_flag) {
+cleanup_on_exit() {
 
-   graphics_info_t::static_thread_pool.stop(true);
+   graphics_info_t g;
+   g.static_thread_pool.stop(true);
 
    // wait for refinement to finish (c.f conditionally_wait_for_refinement_to_finish())
-   while (graphics_info_t::restraints_lock) {
+   while (g.restraints_lock) {
       std::this_thread::sleep_for(std::chrono::milliseconds(30));
    }
+
+   // need to tear framebuffers down too (if used).
+   // BL note:: this could be done in otherplaces, e.g. when Window is destroyed
+   // or even the application can be quit. Either way some objects (here framebuffers)
+   // need to be destroyed before exit destoys them in a random way (at least on Windows)
+   if (g.use_framebuffers) {
+      g.screen_framebuffer.tear_down();
+      g.blur_framebuffer.tear_down();
+   }
+
+}
+
+void
+coot_save_state_and_exit(int retval, int save_state_flag) {
 
    if (save_state_flag) {
       save_state(); // we get error message in save_state()
@@ -1664,7 +1681,6 @@ coot_save_state_and_exit(int retval, int save_state_flag) {
 
 #ifdef WINDOWS_MINGW
    clipper::ClipperInstantiator::instance().destroy();
-   graphics_info_t::static_thread_pool.stop(true);
 #endif
 
    exit(retval);

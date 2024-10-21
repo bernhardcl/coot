@@ -1069,6 +1069,9 @@ int new_startup(int argc, char **argv) {
 
    coot::set_realpath_for_coot_executable(argv[0]);
 
+   // register function to be executed on exit
+   std::atexit(cleanup_on_exit);
+
    mmdb::InitMatType();
 
    // setup_symm_lib();

@@ -521,6 +521,7 @@ PyObject *molecule_name_stub_py(int imol, int include_path_flag);
 #endif	/* __cplusplus */
 /*! \brief set the molecule name of the imol-th molecule */
 void set_molecule_name(int imol, const char *new_name);
+void cleanup_on_exit();
 int coot_checked_exit(int retval);
 /*! \brief exit from coot, give return value retval back to invoking
   process. */
