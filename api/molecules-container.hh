@@ -195,6 +195,8 @@ class molecules_container_t {
 
    bool particles_have_been_shown_already_for_this_round_flag;
 
+   std::pair<short int, clipper::RTop_orth> get_lsq_matrix_internal(int imol_ref, int imol_mov, bool summary_to_screen) const;
+
 #endif
 
    bool refinement_immediate_replacement_flag = true;
@@ -409,7 +411,7 @@ public:
    bool get_use_gemmi() { return use_gemmi; }
 
    // -------------------------------- Basic Utilities -----------------------------------
-   //! backslash name Basic Utilities
+   //! \name Basic Utilities
 
    //! Allow the user to disable/enable backups
    //!
@@ -472,7 +474,7 @@ public:
    int get_imol_enc_any() const;
 
    // -------------------------------- generic utils -----------------------------------
-   //! backslash name Generic Utils
+   //! \name Generic Utils
 
    //! get the molecule name
    //!
@@ -1032,6 +1034,9 @@ public:
                                 const std::string &chain_id_mov, int res_no_mov_start, int res_no_mov_end,
                                 int match_type);
 
+   void add_lsq_superpose_atom_match(const std::string &chain_id_ref, int res_no_ref, const std::string &atom_name_ref,
+                                     const std::string &chain_id_mov, int res_no_mov, const std::string &atom_name_mov);
+
    //! clear any existing lsq matchers
    void clear_lsq_matches();
 
@@ -1041,10 +1046,11 @@ public:
    void lsq_superpose(int imol_ref, int imol_mov);
 
    //! return the transformation matrix in a simple class - dont apply it to the coordinates
-   lsq_results_t get_lsq_matrix(int imol_ref, int imol_mov) const;
+   lsq_results_t get_lsq_matrix(int imol_ref, int imol_mov, bool summary_to_screen) const;
 
-   //! make this private
-   std::pair<short int, clipper::RTop_orth> get_lsq_matrix_internal(int imol_ref, int imol_mov) const;
+   //! transform a map and create a new map
+   //! @return the molecule index of the new map, -1 for failure
+   int transform_map_using_lsq_matrix(int imol_map, lsq_results_t lsq_matrix, float x, float y, float z, float radius);
 
    //! symmetry
    //! now comes in a simple container that also includes the cell
@@ -1202,6 +1208,7 @@ public:
    std::vector<int> make_masked_maps_split_by_chain(int imol, int imol_map);
 
    //! set the map colour.
+   //!
    //! The next time a map mesh is requested, it will have this colour.
    //! This does not affect the colour of the difference maps.
    void set_map_colour(int imol, float r, float g, float b);
@@ -1288,7 +1295,8 @@ public:
    //! delete item
    //!
    //! where `scope` is one of the strings: ["ATOM","WATER","RESIDUE","CHAIN","MOLECULE", "LITERAL"]
-   //! @return 1 on successful modification, return 0 on failure
+   //!
+   //! return 1 on successful modification, return 0 on failure
    std::pair<int, unsigned int> delete_using_cid(int imol, const std::string &cid, const std::string &scope);
 
    //! delete atom
@@ -1345,6 +1353,7 @@ public:
    //
    //! the cid is for an atom.
    //! This used to return a pair, but I removed it so that I could compile the binding.
+   //!
    //! @return an status.
    int add_terminal_residue_directly_using_cid(int imol, const std::string &cid);
 
@@ -1355,22 +1364,22 @@ public:
    //! buccaneer building, called by the above
    int add_terminal_residue_directly_using_bucca_ml_growing(int imol, const coot::residue_spec_t &spec);
 
-   //! parameter for `add_waters()` default  2.4
+   //! parameter for add_waters() default  2.4
    void set_add_waters_water_to_protein_distance_lim_min(float d) {
       ligand_water_to_protein_distance_lim_min = d;
    }
 
-   //! parameter for `add_waters()` default 3.4
+   //! parameter for add_waters() default 3.4
    void set_add_waters_water_to_protein_distance_lim_max(float d) {
       ligand_water_to_protein_distance_lim_max = d;
    }
 
-   //! parameter for `add_waters()` - default 0.1
+   //! parameter for add_waters() - default 0.1
    void set_add_waters_variance_limit(float d) {
       ligand_water_variance_limit = d;
    }
 
-   //! parameter for `add_waters()` - default 1.75
+   //! parameter for add_waters() - default 1.75
    void set_add_waters_sigma_cutoff(float d) {
       ligand_water_sigma_cut_off = d;
    }
@@ -1410,10 +1419,13 @@ public:
    //! @return 1 on a successful fill, 0 on failure.
    int fill_partial_residues(int imol);
 
+#if SKIP_FOR_PYTHON_DOXYGEN
+#else
    //! flip peptide
    //!
    //! @return 1 on a successful flip
    int flip_peptide(int imol, const coot::atom_spec_t &atom_spec, const std::string &alt_conf);
+#endif
    //! flip peptide using an atom CID
    //!
    //! @return 1 on a successful flip
@@ -1483,10 +1495,10 @@ public:
                                               float t0, float t1, float t2); // translation
 
    //! update the positions of the atoms in the residue
-   int new_positions_for_residue_atoms(int imol, const std::string &residue_cid, std::vector<coot::molecule_t::moved_atom_t> &moved_atoms);
+   int new_positions_for_residue_atoms(int imol, const std::string &residue_cid, std::vector<coot::api::moved_atom_t> &moved_atoms);
 
    //! update the positions of the atoms in the residues
-   int new_positions_for_atoms_in_residues(int imol, const std::vector<coot::molecule_t::moved_residue_t> &moved_residues);
+   int new_positions_for_atoms_in_residues(int imol, const std::vector<coot::api::moved_residue_t> &moved_residues);
 
    //! list_of_other_molecules is a colon-separated list of molecules, *e.g.* "2:3:4"
    //! @return the first is a flag set to 1 if a merge occurred (and 0 if it did not)
@@ -1777,7 +1789,7 @@ public:
    std::vector<coot::plain_atom_overlap_t> get_overlaps_for_ligand(int imol, const std::string &cid_ligand);
 
    // -------------------------------- Coordinates and map validation ----------------------
-   //! backslash name Coordinates and Map Validation
+   //! \name Coordinates and Map Validation
 
    //! density fit validation information
    //! @returns a `coot::validation_information_t`
@@ -1882,7 +1894,7 @@ public:
    coot::validation_information_t get_q_score(int imol_model, int imol_map) const;
 
    // -------------------------------- Rail Points ------------------------------------------
-   //! backslash name Rail Points!
+   //! \name Rail Points!
 
    //! calling this adds to the rail_points history. Make this pairs when we add model scoring.
    //! @returns the new rail points (since last modification)
@@ -1893,7 +1905,7 @@ public:
    int rail_points_total() const;
 
    // -------------------------------- Updating Maps ---------------------------------------
-   //! backslash name Updating Maps
+   //! \name Updating Maps
 
    //! associate a data mtz file with a molecule
    //!
@@ -1952,7 +1964,7 @@ public:
    std::string get_data_set_file_name(int imol) const;
 
    // -------------------------------- Go To Blob ---------------------------------------
-   //! backslash name Go to Blob
+   //! \name Go to Blob
 
    //! Given a point on the front clipping plane (x1, y1, z1) and a point on the back clipping plane (x2, y2, z2)
    //! this function searches imol_refinement_map (if set) to find a the centre of a blob above the contour level.
@@ -1968,7 +1980,7 @@ public:
 
 
    // -------------------------------- Ligand Functions ---------------------------------------
-   //! backslash name Ligand Functions
+   //! \name Ligand Functions
 
    //! Ligand Fitting
    //!
@@ -2006,7 +2018,7 @@ public:
                                              float n_rmsd, bool use_conformers, unsigned int n_conformers);
 
    //! Fit ligands (place-holder)
-   //! ``multi_ligand_molecule_number_list`` is a colon-separated list of molecules, *e.g.* "2:3:4"
+   //! `multi_ligand_molecule_number_list` is a colon-separated list of molecules, *e.g.* "2:3:4"
    //! @return an empty vector (at the moment)
    std::vector<fit_ligand_info_t> fit_ligand_multi_ligand(int imol_protein, int imol_map, const std::string &multi_ligand_molecule_number_list,
                                                           float n_rmsd, bool use_conformers, unsigned int n_conformers);
@@ -2035,9 +2047,9 @@ public:
    //! It won't work unless the dictionary for that ligand has been imported.
    //! The output renderings are not very good at the moment.
    //!
-   //! Except for unusual cases, ``imol`` will be IMOL_ENC_ANY (-666666)
+   //! Except for unusual cases, `imol` will be IMOL_ENC_ANY (-666666)
    //!
-   //! ``dark_background_flag`` returns a representation suitable for rendering on a dark background (funnily enough).
+   //! `dark_background_flag` returns a representation suitable for rendering on a dark background (funnily enough).
    //!
    //! This function is not const because it caches the svgs if it can.
    //!
@@ -2047,11 +2059,11 @@ public:
    //! This function is for adding compounds/molecules like buffer agents and precipitants or anions and cations.
    //! _i.e._ those ligands that can be positioned without need for internal torsion angle manipulation.
    //!
-   //! ``tlc`` is the three-letter-code/compound-id
+   //! `tlc` is the three-letter-code/compound-id
    //!
-   //! ``imol_dict`` is the molecule to which the ligand is attached (if any). Typically this will be IMOL_ENC_ANY (-666666).
+   //! `imol_dict`  is the molecule to which the ligand is attached (if any). Typically this will be IMOL_ENC_ANY (-666666).
    //!
-   //! ``imol_map`` is the molecule number of the map that will be used for fitting.
+   //! `imol_map` is the molecule number of the map that will be used for fitting.
    //!
    //! @return the success status, 1 or good, 0 for not good.
    int add_compound(int imol, const std::string &tlc, int imol_dict, int imol_map, float x, float y, float z);
@@ -2079,15 +2091,16 @@ public:
    int get_number_of_map_sections(int imol_map, int axis_id) const;
 
    // -------------------------------- Others -------------------------------------
-   //! backslash name Other Features
+   //! \name Other Features
 
-   //! Make a m `coot::simple_mesh_t` from a file
+   //! Make a `coot::simple_mesh_t` from a file
    //!
    //! @params `file_name` the gltf file
+   //!
    //! @return a `simple_mesh_t` from the given file.
    coot::simple_mesh_t make_mesh_from_gltf_file(const std::string &file_name);
 
-   //! @params `n_divisions` is a number divisble by 2, at least 4 (typically 16)
+   //! @params `n_divisions` is a number divisible by 2, at least 4 (typically 16)
    //! @return a unit-vector end-cap octohemisphere mesh
    coot::simple_mesh_t get_octahemisphere(unsigned int n_divisions) const;
 
@@ -2095,7 +2108,7 @@ public:
    std::string pae_png(const std::string &pae_file_name) const;
 
    // -------------------------------- Testing -------------------------------------
-   //! backslash name Testing functions
+   //! \name Testing functions
 
    class ltj_stats_t {
    public:
@@ -2142,7 +2155,7 @@ public:
    //! get the stats for the long-term job (testing function)
    ltj_stats_t testing_interrogate_long_term_job() { return long_term_job_stats; }
 
-   //! get the time for conntouring in milliseconds
+   //! get the time for contouring in milliseconds
    double get_contouring_time() const { return contouring_time; }
 
    //! set the maximum number of threads for both the thread pool and the vector of threads
@@ -2157,7 +2170,7 @@ public:
    //! @return the time per batch in microseconds
    double test_launching_threads(unsigned int n_threads_per_batch, unsigned int n_batches) const;
 
-   //! @return time in microsections
+   //! @return time in microseconds
    double test_thread_pool_threads(unsigned int n_threads);
 
    //! a test for mmdb/gemmi/mmcif functionality
@@ -2181,7 +2194,7 @@ public:
 
    // -------------------------------- Blender Interface ---------------------------------------
 
-   //! backslash name Functions for Blender Interface
+   //! \name Functions for Blender Interface
 
    //! blender
    void make_mesh_for_map_contours_for_blender(int imol, float x, float y, float z, float level, float radius);

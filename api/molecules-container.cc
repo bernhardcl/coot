@@ -4136,7 +4136,7 @@ molecules_container_t::apply_transformation_to_atom_selection(int imol, const st
 
 
 int
-molecules_container_t::new_positions_for_residue_atoms(int imol, const std::string &residue_cid, std::vector<coot::molecule_t::moved_atom_t> &moved_atoms) {
+molecules_container_t::new_positions_for_residue_atoms(int imol, const std::string &residue_cid, std::vector<coot::api::moved_atom_t> &moved_atoms) {
 
    int status = 0;
    if (is_valid_model_molecule(imol)) {
@@ -4149,7 +4149,7 @@ molecules_container_t::new_positions_for_residue_atoms(int imol, const std::stri
 }
 
 int
-molecules_container_t::new_positions_for_atoms_in_residues(int imol, const std::vector<coot::molecule_t::moved_residue_t> &moved_residues) {
+molecules_container_t::new_positions_for_atoms_in_residues(int imol, const std::vector<coot::api::moved_residue_t> &moved_residues) {
 
    int status = 0;
    if (is_valid_model_molecule(imol)) {
@@ -5828,10 +5828,18 @@ molecules_container_t::dictionary_atom_name_map(const std::string &comp_id_1, in
       if (r_p_2.first) {
          const coot::dictionary_residue_restraints_t &dict_1 = r_p_1.second;
          const coot::dictionary_residue_restraints_t &dict_2 = r_p_2.second;
-         // coot::dictionary_match_info_t dm = dict_1.match(dict_2, nullptr, comp_id_1, "dummy");
+         coot::dictionary_match_info_t dm = dict_1.match_to_reference(dict_2, nullptr, comp_id_1, "dummy");
+         if (false) {
+            std::cout << "There are " << dm.same_names.size() << " atoms with the same name" << std::endl;
+            std::cout << "There are " << dm.name_swaps.size() << " atoms with the different names" << std::endl;
+         }
+         for (const auto &name : dm.same_names)
+            m[name] = name;
+         for (const auto &name : dm.name_swaps) {
+            m[name.first] = name.second;
+         }
       }
    }
-
    return m;
 }
 
