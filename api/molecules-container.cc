@@ -25,6 +25,7 @@
  */
 
 #include <iomanip>
+#include <filesystem>
 
 #include <sys/types.h> // for stating
 #include <sys/stat.h>
@@ -336,7 +337,6 @@ molecules_container_t::testing_stop_long_term_job() {
 
 }
 
-
 void
 molecules_container_t::read_standard_residues() {
 
@@ -348,10 +348,11 @@ molecules_container_t::read_standard_residues() {
       std::string dir = coot::package_data_dir();
       std::string standard_file_name = coot::util::append_dir_file(dir, "standard-residues.pdb");
 
-      struct stat buf;
-      int status = stat(standard_file_name.c_str(), &buf);
-      if (status != 0) { // standard-residues file was not found in
-                         // default location either...
+      std::filesystem::path standard_residues_file_path(standard_file_name);
+
+      // failure case first:
+      if (! std::filesystem::is_regular_file(standard_residues_file_path)) { // standard-residues file was not found in
+                                                                             // default location either...
          std::cout << "WARNING:: default location: " << standard_file_name << std::endl;
          std::cout << "WARNING:: Can't find standard residues file in the default location \n";
          std::cout << "         and environment variable for standard residues ";
@@ -362,8 +363,8 @@ molecules_container_t::read_standard_residues() {
          standard_residues_asc.read_success = 0;
          standard_residues_asc.n_selected_atoms = 0;
          // std::cout << "DEBUG:: standard_residues_asc marked as empty" << std::endl;
+
       } else {
-         // stat success:
 
 #if 0
          // unresolved (linking related?) startup bug here:
@@ -1329,6 +1330,28 @@ molecules_container_t::density_fit_analysis(int imol_model, int imol_map) const 
    r.set_min_max();
    return r;
 }
+
+//! @return the sum of the density of the given atoms in the specified CID
+//!  return -1001 on failure to find the residue or any atoms in the residue or if imol_map is not a map
+double
+molecules_container_t::get_sum_density_for_atoms_in_residue(int imol, const std::string &cid,
+                                                            const std::vector<std::string> &atom_names,
+                                                            int imol_map) {
+   double v = 1001.0;
+   if (is_valid_model_molecule(imol)) {
+      if (is_valid_map_molecule(imol_map)) {
+         const clipper::Xmap<float> &xmap = molecules.at(imol_map).xmap;
+         v = molecules[imol].sum_density_for_atoms_in_residue(cid, atom_names, xmap);
+      } else {
+         std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid map molecule " << imol_map << std::endl;
+      }
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return v;
+
+}
+
 
 //! density correlation validation information
 coot::validation_information_t
@@ -5080,6 +5103,30 @@ molecules_container_t::get_ligand_validation_vs_dictionary(int imol, const std::
    return v;
 }
 
+//! Get ligand distortion
+//!
+//! a more simple interface to the above
+//!
+//! @return a pair: the first is the status (1 for OK, 0 for fail)
+//!
+// should this be const?
+std::pair<int, double>
+molecules_container_t::get_ligand_distortion(int imol, const std::string &ligand_cid, bool with_nbcs) {
+
+   int status = 0;
+   double d = 0;
+   if (is_valid_model_molecule(imol)) {
+      std::pair<int, double> p =
+         molecules[imol].simple_geometric_distortions_from_mol(ligand_cid, with_nbcs, geom, thread_pool);
+      status = p.first;
+      d = p.second;
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return std::make_pair(status, d);
+}
+
+
 
 //! set the map saturation
 void
@@ -5494,6 +5541,19 @@ molecules_container_t::export_molecular_representation_as_gltf(int imol, const s
    }
 }
 
+//! export chemical features for the specified residue
+//!
+void molecules_container_t::export_chemical_features_as_gltf(int imol, const std::string &cid, const std::string &file_name) const {
+
+   int status = 0;
+   if (is_valid_model_molecule(imol)) {
+      molecules[imol].export_chemical_features_as_gltf(cid, geom, file_name);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+}
+
+
 
 
 //! get density at position
@@ -5843,3 +5903,50 @@ molecules_container_t::dictionary_atom_name_map(const std::string &comp_id_1, in
    return m;
 }
 
+
+
+//! get the residue CA position
+//!
+//! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
+std::vector<double>
+molecules_container_t::get_residue_CA_position(int imol, const std::string &cid) const {
+
+   std::vector<double> v;
+   if (is_valid_model_molecule(imol)) {
+      v = molecules[imol].get_residue_CA_position(cid);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return v;
+
+}
+
+//! get the avarge residue position
+//!
+//! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
+std::vector<double>
+molecules_container_t::get_residue_average_position(int imol, const std::string &cid) const {
+
+   std::vector<double> v;
+   if (is_valid_model_molecule(imol)) {
+      v = molecules[imol].get_residue_average_position(cid);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return v;
+}
+
+//! get the avarge residue side-chain position
+//!
+//! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
+std::vector<double>
+molecules_container_t::get_residue_sidechain_average_position(int imol, const std::string &cid) const {
+
+   std::vector<double> v;
+   if (is_valid_model_molecule(imol)) {
+      v = molecules[imol].get_residue_sidechain_average_position(cid);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return v;
+}

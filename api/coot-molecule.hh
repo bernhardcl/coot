@@ -379,6 +379,7 @@ namespace coot {
                                      coot::protein_geometry &geom,
                                      ctpl::thread_pool &static_thread_pool);
 
+
       // ====================== dragged refinement ======================================
 
       coot::restraints_container_t *last_restraints;
@@ -630,6 +631,21 @@ namespace coot {
       //! Get the chains that are related by NCS:
       std::vector<std::vector<std::string> > get_ncs_related_chains() const;
 
+      //! get the residue CA position
+      //!
+      //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
+      std::vector<double> get_residue_CA_position(const std::string &cid) const;
+
+      //! get the avarge residue position
+      //!
+      //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
+      std::vector<double> get_residue_average_position(const std::string &cid) const;
+
+      //! get the avarge residue side-chain position
+      //!
+      //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
+      std::vector<double> get_residue_sidechain_average_position(const std::string &cid) const;
+
       // ----------------------- model bonds
 
       simple_mesh_t get_bonds_mesh(const std::string &mode, protein_geometry *geom,
@@ -781,6 +797,10 @@ namespace coot {
                                                   int secondary_structure_usage_flag,
                                                   const std::string &file_name);
 
+      void export_chemical_features_as_gltf(const std::string &cid,
+                                            const protein_geometry &geom,
+                                            const std::string &file_name) const;
+
       void set_show_symmetry(bool f) { show_symmetry = f;}
       bool get_show_symmetry() { return show_symmetry;}
       void transform_by(mmdb::mat44 SSMAlign_TMatrix);
@@ -839,6 +859,15 @@ namespace coot {
       geometric_distortions_from_mol(const std::string &ligand_cid, bool with_nbcs,
                                      coot::protein_geometry &geom,
                                      ctpl::thread_pool &static_thread_pool);
+
+      // I want a function that does the evaluation of the distortion
+      // in place - I don't want to get a function that allows me to
+      // calculate the distortion from the restraints.
+      //
+      std::pair<int, double>
+      simple_geometric_distortions_from_mol(const std::string &ligand_cid, bool with_nbcs,
+                                            coot::protein_geometry &geom,
+                                            ctpl::thread_pool &static_thread_pool);
 
       coot::instanced_mesh_t get_extra_restraints_mesh(int mode) const;
 
@@ -1182,6 +1211,11 @@ namespace coot {
       // --------------- rigid body fit
       int rigid_body_fit(const std::string &mult_cids, const clipper::Xmap<float> &xmap);
 
+      int rotate_around_bond(const std::string &residue_cid,
+                             const std::string &alt_conf,
+                             coot::atom_name_quad quad,
+                             double torsion_angle, protein_geometry &geom);
+
       // ----------------------- map functions
 
       bool is_EM_map() const;
@@ -1248,6 +1282,10 @@ namespace coot {
       void set_other_map_for_colouring_invert_colour_ramp(bool state) {
          radial_map_colour_invert_flag = state;
       }
+
+      double sum_density_for_atoms_in_residue(const std::string &cid,
+                                              const std::vector<std::string> &atom_names,
+                                              const clipper::Xmap<float> &xmap) const;
 
       //! The container class for an interesting place.
       //!
@@ -1319,6 +1357,12 @@ namespace coot {
                                       float bond_width, float atom_radius_to_bond_width_ratio,
                                       int smoothness_factor);
 
+      //! Make an (internal) mesh
+      //!
+      //! this function doesn't return a value, instead it stores a `blender_mesh_t` blender_mesh
+      //! in this model
+      //!
+      //! @modifies internal state to fill the internal `blender_mesh` object
       void make_mesh_for_molecular_representation_for_blender(const std::string &cid,
                                                               const std::string &colour_scheme,
                                                               const std::string &style,
