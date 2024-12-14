@@ -897,6 +897,10 @@ new_startup_application_activate(GtkApplication *application,
 
       // create the preference defaults
       make_preferences_internal();
+      // new way
+      initializePreferences();
+      coot_preferences.savePreferencesToScript("test_def_pref.py");
+      coot_preferences.loadPreferencesFromScript("test_def_pref2.py");
 
       guint id = gtk_application_window_get_id(GTK_APPLICATION_WINDOW(app_window));
       // std::cout << "debug:: new_startup_application_activate(): Window id: " << id << std::endl;

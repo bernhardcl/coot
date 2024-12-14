@@ -1,4 +1,4 @@
-/* src/atom-selection.hh
+/* src/c-interface-preferences.h
  * 
  * Copyright 2011 by the University of Oxford
  * Copyright 2015 by Medical Research Council
@@ -25,8 +25,63 @@
 
 #include <gtk/gtk.h>
 
-#ifndef BEGIN_C_DECLS
+#include <functional>
+//#include <unordered_map>
+#include <map>
+#include <variant>
+#include <iostream>
+#include <stdexcept>
+#include <fstream>
 
+
+// New stuff
+using preferences_value = std::variant<int, double, std::string, bool, std::vector<float>>;
+
+class preferences_manager {
+
+   using SetterFunction = std::function<void(const preferences_value&)>;
+   using GetterFunction = std::function<preferences_value()>;
+
+   struct preferences_callbacks {
+       SetterFunction setter;
+       GetterFunction getter;
+   };
+
+   // can be unordered_map too... this will then be random
+   // using map it will be alphabetically sorted by key...
+   std::map<std::string, preferences_callbacks> registry;
+   std::map<std::string, preferences_value> defaults;
+
+public:
+   void registerPreference(
+       const std::string& key,
+       const std::function<void(const preferences_value&)>& setter,
+       const std::function<preferences_value()>& getter,
+       const preferences_value& defaultValue);
+   void setPreference(const std::string& key, const preferences_value& value);
+   preferences_value getPreference(const std::string& key) const;
+   void resetToDefault(const std::string& key);
+   void listPreferences() const;
+   void resetAllToDefaults();
+   void savePreferencesToScript(const std::string& filename);
+   void loadPreferencesFromScript(const std::string& filename);
+};
+
+extern preferences_manager coot_preferences;
+void initializePreferences();
+
+#ifdef __cplusplus
+#ifdef USE_PYTHON
+// python binding for preferences - not sure if we need these as such since we have them above...
+PyObject* set_preference(const char *key, PyObject* args);
+PyObject* get_preference(const char *key);
+void reset_all_preferences();
+#endif // PYTHON
+#endif
+
+// This is old and for the gtk interface
+
+#ifndef BEGIN_C_DECLS
 #ifdef __cplusplus
 #define BEGIN_C_DECLS extern "C" {
 #define END_C_DECLS }

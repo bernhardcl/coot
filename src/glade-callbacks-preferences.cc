@@ -152,14 +152,49 @@ extern "C" G_MODULE_EXPORT
 void
 on_preferences_view_rotation_left_mouse_checkbutton_toggled(GtkCheckButton *checkbutton,
                                                             gpointer         user_data) {
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 1);
-      set_use_trackpad(1);
-   } else {
-      preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 0);
-      set_use_trackpad(0);
-   }
+//   if (gtk_check_button_get_active(checkbutton)) {
+//      preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 1);
+//      set_use_trackpad(1);
+//   } else {
+//      preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 0);
+//      set_use_trackpad(0);
+//   }
+   coot_preferences.setPreference("use_trackpad", (bool)gtk_check_button_get_active(checkbutton));
 }
+
+extern "C" G_MODULE_EXPORT
+void
+on_preferences_hid_spherical_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                                 gpointer         user_data) {
+
+   if (gtk_check_button_get_active(checkbutton)) {
+      coot_preferences.setPreference("virtual_trackball", 2);
+   } else {
+      coot_preferences.setPreference("virtual_trackball", 1);
+      std::cout<< "BL DEBUG:: set HID to 1"<<std::endl;
+   }
+
+//   if (gtk_check_button_get_active(checkbutton)) {
+//      preferences_internal_change_value_int(PREFERENCES_VT_SURFACE, 2);
+//      vt_surface(2);
+//   }
+}
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_preferences_hid_flat_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                            gpointer         user_data) {
+
+   // Acutally not needed...
+
+//   if (gtk_check_button_get_active(checkbutton)) {
+//      preferences_internal_change_value_int(PREFERENCES_VT_SURFACE, 1);
+//      vt_surface(1);
+//   }
+
+}
+
 
 extern "C" G_MODULE_EXPORT
 void
@@ -291,7 +326,6 @@ void
 on_preferences_bg_colour_colorbutton_clicked(GtkButton       *button,
                                              gpointer         user_data) {
 
-   // GtkWidget *w = lookup_widget(GTK_WIDGET(button), "preferences_bg_colour_own_radiobutton");
    GtkWidget *w = widget_from_preferences_builder("preferences_bg_colour_own_radiobutton");
    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), TRUE);
 
@@ -639,32 +673,6 @@ on_preferences_map_drag_off_radiobutton_toggled(GtkCheckButton *checkbutton,
       preferences_internal_change_value_int(PREFERENCES_MAP_DRAG, 0);
       set_active_map_drag_flag(0);
    }
-}
-
-
-
-extern "C" G_MODULE_EXPORT
-void
-on_preferences_hid_spherical_radiobutton_toggled(GtkCheckButton *checkbutton,
-                                                 gpointer         user_data) {
-
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_VT_SURFACE, 2);
-      vt_surface(2);
-   }
-}
-
-
-extern "C" G_MODULE_EXPORT
-void
-on_preferences_hid_flat_radiobutton_toggled(GtkCheckButton *checkbutton,
-                                            gpointer         user_data) {
-
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_VT_SURFACE, 1);
-      vt_surface(1);
-   }
-
 }
 
 
