@@ -1110,7 +1110,23 @@ public:        //                      public
    void make_glsl_symmetry_bonds();
    void update_strict_ncs_symmetry(const coot::Cartesian &centre_point,
 				   const molecule_extents_t &extents); // in m-c-i-ncs.cc
-   void draw_anisotropic_atoms();
+   void old_draw_anisotropic_atoms(); // old OpenGL function
+   bool show_atoms_as_aniso_flag;
+   bool show_aniso_atoms_as_ortep_flag;
+   void set_show_atoms_as_aniso(bool state) {
+      if (state != show_atoms_as_aniso_flag) {
+         show_atoms_as_aniso_flag = state;
+         make_bonds_type_checked("set_show_atoms_as_aniso()");
+      }
+   }
+   void set_show_aniso_atoms_as_ortep(bool state) {
+      if (state)
+         show_atoms_as_aniso_flag = true;
+      if (state != show_aniso_atoms_as_ortep_flag) {
+         show_aniso_atoms_as_ortep_flag = state;
+         make_bonds_type_checked("set_show_aniso_atoms_as_ortep()");
+      }
+   }
 
    // void draw_coord_unit_cell(const coot::colour_holder &cell_colour);
    // void draw_map_unit_cell(const coot::colour_holder &cell_colour);
@@ -1376,18 +1392,6 @@ public:        //                      public
    // chain).
    void make_surface(int SelHnd_selection, int SelHnd_all, const coot::protein_geometry &geom,
 		     float col_scale);
-
-   bool molecule_is_drawn_as_surface() const {
-#if 0
-      if (cootsurface)
-	 return true;
-      else
-	 return false;
-#else
-      return true; // for now (in 0.9.x)
-#endif
-   }
-   //
 
    // a generic function to convert from a residue_spec_vec to a
    // selection handle. Caller creates the SelHnd_selection so that it
@@ -1859,6 +1863,8 @@ public:        //                      public
    // Here is something that does DNA/RNA
    int mutate_base(const coot::residue_spec_t &res_spec, std::string type,
 		   bool use_old_style_naming);
+
+   int mutate_by_overlap(const std::string &chain_id, int res_no, const std::string &new_type);
 
    // and the biggie: lots of mutations/deletions/insertions from an
    // alignment:

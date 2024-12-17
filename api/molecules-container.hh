@@ -204,11 +204,14 @@ class molecules_container_t {
 
    bool particles_have_been_shown_already_for_this_round_flag;
 
+#ifdef SKIP_FOR_PYTHON_DOXYGEN
+#else
    //! Get LSQ matrix internal (private)
    //!
    //! @param imol_ref the reference model molecule index
    //! @param imol_mov the moving model molecule index
    std::pair<short int, clipper::RTop_orth> get_lsq_matrix_internal(int imol_ref, int imol_mov, bool summary_to_screen) const;
+#endif
 
    coot::validation_information_t
    get_q_score_validation_information(mmdb::Manager *mol, int udd_q_score, bool do_per_atom) const;
@@ -916,6 +919,13 @@ public:
    //! @return a `coot::acedrg_types_for_residue_t` - which contains a vector/list of bond descriptions.
    coot::acedrg_types_for_residue_t get_acedrg_atom_types_for_ligand(int imol, const std::string &residue_cid) const;
 
+   //! set the occupancy for the given atom selection
+   //!
+   //! @param imol is the model molecule index
+   //! @param cod is the atom selection CID
+   //! @param is the new occupancy
+   void set_occupancy(int imol, const std::string &cid, float occ_new);
+
    //! Write a PNG for the given compound_id.
    //!
    //! Currently this function does nothing (drawing is done with the not-allowed cairo)
@@ -966,18 +976,23 @@ public:
    //! @param against_a_dark_background allows the bond colours to be relevant for the background.
    //! When the background is dark, the colours should (as a rule) be bright and pastelly.
    //! When the background is light/white, the colour are darker and more saturated.
+   //! @param bond_width is the bond width in Angstroms. 0.12 is a reasonable default value.
+   //! @param atom_radius_to_bond_width_ratio allows the representation of "ball and stick". To do so use a value
+   //! between 1.5 and 3.0. The ratio for "liquorice" representation is 1.0.
+   //! @param show_atoms_as_aniso_flag if true, if possible, show the atoms with thermal ellipsoids.
+   //! @param show_aniso_atoms_as_ortep_flag if true, show any anisotropic atoms with ortep style.
+   //! @param draw_hydrogen_atoms_flag if true, bonds to hydrogen atoms should be added.
    //! @param smoothness_factor controls the number of triangles used to make the bond cylinders
    //! and spheres for the atoms - it rises in powers of 4. 1 is the smallest smoothness_factor,
    //! 2 looks nice and 3 is best. Instancing may mean that smoothness factor 3 should
    //! be used by default.
-   //! @param bond_width is the bond width in Angstroms. 0.12 is a reasonable default value.
-   //! @param atom_radius_to_bond_width_ratio allows the representation of "ball and stick". To do so use a value
-   //! between 1.5 and 3.0. The ratio for "liquorice" representation is 1.0.
-   //!
    //! @return a `instanced_mesh_t`
    coot::instanced_mesh_t get_bonds_mesh_instanced(int imol, const std::string &mode,
                                                    bool against_a_dark_background,
                                                    float bond_width, float atom_radius_to_bond_width_ratio,
+                                                   bool show_atoms_as_aniso_flag,
+                                                   bool show_aniso_atoms_as_ortep_flag,
+                                                   bool draw_hydrogen_atoms_flag,
                                                    int smoothness_factor);
 
    //! As `get_bonds_mesh_instanced` above, but only return the bonds for the atom selection.
@@ -989,6 +1004,9 @@ public:
                                                                  const std::string &mode,
                                                                  bool against_a_dark_background,
                                                                  float bond_width, float atom_radius_to_bond_width_ratio,
+                                                                 bool show_atoms_as_aniso_flag,
+                                                                 bool show_aniso_atoms_as_ortep_flag,
+                                                                 bool draw_hydrogen_atoms_flag,
                                                                  int smoothness_factor);
 
    //! Get the Goodsell style mesh
@@ -1186,17 +1204,26 @@ public:
    std::pair<bool, coot::Cartesian> get_atom_position(int imol, coot::atom_spec_t &atom_spec);
 #endif
 
-   //! get the residue CA position
+   //! Get the residue CA position
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the selection CID e.g "//A/15" (residue 15 of chain A)
    //!
    //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
    std::vector<double> get_residue_CA_position(int imol, const std::string &cid) const;
 
-   //! get the avarge residue position
+   //! Get the average residue position
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the selection CID e.g "//A/15" (residue 15 of chain A)
    //!
    //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
    std::vector<double> get_residue_average_position(int imol, const std::string &cid) const;
 
-   //! get the avarge residue side-chain position
+   //! Get the avarage residue side-chain position
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the selection CID e.g "//A/15" (residue 15 of chain A)
    //!
    //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
    std::vector<double> get_residue_sidechain_average_position(int imol, const std::string &cid) const;
@@ -1261,6 +1288,14 @@ public:
    //! @return the residue name, return a blank string on residue not found.
    std::string get_residue_name(int imol, const std::string &chain_id, int res_no, const std::string &ins_code) const;
 
+   //! Get the SMILES string for the give residue type
+   //!
+   //! @param residue name the compound-id
+   //! @param is the molecule index for the residue type/compound_id
+   //! @return the SMILES string if the residue type can be foound in the dictionary store
+   //!         or the empty string on a failure.
+   std::string get_SMILES_for_residue_type(const std::string &residue_name, int imol_enc) const;
+
    //! Get residues with missing atoms
    //!
    //! @param imol is the model molecule index
@@ -1311,12 +1346,19 @@ public:
    //! @param chain_id_mov the chain ID for the moving chain
    //! @param res_no_mov_start the starting residue number in the moving chain
    //! @param res_no_mov_end the ending residue number in the moving chain
-   //! @param match_type 0: all, 1: main, 2: CAs, 3: N, CA, C
+   //! @param match_type 0: all, 1: main, 2: CAs, 3: N, CA, C, 4: N, CA, CB, C
    void add_lsq_superpose_match(const std::string &chain_id_ref, int res_no_ref_start, int res_no_ref_end,
                                 const std::string &chain_id_mov, int res_no_mov_start, int res_no_mov_end,
                                 int match_type);
 
-
+   //! Superpose using LSQ for a scpecific atom - setup the matches
+   //!
+   //! @param chain_id_ref the chain ID for the reference chain
+   //! @param res_no_ref the residue number in the reference chain
+   //! @param atom_name_ref the name of the reference atom
+   //! @param chain_id_mov the chain ID for the moving chain
+   //! @param res_no_mov the residue number in the moving chain
+   //! @param atom_name_mov the name of the moving atom
    void add_lsq_superpose_atom_match(const std::string &chain_id_ref, int res_no_ref, const std::string &atom_name_ref,
                                      const std::string &chain_id_mov, int res_no_mov, const std::string &atom_name_mov);
 
@@ -1331,7 +1373,15 @@ public:
    //! @param imol_mov the moving model molecule index
    void lsq_superpose(int imol_ref, int imol_mov);
 
-   //! transform a map and create a new map
+   //! Transform a map and create a new map
+   //!
+   //! @param imol_map map molecule index
+   //! @param lsq_matrix is an object of type lsq_results_t, is the object returned by `get_lsq_matrix()`
+   //! @param x is the point in the map about which the map is transformed
+   //! @param y is the point in the map about which the map is transformed
+   //! @param z is the point in the map about which the map is transformed
+   //! @param radius the radius of the transformed map, typically between 10 and 100 A
+   //!
    //! @return the molecule index of the new map, -1 for failure
    int transform_map_using_lsq_matrix(int imol_map, lsq_results_t lsq_matrix, float x, float y, float z, float radius);
    //! Get LSQ matrix
@@ -1380,6 +1430,15 @@ public:
    //!
    //! @return 1 on successful redo, return 0 on failure
    int redo(int imol);
+
+   //! Get the torsion of the specified atom in the specified residue
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the selection CID, e.g. //A/15 (residue 15 in chain A)
+   //! @param atom_names is a list of atom names, e.g. [" CA ", " CB ", " CG ", " CD1"]
+   //!
+   //! @return a pair, the first of which is a succes status (1 success, 0 failure), the second is the torsion in degrees
+   std::pair<int, double> get_torsion(int imol, const std::string &cid, const std::vector<std::string> &atom_names);
 
    // -------------------------------- map utils -------------------------------------------
    //! \name Map Utils
@@ -1962,7 +2021,7 @@ public:
    //! Flip peptide
    //!
    //! @param imol is the model molecule index
-   //! @param atom_spec is the atom specifier, atom_spec_t("A", 10, "", "CA", "")
+   //! @param atom_spec is the atom specifier, atom_spec_t("A", 10, "", " CA ", "")
    //! @param alt_conf is the alternate conformation, e.g. "A" or "B"
    //!
    //! @return 1 on a successful flip
@@ -2087,7 +2146,7 @@ public:
    //!
    //! @param imol is the model molecule index
    //! @param residue_cid is the residue selection CID e.g "//A/15" (residue 15 of chain A)
-   //! @param moved_atoms is a list of the atoms moved in the specified residue, e.g. moved_atom_t("CA", 1, 2, 3)
+   //! @param moved_atoms is a list of the atoms moved in the specified residue, e.g. moved_atom_t(" CA ", 1, 2, 3)
    int new_positions_for_residue_atoms(int imol, const std::string &residue_cid, std::vector<coot::api::moved_atom_t> &moved_atoms);
 
    //! Update the positions of the atoms in the residues
@@ -2161,6 +2220,14 @@ public:
    //!
    //! the bond is presumed to be between atom-2 and atom-3. Atom-1 and atom-4 are
    //! used to define the absolute torsion angle.
+   //!
+   //! @param imol is the model molecule index
+   //! @param residue_cid is the residue selection CID e.g "//A/15" (residue 15 of chain A)
+   //! @param atom_name_1 e.g. " CA "
+   //! @param atom_name_2 e.g. " CB "
+   //! @param atom_name_3 e.g. " CG "
+   //! @param atom_name_4 e.g. " CD1"
+   //! @param torsion_angle e.g. 12.3 degrees
    //!
    //! @return status 1 if successful, 0 if not.
    int rotate_around_bond(int imol, const std::string &residue_cid,

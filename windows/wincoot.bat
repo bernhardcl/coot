@@ -41,7 +41,7 @@ set SYMINFO=%COOT_SHARE%\coot\syminfo.lib
 
 set PATH=%COOT_PREFIX%\bin;%COOT_PREFIX%\lib;%PATH%;%COOT_PREFIX%\bin\extras
 
-coot-bin.exe %*
+WinCoot.exe %*
 
 Exit /B %ERRORLEVEL%
 

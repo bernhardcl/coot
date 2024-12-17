@@ -2399,6 +2399,7 @@ coot::molecule_t::get_fixed_atoms() const {
 
 int
 coot::molecule_t::refine_direct(std::vector<mmdb::Residue *> rv, const std::string &alt_loc, const clipper::Xmap<float> &xmap,
+                                unsigned int max_number_of_threads,
                                 float map_weight, int n_cycles, const coot::protein_geometry &geom,
                                 bool do_rama_plot_restraints, float rama_plot_weight,
                                 bool do_torsion_restraints, float torsion_weight,
@@ -2414,7 +2415,7 @@ coot::molecule_t::refine_direct(std::vector<mmdb::Residue *> rv, const std::stri
       local_residues.push_back(std::make_pair(false, r));
 
    if (false) { // debugging
-      std::cout << "----------------------------- local_residues " << local_residues.size() << " --------" << std::endl;
+      std::cout << "---------- local_residues " << local_residues.size() << " --------" << std::endl;
       for (unsigned int i=0; i<local_residues.size(); i++) {
          std::cout << "                 " << i << " " << local_residues[i].second << std::endl;
       }
@@ -2448,7 +2449,7 @@ coot::molecule_t::refine_direct(std::vector<mmdb::Residue *> rv, const std::stri
    if (do_torsion_restraints) flags = TYPICAL_RESTRAINTS_WITH_TORSIONS;
    pseudo_restraint_bond_type pseudos = NO_PSEUDO_BONDS;
 
-   int n_threads = 4; // coot::get_max_number_of_threads();
+   int n_threads = max_number_of_threads;
    ctpl::thread_pool thread_pool(n_threads);
    restraints.thread_pool(&thread_pool, n_threads);
 
@@ -2465,6 +2466,8 @@ coot::molecule_t::refine_direct(std::vector<mmdb::Residue *> rv, const std::stri
                               do_auto_strand_restraints,
                               do_h_bond_restraints,
                               pseudos);
+   restraints.add_extra_restraints(imol, "stored extra retraints called from refine_direct()",
+                                   extra_restraints, geom);
    int nsteps_max = n_cycles;
    short int print_chi_sq_flag = 1;
    restraints.minimize(flags, nsteps_max, print_chi_sq_flag);
@@ -4094,7 +4097,7 @@ coot::molecule_t::add_target_position_restraint_and_refine(const std::string &at
    if (n_cycles < 0) {
       // simple communication test.
    } else {
-      // acutally do some refinement then
+      // actually do some refinement then
       if (last_restraints) {
          clipper::Coord_orth pos(pos_x, pos_y, pos_z);
          mmdb::Atom *at = cid_to_atom(atom_cid);
@@ -4113,7 +4116,12 @@ coot::molecule_t::add_target_position_restraint_and_refine(const std::string &at
    }
 
    std::string mode = "COLOUR-BY-CHAIN-AND-DICTIONARY";
-   m = get_bonds_mesh_instanced(mode, geom_p, true, 0.1, 1.4, 1, true, true);
+   unsigned int smoothness_factor = 1;
+   bool show_atoms_as_aniso_flag = false;
+   bool show_aniso_atoms_as_ortep_flag = false;
+   m = get_bonds_mesh_instanced(mode, geom_p, true, 0.1, 1.4,
+                                show_atoms_as_aniso_flag, show_aniso_atoms_as_ortep_flag,
+                                smoothness_factor, true, true);
    return m;
 
 }
@@ -4415,8 +4423,14 @@ coot::molecule_t::export_model_molecule_as_gltf(const std::string &mode,
                                                 bool draw_hydrogen_atoms_flag, bool draw_missing_residue_loops,
                                                 const std::string &file_name) {
 
+   bool show_atoms_as_aniso_flag = true;
+   bool show_aniso_atoms_as_ortep_flag = false; // pass these
+
    instanced_mesh_t im = get_bonds_mesh_for_selection_instanced(mode, selection_cid, geom, against_a_dark_background,
-                                                                bonds_width, atom_radius_to_bond_width_ratio, smoothness_factor,
+                                                                bonds_width, atom_radius_to_bond_width_ratio,
+                                                                show_atoms_as_aniso_flag,
+                                                                show_aniso_atoms_as_ortep_flag,
+                                                                smoothness_factor,
                                                                 draw_hydrogen_atoms_flag, draw_missing_residue_loops);
 
    coot::simple_mesh_t sm = coot::instanced_mesh_to_simple_mesh(im);
@@ -4844,5 +4858,30 @@ coot::molecule_t::get_residue_sidechain_average_position(const std::string &cid)
       }
    }
    return v;
+}
+
+
+//! set occupancy
+//!
+//! set the occupancy for the given atom selection
+//!
+//! @param imol is the model molecule index
+//! @param cod is the atom selection CID
+void
+coot::molecule_t::set_occupancy(const std::string &cid, float occ_new) {
+
+   int selHnd = atom_sel.mol->NewSelection(); // d
+   mmdb::Atom **SelAtoms = nullptr;
+   int nSelAtoms = 0;
+   atom_sel.mol->Select(selHnd, mmdb::STYPE_ATOM, cid.c_str(), mmdb::SKEY_NEW);
+   atom_sel.mol->GetSelIndex(selHnd, SelAtoms, nSelAtoms);
+
+   for (int i=0; i<nSelAtoms; i++) {
+      mmdb:: Atom *at = SelAtoms[i];
+      if (! at->isTer()) {
+         at->occupancy = occ_new;
+      }
+   }
+   atom_sel.mol->DeleteSelection(selHnd);
 }
 

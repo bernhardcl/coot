@@ -2053,9 +2053,11 @@ coot::instanced_mesh_t
 molecules_container_t::get_bonds_mesh_instanced(int imol, const std::string &mode,
                                                 bool against_a_dark_background,
                                                 float bond_width, float atom_radius_to_bond_width_ratio,
+                                                bool show_atoms_as_aniso_flag,
+                                                bool show_aniso_atoms_as_ortep_flag,
+                                                bool draw_hydrogen_atoms_flag,
                                                 int smoothness_factor) {
 
-   bool draw_hydrogen_atoms_flag = true; // pass this
 
    auto tp_0 = std::chrono::high_resolution_clock::now();
 
@@ -2067,7 +2069,10 @@ molecules_container_t::get_bonds_mesh_instanced(int imol, const std::string &mod
       // coot::colour_t col(0.0999, 0.0888, 0.0777);
       // set_bespoke_carbon_atom_colour(imol, col);
       im = molecules[imol].get_bonds_mesh_instanced(mode, &geom, against_a_dark_background, bond_width, atom_radius_to_bond_width_ratio,
-                                                    smoothness_factor, draw_hydrogen_atoms_flag, draw_missing_residue_loops_flag);
+                                                    show_atoms_as_aniso_flag,
+                                                    show_aniso_atoms_as_ortep_flag,
+                                                    smoothness_factor, draw_hydrogen_atoms_flag,
+                                                    draw_missing_residue_loops_flag);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -2089,8 +2094,10 @@ molecules_container_t::get_bonds_mesh_for_selection_instanced(int imol, const st
                                                               const std::string &mode,
                                                               bool against_a_dark_background,
                                                               float bond_width, float atom_radius_to_bond_width_ratio,
+                                                              bool show_atoms_as_aniso_flag,
+                                                              bool show_aniso_atoms_as_ortep_flag,
+                                                              bool draw_hydrogen_atoms_flag,
                                                               int smoothness_factor) {
-   bool draw_hydrogen_atoms_flag = true; // pass this
 
    // auto tp_0 = std::chrono::high_resolution_clock::now();
 
@@ -2098,7 +2105,11 @@ molecules_container_t::get_bonds_mesh_for_selection_instanced(int imol, const st
    if (is_valid_model_molecule(imol)) {
       im = molecules[imol].get_bonds_mesh_for_selection_instanced(mode, atom_selection_cid,
                                                                   &geom, against_a_dark_background, bond_width, atom_radius_to_bond_width_ratio,
-                                                                  smoothness_factor, draw_hydrogen_atoms_flag, draw_missing_residue_loops_flag);
+                                                                  show_atoms_as_aniso_flag,
+                                                                  show_aniso_atoms_as_ortep_flag,
+                                                                  smoothness_factor,
+                                                                  draw_hydrogen_atoms_flag,
+                                                                  draw_missing_residue_loops_flag);
    } else {
       std::cout << "debug:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -2891,11 +2902,15 @@ molecules_container_t::refine_direct(int imol, std::vector<mmdb::Residue *> rv, 
                 << " and imol_refinement_map " << imol_refinement_map
                 << std::endl;
 
+   // this is not stored in molecules_container!
+   unsigned int max_number_of_threads = thread_pool.size();
+
    int status = 0;
    if (is_valid_model_molecule(imol)) {
       if (is_valid_map_molecule(imol_refinement_map)) {
          const clipper::Xmap<float> &xmap = molecules[imol_refinement_map].xmap;
-         status = molecules[imol].refine_direct(rv, alt_loc, xmap, map_weight, n_cycles, geom,
+         status = molecules[imol].refine_direct(rv, alt_loc, xmap, max_number_of_threads,
+                                                map_weight, n_cycles, geom,
                                        use_rama_plot_restraints, rama_plot_restraints_weight,
                                        use_torsion_restraints, torsion_restraints_weight,
                                        refinement_is_quiet);
@@ -3641,7 +3656,7 @@ molecules_container_t::make_last_restraints(const std::vector<std::pair<bool,mmd
 
    if (molecules[imol_moving_atoms].extra_restraints.has_restraints()) {
       std::cout << "debug:: calling add_extra_restraints() from make_last_restraints() " << std::endl;
-      last_restraints->add_extra_restraints(imol_moving_atoms, "user-defined from make_last_restraints()",
+      last_restraints->add_extra_restraints(imol_moving_atoms, "user-defined restraints called from make_last_restraints()",
                                             molecules[imol_moving_atoms].extra_restraints, geom);
    }
 
@@ -5040,7 +5055,13 @@ molecules_container_t::refine(int imol, int n_cycles) {
       status = molecules[imol].refine_using_last_restraints(n_cycles);
       std::string mode = "COLOUR-BY-CHAIN-AND-DICTIONARY";
       bool draw_hydrogen_atoms_flag = true; // use data member as we do for draw_missing_residue_loops_flag?
-      im = molecules[imol].get_bonds_mesh_instanced(mode, &geom, true, 0.12, 1.4, 1,
+      bool show_atoms_as_aniso_flag = false;
+      bool show_aniso_atoms_as_ortep = false;
+      unsigned int smoothness_factor = 1;
+      im = molecules[imol].get_bonds_mesh_instanced(mode, &geom, true, 0.12, 1.4,
+                                                    show_atoms_as_aniso_flag,
+                                                    show_aniso_atoms_as_ortep,
+                                                    smoothness_factor,
                                                     draw_hydrogen_atoms_flag, draw_missing_residue_loops_flag);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
@@ -5612,6 +5633,20 @@ molecules_container_t::get_residue_name(int imol, const std::string &chain_id, i
 }
 
 
+//! Get the SMILES string for the give residue type
+//!
+//! @param residue name the compound-id
+//! @param is the molecule index for the residue type/compound_id
+//! @return the SMILES string if the residue type can be foound in the dictionary store
+//!         or the empty string on a failure.
+std::string
+molecules_container_t::get_SMILES_for_residue_type(const std::string &residue_name, int imol_enc) const {
+
+   std::string s = geom.Get_SMILES_for_comp_id(residue_name, imol_enc);
+   return s;
+}
+
+
 //! @return an estimate of the diameter of the model molecule (-1 on failure)
 float
 molecules_container_t::get_molecule_diameter(int imol) const {
@@ -5972,4 +6007,20 @@ molecules_container_t::get_residue_sidechain_average_position(int imol, const st
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
    return v;
+}
+
+//! set the occupancy for the given atom selection
+//!
+//! @param imol is the model molecule index
+//! @param cod is the atom selection CID
+//! @param is the new occupancy
+void
+molecules_container_t::set_occupancy(int imol, const std::string &cid, float occ_new) {
+
+   if (is_valid_model_molecule(imol)) {
+      molecules[imol].set_occupancy(cid, occ_new);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+
 }

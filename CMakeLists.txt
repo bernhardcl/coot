@@ -58,7 +58,7 @@ add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1"
   -DHAVE_CXX_THREAD -DHAVE_SSMLIB -DHAVE_BOOST -DUSE_LIBPNG=1 -DCLIPPER_HAS_TOP8000 -DUSE_GEMMI -DHAVE_BOOST_THREAD -DHAVE_GSL
   -DPKGDATADIR="${CMAKE_INSTALL_PREFIX}/share/coot" -DXDATADIR="${CMAKE_INSTALL_PREFIX}/share")
 
-add_definitions(-DMAKE_ENHANCED_LIGAND_TOOLS)
+add_definitions(-DMAKE_ENHANCED_LIGAND_TOOLS="1")
 message("-- Found ENHANCED_LIGAND_TOOLS setting - now requiring the RDKit")
 find_package(Cairo REQUIRED)
 find_package(RDKit CONFIG COMPONENTS RDGeneral REQUIRED)
@@ -154,6 +154,7 @@ add_library(cootapi SHARED
             ${coot_src}/MoleculesToTriangles/CXXClasses/Vector3.cpp
             ${coot_src}/MoleculesToTriangles/CXXClasses/VertexColorNormalPrimitive.cpp
             ${coot_src}/MoleculesToTriangles/CXXClasses/lfit.c
+            ${coot_src}/MoleculesToTriangles/CXXClasses/tubes.cc
             ${coot_src}/api/rigid-body-fit.cc
             ${coot_src}/api/blender-mesh.cc
             ${coot_src}/api/add-terminal-residue.cc
@@ -341,6 +342,8 @@ add_library(cootapi SHARED
             ${coot_src}/coot-utils/oct.cc
             ${coot_src}/coot-utils/shapes.cc
             ${coot_src}/coot-utils/simple-mesh.cc
+            ${coot_src}/coot-utils/gl-matrix.cc
+            ${coot_src}/coot-utils/gl-matrix-eigensystem.cc
             ${coot_src}/coords/phenix-geo-bonds.cc
             ${coot_src}/coords/Bond_lines_ext.cc
             ${coot_src}/coords/mmdb-crystal.cc
@@ -441,7 +444,6 @@ add_library(cootapi SHARED
             ${coot_src}/db-main/db-main.cc
             ${coot_src}/compat/getopt.cc
             ${coot_src}/compat/getopt1.cc
-            ${coot_src}/src/gl-matrix.cc
             ${coot_src}/ideal/write-png.cc
             )
 
