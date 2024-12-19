@@ -307,7 +307,7 @@ _coot_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined  \
 
 if OS_WIN32
 # no more libexec for windows
-bin_PROGRAMS     = coot-bin coot-density-score-by-residue-bin
+bin_PROGRAMS     = WinCoot coot-density-score-by-residue-bin
 else
 if OS_DARWIN
 libexec_PROGRAMS = MacCoot coot-density-score-by-residue-bin
@@ -327,7 +327,7 @@ check_PROGRAMS = test-coot-align test-cholesky
 #	coot-nomenclature.cc
 
 if OS_WIN32
-coot_bin_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc \
+WinCoot_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc \
         glade-callbacks-preferences.cc glade-callbacks-shader-settings.cc \
         new-startup.cc \
         setup-gui-components.cc \
@@ -358,7 +358,7 @@ endif
 # is it a good idea to move functions from coot-bin dependencies into libcootsumo?
 # e.g. atoms_with_zero_occupancy()?
 if OS_WIN32
-coot_bin_LDADD =  \
+WinCoot_LDADD =  \
 	libcootsumo.la                                     \
 	$(top_builddir)/pli/libcoot-pli.la                 \
 	$(top_builddir)/density-contour/libcoot-isosurface.la  	\
@@ -865,7 +865,7 @@ endif
 # coot_bin_LDFLAGS = -static -lstdc++
 #
 if OS_WIN32
-coot_bin_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
+WinCoot_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
 else
 if OS_DARWIN
 MacCoot_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)

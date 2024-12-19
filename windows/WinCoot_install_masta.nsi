@@ -234,7 +234,7 @@ Section "!WinCoot" SEC01
   SetOutPath "$INSTDIR\bin"
   ; always install the newest exe
   SetOverwrite on
-  File "${top_dir}\bin\coot-bin.exe"
+  File "${top_dir}\bin\WinCoot.exe"
   File "${top_dir}\bin\coot-bfactan.exe"
   File "${top_dir}\bin\coot-density-score-by-residue-bin.exe"
   File "${top_dir}\bin\coot-findligand-bin.exe"
@@ -362,6 +362,8 @@ SectionEnd
 ; SectionEnd
 
 Section /o "!Monomer Library" SEC03
+  ; add size requirement in kb
+  AddSize 1500000
   ; first download, then unzip
   ClearErrors
 ;  !define cif_dict_filename "cif.tar.gz"
@@ -519,6 +521,7 @@ Section Uninstall
   Delete "$INSTDIR\bin\coot"
   Delete "$INSTDIR\bin\coot-real.exe"
   Delete "$INSTDIR\bin\coot-bin.exe"
+  Delete "$INSTDIR\bin\WinCoot.exe"
   Delete "$INSTDIR\bin\coot-density-score-by-residue"
   Delete "$INSTDIR\bin\density-score-by-residue-bin.exe"
   Delete "$INSTDIR\bin\density-score-by-residue"
