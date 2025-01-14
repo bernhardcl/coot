@@ -81,67 +81,67 @@ using preferences_value = std::variant<int, double, std::string, bool, std::vect
 preferences_manager coot_preferences;
 
 // Register a preference with setter/getter functions
-void preferences_manager::registerPreference(
+void preferences_manager::register_preference(
       const std::string& key,
       const std::function<void(const preferences_value&)>& setter,
       const std::function<preferences_value()>& getter,
-      const preferences_value& defaultValue)
-   {
-   if (registry.find(key) != registry.end()) {
+      const preferences_value& default_value) {
+
+   if (preferences_registry.find(key) != preferences_registry.end()) {
       throw std::runtime_error("Preference already registered: " + key);
-      }
+   }
 
    // Store the custom getter and setter
-   registry[key] = {setter, getter};
+   preferences_registry[key] = {setter, getter};
 
    // Set the default value
-   defaults[key] = defaultValue;
+   preferences_defaults[key] = default_value;
    try {
-      setter(defaultValue); // Initialize with the default value
+      setter(default_value); // Initialize with the default value
    } catch (std::bad_variant_access) {
       std::cout<<"BL INFO:: try to set the wrong value for key " << key <<
-                 " should be return of setter but is index " << defaultValue.index()<<std::endl;
+                 " should be return of setter but is index " << default_value.index()<<std::endl;
    }
-   }
+}
 
 // Set a preference value
-void preferences_manager::setPreference(const std::string& key, const preferences_value& value) {
-   auto it = registry.find(key);
-   if (it != registry.end()) {
-      it->second.setter(value); // Call the setter function
-      } else {
+void preferences_manager::set_preference(const std::string& key, const preferences_value& value) {
+   auto it = preferences_registry.find(key);
+   if (it != preferences_registry.end()) {
+      it->second.preference_set_function(value); // Call the setter function
+   } else {
       throw std::runtime_error("Preference key not registered: " + key);
-      }
    }
+}
 
 // Get a preference value
-preferences_value preferences_manager::getPreference(const std::string& key) const {
-   auto it = registry.find(key);
-   if (it != registry.end()) {
-      return it->second.getter(); // Call the getter function
-      } else if (defaults.find(key) != defaults.end()) {
-      return defaults.at(key); // Return default if not explicitly set
-      }
-   throw std::runtime_error("Preference key not registered: " + key);
+preferences_value preferences_manager::get_preference(const std::string& key) const {
+   auto it = preferences_registry.find(key);
+   if (it != preferences_registry.end()) {
+      return it->second.preference_get_function(); // Call the getter function
+   } else if (preferences_defaults.find(key) != preferences_defaults.end()) {
+      return preferences_defaults.at(key); // Return default if not explicitly set
    }
+   throw std::runtime_error("Preference key not registered: " + key);
+}
 
 // Reset a preference to its default value
-void preferences_manager::resetToDefault(const std::string& key) {
-   auto def_it = defaults.find(key);
-   if (def_it != defaults.end()) {
-      setPreference(key, def_it->second); // Use the default value
-      } else {
+void preferences_manager::reset_preference_to_default(const std::string& key) {
+   auto def_it = preferences_defaults.find(key);
+   if (def_it != preferences_defaults.end()) {
+      set_preference(key, def_it->second); // Use the default value
+   } else {
       throw std::runtime_error("No default value for preference: " + key);
-      }
    }
+}
 
 // List all registered preferences
 // do we need this function?
-void preferences_manager::listPreferences() const {
-   for (const auto& [key, callbacks] : registry) {
+void preferences_manager::list_preferences() const {
+   for (const auto& [key, callbacks] : preferences_registry) {
       std::cout << key << " = ";
       try {
-      auto value = getPreference(key);
+      auto value = get_preference(key);
 
       // other way?
       // Serialize the value to Python syntax
@@ -166,20 +166,20 @@ void preferences_manager::listPreferences() const {
       } catch (...) {
       // Skip if the preference cannot be retrieved
       }
-    }
+   }
 
 }
 
 // reset all preferences:
-void preferences_manager::resetAllToDefaults() {
-   for (const auto& [key, defaultValue] : defaults) {
-      setPreference(key, defaultValue); // Reset each preference to its default
-      }
+void preferences_manager::reset_all_preferences_to_defaults() {
+   for (const auto& [key, default_value] : preferences_defaults) {
+      set_preference(key, default_value); // Reset each preference to its default
    }
+}
 
 /* save/load preferences */
 
-// maybe should use another function!?
+// maybe should use another/previous function!?
 void preferences_manager::savePreferencesToScript(const std::string& filename) {
    std::ofstream file(filename);
    if (!file.is_open()) {
@@ -193,9 +193,9 @@ void preferences_manager::savePreferencesToScript(const std::string& filename) {
    file << "# Modify this file to customize preferences\n\n";
    file << "import coot\n\n";
 
-   for (const auto& [key, callbacks] : registry) {
+   for (const auto& [key, callbacks] : preferences_registry) {
       try {
-      auto value = getPreference(key);
+      auto value = get_preference(key);
       file << "coot.set_preference(\"" << key << "\", ";
 
       // Serialize the value to Python syntax
@@ -223,10 +223,10 @@ void preferences_manager::savePreferencesToScript(const std::string& filename) {
       } catch (...) {
       // Skip if the preference cannot be retrieved
       }
-      }
+   }
 
    file.close();
-   }
+}
 
 // probbaly dont need, should use existing function.
 void preferences_manager::loadPreferencesFromScript(const std::string& filename) {
@@ -238,7 +238,7 @@ void preferences_manager::loadPreferencesFromScript(const std::string& filename)
    // Execute the Python script
    PyRun_SimpleFile(file, filename.c_str());
    fclose(file);
-   }
+}
 
 
 
@@ -248,70 +248,55 @@ void preferences_manager::loadPreferencesFromScript(const std::string& filename)
 
 /* bind all the preference */
 // Variables get from existing functions...
-std::string theme = "light";
-bool autosave = true;
-int fontSize = 14;
 
-// Define setters and getters
-void setTheme(const preferences_value& value) { theme = std::get<std::string>(value); }
-preferences_value getTheme() { return theme; }
-
-void setAutosave(const preferences_value& value) { autosave = std::get<bool>(value); }
-preferences_value getAutosave() { return autosave; }
-
-void setFontSize(const preferences_value& value) { fontSize = std::get<int>(value); }
-preferences_value getFontSize() { return fontSize; }
-
-//preferences_manager coot_preferences;
-
-void initializePreferences() {
+void initialize_preferences() {
    graphics_info_t g;
    std::vector<float> def_vec;
 
    // Mouse rotation button
-   coot_preferences.registerPreference("use_trackpad",[](const preferences_value& value) {
+   coot_preferences.register_preference("use_trackpad",[](const preferences_value& value) {
       set_use_primary_mouse_button_for_rotation(std::get<bool>(value));},
          []() -> preferences_value { graphics_info_t gg; return gg.using_trackpad;},
    g.using_trackpad);
    std::cout<<"BL DEBUG:: done with 1" <<std::endl;
 
    // Virtual trackball
-   coot_preferences.registerPreference("virtual_trackball",[](const preferences_value& value) {
+   coot_preferences.register_preference("virtual_trackball",[](const preferences_value& value) {
       vt_surface(std::get<int>(value));},
          []() -> preferences_value { return vt_surface_status();},
    g.vt_surface_status());
    std::cout<<"BL DEBUG:: done with 2" <<std::endl;
 
    // Noughty refinement physics
-   coot_preferences.registerPreference("noughty_refinement_physics",[](const preferences_value& value) {
+   coot_preferences.register_preference("noughty_refinement_physics",[](const preferences_value& value) {
       set_refine_use_noughties_physics(std::get<int>(value));},
          []() -> preferences_value { return get_refine_use_noughties_physics_state();},
    int(g.noughties_physics));
    std::cout<<"BL DEBUG:: done with 3" <<std::endl;
 
    // recentre coordinates
-   coot_preferences.registerPreference("recentre_coordinates",[](const preferences_value& value) {
+   coot_preferences.register_preference("recentre_coordinates",[](const preferences_value& value) {
       set_recentre_on_read_pdb(std::get<int>(value));},
          []() -> preferences_value { return recentre_on_read_pdb();},
    g.recentre_on_read_pdb);
    std::cout<<"BL DEBUG:: done with 4" <<std::endl;
 
    // Recentre smooth scrolling
-   coot_preferences.registerPreference("smooth_scroll",[](const preferences_value& value) {
+   coot_preferences.register_preference("smooth_scroll",[](const preferences_value& value) {
       set_smooth_scroll_flag(std::get<int>(value));},
          []() -> preferences_value { return get_smooth_scroll();},
    g.smooth_scroll);
    std::cout<<"BL DEBUG:: done with 5" <<std::endl;
 
    // Recentre smooth scrolling steps
-   coot_preferences.registerPreference("smooth_scroll_steps",[](const preferences_value& value) {
+   coot_preferences.register_preference("smooth_scroll_steps",[](const preferences_value& value) {
       set_smooth_scroll_steps(std::get<int>(value));},
          []() -> preferences_value { graphics_info_t gg; return gg.smooth_scroll_n_steps;},
    g.smooth_scroll_n_steps);
    std::cout<<"BL DEBUG:: done with 6" <<std::endl;
 
    // Recentre smooth scrolling limit
-   coot_preferences.registerPreference("smooth_scroll_limit",[](const preferences_value& value) {
+   coot_preferences.register_preference("smooth_scroll_limit",[](const preferences_value& value) {
       set_smooth_scroll_limit(std::get<double>(value));},
          []() -> preferences_value { graphics_info_t gg; return gg.smooth_scroll_limit;},
    g.smooth_scroll_limit);
@@ -319,16 +304,14 @@ void initializePreferences() {
 
 
    // ask read state
-   coot_preferences.registerPreference("theme", setTheme, getTheme, "light");
-    coot_preferences.registerPreference("autosave", setAutosave, getAutosave, true);
-    coot_preferences.registerPreference("font_size", setFontSize, getFontSize, 14);
-    coot_preferences.registerPreference("map_radius",
+   coot_preferences.register_preference("map_radius",
                                         [](const preferences_value& value) {
        set_map_radius(std::get<double>(value));},
           []() -> preferences_value { return get_map_radius();},
     g.box_radius_xray);
     def_vec = {g.font_colour.red, g.font_colour.green, g.font_colour.blue};
-    coot_preferences.registerPreference("font_colour", [](const preferences_value& value) {
+
+    coot_preferences.register_preference("font_colour", [](const preferences_value& value) {
        set_font_colour(std::get<std::vector<float>>(value)[0],std::get<std::vector<float>>(value)[1],std::get<std::vector<float>>(value)[2]);},
           []() -> preferences_value { graphics_info_t gg; std::vector<float> ret = {gg.font_colour.red,
                                       gg.font_colour.green,gg.font_colour.blue}; return ret;},
@@ -340,75 +323,49 @@ void initializePreferences() {
 #ifdef USE_PYTHON
 PyObject* set_preference(const char *key, PyObject* value) {
 
-    try {
-        // bool needs to come first otherwise it will be int...
-        if (PyBool_Check(value)) {
-           if (PyObject_IsTrue(value)) {
-              coot_preferences.setPreference(key, true);
-           } else {
-              coot_preferences.setPreference(key, false);
-           }
-        } else if (PyFloat_Check(value)) {
-            coot_preferences.setPreference(key, PyFloat_AsDouble(value));
-        } else if (PyUnicode_Check(value)) {
-            coot_preferences.setPreference(key, PyUnicode_AsUTF8(value));
-        } else if (PyLong_Check(value)) {
-           coot_preferences.setPreference(key, PyLong_AsLong(value));
-        } else if (PyList_Check(value)) {
-           // Handle Python list -> std::vector<float>
-           std::vector<float> vec;
-           for (Py_ssize_t i = 0; i < PyList_Size(value); ++i) {
-              PyObject* item = PyList_GetItem(value, i);
-              if (!PyFloat_Check(item)) {
-                 PyErr_SetString(PyExc_ValueError, "List must contain only floats");
-                 return nullptr;
-                 }
-              vec.push_back(static_cast<float>(PyFloat_AsDouble(item)));
-              }
-           coot_preferences.setPreference(key, vec);
-        } else {
-            PyErr_SetString(PyExc_TypeError, "Unsupported preference value type");
+   try {
+   // bool needs to come first otherwise it will be int...
+   if (PyBool_Check(value)) {
+      if (PyObject_IsTrue(value)) {
+         coot_preferences.set_preference(key, true);
+      } else {
+         coot_preferences.set_preference(key, false);
+      }
+   } else if (PyFloat_Check(value)) {
+      coot_preferences.set_preference(key, PyFloat_AsDouble(value));
+   } else if (PyUnicode_Check(value)) {
+      coot_preferences.set_preference(key, PyUnicode_AsUTF8(value));
+   } else if (PyLong_Check(value)) {
+      coot_preferences.set_preference(key, PyLong_AsLong(value));
+   } else if (PyList_Check(value)) {
+      // Handle Python list -> std::vector<float>
+      std::vector<float> vec;
+      for (Py_ssize_t i = 0; i < PyList_Size(value); ++i) {
+         PyObject* item = PyList_GetItem(value, i);
+         if (!PyFloat_Check(item)) {
+            PyErr_SetString(PyExc_ValueError, "List must contain only floats");
             return nullptr;
-        }
-    } catch (const std::exception& e) {
-        PyErr_SetString(PyExc_KeyError, e.what());
-        return nullptr;
-    }
+         }
+         vec.push_back(static_cast<float>(PyFloat_AsDouble(item)));
+      }
+      coot_preferences.set_preference(key, vec);
+   } else {
+      PyErr_SetString(PyExc_TypeError, "Unsupported preference value type");
+      return nullptr;
+   }
+   } catch (const std::exception& e) {
+      PyErr_SetString(PyExc_KeyError, e.what());
+      return nullptr;
+   }
 
-    Py_RETURN_NONE;
+   Py_RETURN_NONE;
 }
 
 PyObject* get_preference(const char *key) {
-//   const char* key;
 
-   // not necessary?! Why should we parse this!?
-//   if (!PyUnicode_Check(key)) {
-//      std::cout <<"BL DEBUG:: dont have unicode return null..."<<std::endl;
-//      return nullptr;
-//   } else {
-//      key = PyUnicode_AsUTF8(args);
-//   }
-
-    try {
-//   auto value = coot_preferences.getPreference(key);
-//   auto visitor = [](const auto& v) -> PyObject* {
-//      using T = std::decay_t<decltype(v)>;
-//      if constexpr (std::is_same_v<T, bool>) {
-//         return PyBool_FromLong(v);
-//         } else if constexpr (std::is_same_v<T, double>) {
-//         return PyFloat_FromDouble(v);
-//         } else if constexpr (std::is_same_v<T, std::string>) {
-//         return PyUnicode_FromString(v.c_str());
-//         } else if constexpr (std::is_same_v<T, int>) {
-//         return PyLong_FromLong(v);
-//         }
-//      return Py_None;
-//      };
-//   PyObject *res= std::visit(visitor, value);
-//   return res;
-
+   try {
    PyObject *ret = Py_None;
-   auto value = coot_preferences.getPreference(key);
+   auto value = coot_preferences.get_preference(key);
    if (std::holds_alternative<bool>(value)) {
       if (std::get<bool>(value) ? ret = Py_True : ret = Py_False);
    } else if (std::holds_alternative<double>(value)) {
@@ -426,77 +383,23 @@ PyObject* get_preference(const char *key) {
    };
    return ret;
 
-
-//   try {
-//   auto value = coot_preferences.getPreference(key);
-//   // bool needs to come first otherwise it will be int...
-//   // Serialize the value to Python syntax
-//   if (std::holds_alternative<bool>(value)) {
-//      file << (std::get<bool>(value) ? "True" : "False");
-//      } else if (std::holds_alternative<int>(value)) {
-
-//      if (PyBool_Check(value)) {
-//         if (PyObject_IsTrue(value)) {
-//            coot_preferences.setPreference(key, true);
-//            } else {
-//            coot_preferences.setPreference(key, false);
-//            }
-//         } else if (PyFloat_Check(value)) {
-//         coot_preferences.setPreference(key, PyFloat_AsDouble(value));
-//         } else if (PyUnicode_Check(value)) {
-//         coot_preferences.setPreference(key, PyUnicode_AsUTF8(value));
-//         } else if (PyLong_Check(value)) {
-//         coot_preferences.setPreference(key, PyLong_AsLong(value));
-//         } else if (PyList_Check(value)) {
-//         // Handle Python list -> std::vector<float>
-//         std::vector<float> vec;
-//         for (Py_ssize_t i = 0; i < PyList_Size(value); ++i) {
-//            PyObject* item = PyList_GetItem(value, i);
-//            if (!PyFloat_Check(item)) {
-//               PyErr_SetString(PyExc_ValueError, "List must contain only floats");
-//               return nullptr;
-//               }
-//            vec.push_back(static_cast<float>(PyFloat_AsDouble(item)));
-//            }
-//         coot_preferences.setPreference(key, vec);
-//         } else {
-//         PyErr_SetString(PyExc_TypeError, "Unsupported preference value type");
-//         return nullptr;
-//         }
-//      } catch (const std::exception& e) {
-//      PyErr_SetString(PyExc_KeyError, e.what());
-//      return nullptr;
-//      }
-
-
-//        return std::visit([](const auto& v) -> PyObject* {
-//            if constexpr (std::is_same_v<decltype(v), int>) {
-//                return PyLong_FromLong(v);
-//            } else if constexpr (std::is_same_v<decltype(v), double>) {
-//                return PyFloat_FromDouble(v);
-//            } else if constexpr (std::is_same_v<decltype(v), std::string>) {
-//                return PyUnicode_FromString(v.c_str());
-//            } else if constexpr (std::is_same_v<decltype(v), bool>) {
-//                return PyBool_FromLong(v);
-//            }
-//        }, value);
-    } catch (const std::exception& e) {
-        PyErr_SetString(PyExc_KeyError, e.what());
-        return nullptr;
-    }
+   } catch (const std::exception& e) {
+       PyErr_SetString(PyExc_KeyError, e.what());
+       return nullptr;
+   }
 }
 
 
 /* reset preferences py */
 
 void reset_all_preferences() {
-    try {
-        coot_preferences.resetAllToDefaults();
-        //Py_RETURN_NONE;
-    } catch (const std::exception& e) {
-        PyErr_SetString(PyExc_RuntimeError, e.what());
-        //return nullptr;
-    }
+   try {
+   coot_preferences.reset_all_preferences_to_defaults();
+   //Py_RETURN_NONE;
+   } catch (const std::exception& e) {
+      PyErr_SetString(PyExc_RuntimeError, e.what());
+      //return nullptr;
+   }
 }
 #endif // PYTHON
 
@@ -679,7 +582,7 @@ void update_preference_gui() {
   preferences_value value;
   //case PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON:
   w = widget_from_preferences_builder("preferences_view_rotation_left_mouse_checkbutton");
-  value = coot_preferences.getPreference("use_trackpad");
+  value = coot_preferences.get_preference("use_trackpad");
   gtk_check_button_set_active(GTK_CHECK_BUTTON(w), std::get<bool>(value));
 
   for (unsigned int i=0; i<g.preferences_internal.size(); i++) {
@@ -848,7 +751,7 @@ void update_preference_gui() {
      //    break;
 
      case PREFERENCES_DEFAULT_B_FACTOR:
-        w = widget_from_preferences_builder("preferences_default_b_factor_entry");
+        w = widget_from_preferences_builder("preferences_defaults_b_factor_entry");
         {
            std::string s = coot::util::float_to_string(graphics_info_t::default_new_atoms_b_factor);
            gtk_editable_set_text(GTK_EDITABLE(w), s.c_str());

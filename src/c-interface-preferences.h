@@ -39,40 +39,38 @@ using preferences_value = std::variant<int, double, std::string, bool, std::vect
 
 class preferences_manager {
 
-   using SetterFunction = std::function<void(const preferences_value&)>;
-   using GetterFunction = std::function<preferences_value()>;
-
    struct preferences_callbacks {
-       SetterFunction setter;
-       GetterFunction getter;
+       std::function<void(const preferences_value&)> preference_set_function;
+       std::function<preferences_value()> preference_get_function;
    };
 
    // can be unordered_map too... this will then be random
    // using map it will be alphabetically sorted by key...
-   std::map<std::string, preferences_callbacks> registry;
-   std::map<std::string, preferences_value> defaults;
+   std::map<std::string, preferences_callbacks> preferences_registry;
+   std::map<std::string, preferences_value> preferences_defaults;
 
 public:
-   void registerPreference(
+   void register_preference(
        const std::string& key,
-       const std::function<void(const preferences_value&)>& setter,
-       const std::function<preferences_value()>& getter,
+       const std::function<void(const preferences_value&)>& set_function,
+       const std::function<preferences_value()>& get_function,
        const preferences_value& defaultValue);
-   void setPreference(const std::string& key, const preferences_value& value);
-   preferences_value getPreference(const std::string& key) const;
-   void resetToDefault(const std::string& key);
-   void listPreferences() const;
-   void resetAllToDefaults();
+   void set_preference(const std::string& key, const preferences_value& value);
+   preferences_value get_preference(const std::string& key) const;
+   void reset_preference_to_default(const std::string& key);
+   void list_preferences() const;
+   void reset_all_preferences_to_defaults();
+   // these may be replaced by old/existing functions.
    void savePreferencesToScript(const std::string& filename);
    void loadPreferencesFromScript(const std::string& filename);
 };
 
 extern preferences_manager coot_preferences;
-void initializePreferences();
+void initialize_preferences();
 
 #ifdef __cplusplus
 #ifdef USE_PYTHON
-// python binding for preferences - not sure if we need these as such since we have them above...
+// python binding for preferences
 PyObject* set_preference(const char *key, PyObject* args);
 PyObject* get_preference(const char *key);
 void reset_all_preferences();

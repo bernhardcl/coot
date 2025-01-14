@@ -898,7 +898,7 @@ new_startup_application_activate(GtkApplication *application,
       // create the preference defaults
       make_preferences_internal();
       // new way
-      initializePreferences();
+      initialize_preferences();
       coot_preferences.savePreferencesToScript("test_def_pref.py");
       coot_preferences.loadPreferencesFromScript("test_def_pref2.py");
 

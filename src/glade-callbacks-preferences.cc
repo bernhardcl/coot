@@ -159,7 +159,7 @@ on_preferences_view_rotation_left_mouse_checkbutton_toggled(GtkCheckButton *chec
 //      preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 0);
 //      set_use_trackpad(0);
 //   }
-   coot_preferences.setPreference("use_trackpad", (bool)gtk_check_button_get_active(checkbutton));
+   coot_preferences.set_preference("use_trackpad", (bool)gtk_check_button_get_active(checkbutton));
 }
 
 extern "C" G_MODULE_EXPORT
@@ -168,9 +168,9 @@ on_preferences_hid_spherical_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                  gpointer         user_data) {
 
    if (gtk_check_button_get_active(checkbutton)) {
-      coot_preferences.setPreference("virtual_trackball", 2);
+      coot_preferences.set_preference("virtual_trackball", 2);
    } else {
-      coot_preferences.setPreference("virtual_trackball", 1);
+      coot_preferences.set_preference("virtual_trackball", 1);
       std::cout<< "BL DEBUG:: set HID to 1"<<std::endl;
    }
 
