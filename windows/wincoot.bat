@@ -34,7 +34,7 @@ set COOT_PIXMAPS_DIR=%COOT_SHARE%\coot\pixmaps
 set COOT_RESOURCES_FILE=%COOT_SHARE%\coot\cootrc
 set COOT_DATA_DIR=%COOT_SHARE%\coot
 set COOT_REF_STRUCTS=%COOT_SHARE%\coot\reference-structures
-set COOT_PYTHON_DIR=%COOT_PREFIX%\lib\python3.11\site-packages\coot
+set COOT_PYTHON_DIR=%COOT_PREFIX%\lib\python3.12\site-packages\coot
 set PYTHONHOME=%COOT_PREFIX%
 
 set SYMINFO=%COOT_SHARE%\coot\syminfo.lib
