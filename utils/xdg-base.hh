@@ -198,6 +198,12 @@ public:
          std::filesystem::create_directories(cache_home);
       return cache_home;
    }
+   std::filesystem::path get_runtime_dir() const {
+      // 20250113-PE add a check here that runtime_dir is on a local filesystem
+      if (!std::filesystem::is_directory(runtime_dir))
+         std::filesystem::create_directories(runtime_dir);
+      return runtime_dir;
+   }
 #ifdef WINDOWS_MINGW
    // need to create the data dirs on windows as well
    std::string get_data_dirs() const {

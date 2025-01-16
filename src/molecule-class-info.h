@@ -106,7 +106,7 @@ enum {CONTOUR_UP, CONTOUR_DOWN};
 #include "coot-render.hh" // 20220723-PE no graphics for WebAssembly build
 
 // #include "coot-surface/coot-surface.hh" dead now
-#include "coot-align.hh"
+#include "coot-utils/coot-align.hh"
 #include "utils/coot-fasta.hh"
 #include "coot-utils/coot-shelx.hh"
 #include "utils/coot-utils.hh"
@@ -1067,6 +1067,7 @@ public:        //                      public
                                             bool all_atoms_mode,
                                             bool draw_missing_loops_flag);
 
+   void alt_conf_view_next_alt_conf(const std::string &current_alt_conf);
 
 
    // This doesn't catch the case when__builtin_FUNCTION exists but __has_builtin does not
@@ -1670,7 +1671,7 @@ public:        //                      public
    // But we should try to put the waters into (add/append to) a chain
    // of waters in this molecule, if it has one.
    //
-   int insert_waters_into_molecule(const coot::minimol::molecule &water_mol);
+   int insert_waters_into_molecule(const coot::minimol::molecule &water_mol, const std::string &res_name);
    int append_to_molecule(const coot::minimol::molecule &water_mol);
    mmdb::Residue *residue_from_external(int reso, const std::string &insertion_code,
 					const std::string &chain_id) const;
