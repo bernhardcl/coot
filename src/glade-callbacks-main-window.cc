@@ -862,8 +862,7 @@ fill_comboboxtext_with_atom_of_residue_type(const char *rn, GtkWidget *comboboxt
       graphics_info_t::cif_dictionary_read_number++;
       std::pair<bool, coot::dictionary_residue_restraints_t> rp = geom.get_monomer_restraints(residue_type, imol);
       if (rp.first) {
-	 // don't do it like this -- maybe more code is needed. With this in place the combobox is just blank entries.
-         // gtk_cell_layout_clear(GTK_CELL_LAYOUT(comboboxtext)); // clear combobox
+         gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(comboboxtext));
          const auto &restraints = rp.second;
          const auto &atoms = restraints.atom_info;
          for (const auto &atom : atoms) {
@@ -1059,17 +1058,18 @@ on_acedrg_link_ok_button_clicked(GtkButton       *button,
       ss += atom_name_first;
       ss += " ";
       if (!cif_file_name_1.empty())
-         ss + "FILE-1 " + cif_file_name_1;
+         ss += std::string("FILE-1 ") + cif_file_name_1;
 
       ss += "RES-NAME-2 ";
       ss += residue_name_second;
       ss += " ";
       ss += "ATOM-NAME-2 ";
       ss += atom_name_second;
+      ss += " ";
       if (!cif_file_name_2.empty())
-         ss + "FILE-2 " + cif_file_name_2;
+         ss += std::string("FILE-2 ") + cif_file_name_2;
 
-      ss += " BOND-TYPE ";
+      ss += std::string(" BOND-TYPE ");
       ss += coot::util::upcase(bond_order);
       std::cout << ss << std::endl;
       run_acedrg_link_generation(ss);
@@ -1101,10 +1101,10 @@ on_acedrg_link_ok_button_clicked(GtkButton       *button,
       ss += atom_name_first;
       ss += " ";
       if (!cif_file_name_1.empty())
-         ss + "FILE-1 " + cif_file_name_1 + std::string(" ");
+         ss += "FILE-1 " + cif_file_name_1 + std::string(" ");
       if (delete_atom_first)
          if (da_first)
-         ss += "DELETE " + std::string(da_first) + std::string(" 1 ");
+         ss += "DELETE ATOM " + std::string(da_first) + std::string(" 1 ");
       if (change_charge_on_first_residue_atom)
          ss += std::string("CHANGE CHARGE ") + std::string(change_charge_on_first_atom) + std::string(" 1 ");
       if (change_bond_order_first)
@@ -1118,14 +1118,16 @@ on_acedrg_link_ok_button_clicked(GtkButton       *button,
       ss += residue_name_second;
       ss += " ";
       ss += "ATOM-NAME-2 ";
+      ss += " ";
       ss += atom_name_second;
+      ss += " ";
       if (!cif_file_name_2.empty())
-         ss += std::string("FILE-2 ") + cif_file_name_2;
+         ss += std::string("FILE-2 ") + cif_file_name_2 + std::string(" ");
       if (delete_atom_second)
          if (da_second)
-         ss += "DELETE " + std::string(da_second) + std::string(" 2 ");
+         ss += "DELETE ATOM " + std::string(da_second) + std::string(" 2 ");
       if (change_charge_on_second_residue_atom)
-         ss += std::string("CHANGE CHARGE ") + std::string(change_charge_on_first_atom) + std::string(" 2 ");
+         ss += std::string("CHANGE CHARGE ") + std::string(change_charge_on_second_atom) + std::string(" 2 ");
       if (change_bond_order_second)
          if (cbo_second)
             if (change_bond_order_second_atom_1)
@@ -1272,6 +1274,8 @@ on_acedrg_link_ok_button_clicked(GtkButton       *button,
          }
       }
    }
+   graphics_info_t g;
+   g.graphics_grab_focus();
 }
 
 extern "C" G_MODULE_EXPORT
@@ -1307,10 +1311,134 @@ on_acedrg_link_second_residue_activate(GtkEntry *entry, gpointer user_data) {
 
 extern "C" G_MODULE_EXPORT
 void
-on_acedrg_link_cancel_button_clicked(GtkButton       *button,
-				     gpointer         user_data) {
+on_acedrg_link_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+				     G_GNUC_UNUSED gpointer         user_data) {
 
-  std::cout << "Cancel" << std::endl;
-  GtkWidget *w = widget_from_builder("acedrg_link_interface_frame");
-  gtk_widget_set_visible(w, FALSE);
+   std::cout << "Cancel" << std::endl;
+   GtkWidget *w = widget_from_builder("acedrg_link_interface_frame");
+   gtk_widget_set_visible(w, FALSE);
+   graphics_info_t g;
+   g.graphics_grab_focus();
 }
+
+extern "C" G_MODULE_EXPORT
+void
+on_flip_hand_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                   G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame = widget_from_builder("flip_map_hand_frame");
+   gtk_widget_set_visible(frame, FALSE);
+   graphics_info_t g;
+   g.graphics_grab_focus();
+
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_flip_hand_ok_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                               G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame                = widget_from_builder("flip_map_hand_frame");
+   GtkWidget *mol_chooser_combobox = widget_from_builder("flip_map_hand_comboboxtext");
+   gtk_widget_set_visible(frame, FALSE);
+   int imol = my_combobox_get_imol(GTK_COMBO_BOX(mol_chooser_combobox));
+   flip_hand(imol);
+   graphics_info_t g;
+   g.graphics_grab_focus();
+
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_make_masked_maps_by_chain_ok_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                                   G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame = widget_from_builder("make_masked_maps_by_chain_frame");
+   GtkWidget *mol_chooser_combobox = widget_from_builder("make_masked_maps_by_chain_model_comboboxtext");
+   GtkWidget *map_chooser_combobox = widget_from_builder("make_masked_maps_by_chain_map_comboboxtext");
+   int imol     = my_combobox_get_imol(GTK_COMBO_BOX(mol_chooser_combobox));
+   int imol_map = my_combobox_get_imol(GTK_COMBO_BOX(map_chooser_combobox));
+   make_masked_maps_split_by_chain(imol, imol_map);
+   gtk_widget_set_visible(frame, FALSE);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_make_masked_maps_by_chain_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                                   G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame = widget_from_builder("make_masked_maps_by_chain_frame");
+   gtk_widget_set_visible(frame, FALSE);
+}
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_sharpen_blur_map_ok_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                      G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame          = widget_from_builder("sharpen_blur_map_frame");
+   GtkWidget *combobox       = widget_from_builder("sharpen_blur_map_comboboxtext");
+   GtkWidget *checkbutton    = widget_from_builder("sharpen_blur_map_resample_checkbutton");
+   GtkWidget *resample_entry = widget_from_builder("sharpen_blur_map_resample_entry");
+   GtkWidget *b_factor_entry = widget_from_builder("sharpen_blur_map_entry");
+   int imol_map = my_combobox_get_imol(GTK_COMBO_BOX(combobox));
+   float resample_factor = 1.0;
+   float b_factor = 0.0;
+   if (b_factor_entry) {
+      const char *t = gtk_editable_get_text(GTK_EDITABLE(b_factor_entry));
+      try {
+         b_factor = coot::util::string_to_float(std::string(t));
+      }
+      catch (const std::runtime_error &e) {
+         std::cout << "WARNING::" << e.what() << std::endl;
+      }
+   }
+   if (gtk_check_button_get_active(GTK_CHECK_BUTTON(checkbutton))) {
+      const char *t = gtk_editable_get_text(GTK_EDITABLE(resample_entry));
+      try {
+         resample_factor = coot::util::string_to_float(std::string(t));
+      }
+      catch (const std::runtime_error &e) {
+         std::cout << "WARNING::" << e.what() << std::endl;
+      }
+      // 20250115-PE make this non-blocking if you can (non-trivial)
+      // you will need to split the calculation from the update of the gui and graphics.
+      sharpen_blur_map_with_resampling(imol_map, b_factor, resample_factor);
+   } else {
+      // 20250115-PE make this non-blocking if you can
+      sharpen_blur_map(imol_map, b_factor);
+   }
+   if (frame)
+      gtk_widget_set_visible(frame, FALSE);
+
+}
+extern "C" G_MODULE_EXPORT
+
+void
+on_sharpen_blur_map_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                          G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame = widget_from_builder("sharpen_blur_map_frame");
+   if (frame)
+      gtk_widget_set_visible(frame, FALSE);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_sharpen_blur_map_resample_checkbutton_toggled(GtkCheckButton *checkbutton,
+                                                 G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *resample_entry = widget_from_builder("sharpen_blur_map_resample_entry");
+   GtkWidget *resample_label = widget_from_builder("sharpen_blur_map_resample_label");
+   if (resample_entry) {
+      if (gtk_check_button_get_active(checkbutton)) {
+         gtk_widget_set_sensitive(resample_entry, TRUE);
+         gtk_widget_set_sensitive(resample_label, TRUE);
+      } else {
+         gtk_widget_set_sensitive(resample_entry, FALSE);
+         gtk_widget_set_sensitive(resample_label, FALSE);
+      }
+   }
+}
+
