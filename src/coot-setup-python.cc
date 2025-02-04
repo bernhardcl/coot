@@ -191,6 +191,11 @@ void setup_python_with_coot_modules(int argc, char **argv) {
       // idioms.
       // PyImport_ImportModule("extensions");
 
+      // BL says:: needed by coot_gui.py so need to import coot_gui_api before
+      initcoot_python_gobject(); // this is not a good name for this function. We need to say
+                                 // this this is the module that wraps the glue to get
+                                 // the status-bar, menu-bar etc. i.e. coot_python_api
+
 
       // this should not be called if we are not starting the graphics. But for now, add
       // it without that test
@@ -201,10 +206,6 @@ void setup_python_with_coot_modules(int argc, char **argv) {
       PyErr_Print();
 
       std::cout << "DEBUG:: setup_python_with_coot_modules() PyImport_ImportModule() for gui_module: " << gui_module << std::endl;
-
-      initcoot_python_gobject(); // this is not a good name for this function. We need to say
-                                 // this this is the module that wraps the glue to get
-                                 // the status-bar, menu-bar etc. i.e. coot_python_api
 
    }
 
