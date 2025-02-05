@@ -3446,9 +3446,9 @@ int test_svg(molecules_container_t &mc) {
 
    mc.import_cif_dictionary("ATP.cif", imol_1);
    mc.import_cif_dictionary("ATP.cif", imol_2);
-   bool dark_bg = false;
    bool use_rdkit_svg = false;
-   std::string s = mc.get_svg_for_residue_type(imol_1, "ATP", use_rdkit_svg, dark_bg);
+   std::string bg = "dark-bonds/opaque-bg";
+   std::string s = mc.get_svg_for_residue_type(imol_1, "ATP", use_rdkit_svg, bg);
 
    if (s.length() > 0) {
 
@@ -3457,7 +3457,7 @@ int test_svg(molecules_container_t &mc) {
       f.close();
       {
          mc.import_cif_dictionary("G37.cif", coot::protein_geometry::IMOL_ENC_ANY);
-         s = mc.get_svg_for_residue_type(imol_1, "G37", use_rdkit_svg, dark_bg);
+         s = mc.get_svg_for_residue_type(imol_1, "G37", use_rdkit_svg, bg);
          std::ofstream f2("G37.svg");
          f2 << s;
          f2.close();
@@ -3465,7 +3465,7 @@ int test_svg(molecules_container_t &mc) {
 
       {
          mc.import_cif_dictionary("GLC.cif", coot::protein_geometry::IMOL_ENC_ANY);
-         s = mc.get_svg_for_residue_type(imol_1, "GLC", use_rdkit_svg, dark_bg);
+         s = mc.get_svg_for_residue_type(imol_1, "GLC", use_rdkit_svg, bg);
          std::ofstream f2("GLC.svg");
          f2 << s;
          f2.close();
@@ -4552,8 +4552,8 @@ int test_pdbe_dictionary_depiction(molecules_container_t &mc) {
    // if (coot::file_exists("MOI-depiction.png")) status = 1; // not a good test.
 
    bool use_rdkit_rendering = true;
-   bool dark_background = false;
-   std::string svg = mc.get_svg_for_residue_type(coot::protein_geometry::IMOL_ENC_ANY, "MOI", use_rdkit_rendering, dark_background);
+   std::string bg = "dark-bonds/opaque-bg";
+   std::string svg = mc.get_svg_for_residue_type(coot::protein_geometry::IMOL_ENC_ANY, "MOI", use_rdkit_rendering, bg);
    std::ofstream f("MOI.svg");
    f << svg;
    f.close();
@@ -6042,14 +6042,17 @@ int test_delete_two_add_one_using_gemmi(molecules_container_t &mc) {
 
 int test_merge_ligand_and_gemmi_parse_mmcif(molecules_container_t &mc) {
 
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+#ifdef USE_GEMMI_REALLY
+
   auto read_structure_from_string = [] (const std::string &data, const std::string& path){
     char *c_data = (char *)data.c_str();
     size_t size = data.length();
-    return gemmi::read_structure_from_char_array(c_data,size,path);
+    // return gemmi::read_structure_from_char_array(c_data,size,path);
+    return nullptr;
   };
-
-   starting_test(__FUNCTION__);
-   int status = 0;
 
    auto coordMolNo_1 = mc.read_pdb(reference_data("5a3h.mmcif"));
    // expect(coordMolNo_1).toBe(0)
@@ -6113,6 +6116,8 @@ int test_merge_ligand_and_gemmi_parse_mmcif(molecules_container_t &mc) {
    if (model.chains.size() == 3)
       if (chains[2].get_ligands().size() == 1)
          status = 1;
+
+#endif
 
    return status;
 
@@ -6604,10 +6609,12 @@ int main(int argc, char **argv) {
          // status += run_test(test_delete_two_add_one_using_gemmi, "test_delete_two_add_one_using_gemmi", mc);
          // status += run_test(test_dictionary_atom_name_match, "dictionary atom names match", mc);
          // status += run_test(test_average_position_functions, "average position functions", mc);
+
+         status += run_test(test_get_torsion, "get_torsion", mc);
          status += run_test(test_set_occupancy, "set occupancy", mc);
          status += run_test(test_missing_residues, "missing residues", mc);
          status += run_test(test_mutation_info, "mutation info", mc);
-        if (status == n_tests) all_tests_status = 0;
+         if (status == n_tests) all_tests_status = 0;
 
          print_results_summary();
       }

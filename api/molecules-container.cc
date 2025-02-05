@@ -55,6 +55,18 @@ molecules_container_t::~molecules_container_t() {
    standard_residues_asc.clear_up();
 }
 
+//! Get the package version
+//!
+//! @return the package version, e.g. "1.1.11" - if this is a not yet a release version
+//! the version will end in a "+", such as "1.1.11+"
+std::string
+molecules_container_t::package_version() const {
+
+   std::string s(PACKAGE_VERSION);
+   return s;
+
+}
+
 //! get imol_enc_any
 //!
 //! @return the value of imol_enc_any (meaning "the molecule number for dictionary that
@@ -301,7 +313,7 @@ molecules_container_t::get_number_of_hydrogen_atoms(int imol) const {
 
 void
 molecules_container_t::set_draw_missing_residue_loops(bool state) {
-   std::cout << "****** in set_draw_missing_residue_loops() with state " << state << std::endl;
+   // std::cout << "****** in set_draw_missing_residue_loops() with state " << state << std::endl;
    draw_missing_residue_loops_flag = state;
 }
 
@@ -1102,7 +1114,7 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
    auto_mtz_pairs.push_back(coot::mtz_column_trials_info_t("FDM",          "PHIDM",     false));
    auto_mtz_pairs.push_back(coot::mtz_column_trials_info_t("FAN",          "PHAN",      true));
    auto_mtz_pairs.push_back(coot::mtz_column_trials_info_t("F_ano",        "PHI_ano",   true));
-   auto_mtz_pairs.push_back(coot::mtz_column_trials_info_t("F_early-Flate","PHI_early-late", true));
+   auto_mtz_pairs.push_back(coot::mtz_column_trials_info_t("F_early-late", "PHI_early-late", true));
 
    auto add_r_free_column_label = [] (auto_read_mtz_info_t *a, const coot::mtz_column_types_info_t &r) {
       for (unsigned int i=0; i<r.r_free_cols.size(); i++) {
@@ -2893,12 +2905,6 @@ molecules_container_t::thread_for_refinement_loop_threaded() {
 
 }
 
-std::pair<int, double>
-molecules_container_t::get_torsion(int imol, const std::string &cid, const std::vector<std::string> &atom_names) {
-
-   return std::make_pair(0, 0.0);
-}
-
 
 
 int
@@ -4031,7 +4037,7 @@ molecules_container_t::flood(int imol_model, int imol_map, float n_rmsd) {
 
 
 std::vector<coot::molecule_t::interesting_place_t>
-molecules_container_t::unmodelled_blobs(int imol_model, int imol_map) const {
+molecules_container_t::unmodelled_blobs(int imol_model, int imol_map, float rmsd_cut_off) const {
 
    std::vector<coot::molecule_t::interesting_place_t> v;
    if (is_valid_model_molecule(imol_model)) {
@@ -4044,7 +4050,7 @@ molecules_container_t::unmodelled_blobs(int imol_model, int imol_map) const {
          lig.import_map_from(molecules[imol_map].xmap, sigma);
          lig.set_map_atom_mask_radius(1.9); // Angstrom
          lig.mask_map(molecules[imol_model].atom_sel.mol, mask_waters_flag);
-         float sigma_cut_off = 1.4;
+         float sigma_cut_off = rmsd_cut_off;
          std::cout << "Unmodelled blobs using sigma cut off " << sigma_cut_off << std::endl;
          int n_cycles = 1;
          lig.water_fit(sigma_cut_off, n_cycles);
@@ -4942,13 +4948,13 @@ molecules_container_t::get_simple_molecule(int imol, const std::string &residue_
 
 //! @return a vector of lines for non-bonded contacts and hydrogen bonds
 generic_3d_lines_bonds_box_t
-molecules_container_t::make_exportable_environment_bond_box(int imol, coot::residue_spec_t &spec) {
+molecules_container_t::make_exportable_environment_bond_box(int imol, coot::residue_spec_t &spec, float max_dist) {
 
    // this function is non-const because the Bonds_lines function needs a mutable protein_geometry
 
    generic_3d_lines_bonds_box_t bonds_box;
    if (is_valid_model_molecule(imol)) {
-      bonds_box = molecules[imol].make_exportable_environment_bond_box(spec, geom);
+      bonds_box = molecules[imol].make_exportable_environment_bond_box(spec, max_dist, geom);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -6038,7 +6044,7 @@ molecules_container_t::dictionary_atom_name_map(const std::string &comp_id_1, in
 
 
 
-//! get the residue CA position
+//! Get the residue CA position
 //!
 //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
 std::vector<double>
@@ -6054,7 +6060,7 @@ molecules_container_t::get_residue_CA_position(int imol, const std::string &cid)
 
 }
 
-//! get the avarge residue position
+//! Get the average residue position
 //!
 //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
 std::vector<double>
@@ -6069,7 +6075,7 @@ molecules_container_t::get_residue_average_position(int imol, const std::string 
    return v;
 }
 
-//! get the avarge residue side-chain position
+//! Get the average residue side-chain position
 //!
 //! @return a vector. The length of the vector is 0 on failure, otherwise it is the x,y,z values
 std::vector<double>
@@ -6082,6 +6088,25 @@ molecules_container_t::get_residue_sidechain_average_position(int imol, const st
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
    return v;
+}
+
+//! Get the torsion of the specified atom in the specified residue
+//!
+//! @param imol is the model molecule index
+//! @param cid is the selection CID, e.g. //A/15 (residue 15 in chain A)
+//! @param atom_names is a list of atom names, e.g. ["CA", "CB", "CG", "CD"]
+//!
+//! @return a pair, the first of which is a succes status (1 success, 0 failure), the second is the torsion in degrees
+std::pair<int, double>
+molecules_container_t::get_torsion(int imol, const std::string &cid, const std::vector<std::string> &atom_names) {
+   std::pair<int, double> p(0,0);
+
+   if (is_valid_model_molecule(imol)) {
+      p = molecules[imol].get_torsion(cid, atom_names);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return p;
 }
 
 //! set the occupancy for the given atom selection
@@ -6100,10 +6125,7 @@ molecules_container_t::set_occupancy(int imol, const std::string &cid, float occ
 
 }
 
-#include <format>
 #include "utils/subprocess.hpp"
-using namespace std::chrono_literals;
-
 
 
 //! External refinement using servalcat
