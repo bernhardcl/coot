@@ -46,10 +46,13 @@
 #include "labelled-button-info.hh"
 #include "cc-interface.hh" // for fullscreen()
 
+// In Windows they need to be in graphics-info-statics.cc
+#ifndef WINDOWS_MINGW
 // These don't work if they are in graphics-info-statics.cc
 // Possibly because the gui is loaded at run-time.
 int graphics_info_t::scale_up_graphics = 1;
 int graphics_info_t::scale_down_graphics = 1;
+#endif
 
 extern "C" { void load_tutorial_model_and_data(); }
 

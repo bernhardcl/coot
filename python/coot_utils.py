@@ -4044,7 +4044,7 @@ def find_exe(program_name, *args, **kwargs):
             else:
                 try:
                     primary_path = os.environ[search_path]
-                    for path in string.split(primary_path, os.pathsep):
+                    for path in primary_path.split(os.pathsep):
                         program_exe = os.path.join(path, file_name)
                         if (os.path.isfile(program_exe)):
                             if info:
@@ -4053,6 +4053,7 @@ def find_exe(program_name, *args, **kwargs):
                 except:
                     if info:
                         print("BL WARNING:: %s not defined!" % search_path)
+                    pass
 
     # BL says: before we search everywhere we might want to ask
     # the user if he actually wishes to do so!

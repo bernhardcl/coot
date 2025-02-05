@@ -65,9 +65,11 @@ extern "C" {
   #include <io.h>
   #include <cwchar>
 
+#ifndef __MINGW32__
   #define close _close
   #define open _open
   #define fileno _fileno
+#endif
 #else
   #include <sys/wait.h>
   #include <unistd.h>

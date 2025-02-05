@@ -950,7 +950,12 @@ new_startup_application_activate(GtkApplication *application,
       // DEBUG:: --- new_startup_on_glarea_resize() 900 710
       // DEBUG:: --- new_startup_on_glarea_resize() 900 900
       // Curious.
+      // BL says:: make smaller on Windows too, to be on the safe side
+#ifdef WINDOWS_MINGW
+      gtk_window_set_default_size(GTK_WINDOW(app_window), 900, 900);
+#else
       gtk_window_set_default_size(GTK_WINDOW(app_window), 1076, 1023);
+#endif
       gtk_window_set_default_widget(GTK_WINDOW(app_window), gl_area);
       gtk_widget_set_visible(app_window, TRUE);
       gtk_window_set_focus_visible(GTK_WINDOW(app_window), TRUE);
