@@ -1,3 +1,24 @@
+/* src/gl-matrix.cc
+ *
+ * Copyright 2002,  by The University of York
+ * Author: Paul Emsley
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA
+ */
+
 
 #include <iostream>
 #include <math.h>
@@ -15,7 +36,7 @@ GL_matrix::GL_matrix() {
 	 mat[i*4+j] = 0.0;
       }
    }
-      
+
    for (int i=0; i<4; i++) {
       mat[i*5] = 1.0;
    }
@@ -24,7 +45,7 @@ GL_matrix::GL_matrix() {
 GL_matrix::GL_matrix(const clipper::Mat33<double> &m) {
 
    // indexing bug fix from Ansgar Esztermann
-   // 
+   //
    mat[ 0] = m(0,0);
    mat[ 1] = m(0,1);
    mat[ 2] = m(0,2);
@@ -271,19 +292,20 @@ GL_matrix::cholesky() const {
    l.mat[ 3] = 0;
    l.mat[ 7] = 0;
    l.mat[11] = 0;
-   l.mat[15] = 1; 
+   l.mat[15] = 1;
 
-   return std::pair<bool,GL_matrix> (1, l); 
+   return std::pair<bool,GL_matrix> (1, l);
 }
 
 // Use the GSL for cholesky then:
-#else 
+#else
+
 std::pair<bool,GL_matrix>
 GL_matrix::cholesky() const {
 
    double a_data[] = { mat[0], mat[1], mat[ 2],
-		       mat[4], mat[5], mat[ 6], 
-		       mat[8], mat[9], mat[10] }; 
+		       mat[4], mat[5], mat[ 6],
+		       mat[8], mat[9], mat[10] };
 
    gsl_matrix_view m = gsl_matrix_view_array (a_data, 3, 3);
 
@@ -315,7 +337,7 @@ GL_matrix::cholesky() const {
       old_handler = gsl_set_error_handler(my_aniso_error_handler);
       int ic = gsl_linalg_cholesky_decomp (&m.matrix);
       gsl_set_error_handler(old_handler);
-      
+
       return std::pair<bool, GL_matrix> (1, GL_matrix(gsl_matrix_get(&m.matrix, 0, 0),
 						      gsl_matrix_get(&m.matrix, 0, 1),
 						      gsl_matrix_get(&m.matrix, 0, 2),
@@ -326,7 +348,8 @@ GL_matrix::cholesky() const {
 						      gsl_matrix_get(&m.matrix, 2, 1),
 						      gsl_matrix_get(&m.matrix, 2, 2)));
    }
-} 
+}
+
 #endif // GSL for Cholesky
 
 
