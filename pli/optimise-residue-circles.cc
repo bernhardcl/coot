@@ -38,7 +38,7 @@ pli::optimise_residue_circles::optimise_residue_circles(const std::vector<residu
    score_vs_ligand_atoms_rk = 50000.0;
    score_vs_ligand_atoms_exp_scale = 0.0002; // quite sensitive value - 0.0002 is big kick
    score_vs_original_positions_kk = 500.0;
-   score_vs_ligand_atom_bond_length_kk = 0.001;
+   score_vs_ligand_atom_bond_length_kk = 1.001;
 
    score_vs_other_residues_kk = 2000.0;
    score_vs_other_residues_exp_scale = 0.5;
@@ -260,7 +260,7 @@ pli::optimise_residue_circles::f(const gsl_vector *v, void *params) {
       double kk = orc->score_vs_ligand_atom_bond_length_kk;
       for (unsigned int iprimary=0; iprimary<orc->primary_indices.size(); iprimary++) {
 	 int idx = orc->primary_indices[iprimary];
-	 std::vector<std::pair<lig_build::pos_t, double> > attachment_points =
+	 const std::vector<std::pair<lig_build::pos_t, double> > &attachment_points =
 	    orc->current_circles[idx].get_attachment_points(orc->mol);
 	 for (unsigned int iattach=0; iattach<attachment_points.size(); iattach++) {
 	    //
@@ -425,7 +425,7 @@ pli::optimise_residue_circles::df(const gsl_vector *v, void *params, gsl_vector 
       double kk = orc->score_vs_ligand_atom_bond_length_kk;
       for (unsigned int iprimary=0; iprimary<orc->primary_indices.size(); iprimary++) {
          int idx = orc->primary_indices[iprimary];
-         std::vector<std::pair<lig_build::pos_t, double> > attachment_points =
+         const std::vector<std::pair<lig_build::pos_t, double> > &attachment_points =
             orc->current_circles[idx].get_attachment_points(orc->mol);
          for (unsigned int iattach=0; iattach<attachment_points.size(); iattach++) {
             //
@@ -513,11 +513,10 @@ residue_circle_t::get_attachment_points(const svg_molecule_t &mol) const {
    for (unsigned int i=0; i<bonds_to_ligand.size(); i++) {
       if (bonds_to_ligand[i].is_set()) {
          try {
-            lig_build::pos_t pos =
-               mol.get_atom_canvas_position(bonds_to_ligand[i].ligand_atom_name);
+            lig_build::pos_t pos = mol.get_atom_canvas_position(bonds_to_ligand[i].ligand_atom_name);
             if (bonds_to_ligand[i].is_set()) {
                double bl = bonds_to_ligand[i].bond_length;
-               double target_dist = bl * 1.5;
+               double target_dist = bl;
                std::pair<lig_build::pos_t, double> p(pos, target_dist);
                v.push_back(p);
             }

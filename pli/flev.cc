@@ -144,6 +144,7 @@ flev_t::convert(const std::vector<std::pair<coot::atom_spec_t, float> > &s_a_v,
       std::string name = s_a_v[i].first.atom_name;
       r[i].atom_name = name;
       r[i].solvent_accessibility = s_a_v[i].second;
+      // std::cout << "convert(): " << i << " " << name << " " << s_a_v[i].second << std::endl;
 
       std::map<std::string, std::vector<coot::bash_distance_t> >::const_iterator it =
          ah.atom_bashes.find(name);
@@ -189,10 +190,11 @@ flev_t::solution_has_problems_p() const {
 	 double d2 = (residue_circles[i].pos-mol.atoms[j].atom_position).lengthsq();
          std::string mark = "";
          if (d2 < crit_dist_sqrd) mark = " ***";
-         std::cout << "in solution_has_problems_p(): comparing " << std::sqrt(d2) << " " << crit_dist
-                   << " residue: " << residue_circles[i].residue_label
-                   << " atom: " << mol.atoms[j].atom_name << " " << mark
-                   << std::endl;
+         if (false)
+            std::cout << "in solution_has_problems_p(): comparing " << std::sqrt(d2) << " " << crit_dist
+                      << " residue: " << residue_circles[i].residue_label
+                      << " atom: " << mol.atoms[j].atom_name << " " << mark
+                      << std::endl;
 	 if (d2 < crit_dist_sqrd) {
 	    n_close++;
 	    if (n_close > 1) {
@@ -274,6 +276,8 @@ flev_t::reposition_bonded_problematics_and_reoptimise(const std::vector<int> &pr
 void
 flev_t::reposition_problematics_and_reoptimise(const std::vector<int> &problematics,
                                                const std::vector<int> &primary_indices) {
+
+   // is this function used!?
 
    std::pair<lig_build::pos_t, lig_build::pos_t> l_e_pair = mol.ligand_extents();
    ligand_grid grid(l_e_pair.first, l_e_pair.second);
@@ -361,7 +365,7 @@ flev_t::annotate(const std::vector<std::pair<coot::atom_spec_t, float> > &s_a_v,
       }
    }
 
-   if (true) {
+   if (false) {
       std::cout << "--------------------------------------------------------------" << std::endl;
       std::cout << "======== flev_t::annotate() here are bash distances for atoms:" << std::endl;
       std::map<std::string, std::vector<coot::bash_distance_t> >::const_iterator it;
@@ -376,10 +380,10 @@ flev_t::annotate(const std::vector<std::pair<coot::atom_spec_t, float> > &s_a_v,
 
    bool r = false;
    std::vector<pli::solvent_accessible_atom_t> solvent_accessible_atoms = convert(s_a_v, ah);
+   std::cout << "annotate(): solvent_accessible_atoms size " << solvent_accessible_atoms.size() << std::endl;
 
-   lig_build::molecule_t<svg_atom_t, svg_bond_t> new_mol = mol;
-   // modify the atoms of new_mol
-   map_solvent_accessibilities_to_atoms(&new_mol, solvent_accessible_atoms);
+   // modify the atoms of mol
+   map_solvent_accessibilities_to_atoms(&mol, solvent_accessible_atoms);
 
    // fill class data item std::vector<residue_circle_t> residue_circles;
    //
@@ -820,8 +824,10 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
    }
 }
 
-void
+svg_container_t
 flev_t::draw_substitution_contour() {
+
+   svg_container_t svgc;
 
    bool debug = true;
 
@@ -982,6 +988,7 @@ flev_t::draw_substitution_contour() {
          }
       }
    }
+   return svgc;
 }
 
 
@@ -1035,8 +1042,10 @@ svg_container_t
 flev_t::draw_all_flev_ligand_annotations() {
 
    svg_container_t svgc;
-   draw_substitution_contour();
-   draw_solvent_accessibility_of_atoms();
+   svg_container_t svg_sc  = draw_substitution_contour();
+   svg_container_t svg_saa = draw_solvent_accessibility_of_atoms();
+   svgc.add(svg_sc);
+   svgc.add(svg_saa);
    return svgc;
 }
 
@@ -1419,38 +1428,41 @@ flev_t::draw_bonds_to_ligand() {
 }
 
 
-void
+svg_container_t
 flev_t::draw_solvent_accessibility_of_atoms() {
 
+   svg_container_t svgc;
    for (unsigned int iat=0; iat<mol.atoms.size(); iat++) {
       lig_build::pos_t pos = mol.atoms[iat].atom_position;
       double sa = mol.atoms[iat].get_solvent_accessibility();
-      if (sa  > 0)
-         draw_solvent_accessibility_of_atom(pos, sa);
-   }
-}
-
-void
-flev_t::draw_solvent_accessibility_of_atom(const lig_build::pos_t &pos, double sa) {
-
-   if (true) {
-      int n_circles = int(sa*40) + 1;    // needs fiddling?
-      if (n_circles> 10) n_circles = 10; // needs fiddling?
-
-      for (int i=0; i<n_circles; i++) {
-         double rad = 0.1 * double(i+1); // needs fiddling?
-
-         // CONVERT-TO-SVG
-         // GooCanvasItem *circle = goo_canvas_ellipse_new(group,
-         //                                                pos.x, pos.y,
-         //                                                rad, rad,
-         //                                                "line_width", 0.0,
-         //                                                "fill-color-rgba", 0x5555cc30,
-         //                                                NULL);
-         // goo_canvas_item_lower(group, NULL); // to the bottom
-
+      // saa of -1 is "unset"
+      if (sa  > 0.0) {
+         svg_container_t saa = draw_solvent_accessibility_of_atom(pos, sa);
+         svgc.add(saa);
       }
    }
+   return svgc;
+}
+
+svg_container_t
+flev_t::draw_solvent_accessibility_of_atom(const lig_build::pos_t &pos, double sa) {
+
+   svg_container_t svgc;
+
+   int n_circles = int(sa*40) + 1;    // needs fiddling?
+   if (n_circles> 10) n_circles = 10; // needs fiddling?
+
+   for (int i=0; i<n_circles; i++) {
+      double rad = 0.1 * double(i+1); // needs fiddling?
+
+      std::string comment = "Solvent Accessibilty of Atom";
+      // needs to be drawn first? Use a group for sovlent accessibility circles?
+      std::string c = make_circle(pos.invert_y(), rad, 0.0, "#5555cc30", "#5555cc30");
+      svgc.add_comment(comment);
+      svgc.add(c);
+   }
+
+   return svgc;
 }
 
 void
@@ -1464,13 +1476,13 @@ flev_t::ligand_grid::add_for_accessibility(double bash_dist, const lig_build::po
 
    for (int ipos_x= -grid_extent; ipos_x<=grid_extent; ipos_x++) {
       for (int ipos_y= -grid_extent; ipos_y<=grid_extent; ipos_y++) {
-         std::pair<int, int> p = canvas_pos_to_grid_pos(atom_pos);
+         std::pair<int, int> p = mol_space_pos_to_grid_pos(atom_pos);
          int ix_grid = ipos_x + p.first;
          int iy_grid = ipos_y + p.second;
          if ((ix_grid >= 0) && (ix_grid < x_size())) {
             if ((iy_grid >= 0) && (iy_grid < y_size())) {
 
-               double d2 = (to_canvas_pos(ix_grid, iy_grid) - atom_pos).lengthsq();
+               double d2 = (grid_pos_to_mol_space_pos(ix_grid, iy_grid) - atom_pos).lengthsq();
                d2 *= (inv_scale_factor * inv_scale_factor);
                double val = substitution_value(d2, bash_dist);
                if (debug)
@@ -1490,19 +1502,18 @@ flev_t::ligand_grid::add_for_accessibility_no_bash_dist_atom(double scale,
 
    bool debug = 1;
    int grid_extent = 40;
-   double LIGAND_TO_CANVAS_SCALE_FACTOR = 1.0; // this needs to go somewhere
 
    double inv_scale_factor = 1.0/double(LIGAND_TO_CANVAS_SCALE_FACTOR);
 
    for (int ipos_x= -grid_extent; ipos_x<=grid_extent; ipos_x++) {
       for (int ipos_y= -grid_extent; ipos_y<=grid_extent; ipos_y++) {
-         std::pair<int, int> p = canvas_pos_to_grid_pos(atom_pos);
+         std::pair<int, int> p = mol_space_pos_to_grid_pos(atom_pos);
          int ix_grid = ipos_x + p.first;
          int iy_grid = ipos_y + p.second;
          if ((ix_grid >= 0) && (ix_grid < x_size())) {
             if ((iy_grid >= 0) && (iy_grid < y_size())) {
 
-               double d2 = (to_canvas_pos(ix_grid, iy_grid) - atom_pos).lengthsq();
+               double d2 = (grid_pos_to_mol_space_pos(ix_grid, iy_grid) - atom_pos).lengthsq();
                d2 *= (inv_scale_factor * inv_scale_factor);
                // a triangle function, 1 at the atom centre, 0 at 1.5A and beyond
                //
@@ -1521,53 +1532,57 @@ flev_t::ligand_grid::add_for_accessibility_no_bash_dist_atom(double scale,
 flev_t::ligand_grid::ligand_grid(const lig_build::pos_t &low_x_and_y,
                                  const lig_build::pos_t &high_x_and_y) {
 
-   double extra_extents = 10;
-   top_left     = low_x_and_y  - lig_build::pos_t(extra_extents, extra_extents);
-   bottom_right = high_x_and_y + lig_build::pos_t(extra_extents, extra_extents);
-   scale_fac = 5; // seems good
-   double delta_x = bottom_right.x - top_left.x;
-   double delta_y = bottom_right.y - top_left.y;
-   if (true)
-      std::cout << "debug:: ligand_grid constructor: in making grid, got delta_x and delta_y "
-                << delta_x << " " << delta_y << std::endl;
-   x_size_ = int(delta_x/scale_fac+1);
-   y_size_ = int(delta_y/scale_fac+1);
+   extra_extents = 10; // grid points, added to both sides
+   n_grid_per_angstrom = 5.0;
+   scale_fac = 5; // same thing? (old and not used?)
+
+   ligand_atoms_min_x =  low_x_and_y.x;
+   ligand_atoms_min_y =  low_x_and_y.y;
+   ligand_atoms_max_x = high_x_and_y.x;
+   ligand_atoms_max_y = high_x_and_y.y;
+
+   mol_space_grid_min_x = ligand_atoms_min_x - extra_extents / n_grid_per_angstrom;
+   mol_space_grid_min_y = ligand_atoms_min_y - extra_extents / n_grid_per_angstrom;
+
+   double mol_space_grid_max_x = ligand_atoms_max_x + extra_extents / n_grid_per_angstrom;
+   double mol_space_grid_max_y = ligand_atoms_max_y + extra_extents / n_grid_per_angstrom;
+
+   std::cout << "in constructor with ligand_atoms_min_x " << ligand_atoms_min_x << std::endl;
+   std::cout << "in constructor with ligand_atoms_min_y " << ligand_atoms_min_y << std::endl;
+
+   std::cout << "in constructor with mol_space_grid_min_x " << mol_space_grid_min_x << std::endl;
+   std::cout << "in constructor with mol_space_grid_min_y " << mol_space_grid_min_x << std::endl;
+
+   double delta_x = mol_space_grid_max_x - mol_space_grid_min_x;
+   double delta_y = mol_space_grid_max_y - mol_space_grid_min_y;
+   x_size_ = int(delta_x * n_grid_per_angstrom + 2 * extra_extents) + 1;
+   y_size_ = int(delta_y * n_grid_per_angstrom + 2 * extra_extents) + 1;
 
    std::vector<double> tmp_y(y_size_, 0.0);
    grid_.resize(x_size_);
    for (int i=0; i<x_size_; i++)
       grid_[i] = tmp_y;
-   if (true)
-      std::cout << "debug:: in ligand_grid constructor: grid has extents "
-                << x_size_ << " " << y_size_ << " real " << grid_.size()
-                << " " << grid_[0].size()
-                << std::endl;
-}
 
-std::pair<int, int>
-flev_t::ligand_grid::canvas_pos_to_grid_pos(const lig_build::pos_t &pos) const {
-
-   lig_build::pos_t p = pos - top_left;
-   int ix = (int)(p.x/scale_fac);
-   int iy = (int)(p.y/scale_fac);
-   return std::pair<int, int> (ix, iy);
 }
 
 
-lig_build::pos_t
-flev_t::ligand_grid::to_canvas_pos(const double &ii, const double &jj) const {
+void
+flev_t::ligand_grid::print(int primary_index) const {
 
-#if 0
-   std::cout << "to_canvas_pos() using scale_fac " << scale_fac << " and top_left " << top_left << std::endl;
-   lig_build::pos_t p(ii*scale_fac, jj*scale_fac);
-   p += top_left;
-   return p;
-#endif
+   int xs = x_size();
+   int ys = y_size();
 
-   double sf = 1.0;
-   lig_build::pos_t p(ii*sf, jj*sf);
-   return p;
-
+   std::string file_name = "ligand-grid-" + std::to_string(primary_index) + ".table";
+   std::ofstream f(file_name);
+   if (f) {
+      for (int ix=0; ix<xs; ix++) {
+         for (int iy=0; iy<ys; iy++) {
+            double v = get(ix, iy);
+            f << ix << " " << iy << " " << v << "\n";
+         }
+      }
+      f.close();
+   }
 }
 
 void
@@ -1654,13 +1669,13 @@ flev_t::ligand_grid::show_contour(float contour_level,
 
                std::pair<double, double> xy_1 = cf.get_coords(ix, iy, 0);
                std::pair<double, double> xy_2 = cf.get_coords(ix, iy, 1);
-               lig_build::pos_t pos_1 = to_canvas_pos(xy_1.first, xy_1.second);
-               lig_build::pos_t pos_2 = to_canvas_pos(xy_2.first, xy_2.second);
+               lig_build::pos_t pos_1 = grid_pos_to_mol_space_pos(xy_1.first, xy_1.second);
+               lig_build::pos_t pos_2 = grid_pos_to_mol_space_pos(xy_2.first, xy_2.second);
 
-               lig_build::pos_t p1 = to_canvas_pos(cf.get_coords(ix, iy, 0).first,
-                                                   cf.get_coords(ix, iy, 0).second);
-               lig_build::pos_t p2 = to_canvas_pos(cf.get_coords(ix, iy, 1).first,
-                                                   cf.get_coords(ix, iy, 1).second);
+               lig_build::pos_t p1 = grid_pos_to_mol_space_pos(cf.get_coords(ix, iy, 0).first,
+                                                               cf.get_coords(ix, iy, 0).second);
+               lig_build::pos_t p2 = grid_pos_to_mol_space_pos(cf.get_coords(ix, iy, 1).first,
+                                                               cf.get_coords(ix, iy, 1).second);
                std::pair<lig_build::pos_t, lig_build::pos_t> fragment_pair(p1, p2);
 
                // Now filter out this fragment pair if it is too close
@@ -1722,18 +1737,6 @@ flev_t::ligand_grid::show_contour(float contour_level,
 
    plot_contour_lines(contour_lines);
 
-#if 0
-   // check the orientation of the canvas
-   if (false) {
-      lig_build::pos_t grid_ori = to_canvas_pos(0.0, 0.0);
-      goo_canvas_rect_new (group,
-                           grid_ori.x, grid_ori.y, 5.0, 5.0,
-                           "line-width", 1.0, // in show_contour()
-                           "stroke-color", "green",
-                           "fill_color", "blue",
-                           NULL);
-   }
-#endif
 }
 
 
@@ -2116,74 +2119,117 @@ flev_t::ligand_grid::normalize() {
    }
 }
 
+// --------------------------- coordinate transformation -----------------------------
+std::pair<int, int>
+flev_t::ligand_grid::mol_space_pos_to_grid_pos(const lig_build::pos_t &pos) const {
+
+   double gminx = mol_space_grid_min_x;
+   double gminy = mol_space_grid_min_y;
+   lig_build::pos_t grid_offset(gminx, gminy);
+
+   lig_build::pos_t p = pos - grid_offset;
+   int nx = p.x * n_grid_per_angstrom;
+   int ny = p.y * n_grid_per_angstrom;
+   return std::pair<int, int> (nx, ny);
+}
+
+// --------------------------- coordinate transformation -----------------------------
+lig_build::pos_t
+flev_t::ligand_grid::grid_pos_to_mol_space_pos(int ix, int iy) const {
+
+   double gminx = mol_space_grid_min_x;
+   double gminy = mol_space_grid_min_y;
+   lig_build::pos_t grid_offset(gminx, gminy);
+
+   double rx = static_cast<double>(ix) / n_grid_per_angstrom;
+   double ry = static_cast<double>(iy) / n_grid_per_angstrom;
+   lig_build::pos_t p(rx, ry);
+   lig_build::pos_t d = p + grid_offset;
+   return d;
+}
+
 
 // 20241005-PE note to self get_ring_centre() caches the result, so we can't user a const mol here
 void
 flev_t::ligand_grid::fill(svg_molecule_t mol) {
 
+   auto print_grid = [] (const std::vector<std::vector<double> > &grid, const std::string &label) {
+      int grid_size = grid.size();
+      for (int ipos_x = 0; ipos_x < grid_size; ipos_x++) {
+         int grid_x_size = grid[ipos_x].size();
+         for (int ipos_y= 0; ipos_y<= grid_x_size; ipos_y++) {
+            double g = grid[ipos_x][ipos_y];
+            std::cout << "ligand_grid::fill() " << label << " " << ipos_x << " " << ipos_y << " " << g << "\n";
+         }
+      }
+   };
+
    double exp_scale = 0.0011;
+   exp_scale = 1.0;
    double rk = 3000.0;
 
    // int grid_extent = 15; // 10, 12 is not enough
-   int grid_extent = 50 ; // untraps 2wot residues?
+   // int grid_extent = 50 ; // untraps 2wot residues?
+
+
+   if (false) { // debug
+      for (unsigned int iat=0; iat<mol.atoms.size(); iat++) {
+         for (int ipos_x=0; ipos_x<x_size_; ipos_x++) {
+            for (int ipos_y=0; ipos_y<y_size_; ipos_y++) {
+               lig_build::pos_t mol_space_pos_for_grid_point = grid_pos_to_mol_space_pos(ipos_x, ipos_y);
+               std::pair<int, int> gp = mol_space_pos_to_grid_pos(mol_space_pos_for_grid_point);
+               std::cout << "grid: XXX: " << ipos_x << " " << gp.first << " YYY: " << ipos_y << " " << gp.second
+                         << std::endl;
+            }
+         }
+      }
+   }
 
    for (unsigned int iat=0; iat<mol.atoms.size(); iat++) {
-      // std::cout << "mol iat: " << iat << " at " << mol.atoms[iat].atom_position << std::endl;
-      for (int ipos_x= -grid_extent; ipos_x<=grid_extent; ipos_x++) {
-         for (int ipos_y= -grid_extent; ipos_y<=grid_extent; ipos_y++) {
-            std::pair<int, int> p = canvas_pos_to_grid_pos(mol.atoms[iat].atom_position);
-            int ix_grid = ipos_x + p.first;
-            int iy_grid = ipos_y + p.second;
-            // std::cout << "    grid: ix " << ix_grid << " iy " << iy_grid << std::endl;
-            if ((ix_grid >= 0) && (ix_grid < x_size())) {
-               if ((iy_grid >= 0) && (iy_grid < y_size())) {
-                  double d2 = (to_canvas_pos(ix_grid, iy_grid) - mol.atoms[iat].atom_position).lengthsq();
-                  double val =  rk * exp(-0.5*exp_scale*d2);
-                  grid_[ix_grid][iy_grid] += val;
-               } else {
-//                std::cout << "ERROR:: out of range in y: " << ix_grid << "," << iy_grid << " "
-//                          << "and grid size: " << x_size() << "," << y_size() << std::endl;
-               }
-            } else {
-//             std::cout << "ERROR:: out of range in x: " << ix_grid << "," << iy_grid << " "
-//                       << "and grid size: " << x_size() << "," << y_size() << std::endl;
+      const auto &atom_pos = mol.atoms[iat].atom_position;
+      for (int ipos_x=0; ipos_x<x_size_; ipos_x++) {
+         for (int ipos_y=0; ipos_y<y_size_; ipos_y++) {
+            lig_build::pos_t mol_space_pos_for_grid_point = grid_pos_to_mol_space_pos(ipos_x, ipos_y);
+            lig_build::pos_t delta = mol_space_pos_for_grid_point - atom_pos;
+            double d2 = delta.lengthsq();
+            double val =  rk * exp(-0.5*exp_scale*d2);
+            grid_[ipos_x][ipos_y] += val;
+            if (iat == 1) {
+               double d = sqrt(d2);
+               // std::cout << "debug-grid: " << ipos_x << " " << ipos_y << " " << d << std::endl;
+               std::cout << "debug-grid: ipos_x " << ipos_x << " ipos_y " << ipos_y
+                         << " atom_pos.x " << atom_pos.x << " atom_pos.y " << atom_pos.y
+                         << " msgp.x " << mol_space_pos_for_grid_point.x << " "
+                         << " msgp.y " << mol_space_pos_for_grid_point.y << " "
+                         << " delta.x " << delta.x << " "
+                         << " delta.y " << delta.y << " "
+                         << " d " << d << std::endl;
             }
          }
       }
    }
 
-   if (false) { // print grid
-      int grid_size = grid_.size();
-      for (int ipos_x = 0; ipos_x < grid_size; ipos_x++) {
-         int grid_x_size = grid_[ipos_x].size();
-         for (int ipos_y= 0; ipos_y<= grid_x_size; ipos_y++) {
-            double g = grid_[ipos_x][ipos_y];
-            std::cout << "ligand_grid: " << ipos_x << " " << ipos_y << " " << g << "\n";
-         }
-      }
-   }
+   if (true)
+      print_grid(grid_, "A");
 
    std::vector<lig_build::pos_t> mol_ring_centres = mol.get_ring_centres();
-
    // std::cout << "DEBUG:: found " << mol_ring_centres.size() << " ring centres " << std::endl;
-
    for (unsigned int ir=0; ir<mol_ring_centres.size(); ir++) {
-      for (int ipos_x= -10; ipos_x<=10; ipos_x++) {
-         for (int ipos_y= -10; ipos_y<=10; ipos_y++) {
-            std::pair<int, int> p = canvas_pos_to_grid_pos(mol_ring_centres[ir]);
-            int ix_grid = ipos_x + p.first;
-            int iy_grid = ipos_y + p.second;
-            if ((ix_grid >= 0) && (ix_grid < x_size())) {
-               if ((iy_grid >= 0) && (iy_grid < y_size())) {
-                  double d2 = (to_canvas_pos(ix_grid, iy_grid) - mol_ring_centres[ir]).lengthsq();
-                  double val = rk * exp(-0.5* exp_scale * d2);
-                  grid_[ix_grid][iy_grid] += val;
-               }
-            }
+      for (int ipos_x=0; ipos_x<x_size_; ipos_x++) {
+         for (int ipos_y=0; ipos_y<y_size_; ipos_y++) {
+            lig_build::pos_t mol_space_pos_for_grid_point = grid_pos_to_mol_space_pos(ipos_x, ipos_y);
+            lig_build::pos_t delta = mol_space_pos_for_grid_point - mol_ring_centres[ir];
+            double d2 = delta.lengthsq();
+            double val =  rk * exp(-0.5*exp_scale*d2);
+            grid_[ipos_x][ipos_y] += val;
          }
       }
    }
-   normalize(); // scaled peak value to 1.
+
+   if (true)
+      print_grid(grid_, "B");
+
+   //  normalize(); // scaled peak value to 1.
 }
 
 
@@ -2298,7 +2344,7 @@ flev_t::draw_residue_circles(const std::vector<residue_circle_t> &l_residue_circ
 
    svg_container_t svgc;
 
-   std::cout << "-------------------- here we are in draw_residue_circles "
+   std::cout << "debug:: Here we are in draw_residue_circles() "
              << l_residue_circles.size() << " " << add_rep_handles.size() << std::endl;
 
    double max_dist_water_to_ligand_atom  = 3.3; // don't draw waters that are far from ligand
@@ -2569,7 +2615,7 @@ flev_t::position_non_primaries(const ligand_grid &grid,
 flev_t::grid_index_t
 flev_t::ligand_grid::grid_pos_nearest(const lig_build::pos_t &pos) const {
 
-   lig_build::pos_t p = pos - top_left;
+   lig_build::pos_t p = pos - lig_build::pos_t(ligand_atoms_min_x, ligand_atoms_min_y);
    int idx_x = int(p.x/scale_fac+0.5);
    int idx_y = int(p.y/scale_fac+0.5);
 
@@ -2590,7 +2636,7 @@ flev_t::ligand_grid::find_minimum_position() const {
       for (int iy=0; iy<y_size(); iy++) {
          if (grid_[ix][iy] < best_pos_score) {
             best_pos_score = grid_[ix][iy];
-            best_pos = to_canvas_pos(ix,iy);
+            best_pos = grid_pos_to_mol_space_pos(ix,iy);
          }
       }
    }
@@ -2627,7 +2673,7 @@ flev_t::ligand_grid::find_nearest_zero(const lig_build::pos_t &pos,
                if (false)
                   std::cout << "grid_value " << ix << " " << iy << " is " << grid_[ix][iy] << std::endl;
                if (grid_[ix][iy] < crit) {
-                  lig_build::pos_t gp = to_canvas_pos(ix, iy);
+                  lig_build::pos_t gp = grid_pos_to_mol_space_pos(ix, iy);
                   if (false)
                      std::cout << "   ix " << ix << " iy " << iy << " gp " << gp << " c.f. pos " << pos << std::endl;
                   double d = (gp - pos).lengthsq();
@@ -2666,18 +2712,23 @@ flev_t::initial_primary_residue_circles_layout(const ligand_grid &grid,
                                                int primary_index,
                                                const std::vector<std::pair<lig_build::pos_t, double> > &attachment_points) {
 
-   if (false)
+   if (true)
       std::cout << "DEBUG:: starting initial_primary_residue_circles_layout() primary_index " << primary_index
                 << " " << residue_circles[primary_index].residue_label << " "
                 << residue_circles[primary_index].residue_type
                 << " has position " << residue_circles[primary_index].pos
                 << std::endl;
 
-   if (false)
-      std::cout << " =========== adding quadratic for residue "
+   if (true)
+      std::cout << "DEBUG:: initial_primary_residue_circles_layout() =========== adding quadratic for residue "
                 << residue_circles[primary_index].residue_label
                 << " ============================"
                 << std::endl;
+
+   if (true) {
+      grid.print(primary_index);
+   }
+
    ligand_grid primary_grid = grid;
 
    // attachment points are points on the ligand, in ligand
@@ -2727,9 +2778,9 @@ flev_t::ligand_grid::add_quadratic(const std::vector<std::pair<lig_build::pos_t,
       for (unsigned int iattach=0; iattach<attachment_points.size(); iattach++) {
          for (int ix=0; ix<x_size(); ix++) {
             for (int iy=0; iy<y_size(); iy++) {
-               lig_build::pos_t pos = to_canvas_pos(ix, iy);
+               lig_build::pos_t pos = grid_pos_to_mol_space_pos(ix, iy);
                double d2 = (pos-attachment_points[iattach].first).lengthsq();
-               double val = 0.00002 * d2 * scale_by_n_attach;
+               double val = 0.2 * d2 * scale_by_n_attach; // test scaling here FIXME
                grid_[ix][iy] += val;
             }
          }

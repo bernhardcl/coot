@@ -78,21 +78,30 @@ class flev_t {
    class ligand_grid {
       double scale_fac;
       double LIGAND_TO_CANVAS_SCALE_FACTOR;
-      lig_build::pos_t top_left;
-      lig_build::pos_t bottom_right;
+      double ligand_atoms_min_x;
+      double ligand_atoms_min_y;
+      double ligand_atoms_max_x;
+      double ligand_atoms_max_y;
+      double extra_extents; // added to both front and end, top and bottom.
+      double n_grid_per_angstrom;
+      // useful for coordinate transformation
+      double mol_space_grid_min_x;
+      double mol_space_grid_min_y;
       std::vector<std::vector<double> > grid_;
       int x_size_;
       int y_size_;
       void normalize(); // scale peak value to 1.0
-      std::pair<int, int> canvas_pos_to_grid_pos(const lig_build::pos_t &atom_pos) const;
       int square_type(int ii, int jj, float contour_level) const;
       std::vector<std::vector<lig_build::pos_t> > make_contour_lines(const std::vector<std::pair<lig_build::pos_t, lig_build::pos_t> > &line_fragments) const;
       double substitution_value(double r_squared, double bash_dist) const;
       // can throw a std::runtime_error (if result is out of grid)
       grid_index_t grid_pos_nearest(const lig_build::pos_t &pos) const;
 
+      std::pair<int, int> mol_space_pos_to_grid_pos(const lig_build::pos_t &pos) const;
+      lig_build::pos_t grid_pos_to_mol_space_pos(int ix, int iy) const;
+
+
    public:
-      // (low means low numbers, not low on the canvas)
       //
       ligand_grid(const lig_build::pos_t &low_x_and_y,
                   const lig_build::pos_t &high_x_and_y);
@@ -118,9 +127,6 @@ class flev_t {
              MS_UP_0_1_and_1_0_and_1_1,
              };
 
-      // lig_build::pos_t to_canvas_pos(const int &ii, const int &jj) const;
-      lig_build::pos_t to_canvas_pos(const double &ix, const double &iy) const;
-
       // Actually, not exactly zero but something small.
       // Don't return a grid-point/position that matches anything in
       // already_positioned.
@@ -132,6 +138,8 @@ class flev_t {
       // the return value inside mol.
       //
       void fill(svg_molecule_t mol);
+
+      void print(int primary_index) const;
 
       double get(int i, int j) const {
          return grid_[i][j];
@@ -285,10 +293,10 @@ class flev_t {
                                                  const lig_build::pos_t &ligand_centre,
                                                  int add_rep_handle);
 
-   void draw_solvent_accessibility_of_atom(const lig_build::pos_t &pos, double sa);
-   void draw_solvent_accessibility_of_atoms();
+   svg_container_t draw_solvent_accessibility_of_atom(const lig_build::pos_t &pos, double sa);
+   svg_container_t draw_solvent_accessibility_of_atoms();
 
-   void draw_substitution_contour();
+   svg_container_t draw_substitution_contour();
    svg_container_t draw_bonds_to_ligand();
    svg_container_t draw_solvent_exposure_circle(const residue_circle_t &residue_circle,
                                                 const lig_build::pos_t &ligand_centre);
