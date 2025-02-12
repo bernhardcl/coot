@@ -85,7 +85,7 @@ libcoot_coord_utils_la_LIBADD = \
     $(top_builddir)/mini-mol/libcoot-mini-mol.la     \
     $(top_builddir)/utils/libcoot-utils.la           \
     $(CLIPPER_LIBS) $(MMDB_LIBS)                     \
-    $(GSL_LIBS) $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(L_BOOST_PYTHON) $(PYTHON_LIBS)
+    $(GSL_LIBS) $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(L_BOOST_PYTHON) $(PYTHON_LIBS) -lz
 
 libcoot_coord_utils_la_LDFLAGS = $(SHARED_LDFLAGS)
 

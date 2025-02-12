@@ -21,6 +21,7 @@
 #include <iostream>
 #include <system_error>
 #include <chrono>
+#include <zlib.h>
 
 #include "utils/coot-utils.hh"
 #include "slurp-map.hh"
@@ -34,6 +35,8 @@ coot::util::is_basic_em_map_file(const std::string &file_name) {
    return slurp_fill_xmap_from_map_file(file_name, &xmap, true); // check-only mode
 }
 
+#include "voidp-buffer.hh"
+
 bool
 coot::util::slurp_fill_xmap_from_map_file(const std::string &file_name,
                                           clipper::Xmap<float> *xmap_p,
@@ -41,27 +44,86 @@ coot::util::slurp_fill_xmap_from_map_file(const std::string &file_name,
 
    // std::cout << "slurp_fill_xmap_from_map_file() callled with check_only " << check_only << std::endl;
 
-   bool status = false;
-   if (file_exists(file_name)) {
+   auto slurp_fill_xmap_from_gz_map_file = [] (const std::string &file_name,
+                                               clipper::Xmap<float> *xmap_p,
+                                               bool check_only) {
+
+      int status  = 0;
       struct stat s;
       int fstat = stat(file_name.c_str(), &s);
       if (fstat == 0) {
-         FILE *fptr = fopen(file_name.c_str(), "rb");
-         int st_size = s.st_size;
-         void *space = malloc(st_size);
-         // Happy Path
-         size_t st_size_2 = fread(space, st_size, 1, fptr);
-         char *data = static_cast<char *>(space);
-         fclose(fptr);
-         if (st_size_2 == 1) {
-            // Happy Path
-            if (st_size > 1024) {
-               status = slurp_parse_xmap_data(data, xmap_p, check_only); // fill xmap
-            } else {
-               std::cout << "WARNING:: bad read " << file_name << std::endl;
+         gzFile file = gzopen(file_name.c_str(), "rb");
+         int z_status = Z_OK;
+         voidp_buffer_t buff(4);
+         size_t read_pos = 0;
+         while (! gzeof(file)) {
+            size_t space_remaining = buff.size() - read_pos;
+            int bytes_read = gzread(file, (char *)buff.get() + read_pos, space_remaining);
+            const char *error_message = gzerror(file, &z_status);
+            if ((bytes_read == -1) || z_status != Z_OK) {
+               std::cout << "WARNING:: gz read error for " << file_name << " "
+                         << error_message << std::endl;
+               break;
             }
-         } else {
-            std::cout << "WARNING:: bad read " << file_name << std::endl;
+            read_pos += bytes_read;
+            if (buff.size() == read_pos) {
+               buff.resize(buff.size() * 2);
+            }
+         }
+         z_status = gzclose_r(file);
+         if (z_status != Z_OK) {
+            std::cout << "WARNING:: gz close read error for " << file_name << std::endl;
+         }
+         if (read_pos >= buff.size()) {
+            buff.resize(buff.size() + 1);
+         }
+         *((char *)buff.get() + read_pos) = 0;
+         char *data = reinterpret_cast< char *>(buff.get());
+         status = slurp_parse_xmap_data(data, xmap_p, check_only); // fill xmap
+         std::cout << "DEBUG:: slurp_parse_xmap_data() returns with status " << status << std::endl;
+      }
+      return status;
+   };
+
+   bool status = false;
+   if (file_exists(file_name)) {
+
+      bool is_gzip = false;
+      std::string ext = file_name_extension(file_name);
+      if (ext == ".gz") is_gzip = true;
+
+      if (is_gzip) {
+         // this can fail (at the moment) if the axes are not in X,Y,Z order
+         status = slurp_fill_xmap_from_gz_map_file(file_name, xmap_p, check_only);
+      } else {
+         struct stat s;
+         int fstat = stat(file_name.c_str(), &s);
+         if (fstat == 0) {
+            FILE *fptr = fopen(file_name.c_str(), "rb");
+            off_t st_size = s.st_size;
+            // std::cout << "st_size: " << st_size << std::endl;
+            try {
+               // 20231006-PE as it used to be.
+               char *space = new char[st_size+1];
+               // Happy Path
+               size_t st_size_2 = fread(space, st_size, 1, fptr);
+               char *data = static_cast<char *>(space);
+               fclose(fptr);
+               if (st_size_2 == 1) {
+                  // Happy Path
+                  if (st_size > 1024) {
+                     status = slurp_parse_xmap_data(data, xmap_p, check_only); // fill xmap
+                  } else {
+                     std::cout << "WARNING:: bad read " << file_name << std::endl;
+                  }
+               } else {
+                  std::cout << "WARNING:: bad read " << file_name << std::endl;
+               }
+               delete [] space;
+            }
+            catch (const std::bad_alloc &e) {
+               std::cout << "WARNING:: out-of-memory " << st_size+1 << " " << e.what() << std::endl;
+            }
          }
       }
    } else {

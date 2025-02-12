@@ -1950,6 +1950,12 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
       }
    }
 
+   // 20231006-PE now allow .gz files
+   if (filename.find(".map.gz") != std::string::npos) good_extension_flag = true;
+   if (filename.find(".mrc.gz") != std::string::npos) good_extension_flag = true;
+   std::string extension = coot::util::file_name_extension(filename);
+   bool is_gzip = (extension == ".gz");
+
    // not really extension checking, just that it has it in the
    // filename:
    if (good_extension_flag == 0) {
@@ -1981,6 +1987,9 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
      else           map_file_type = CNS;
    }
 
+   if (filename.find(".map.gz") != std::string::npos) map_file_type = CCP4;
+   if (filename.find(".mrc.gz") != std::string::npos) map_file_type = CCP4;
+
    if (map_file_type == CCP4)
       std::cout << "INFO:: map file type was determined to be CCP4 type\n";
    if (map_file_type == CNS)
@@ -2000,23 +2009,41 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
          done = coot::util::slurp_fill_xmap_from_map_file(filename, &xmap, check_only);
          auto tp_2 = std::chrono::high_resolution_clock::now();
          auto d21 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_2 - tp_1).count();
-         std::cout << "INFO:: map read " << d21 << " milliseconds" << std::endl;
-         try {
-            clipper_map_file_wrapper file;
-            file.open_read(filename);
-            set_is_em_map(file); // sets is_em_map_cached_flag
-            em = is_em_map_cached_flag;
-            if (imol_no == 0) {
-               clipper::Cell c = file.cell();
-               coot::Cartesian m(0.5*c.descr().a(), 0.5*c.descr().b(), 0.5*c.descr().c());
-               graphics_info_t g;
-               g.setRotationCentre(m);
-            }
+         std::cout << "INFO:: map read in " << d21 << " milliseconds" << std::endl;
 
-         }
-         catch (const clipper::Message_base &exc) {
-            std::cout << "WARNING:: failed to open " << filename << std::endl;
-            bad_read = true;
+         // Now set is_em_map_cached_flag and set the rotation centres.
+         // I think that we only need set the is_em_map_cached_flag.
+         //
+         if (done) {
+            if (is_gzip) {
+               em = true;
+               is_em_map_cached_flag = true; // who else gzip map files?
+               if (imol_no == 0) {
+                  clipper::Cell c = xmap.cell();
+                  coot::Cartesian m(0.5*c.descr().a(), 0.5*c.descr().b(), 0.5*c.descr().c());
+                  graphics_info_t g;
+                  std::cout << "INFO:: setRotationCentre " << m << std::endl;
+                  g.setRotationCentre(m);
+               }
+            } else {
+               try {
+                  clipper_map_file_wrapper file;
+                  file.open_read(filename);
+                  set_is_em_map(file); // sets is_em_map_cached_flag
+                  em = is_em_map_cached_flag;
+                  if (imol_no == 0) {
+                     clipper::Cell c = file.cell();
+                     coot::Cartesian m(0.5*c.descr().a(), 0.5*c.descr().b(), 0.5*c.descr().c());
+                     graphics_info_t g;
+                     std::cout << "INFO:: setRotationCentre " << m << std::endl;
+                     g.setRotationCentre(m);
+                  }
+               }
+               catch (const clipper::Message_base &exc) {
+                  std::cout << "WARNING:: failed to open " << filename << std::endl;
+                  bad_read = true;
+               }
+            }
          }
       }
 
