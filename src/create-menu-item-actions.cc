@@ -3680,7 +3680,24 @@ about_coot_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    if (dialog) {
       set_transient_for_main_window(dialog);
       gtk_widget_set_visible(dialog, TRUE);
+      // Add the Coot reference. Maybe more at some point ?!
+      const gchar *ref_list[] = {
+         "Emsley, P., Lohkamp, B., Scott, W. G. &amp; Cowtan, K. (2010).",
+	 "Features and development of Coot. Acta Cryst. D66, 486-501.",
+         "Article online http://journals.iucr.org/d/issues/2010/04/00/ba5144/index.html",
+         NULL};
+      gtk_about_dialog_add_credit_section (GTK_ABOUT_DIALOG(dialog),
+		      "Reference", ref_list);
+#ifdef WINDOWS_MINGW
+      gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog),
+                                    "Welcome to WinCoot");
+      gtk_about_dialog_add_credit_section(GTK_ABOUT_DIALOG(dialog), "WinCoot",
+          (const char *[]) {
+            "The WinCoot website https://bernhardcl.github.io/coot/",
+            NULL });
+#endif
    }
+
 }
 
 void

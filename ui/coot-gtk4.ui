@@ -1485,6 +1485,7 @@ Copyright 2023, 2024 Global Phasing Ltd.</property>
     <property name="version">1.1.12</property>
     <property name="website">https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot</property>
     <property name="website-label">The Coot Website</property>
+    <property name="hide-on-close">True</property>
   </object>
 
   <object class="GtkWindow" id="active_map_window">
