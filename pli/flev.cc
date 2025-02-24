@@ -390,7 +390,7 @@ flev_t::annotate(const std::vector<std::pair<coot::atom_spec_t, float> > &s_a_v,
    residue_circles.clear();
    for (unsigned int i=0; i<centres.size(); i++) {
 
-      if (true)
+      if (false)
          std::cout << "debug:: in flev_t::annotate() handling circle " << i << " of "
                    << centres.size() << std::endl;
 
@@ -412,9 +412,10 @@ flev_t::annotate(const std::vector<std::pair<coot::atom_spec_t, float> > &s_a_v,
       // lig_build::pos_t pos = mol.input_coords_to_canvas_coords(cp); // 20240601-PE
       lig_build::pos_t pos = input_coords_to_canvas_coords(cp);
       circle.set_canvas_pos(pos);
-      std::cout << "debug:: in flev_t::annotate() residue-circle "
-                << cp.x() << " " << cp.y() << " " << cp.z()
-                << " canvas coord " << pos.x << " " << pos.y << std::endl;
+      if (false)
+         std::cout << "debug:: in flev_t::annotate() residue-circle "
+                   << cp.x() << " " << cp.y() << " " << cp.z()
+                   << " canvas coord " << pos.x << " " << pos.y << std::endl;
 
       if (centres[i].residue_name == "HOH") {
          for (unsigned int ib=0; ib<bonds_to_ligand.size(); ib++) {
@@ -563,13 +564,12 @@ flev_t::write_svg(const std::string &file_name) const {
 
 
 
-void
+svg_container_t
 pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
                                   int imol,
                                   coot::protein_geometry *geom_p,
                                   const std::string &chain_id, int res_no, const std::string &ins_code,
-                                  float residues_near_radius,
-                                  const std::string &file_format, const std::string &output_image_file_name) {
+                                  float residues_near_radius) {
 
    auto write_string_to_file = [] (const std::string &s, const std::string &fn) {
 
@@ -580,13 +580,16 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
       f.close();
    };
 
+   std::string output_image_file_name = "something.svg";
+   svg_container_t svgc_outer;
+
    double scale_factor = 400.0;
    bool dark_background_flag = false; // pass this
 
    double weight_for_3d_distances = 0.4; // for 3d distances
-   std::string output_format = file_format;
+   std::string output_format = "svg"; // was file_format;
 
-   bool wrap_in_refresh_html = true;
+   bool wrap_in_refresh_html = false;
 
    if (mol) {
       mmdb::Residue  *res_ref = coot::util::get_residue(chain_id, res_no, ins_code, mol);
@@ -697,12 +700,12 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
 
                   scale_factor = 1.0;
                   bool add_background = false;
-                  svg_container_t svgc = flev.mol.make_svg(scale_factor, dark_background_flag, add_background);
+                  svg_container_t svgc_mol = flev.mol.make_svg(scale_factor, dark_background_flag, add_background);
 
                   if (wrap_in_refresh_html) {
                      // 20250106-PE: hack the bounds for now
-                     svgc.set_bounds(-9, -7, 20, 20);
-                     std::string s = svgc.compose(true);
+                     svgc_mol.set_bounds(-9, -7, 20, 20);
+                     std::string s = svgc_mol.compose(true);
                      unsigned int refresh_delta = 1;
                      std::string html_top = "<!DOCTYPE html><html><head><meta http-equiv=\"refresh\" ";
                      html_top += "content=\"" + std::to_string(refresh_delta);
@@ -712,7 +715,7 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
                      s = ss;
                      write_string_to_file(ss, "flev-test-1.svg.html");
                   } else {
-                     write_string_to_file(svgc.compose(true), "flev-test-1.svg");
+                     write_string_to_file(svgc_mol.compose(true), "flev-test-1.svg");
                   }
 
                   mmdb::Residue *residue_flat = coot::make_residue(rdkm, mol_2d_depict_conformer, "XXX");
@@ -762,7 +765,7 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
 
                   std::vector<int> add_reps_vec;
 
-                  if (true) {
+                  if (false) {
                      for (unsigned int ic=0; ic<res_centres.size(); ic++) {
                         const auto &res_centre = res_centres[ic];
                         std::cout << "  fle_view_with_rdkit_internal(): res_centres: " << ic
@@ -787,13 +790,14 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
                   bool annotate_status = flev.annotate(s_a_v, res_centres, add_reps_vec, bonds_to_ligand,
                                                        sed, ah, pi_stack_info, p.second);
 
+                  svgc_outer.add(svgc_mol);
                   svg_container_t svgc_2 = flev.draw_all_flev_annotations();
-                  svgc.add(svgc_2);
+                  svgc_outer.prepend(svgc_2);
 
                   if (wrap_in_refresh_html) {
                      // 20250106-PE: hack the bounds for now
-                     svgc.set_bounds(-20, -20, 40, 40);
-                     std::string s = svgc.compose(true);
+                     svgc_outer.set_bounds(-20, -20, 40, 40);
+                     std::string s = svgc_outer.compose(true);
                      unsigned int refresh_delta = 1;
                      std::string html_top = "<!DOCTYPE html><html><head><meta http-equiv=\"refresh\" ";
                      html_top += "content=\"" + std::to_string(refresh_delta);
@@ -803,7 +807,7 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
                      s = ss;
                      write_string_to_file(ss, "flev-test-all-parts-svg.html");
                   } else {
-                     write_string_to_file(svgc.compose(true), "flev-test-all-parts.svg");
+                     write_string_to_file(svgc_outer.compose(true), "flev-test-all-parts.svg");
                   }
 
                   if (output_format == "png") flev.write_png(output_image_file_name);
@@ -822,172 +826,132 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
          }
       }
    }
+
+   // 20250106-PE: hack the bounds for now
+   svgc_outer.set_bounds(-20, -20, 40, 40);
+   return svgc_outer;
 }
 
 svg_container_t
 flev_t::draw_substitution_contour() {
 
+   auto show_grid = [] (const flev_t::ligand_grid &grid) {
+      for (int ix=0; ix<grid.x_size(); ix++) {
+         for (int iy=0; iy<grid.y_size(); iy++) {
+            double I = grid.get(ix, iy);
+            std::cout << "substitution-grid " << ix << " " << iy << " " << I << std::endl;
+         }
+      }
+   };
+
    svg_container_t svgc;
 
-   bool debug = true;
+   bool debug = false;
 
    bool draw_flev_annotations_flag = true; // why wouldn't it be?
 
+   auto debug_bash_distances = [] (const svg_molecule_t &mol) {
+
+      for (unsigned int i=0; i<mol.atoms.size(); i++) {
+         std::cout << "in draw_substitution_contour() atom " << i << " "
+                   << mol.atoms[i].get_atom_name()
+                   << " has "  << mol.atoms[i].bash_distances.size()
+                   << " bash distances" << std::endl;
+         for (unsigned int j=0; j<mol.atoms[i].bash_distances.size(); j++) {
+            std::cout << "  " << mol.atoms[i].bash_distances[j];
+         }
+         if (! mol.atoms[i].bash_distances.empty())
+            std::cout << std::endl;
+      }
+   };
+
+   auto is_unlimited = [] (const svg_atom_t &atom) {
+      unsigned int n_unlimited = 0;
+      unsigned int n_bash_distances = atom.bash_distances.size();
+      for (unsigned int i=0; i<n_bash_distances; i++)
+         if (atom.bash_distances[i].unlimited())
+            n_unlimited++;
+      float f = static_cast<float>(n_unlimited) / static_cast<float>(n_bash_distances);
+      return (f > 0.49999);
+   };
+
    if (draw_flev_annotations_flag) {
       if (mol.atoms.size() > 0) {
+         try {
+            std::pair<lig_build::pos_t, lig_build::pos_t> l_e_pair = mol.ligand_extents();
+            ligand_grid grid(l_e_pair.first, l_e_pair.second);
+            debug_bash_distances(mol);
 
-         // first of all, do we have any bash distances for the atoms of this molecule?
-         bool have_bash_distances = 0;
-         for (unsigned int iat=0; iat<mol.atoms.size(); iat++) {
-            if (mol.atoms[iat].bash_distances.size()) {
-               have_bash_distances = 1;
-               break;
-            }
-         }
+            for (unsigned int iat=0; iat<mol.atoms.size(); iat++) {
 
-         // If we don't have bash distances, then don't grid and contour anything.  If
-         // we do, we do....
-         //
-         if (have_bash_distances) {
+               const auto &atom = mol.atoms[iat];
+               const auto &atom_position = mol.atoms[iat].atom_position;
+               unsigned int n_bash_distances = atom.bash_distances.size();
 
-            // REPLACE-ME-WITH-SVG
-            // GooCanvasItem *root = goo_canvas_get_root_item (GOO_CANVAS(canvas));
-
-            try {
-
-               std::pair<lig_build::pos_t, lig_build::pos_t> l_e_pair =
-                  mol.ligand_extents();
-
-               std::cout << "draw_substitution_contour(): creating ligand grid with args "
-                         << l_e_pair.first << " " << l_e_pair.second
-                         << std::endl;
-               ligand_grid grid(l_e_pair.first, l_e_pair.second);
-
-               if (true) { // debug
-                  for (unsigned int i=0; i<mol.atoms.size(); i++) {
-                     std::cout << "in draw_substitution_contour() atom " << i << " "
-                               << mol.atoms[i].get_atom_name()
-                               << " has "
-                               << mol.atoms[i].bash_distances.size() << " bash distances"
-                               << std::endl;
-                     for (unsigned int j=0; j<mol.atoms[i].bash_distances.size(); j++) {
-                        std::cout << "  " << mol.atoms[i].bash_distances[j];
-                     }
-                     if (mol.atoms[i].bash_distances.size())
-                        std::cout << std::endl;
-                  }
-               }
-
-
-               std::vector<lig_build::atom_ring_centre_info_t> unlimited_atoms;
-               // std::vector<widgeted_atom_ring_centre_info_t> unlimited_atoms;
-
-               for (unsigned int iat=0; iat<mol.atoms.size(); iat++) {
-                  int n_bash_distances = 0;
-                  double sum_bash = 0.0;
-                  bool unlimited = 0;
-                  int n_unlimited = 0;
-
-                  if (mol.atoms[iat].bash_distances.size()) {
-                     for (unsigned int j=0; j<mol.atoms[iat].bash_distances.size(); j++) {
-                        if (! mol.atoms[iat].bash_distances[j].unlimited()) {
-                           sum_bash += mol.atoms[iat].bash_distances[j].dist;
-                           n_bash_distances++;
-                        } else {
-                           unlimited = 1;
-                           n_unlimited++;
-                        }
-                     }
-
-                     if (! unlimited) {
-                        if (n_bash_distances > 0) {
-                           double bash_av = sum_bash/double(n_bash_distances);
-                           if (debug)
-                              std::cout << "   none unlimited, using bash_av " << bash_av
-                                        << " for atom " << mol.atoms[iat].get_atom_name()
-                                        << std::endl;
-                           grid.add_for_accessibility(bash_av, mol.atoms[iat].atom_position);
-                        }
-                     } else {
-
-                        // Now, were more than half of the bash distances
-                        // unlimited?  If yes, then this is unlimited.
-
-                        if (double(n_unlimited)/double(mol.atoms[iat].bash_distances.size()) > 0.5) {
-
-                           // just shove some value in to make the grid values vaguely
-                           // correct - the unlimited atoms properly assert themselves
-                           // in the drawing of the contour (that is, the selection of
-                           // the contour fragments).
-                           //
-                           grid.add_for_accessibility(1.2, mol.atoms[iat].atom_position);
-                           //                std::cout << "adding unlimited_atom_position "
-                           //                          << iat << " "
-                           //                          << mol.atoms[iat].atom_position
-
-                           // not elegant because no constructor for
-                           // widgeted_atom_ring_centre_info_t (because no simple
-                           // constructor for lig_build::atom_t).
-                           //
-                           lig_build::atom_ring_centre_info_t ua(mol.atoms[iat]);
-                           unlimited_atoms.push_back(ua);
-                        } else {
-
-                           // treat as a limited:
-                           double bash_av =
-                              (sum_bash + 4.0 * n_unlimited)/double(n_bash_distances+n_unlimited);
-                           if (debug)
-                              std::cout << "   few unlimited, as limited using bash_av "
-                                        << bash_av << " for atom "
-                                        << mol.atoms[iat].get_atom_name()
-                                        << std::endl;
-
-                           grid.add_for_accessibility(bash_av, mol.atoms[iat].atom_position);
-                        }
-                     }
-
+               if (n_bash_distances == 0) {
+                  if (mol.atoms[iat].element != "H") // checked.
+                     grid.add_for_accessibility_no_bash_dist_atom(1.0, atom_position);
+               } else {
+                  if (is_unlimited(atom)) {
+                     grid.add_for_accessibility(1.8, 0.2, atom_position);
                   } else {
-
-                     // we don't get here currently, now that there is an
-                     // outer test for having bash distances. Current way
-                     // is OK, I think.
-
-                     // there were no bash distancs - what do we do?  Leaving out
-                     // atoms means gaps over the ligand - bleugh.  Shove some
-                     // value in?  1.0?  if they are not hydrogens, of course.
-                     //
-                     if (mol.atoms[iat].element != "H") // checked.
-                        grid.add_for_accessibility_no_bash_dist_atom(1.0, mol.atoms[iat].atom_position);
+                     grid.add_for_accessibility(1.2, 0.05, atom_position);
                   }
                }
+            }
 
-               // Put some values around the ring centres too.
-               //
-               grid.avoid_ring_centres(ring_atoms_list, mol);
+            // Put some values around the ring centres too.
+            //
+            grid.avoid_ring_centres(ring_atoms_list, mol);
 
-               // for debugging
-               // show_grid(grid);
+            // for debugging
+            if (debug)
+               show_grid(grid);
 
-               // std::vector<widgeted_atom_ring_centre_info_t> dummy_unlimited_atoms;
-               grid.show_contour(0.5, unlimited_atoms, ring_atoms_list);
-               // debug
-               // show_unlimited_atoms(unlimited_atoms);
-               // show_ring_centres(ring_atoms_list, mol);
-
-               if (debug) {
-                  std::cout << "Here are the "<< unlimited_atoms.size()
-                            << " unlimited atoms: " << std::endl;
-                  for (unsigned int iat=0; iat<unlimited_atoms.size(); iat++)
-                     std::cout << "   " << unlimited_atoms[iat] << std::endl;
+            std::vector<lig_build::atom_ring_centre_info_t> unlimited_atoms;
+            for (unsigned int iat=0; iat<mol.atoms.size(); iat++) {
+               const auto &atom = mol.atoms[iat];
+               if (is_unlimited(atom)) {
+                  lig_build::atom_ring_centre_info_t ua(atom);
+                  unlimited_atoms.push_back(ua);
                }
+            }
 
+            if (false) {
+               std::vector<float> contour_levels = { 0.2, 0.4, 0.6, 0.8, 1.0,
+                                                     1.2, 1.4, 1.6, 1.8, 2.0,
+                                                     2.2, 2.4, 2.6, 2.8, 3.0,
+                                                     3.2, 3.4, 3.6, 3.8, 4.0,
+                                                     4.2, 4.4, 4.6, 4.8, 5.0 };
+
+               std::string col = "#bbbbbb";
+               bool is_dashed = false;
+               for (const auto &level : contour_levels)
+                  svgc.add(grid.show_contour(level, is_dashed, col, unlimited_atoms, ring_atoms_list));
             }
-            catch (const std::runtime_error &rte) {
-               std::cout << rte.what() << std::endl;
+
+            bool is_dashed = true;
+            std::string col = "#aaaaaa";
+            svgc.add(grid.show_contour(0.5, is_dashed, col, unlimited_atoms, ring_atoms_list)); // was 0.5
+
+            // debug
+            // show_unlimited_atoms(unlimited_atoms);
+            // show_ring_centres(ring_atoms_list, mol);
+
+            if (true) {
+               std::cout << "Here are the "<< unlimited_atoms.size()
+                         << " unlimited atoms: " << std::endl;
+               for (unsigned int iat=0; iat<unlimited_atoms.size(); iat++)
+                  std::cout << "   " << unlimited_atoms[iat] << std::endl;
             }
+
+         }
+         catch (const std::runtime_error &rte) {
+            std::cout << rte.what() << std::endl;
          }
       }
    }
+   // std::cout << "subsitution-contour: " << svgc.svg << std::endl;
    return svgc;
 }
 
@@ -1021,7 +985,7 @@ flev_t::draw_all_flev_annotations() {
    svg_container_t svgc_ra = draw_all_flev_residue_attribs();
    svg_container_t svgc_li = draw_all_flev_ligand_annotations();
    svgc.add(svgc_ra);
-   svgc.add(svgc_li);
+   svgc.prepend(svgc_li);
    return svgc;
 }
 
@@ -1041,6 +1005,8 @@ flev_t::draw_all_flev_residue_attribs() {
 svg_container_t
 flev_t::draw_all_flev_ligand_annotations() {
 
+   // return should be prepended
+
    svg_container_t svgc;
    svg_container_t svg_sc  = draw_substitution_contour();
    svg_container_t svg_saa = draw_solvent_accessibility_of_atoms();
@@ -1058,9 +1024,10 @@ flev_t::draw_stacking_interactions(const std::vector<residue_circle_t> &rc) {
       int st = rc[ires].get_stacking_type();
       clipper::Coord_orth click_pos = rc[ires].residue_centre_real;
 
-      std::cout << ":::::::::::::::::: stacking: ires " << ires << " "
-                << rc[ires].has_ring_stacking_interaction()
-                << std::endl;
+      if (false)
+         std::cout << ":::::::::::::::::: stacking: ires " << ires << " "
+                   << rc[ires].has_ring_stacking_interaction()
+                   << std::endl;
 
       if (rc[ires].has_ring_stacking_interaction()) {
 
@@ -1096,9 +1063,9 @@ flev_t::draw_stacking_interactions(const std::vector<residue_circle_t> &rc) {
 // (line) is clicked.
 svg_container_t
 flev_t::draw_annotated_stacking_line(const lig_build::pos_t &ligand_ring_centre,
-                                         const lig_build::pos_t &residue_pos,
-                                         int stacking_type,
-                                         const clipper::Coord_orth &click_pos) {
+                                     const lig_build::pos_t &residue_pos,
+                                     int stacking_type,
+                                     const clipper::Coord_orth &click_pos) {
 
    auto do_polygon = [] (const std::vector<std::pair<double, double> > &hex_points) {
       std::string s = "   <polygon points=\"";
@@ -1136,8 +1103,6 @@ flev_t::draw_annotated_stacking_line(const lig_build::pos_t &ligand_ring_centre,
    lig_build::pos_t close_mid_pt_1 = mid_pt - a_to_b_uv * 0.92;
    lig_build::pos_t close_mid_pt_2 = mid_pt + a_to_b_uv * 0.92;
 
-   bool start_arrow = false;
-   bool end_arrow = true;
    std::string stroke_colour = "#008000";
 
    std::vector<lig_build::pos_t> hex_and_ring_centre(2);
@@ -1158,27 +1123,28 @@ flev_t::draw_annotated_stacking_line(const lig_build::pos_t &ligand_ring_centre,
       }
       if (stacking_type == residue_circle_t::PI_CATION_STACKING) {
          if (ir == 0) {
-            do_ring = 0;
-            do_anion = 1;
+            do_ring = false;
+            do_anion = true;
          } else {
-            do_ring = 1;
-            do_anion = 0;
+            do_ring = true;
+            do_anion = false;
          }
       }
       if (stacking_type == residue_circle_t::CATION_PI_STACKING) {
          if (ir == 0) {
-            do_ring = 1;
-            do_anion = 0;
+            do_ring = true;
+            do_anion = false;
          } else {
-            do_ring = 0;
-            do_anion = 1;
+            do_ring = false;
+            do_anion = true;
          }
       }
 
       if (do_ring) {
 
-         std::cout << "--------------------- in the do_ring block residue_pos " << residue_pos
-                   << " hex_and_ring_centre[ir] " << hex_and_ring_centre[ir] << std::endl;
+         if (false)
+            std::cout << "--------------------- in the do_ring block residue_pos " << residue_pos
+                      << " hex_and_ring_centre[ir] " << hex_and_ring_centre[ir] << std::endl;
 
          double angle_step = 60;
          double r = 0.4; // radius
@@ -1201,19 +1167,24 @@ flev_t::draw_annotated_stacking_line(const lig_build::pos_t &ligand_ring_centre,
       }
 
       if (do_anion) {
-         // the "+" symbol for the anion
-         //
-         // GooCanvasItem *text_1 = goo_canvas_text_new(group,
-         //                                             "+",
-         //                                             hex_and_ring_centre[ir].x,
-         //                                             hex_and_ring_centre[ir].y,
-         //                                             -1,
-         //                                             GOO_CANVAS_ANCHOR_CENTER,
-         //                                             "font", "Sans 12",
-         //                                             "fill_color", stroke_colour.c_str(),
-         //                                             NULL);
-         clipper::Coord_orth *pos_p = new clipper::Coord_orth(click_pos);
-         // g_object_set_data_full(G_OBJECT(text_1), "position", pos_p, g_free);
+         // the "+" symbol for the anion.
+         // note that the anchor "middle" applies to x, not y
+         std::string t("   <text ");
+         t += std::string("fill=\"");
+         t += stroke_colour;
+         t += std::string("\"");
+         t += std::string(" x=\"");
+         t += std::to_string(hex_and_ring_centre[ir].x);
+         t += std::string("\"");
+         t += std::string(" y=\"");
+         t += std::to_string(-hex_and_ring_centre[ir].y+0.16);
+         t += std::string("\"");
+         t += std::string(" text-anchor=\"middle\"");
+         t += std::string(" font-family=\"Helvetica, sans-serif\" font-size=\"0.06em\">");
+         t += std::string("+");
+         t += std::string("</text>\n");
+
+         svgc.add(t);
       }
    }
 
@@ -1466,16 +1437,17 @@ flev_t::draw_solvent_accessibility_of_atom(const lig_build::pos_t &pos, double s
 }
 
 void
-flev_t::ligand_grid::add_for_accessibility(double bash_dist, const lig_build::pos_t &atom_pos) {
+flev_t::ligand_grid::add_for_accessibility(double bash_dist,
+                                           double exp_fac,
+                                           const lig_build::pos_t &atom_pos) {
 
-   bool debug = 0;
-   int grid_extent = 45;
+   bool debug = false;
+   int feature_extent = 45;
 
-   double LIGAND_TO_CANVAS_SCALE_FACTOR = 1.0; // this needs to go somewhere
-   double inv_scale_factor = 1.0/double(LIGAND_TO_CANVAS_SCALE_FACTOR);
+   double inv_scale_factor = 1.0;
 
-   for (int ipos_x= -grid_extent; ipos_x<=grid_extent; ipos_x++) {
-      for (int ipos_y= -grid_extent; ipos_y<=grid_extent; ipos_y++) {
+   for (int ipos_x= -feature_extent; ipos_x<=feature_extent; ipos_x++) {
+      for (int ipos_y= -feature_extent; ipos_y<=feature_extent; ipos_y++) {
          std::pair<int, int> p = mol_space_pos_to_grid_pos(atom_pos);
          int ix_grid = ipos_x + p.first;
          int iy_grid = ipos_y + p.second;
@@ -1483,11 +1455,16 @@ flev_t::ligand_grid::add_for_accessibility(double bash_dist, const lig_build::po
             if ((iy_grid >= 0) && (iy_grid < y_size())) {
 
                double d2 = (grid_pos_to_mol_space_pos(ix_grid, iy_grid) - atom_pos).lengthsq();
-               d2 *= (inv_scale_factor * inv_scale_factor);
-               double val = substitution_value(d2, bash_dist);
+               double f = d2 / (inv_scale_factor * inv_scale_factor);
+               // double val = substitution_value(f, bash_dist); // expire this 20250214-PE
+               double v = 0.04 * f;
+               double A = bash_dist;
+               double ff = exp_fac;
+               double val = A * exp(- v/ff);
                if (debug)
                   if (val > 0)
-                     std::cout << "adding " << val << " to grid " << ix_grid << " " << iy_grid
+                     std::cout << "add_for_accessibility(): adding " << val
+                               << " to grid " << ix_grid << " " << iy_grid
                                << " from " << sqrt(d2) << " vs " << bash_dist << std::endl;
                grid_[ix_grid][iy_grid] += val;
             }
@@ -1500,13 +1477,10 @@ void
 flev_t::ligand_grid::add_for_accessibility_no_bash_dist_atom(double scale,
                                                              const lig_build::pos_t &atom_pos) {
 
-   bool debug = 1;
-   int grid_extent = 40;
+   int feature_extent = 40;
 
-   double inv_scale_factor = 1.0/double(LIGAND_TO_CANVAS_SCALE_FACTOR);
-
-   for (int ipos_x= -grid_extent; ipos_x<=grid_extent; ipos_x++) {
-      for (int ipos_y= -grid_extent; ipos_y<=grid_extent; ipos_y++) {
+   for (int ipos_x= -feature_extent; ipos_x<=feature_extent; ipos_x++) {
+      for (int ipos_y= -feature_extent; ipos_y<=feature_extent; ipos_y++) {
          std::pair<int, int> p = mol_space_pos_to_grid_pos(atom_pos);
          int ix_grid = ipos_x + p.first;
          int iy_grid = ipos_y + p.second;
@@ -1514,14 +1488,10 @@ flev_t::ligand_grid::add_for_accessibility_no_bash_dist_atom(double scale,
             if ((iy_grid >= 0) && (iy_grid < y_size())) {
 
                double d2 = (grid_pos_to_mol_space_pos(ix_grid, iy_grid) - atom_pos).lengthsq();
-               d2 *= (inv_scale_factor * inv_scale_factor);
-               // a triangle function, 1 at the atom centre, 0 at 1.5A and beyond
-               //
-               double dist_at_zero = 2.6;
-
-               double val = 0.0;
-               if (d2< dist_at_zero * dist_at_zero)
-                  val = - 1.0/dist_at_zero * sqrt(d2) + 1.0;
+               double v = d2 / ( 1.0 * 1.0);
+               double A = 1.0;
+               double ff = 0.95;
+               double val = A * exp(- v/ff);
                grid_[ix_grid][iy_grid] += val;
             }
          }
@@ -1602,7 +1572,7 @@ flev_t::ligand_grid::avoid_ring_centres(const std::vector<std::vector<std::strin
          double radius = 1/(2*sin(M_PI/double(n_atoms))) * 1.5; // in "A" or close
          // std::cout << "avoid_ring_centres() adding ring centre at " << centre
          // << " n_atoms: " << n_atoms << " radius " << radius << std::endl;
-         add_for_accessibility(radius, centre);
+         add_for_accessibility(radius, 0.1, centre);
       }
       catch (const std::runtime_error &rte) {
          std::cout << "Opps - failed to find ring centre for ring atom name "
@@ -1616,20 +1586,37 @@ flev_t::ligand_grid::show_contour(float contour_level) {
 
    std::vector<lig_build::atom_ring_centre_info_t> dummy_unlimited_atoms;
    std::vector<std::vector<std::string> > dummy_ring_atom_names;
-   show_contour(contour_level, dummy_unlimited_atoms, dummy_ring_atom_names);
+   std::string col = "#888888";
+   bool is_dashed = false;
+   show_contour(contour_level, is_dashed, col, dummy_unlimited_atoms, dummy_ring_atom_names);
 }
 
-void
+svg_container_t
 flev_t::ligand_grid::show_contour(float contour_level,
+                                  bool is_dashed,
+                                  const std::string &col,
                                   const std::vector<lig_build::atom_ring_centre_info_t> &unlimited_atoms,
                                   const std::vector<std::vector<std::string> > &ring_atoms_list) {
 
-
-   // GooCanvasItem *group = goo_canvas_group_new (root, "stroke-color", "#880000", NULL);
+   auto contour_lines_to_svg = [] (const std::vector<std::vector<lig_build::pos_t> > &contour_lines,
+                                   const std::string &col,
+                                   bool is_dashed) {
+      svg_container_t svgc;
+      for(const auto &pos_vec : contour_lines) {
+         unsigned int n_pos = pos_vec.size();
+         if (n_pos > 1) {
+            svgc.add_comment("Substitution Contour");
+            for(unsigned int i=0; i<(n_pos-1); i++) {
+               const auto &p_1 = pos_vec[i];
+               const auto &p_2 = pos_vec[i+1];
+               svgc.add_line(p_1, p_2, 0.1, col, is_dashed);
+            }
+         }
+      }
+      return svgc;
+   };
 
    bool debug = false;
-   int ii=0;
-   int jj=0;
 
    // fill the ring centre vector, if the unlimited atom have ring centres
    std::vector<std::pair<bool, lig_build::pos_t> > ring_centres(unlimited_atoms.size());
@@ -1644,48 +1631,46 @@ flev_t::ligand_grid::show_contour(float contour_level,
 
    std::vector<std::pair<lig_build::pos_t, lig_build::pos_t> > line_fragments;
 
-   grid_index_t grid_index_prev(0,0);
-
-   for (int ix=0; ix<x_size(); ix+=1) {
-      for (int iy=0; iy<y_size(); iy+=1) {
+   for (int ix=0; ix<x_size()-1; ix+=1) {
+      for (int iy=0; iy<y_size()-1; iy+=1) {
          int ms_type = square_type(ix, iy, contour_level);
 
-         grid_index_t grid_index(ix,iy);
-
          if ((ms_type != MS_NO_CROSSING) && (ms_type != MS_NO_SQUARE)) {
-            contour_fragment cf(ms_type, contour_level,
-                                grid_index_prev,
-                                grid_index,
-                                *this); // sign of bad architecture
 
-            if (cf.coords.size() == 1) {
+            double v00 = get(ix,   iy);   // the values of the grid at these positions
+            double v01 = get(ix,   iy+1);
+            double v10 = get(ix+1, iy);
+            double v11 = get(ix+1, iy+1);
 
-               if (debug)
-                  std::cout << "plot contour ("
-                            << cf.get_coords(ix, iy, 0).first << " "
-                            << cf.get_coords(ix, iy, 0).second << ") to ("
-                            << cf.get_coords(ix, iy, 1).first << " "
-                            << cf.get_coords(ix, iy, 1).second << ")" << std::endl;
+            contour_fragment cf(ms_type, contour_level, v00, v01, v10, v11);
+
+            if (cf.coords_size() == 1) {
 
                std::pair<double, double> xy_1 = cf.get_coords(ix, iy, 0);
                std::pair<double, double> xy_2 = cf.get_coords(ix, iy, 1);
-               lig_build::pos_t pos_1 = grid_pos_to_mol_space_pos(xy_1.first, xy_1.second);
-               lig_build::pos_t pos_2 = grid_pos_to_mol_space_pos(xy_2.first, xy_2.second);
 
-               lig_build::pos_t p1 = grid_pos_to_mol_space_pos(cf.get_coords(ix, iy, 0).first,
-                                                               cf.get_coords(ix, iy, 0).second);
-               lig_build::pos_t p2 = grid_pos_to_mol_space_pos(cf.get_coords(ix, iy, 1).first,
-                                                               cf.get_coords(ix, iy, 1).second);
-               std::pair<lig_build::pos_t, lig_build::pos_t> fragment_pair(p1, p2);
+               if (debug)
+                  std::cout << "plot_contour A "
+                            << xy_1.first  << " "
+                            << xy_1.second << " to "
+                            << xy_2.first  << " "
+                            << xy_2.second << "  " << ms_type << std::endl;
+
+               lig_build::pos_t pos_1 = grid_pos_as_double_to_mol_space_pos(xy_1.first, xy_1.second);
+               lig_build::pos_t pos_2 = grid_pos_as_double_to_mol_space_pos(xy_2.first, xy_2.second);
+
+               std::pair<lig_build::pos_t, lig_build::pos_t> fragment_pair(pos_1, pos_2);
+               if (debug)
+                  std::cout << "plot_contour B "
+                            << pos_1.x << " " << pos_1.y << " to "
+                            << pos_2.x << " " << pos_2.y << std::endl;
 
                // Now filter out this fragment pair if it is too close
                // to an unlimited_atom_positions
-               bool plot_it = 1;
-               double dist_crit = 4.0 * LIGAND_TO_CANVAS_SCALE_FACTOR;
+               bool plot_it = true;
+               double dist_crit = 3.3; // should be/was 4.0
 
                for (unsigned int i=0; i<unlimited_atoms.size(); i++) {
-//                   lig_build::pos_t p = to_canvas_pos(unlimited_atom_positions[i].x,
-//                                                      unlimited_atom_positions[i].y);
 
                   lig_build::pos_t p = unlimited_atoms[i].atom.atom_position;
 
@@ -1693,37 +1678,27 @@ flev_t::ligand_grid::show_contour(float contour_level,
                   // centre to atom vector to unplot vectors only in a
                   // particular direction.
                   //
-                  if ((p - p1).lengthsq() < (dist_crit * dist_crit)) {
+                  if ((p - pos_1).lengthsq() < (dist_crit * dist_crit)) {
                      if (1) { // for debugging
                         if (unlimited_atoms[i].has_ring_centre_flag) {
                            // std::cout << " atom " << i << " has ring_centre ";
                            lig_build::pos_t d_1 =
                               unlimited_atoms[i].ring_centre - unlimited_atoms[i].atom.atom_position;
-                           lig_build::pos_t d_2 = unlimited_atoms[i].atom.atom_position - p1;
-                           double cos_theta =
-                              lig_build::pos_t::dot(d_1, d_2)/(d_1.length()*d_2.length());
+                           lig_build::pos_t d_2 = unlimited_atoms[i].atom.atom_position - pos_1;
+                           double cos_theta = lig_build::pos_t::dot(d_1, d_2)/(d_1.length()*d_2.length());
                            // std::cout << " cos_theta " << cos_theta << " for unlimited atom " << i << std::endl;
                            if (cos_theta > 0.3) { // only cut in the "forwards" direction
-
-//                               std::cout << " cutting by ring-centred unlimited atom " << i << " "
-//                                  << unlimited_atoms[i].atom.get_atom_name()
-//                                         << std::endl;
-
-                              plot_it = 0;
+                              plot_it = false;
                               break;
                            }
                            // std::cout << std::endl;
 
                         } else {
-                           plot_it = 0;
-//                             std::cout << " cutting by unlimited atom " << i << " "
-//                                       << unlimited_atoms[i].atom.get_atom_name()
-//                                       << std::endl;
+                           plot_it = false;
                            break;
                         }
                      }
                   }
-
                } // end unlimited atoms loop
 
                if (plot_it)
@@ -1734,8 +1709,8 @@ flev_t::ligand_grid::show_contour(float contour_level,
    }
 
    std::vector<std::vector<lig_build::pos_t> > contour_lines = make_contour_lines(line_fragments);
-
-   plot_contour_lines(contour_lines);
+   svg_container_t svgc = contour_lines_to_svg(contour_lines, col, is_dashed);
+   return svgc;
 
 }
 
@@ -1855,9 +1830,9 @@ flev_t::ligand_grid::plot_contour_lines(const std::vector<std::vector<lig_build:
 						NULL);
    GooCanvasLineDash *dash = goo_canvas_line_dash_new (2, 1.5, 2.5);
 
-   for (unsigned int i=0; i<contour_lines.size(); i++) { 
+   for (unsigned int i=0; i<contour_lines.size(); i++) {
       for (int j=0; j<int(contour_lines[i].size()-1); j++) {
-	 
+
 	 goo_canvas_polyline_new_line(group,
 				      contour_lines[i][j].x,
 				      contour_lines[i][j].y,
@@ -1866,37 +1841,35 @@ flev_t::ligand_grid::plot_contour_lines(const std::vector<std::vector<lig_build:
 				      "line_width", 1.0,
 				      "line-dash", dash,
 				      NULL);
-	 
       }
    }
    goo_canvas_line_dash_unref(dash);
 #endif
-   
+
 }
 
 flev_t::contour_fragment::contour_fragment(int ms_type,
-                                           const float &contour_level, 
-                                           const grid_index_t &grid_index_prev,
-                                           const grid_index_t &grid_index,
-                                           const ligand_grid &grid) {
+                                           const float &contour_level,
+                                           double v00, double v01, double v10, double v11) {
 
    int ii_next = grid_index_t::INVALID_INDEX;
    int jj_next = grid_index_t::INVALID_INDEX;
 
-   float v00 = grid.get(grid_index.i(),   grid_index.j());
-   float v01 = grid.get(grid_index.i(),   grid_index.j()+1);
-   float v10 = grid.get(grid_index.i()+1, grid_index.j());
-   float v11 = grid.get(grid_index.i()+1, grid_index.j()+1);
+   // now done by caller
+   // float v00 = grid.get(grid_index.i(),   grid_index.j());
+   // float v01 = grid.get(grid_index.i(),   grid_index.j()+1);
+   // float v10 = grid.get(grid_index.i()+1, grid_index.j());
+   // float v11 = grid.get(grid_index.i()+1, grid_index.j()+1);
 
-   float frac_x1 = -1; 
-   float frac_y1 = -1;
-   float frac_x2 = -1;  // for hideous valley
-   float frac_y2 = -1;
+   double frac_x1 = -1;
+   double frac_y1 = -1;
+   double frac_x2 = -1;  // for hideous valley
+   double frac_y2 = -1;
 
    contour_fragment::coordinates c1(0.0, X_AXIS_LOW);
    contour_fragment::coordinates c2(Y_AXIS_LOW, 0.0);
    cp_t p(c1,c2);
-   
+
    switch (ms_type) {
 
    case ligand_grid::MS_UP_0_0:
@@ -1923,10 +1896,9 @@ flev_t::contour_fragment::contour_fragment(int ms_type,
       coords.push_back(p);
       break;
 
-      
    case ligand_grid::MS_UP_1_0:
    case ligand_grid::MS_UP_0_0_and_0_1_and_1_1:
-      
+
       // std::cout << " ----- case MS_UP_1,0 " << std::endl;
       frac_x1 = (contour_level - v00)/(v10-v00);
       frac_y1 = (contour_level - v10)/(v11-v10);
@@ -1936,8 +1908,7 @@ flev_t::contour_fragment::contour_fragment(int ms_type,
       coords.push_back(p);
       break;
 
-      
-      
+
    case ligand_grid::MS_UP_1_1:
    case ligand_grid::MS_UP_0_0_and_0_1_and_1_0:
 
@@ -1952,7 +1923,7 @@ flev_t::contour_fragment::contour_fragment(int ms_type,
 
    case ligand_grid::MS_UP_0_0_and_0_1:
    case ligand_grid::MS_UP_1_0_and_1_1:
-      
+
       // std::cout << " ----- case MS_UP_0,0 and 0,1 " << std::endl;
       frac_x1 = (v00-contour_level)/(v00-v10);
       frac_x2 = (v01-contour_level)/(v01-v11);
@@ -1964,7 +1935,7 @@ flev_t::contour_fragment::contour_fragment(int ms_type,
 
    case ligand_grid::MS_UP_0_0_and_1_0:
    case ligand_grid::MS_UP_0_1_and_1_1:
-      
+
       // std::cout << " ----- case MS_UP_0,0 and 1,0 " << std::endl;
       frac_y1 = (v00-contour_level)/(v00-v01);
       frac_y2 = (v10-contour_level)/(v10-v11);
@@ -1973,24 +1944,55 @@ flev_t::contour_fragment::contour_fragment(int ms_type,
       p = cp_t(c1,c2);
       coords.push_back(p);
       break;
-      
 
    default:
       std::cout << "ERROR:: unhandled square type: " << ms_type << std::endl;
 
-   } 
+   }
 
 }
 
 
+std::pair<double, double>
+flev_t::contour_fragment::get_coords(int ii, int jj, int coord_indx) const {
+
+   coordinates c;
+
+   if (coord_indx == 0)
+      if (coords.size() == 0)
+         std::cout << "disaster A in get_coords()" << std::endl;
+
+   if (coord_indx == 1)
+      if (coords.size() == 0)
+         std::cout << "disaster B in get_coords()" << std::endl;
+
+   if (coord_indx == 0)
+      c = coords[0].first;
+   if (coord_indx == 1)
+      c = coords[0].second;
+
+   // these are for hideous value (two crossing vectors)
+   if (coord_indx == 2)
+      c = coords[1].first;
+   if (coord_indx == 3)
+      c = coords[1].second;
+
+   double iid = static_cast<double>(ii);
+   double jjd = static_cast<double>(jj);
+   // std::cout << "get_coords for coord_indx " << coord_indx << " parts " << iid << " " << jjd
+   //           << " fracs: " << c.get_frac_x() << " " << c.get_frac_y() << std::endl;
+   return std::pair<double, double> (iid+c.get_frac_x(), jjd+c.get_frac_y());
+}
+
+
 // for marching squares, ii and jj are the indices of the bottom left-hand side.
-int 
+int
 flev_t::ligand_grid::square_type(int ii, int jj, float contour_level) const {
 
    int square_type = ligand_grid::MS_NO_SQUARE;
    if ((ii+1) >= x_size_) {
       return ligand_grid::MS_NO_SQUARE;
-   } else { 
+   } else {
       if ((jj+1) >= y_size_) {
 	 return ligand_grid::MS_NO_SQUARE;
       } else {
@@ -1998,9 +2000,9 @@ flev_t::ligand_grid::square_type(int ii, int jj, float contour_level) const {
 	 float v01 = get(ii, jj+1);
 	 float v10 = get(ii+1, jj);
 	 float v11 = get(ii+1, jj+1);
-	 if (v00 > contour_level) { 
-	    if (v01 > contour_level) { 
-	       if (v10 > contour_level) { 
+	 if (v00 > contour_level) {
+	    if (v01 > contour_level) {
+	       if (v10 > contour_level) {
 		  if (v11 > contour_level) {
 		     return ligand_grid::MS_NO_CROSSING;
 		  }
@@ -2148,6 +2150,21 @@ flev_t::ligand_grid::grid_pos_to_mol_space_pos(int ix, int iy) const {
    return d;
 }
 
+// --------------------------- coordinate transformation -----------------------------
+lig_build::pos_t
+flev_t::ligand_grid::grid_pos_as_double_to_mol_space_pos(double x, double y) const {
+
+   double gminx = mol_space_grid_min_x;
+   double gminy = mol_space_grid_min_y;
+   lig_build::pos_t grid_offset(gminx, gminy);
+
+   double rx = x / n_grid_per_angstrom;
+   double ry = y / n_grid_per_angstrom;
+   lig_build::pos_t p(rx, ry);
+   lig_build::pos_t d = p + grid_offset;
+   return d;
+}
+
 
 // 20241005-PE note to self get_ring_centre() caches the result, so we can't user a const mol here
 void
@@ -2196,20 +2213,20 @@ flev_t::ligand_grid::fill(svg_molecule_t mol) {
             grid_[ipos_x][ipos_y] += val;
             if (iat == 1) {
                double d = sqrt(d2);
-               // std::cout << "debug-grid: " << ipos_x << " " << ipos_y << " " << d << std::endl;
-               std::cout << "debug-grid: ipos_x " << ipos_x << " ipos_y " << ipos_y
-                         << " atom_pos.x " << atom_pos.x << " atom_pos.y " << atom_pos.y
-                         << " msgp.x " << mol_space_pos_for_grid_point.x << " "
-                         << " msgp.y " << mol_space_pos_for_grid_point.y << " "
-                         << " delta.x " << delta.x << " "
-                         << " delta.y " << delta.y << " "
-                         << " d " << d << std::endl;
+               if (false)
+                  std::cout << "debug-grid: ipos_x " << ipos_x << " ipos_y " << ipos_y
+                            << " atom_pos.x " << atom_pos.x << " atom_pos.y " << atom_pos.y
+                            << " msgp.x " << mol_space_pos_for_grid_point.x << " "
+                            << " msgp.y " << mol_space_pos_for_grid_point.y << " "
+                            << " delta.x " << delta.x << " "
+                            << " delta.y " << delta.y << " "
+                            << " d " << d << std::endl;
             }
          }
       }
    }
 
-   if (true)
+   if (false)
       print_grid(grid_, "A");
 
    std::vector<lig_build::pos_t> mol_ring_centres = mol.get_ring_centres();
@@ -2226,8 +2243,7 @@ flev_t::ligand_grid::fill(svg_molecule_t mol) {
       }
    }
 
-   if (true)
-      print_grid(grid_, "B");
+   // print_grid(grid_, "B");
 
    //  normalize(); // scaled peak value to 1.
 }
@@ -2344,8 +2360,9 @@ flev_t::draw_residue_circles(const std::vector<residue_circle_t> &l_residue_circ
 
    svg_container_t svgc;
 
-   std::cout << "debug:: Here we are in draw_residue_circles() "
-             << l_residue_circles.size() << " " << add_rep_handles.size() << std::endl;
+   if (false)
+      std::cout << "debug:: Here we are in draw_residue_circles() "
+                << l_residue_circles.size() << " " << add_rep_handles.size() << std::endl;
 
    double max_dist_water_to_ligand_atom  = 3.3; // don't draw waters that are far from ligand
    double max_dist_water_to_protein_atom = 3.3; // don't draw waters that are not somehow
@@ -2535,17 +2552,18 @@ flev_t::draw_solvent_exposure_circle(const residue_circle_t &residue_circle,
 
 	    std::string fill_colour = get_residue_solvent_exposure_fill_colour(radius_extra);
 	    double r = standard_residue_circle_radius + radius_extra;
-            std::cout << "in draw_solvent_exposure_circle() to_lig_centre_uv " << to_lig_centre_uv << " "
-                      << "se_circle_centre " << se_circle_centre << " fill_colour " << fill_colour << " "
-                      << "radius_extra " << radius_extra << " "
-                      << "r " << r << std::endl;
+            if (false)
+               std::cout << "in draw_solvent_exposure_circle() to_lig_centre_uv " << to_lig_centre_uv << " "
+                         << "se_circle_centre " << se_circle_centre << " fill_colour " << fill_colour << " "
+                         << "radius_extra " << radius_extra << " "
+                         << "r " << r << std::endl;
             double line_width = 0.0;
-            double vv0 = 0.5;
             svgc.add("<!-- Exposure Circle -->\n");
             lig_build::pos_t pos = se_circle_centre;
             pos.y = -pos.y; // to match the top layer
             pos += lig_build::pos_t(0.0002, 0.0002);
-            std::cout << "   pos " << pos << " se_circle_centre " << se_circle_centre << std::endl;
+            if (false)
+               std::cout << "   pos " << pos << " se_circle_centre " << se_circle_centre << std::endl;
             std::string c = make_circle(pos, r, line_width, fill_colour, "black");
             svgc.add(c);
 	 }
@@ -2712,22 +2730,21 @@ flev_t::initial_primary_residue_circles_layout(const ligand_grid &grid,
                                                int primary_index,
                                                const std::vector<std::pair<lig_build::pos_t, double> > &attachment_points) {
 
-   if (true)
+   if (false)
       std::cout << "DEBUG:: starting initial_primary_residue_circles_layout() primary_index " << primary_index
                 << " " << residue_circles[primary_index].residue_label << " "
                 << residue_circles[primary_index].residue_type
                 << " has position " << residue_circles[primary_index].pos
                 << std::endl;
 
-   if (true)
+   if (false)
       std::cout << "DEBUG:: initial_primary_residue_circles_layout() =========== adding quadratic for residue "
                 << residue_circles[primary_index].residue_label
                 << " ============================"
                 << std::endl;
 
-   if (true) {
+   if (false)
       grid.print(primary_index);
-   }
 
    ligand_grid primary_grid = grid;
 

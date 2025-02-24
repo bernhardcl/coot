@@ -277,6 +277,7 @@ molecule_class_info_t::setup_internal() { // init
    shader_shininess = 6.0;
    shader_specular_strength = 0.5;
 
+   map_contours_outdated = false;
    map_mesh_first_time = true;
    model_mesh_first_time = true;
 
@@ -858,7 +859,10 @@ molecule_class_info_t::install_model_with_ghosts(int imol_no_in,
       bool do_rtops = true;
       fill_ghost_info(do_rtops, graphics_info_t::ncs_homology_level);
    } else {
-      ncs_ghosts = ncs_ghosts_in;
+      // ncs_ghosts = ncs_ghosts_in;
+      ncs_ghosts.clear();
+      for (unsigned int i=0; i<ncs_ghosts_in.size(); i++)
+         ncs_ghosts.push_back(drawn_ghost_molecule_display_t(ncs_ghosts_in[i]));
    }
    initialize_coordinate_things_on_read_molecule_internal(name, is_undo_or_redo);
 }
@@ -3463,8 +3467,8 @@ molecule_class_info_t::draw_atom_label(int atom_index,
                                        short int seg_ids_in_atom_labels_flag,
                                        const glm::vec4 &atom_label_colour,
                                        const glm::mat4 &mvp,
-                                       const glm::mat4 &view_rotation) { // not used - removed this argument      
-#ifndef EMSCRIPTEN
+                                       const glm::mat4 &view_rotation) {
+
    if (has_model()) {
       if (atom_index < atom_sel.n_selected_atoms) {
          mmdb::Atom *atom = atom_sel.atom_selection[atom_index];
@@ -3490,7 +3494,7 @@ molecule_class_info_t::draw_atom_label(int atom_index,
          unlabel_atom(atom_index);
       }
    }
-#endif
+
 }
 
 // Put a label at the ith atom of mol_class_info::atom_selection.
@@ -3501,7 +3505,7 @@ molecule_class_info_t::draw_symm_atom_label(int atom_index,
                                             const glm::vec4 &atom_label_colour,
                                             const glm::mat4 &mvp,
                                             const glm::mat4 &view_rotation) {
-#ifndef EMSCRIPTEN
+
    if (has_model()) {
       if (atom_index < atom_sel.n_selected_atoms) {
          mmdb::Atom *atom = atom_sel.atom_selection[atom_index];
@@ -3527,7 +3531,7 @@ molecule_class_info_t::draw_symm_atom_label(int atom_index,
          unlabel_atom(atom_index);
       }
    }
-#endif
+
 }
 
 

@@ -1,6 +1,61 @@
 ----
 
-picking should use non-drawn atom indicies
+When "spacing" through a chain, if the CA of the current atom is labelled,
+then label the CA of next atom.
+
+try to diagnose the GL errors on startup.
+
+Fix SSM superpose dialog
+* Done. What a grid.
+
+Fix Undo (Molecule) dialog - maybe compression problems
+
+Send Charles info about Coot tests.
+
+Add a function is_nucleic_acid(imol, residue_cid)
+
+double-clicking on a HUD button does a "go to blob"
+(haha)
+
+add scaling for view rotation/pixel
+
+Analyse/Validate fragment - do refinement setup energy
+and rama, rota etc and density fit.
+
+Do ribbons cast shadows?
+
+add terminal residue for nucleic acic in moorhen.
+Add a function is_nucleic_acid(imol, cid)
+
+In jiggle fit, at the end of a scoring, some atoms have zero
+density and other high density. Multiply the density value
+by the position of the atom relative to the center of
+the chain/fragment. That will give you a direction
+to move the molecule - you might like to try several
+different rotation/translation hypotheses to check
+for consistency.
+
+Stuart: Download svg in Moorhen ligands and carbohydrate.
+
+Stuart: hydrogen bonds?
+
+Look at fftw2 usage in electrostatics
+
+Coot: picking should use the non-drawn atom indicies vector
+
+Add feature: Moorhen: Delete Waters
+
+(Conditional) Recontour on button-release in "Dragged-map no" mode? At least as
+an option. (Based on how far we have moved since the last contouring and the map radius)
+
+2pwt: add hydrogen atoms and refine - see that the bases are pushed away.
+What's going wrong - hydrogen bond distance restraints? Lucrezia script.
+
+Look at picking in RNA stick mode
+
+Discs for HOLE output?
+
+add show_hydrogen_bonds to chapi api
 
 Why doesn't YTD import into layla after reading acedrg-YTD.cif?
 LaylaState::LaylaState(CootLigandEditorCanvas* canvas_widget, GtkWindow* win, GtkLabel* status_label) noexcept {
@@ -13,10 +68,15 @@ Key binding.
 
 Edit Restraints dialog should be an overlay.
 
+Add "fat atom" refinement - instead of using just the atom centre, use a box of points around it also.
+Box size can depend on B-factor.
+
 GEMMI: Transfer aniso-B information in gemmi-mmdb - aniso table is missing from
 output cif - why? Ask Marcin.
 
-Add feature: Moorhen: Delete Waters
+Replace line symmetry with 3d model
+
+For tubes view, use 8a5y and 8a61 as an example.
 
 Moorhen: Session file doesn't save the environment distances on restore. Fixed?
 
@@ -51,8 +111,6 @@ copy_ncs_chain_action
 ncs_jumping_action
 ncs_ligands_action
 
-Send Charles info about Coot tests.
-
 1.1.12 make svg molecule work again (pli need not work). Test wedge bonds. Test atom
 label positioning.
 
@@ -65,6 +123,18 @@ with 258 N1? Ah! They are both acceptors! Interesting. What to do about it?
 
 More work on molecule_class_info_t::alt_conf_view_next_alt_conf(const std::string &current_alt_conf)
 needed.
+
+It's a mistake to recontour the maps when they are not displayed.
+Instead of recontouring, mark them as 'outdated'
+When the set_map_is_displayed() function is activated the "map state"
+is checked and contoured regenerated if the map state is 'outdated'.
+* Done.
+
+add terminal residue for nucleic acic in moorhen.
+* Done.
+
+scale the map in moorhen.
+* Done. Good.
 
 The first save coords molecule selector dialog should be an overlay.
 * Done. Nice.

@@ -1080,7 +1080,7 @@ void set_new_non_drawn_bonds(int imol, const std::string &cid);
 //! \brief add to non-drawn bonds - and regen bonds
 void add_to_non_drawn_bonds(int imol, const std::string &cid);
 
-//! \brief clear the non-drawn bonds - don't regen bonds
+//! \brief clear the non-drawn bonds - force regen bonds to restore all
 void clear_non_drawn_bonds(int imol);
 
 //! \brief return a Python object for the radii of the atoms in the dictionary
@@ -2435,6 +2435,10 @@ void set_use_sounds(bool state);
 void curmudgeon_mode();
 
 void halloween();
+
+void display_svg_from_file_in_a_dialog(const std::string &file_name);
+
+void display_svg_from_string_in_a_dialog(const std::string &string);
 
 //! return the section index (the middle section currently)
 int setup_tomo_slider(int imol);

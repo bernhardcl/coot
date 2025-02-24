@@ -112,6 +112,7 @@ enum {CONTOUR_UP, CONTOUR_DOWN};
 #include "utils/coot-utils.hh"
 #include "utils/pir-alignment.hh"
 #include "api/ghost-molecule-display.hh"
+#include "drawn-ghost-molecule-display.hh"
 
 #include "protein_db/protein_db_utils.h"
 
@@ -488,9 +489,9 @@ class molecule_class_info_t {
 
    // NCS ghost molecules:
    //
-   std::vector<coot::ghost_molecule_display_t> ncs_ghosts;
+   std::vector<drawn_ghost_molecule_display_t> ncs_ghosts;
    void update_ghosts();
-   short int show_ghosts_flag; // i.e. draw_it_for_ncs_ghosts
+   bool show_ghosts_flag; // i.e. draw_it_for_ncs_ghosts
    float ghost_bond_width;
    bool ncs_ghost_chain_is_a_target_chain_p(const std::string &chain_id) const;
    // throw an exception when the matrix is not defined (e.g. no atoms).
@@ -505,7 +506,7 @@ class molecule_class_info_t {
 				       const std::vector<std::pair<std::string, int> > &v2,
 				       float exact_homology_level) const;
    bool last_ghost_matching_target_chain_id_p(int i_match,
-					      const std::vector<coot::ghost_molecule_display_t> &ncs_ghosts) const;
+					      const std::vector<drawn_ghost_molecule_display_t> &ncs_ghosts) const;
    void delete_ghost_selections();
 
    std::vector<coot::ghost_molecule_display_t> strict_ncs_info;
@@ -882,9 +883,8 @@ public:        //                      public
 	 pickable_atom_selection = 0;
    }
 
-   void set_map_is_displayed(int state) {
-      draw_it_for_map = state;
-   }
+   void set_map_is_displayed(int state); // 20250216-PE moved out of header, to handle
+                                         // expired map contours
 
    void set_map_is_displayed_as_standard_lines(short int state) {
       draw_it_for_map_standard_lines = state;
@@ -1414,6 +1414,8 @@ public:        //                      public
 
    void clear_draw_vecs();
    void clear_diff_map_draw_vecs();
+
+   bool map_contours_outdated;
 
    // void add_draw_vecs_to_set(const coot::CartesianPairInfo &cpi);
 
@@ -2582,7 +2584,7 @@ public:        //                      public
                         const glm::vec3 &eye_position,
                         const glm::vec4 &background_colour);
 
-   std::vector<coot::ghost_molecule_display_t> NCS_ghosts() const;
+   std::vector<drawn_ghost_molecule_display_t> NCS_ghosts() const;
 
    std::vector<std::vector<std::string> > ncs_ghost_chains() const;
 
@@ -2797,6 +2799,7 @@ public:        //                      public
    void move_reference_chain_to_symm_chain_position(coot::Symm_Atom_Pick_Info_t naii);
    void fill_ncs_control_frame(GtkWidget *dialog) const; // called for every coords mol
    void fill_ncs_control_frame_internal(GtkWidget *dialog) const; // called if needed.
+   void old_fill_ncs_control_frame_internal(GtkWidget *dialog) const; // delete one day
    void ncs_control_change_ncs_master_to_chain_update_widget(GtkWidget *w, int ichain) const;
 
    void set_display_ncs_ghost_chain(int ichain, int state);
@@ -3600,6 +3603,8 @@ void draw_map_molecule(bool draw_transparent_maps,
    void add_ribbon_representation_with_user_defined_residue_colours(const std::vector<coot::colour_holder> &user_defined_colours,
                                                                     const std::string &mesh_name);
    void remove_molecular_representation(int idx);
+
+   void delete_all_carbohydrate();
 
    // carbohydrate validation tools
    void glyco_tree_internal_distances_fn(const coot::residue_spec_t &base_residue_spec,

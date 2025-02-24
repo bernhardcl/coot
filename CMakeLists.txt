@@ -54,7 +54,7 @@ endif(WIN32)
 
 set(coot_src ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1.1.12"
+add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1.1.13"
   -DHAVE_CXX_THREAD -DHAVE_SSMLIB -DHAVE_BOOST -DUSE_LIBPNG=1 -DCLIPPER_HAS_TOP8000 -DUSE_GEMMI -DHAVE_BOOST_THREAD -DHAVE_GSL
   -DPKGDATADIR="${CMAKE_INSTALL_PREFIX}/share/coot" -DXDATADIR="${CMAKE_INSTALL_PREFIX}/share")
 
@@ -86,7 +86,6 @@ add_library(cootapi SHARED
             ${coot_src}/lidia-core/cod-atom-type-t.cc
             ${coot_src}/lidia-core/rdkit-interface.cc
             ${coot_src}/lidia-core/bond-table-record-t.cc
-            ${coot_src}/pli/pi-stacking.cc
             ${coot_src}/src/coot-hydrogens.cc
             ${coot_src}/src/cfc.cc
             ${coot_src}/MoleculesToTriangles/CXXSurface/CXXBall.cpp
@@ -175,6 +174,7 @@ add_library(cootapi SHARED
             ${coot_src}/api/coot-molecule-modelling.cc
             ${coot_src}/api/coot-molecule-refine.cc
             ${coot_src}/api/coot-molecule-replace-fragment.cc
+            ${coot_src}/api/ghost-molecule-display.cc
             ${coot_src}/api/molecules-container.cc
             ${coot_src}/api/molecules-container-blender.cc
             ${coot_src}/api/molecules-container-bucca-ml-growing.cc
@@ -187,7 +187,6 @@ add_library(cootapi SHARED
             ${coot_src}/api/mmcif-tests.cc
             ${coot_src}/api/phi-psi-prob.cc
             ${coot_src}/api/moorhen-h-bonds.cc
-            ${coot_src}/api/add-terminal-residue.cc
             ${coot_src}/api/rama-plot-phi-psi.cc
             ${coot_src}/analysis/daca.cc
             ${coot_src}/analysis/kolmogorov.cc
@@ -263,11 +262,18 @@ add_library(cootapi SHARED
             ${coot_src}/protein_db/protein_db.cpp
             ${coot_src}/protein_db/protein_db_utils.cpp
             ${coot_src}/protein_db/rna_db.cpp
-            ${coot_src}/pli/specs.cc
             ${coot_src}/pli/flev-annotations.cc
+            ${coot_src}/pli/flev.cc
+            ${coot_src}/pli/flev-annotations.cc
+            ${coot_src}/pli/flev-attached-hydrogens.cc
+            ${coot_src}/pli/optimise-residue-circles.cc
+            ${coot_src}/pli/residue-circles.cc
+            ${coot_src}/pli/dots-representation-info.cc
+            ${coot_src}/pli/pi-stacking.cc
             ${coot_src}/pli/protein-ligand-interactions.cc
             ${coot_src}/pli/pi-stacking.cc
             ${coot_src}/pli/sdf-interface.cc
+            ${coot_src}/pli/specs.cc
             ${coot_src}/coot-utils/coot-align.cc
             ${coot_src}/coot-utils/cmtz-interface.cc
             ${coot_src}/coot-utils/lidia-core-functions.cc
