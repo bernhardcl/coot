@@ -1259,6 +1259,10 @@
   <menu id="ligand-menu">
     <section>
       <item>
+        <attribute name="label" translatable="no">2D Ligand Environment View</attribute>
+        <attribute name="action">app.flev_action</attribute>
+      </item>
+      <item>
         <attribute name="label" translatable="no">Contact Dots for Ligand</attribute>
         <attribute name="action">app.coot_contact_dots_for_ligand_action</attribute>
       </item>
@@ -16694,7 +16698,7 @@ Move a copy?</property>
         </child>
          <child type="action">
               <object class="GtkButton" id="undo_molecule_chooser_ok_button">
-                <property name="label" translatable="yes">Close</property>
+                <property name="label" translatable="yes">OK</property>
                 <property name="margin-start">8</property>
                 <property name="margin-end">8</property>
                 <property name="margin-top">4</property>
@@ -16913,6 +16917,7 @@ Move a copy?</property>
             <property name="margin-bottom">10</property>
             <property name="margin-start">6</property>
             <property name="margin-end">6</property>
+            <property name="halign">end</property>
             <child>
               <object class="GtkButton" id="unsaved_changes_cancel_button">
                 <property name="label" translatable="yes">Cancel</property>

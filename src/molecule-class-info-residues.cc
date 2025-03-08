@@ -2464,11 +2464,11 @@ molecule_class_info_t::delete_sidechain_range(const coot::residue_spec_t &res_1,
 void
 molecule_class_info_t::delete_all_carbohydrate() {
 
-   std::cout << "delete stuff here" << std::endl;
-   // (if (or (string=? "NAG" rn) (string=? "MAN" rn) (string=? "BMA" rn) (string=? "FUL" rn)
-   //         (string=? "FUC" rn) (string=? "XYP" rn) (string=? "SIA" rn) (string=? "GAL" rn)
-   //         (string=? "NDG" rn) (string=? "BGC" rn) (string=? "A2G" rn))
-
+   if (atom_sel.mol) {
+      make_backup();
+      coot::util::delete_all_carbohydrate(atom_sel.mol);
+      make_bonds_type_checked();
+   }
 }
 
 

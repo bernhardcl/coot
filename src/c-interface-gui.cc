@@ -2241,7 +2241,7 @@ void network_get_accession_code_entity(const std::string &text, int mode) {
          }
       }
    }
- }
+}
 
 
 

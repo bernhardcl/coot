@@ -108,6 +108,15 @@ namespace coot {
       int res_no_end;
    };
 
+   class atom_distance_t {
+   public:
+     atom_distance_t(const atom_spec_t &a1, const atom_spec_t &a2,
+		    float d) : atom_1(a1), atom_2(a2), distance(d) {}
+     atom_spec_t atom_1;
+     atom_spec_t atom_2;
+     float distance;
+   };
+
    class molecule_t {
 
       class molecule_save_info_t {
@@ -922,6 +931,13 @@ namespace coot {
       //! @return a list of residues specs that have atoms within dist of the atoms of the specified residue
       std::vector<coot::residue_spec_t> residues_near_residue(const std::string &residue_cid, float dist) const;
 
+     //! get atom distances
+     //! other stuff here
+     std::vector<coot::atom_distance_t>
+     get_distances_between_atoms_of_residues(const std::string &cid_res_1,
+					     const std::string &cid_res_2,
+					     float dist_max) const;
+
       //! not const because it can dynamically add dictionaries
       std::vector<plain_atom_overlap_t> get_overlaps(protein_geometry *geom_p);
 
@@ -948,7 +964,8 @@ namespace coot {
       //!
       //! @param residue_cid is the cid for the residue
       std::string get_svg_for_2d_ligand_environment_view(const std::string &residue_cid,
-                                                         protein_geometry *geom) const;
+                                                         protein_geometry *geom,
+                                                         bool add_key) const;
 
 
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS
@@ -1062,6 +1079,21 @@ namespace coot {
 
       //! @return 1 on a successful additions, 0 on failure.
       int delete_hydrogen_atoms();
+
+      //! delete all carbohydrate
+      //!
+      //! @return true on successful deletion, return false on no deletion.
+      bool delete_all_carbohydrate();
+
+      //! Residue is nucleic acid?
+      //!
+      //! Every residue in the selection is checked
+      //!
+      //! @param imol is the model molecule index
+      //! @param cid is the selection CID e.g "//A/15" (residue 15 of chain A)
+      //!
+      //! @return a bool
+      bool residue_is_nucleic_acid(const std::string &cid) const;
 
       // change the chain id
       // return -1 on a conflict

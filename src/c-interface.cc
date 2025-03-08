@@ -3628,10 +3628,10 @@ int dots(int imol,
    int idots = -1;
    if (is_valid_model_molecule(imol)) {
       if (atom_selection_str) {
-	 // the colour is handled internally to make_dots - there the
-	 // state of molecule dots colour (see set_dots_colour()
-	 // below) is checked.
-	 idots = graphics_info_t::molecules[imol].make_dots(std::string(atom_selection_str),
+         // the colour is handled internally to make_dots - there the
+         // state of molecule dots colour (see set_dots_colour()
+         // below) is checked.
+         idots = graphics_info_t::molecules[imol].make_dots(std::string(atom_selection_str),
 							    dots_name,
 							    dot_density,
 							    sphere_size_scale);
@@ -4341,6 +4341,18 @@ int reset_view() {
    add_to_history_simple("reset-view");
    return istat;
 }
+
+
+/*! \brief set the view rotation scale factor
+
+ Useful/necessary for high resolution displayed, where, without this factor
+ the view doesn't rotate enough */
+void set_view_rotation_scale_factor(float f) {
+
+   graphics_info_t::view_rotation_per_pixel_scale_factor = f;
+
+}
+
 
 
 

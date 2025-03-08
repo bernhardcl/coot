@@ -1227,6 +1227,16 @@ public:
    std::pair<bool, coot::Cartesian> get_atom_position(int imol, coot::atom_spec_t &atom_spec);
 #endif
 
+   //! Residue is nucleic acid?
+   //!
+   //! Every residue in the selection is checked
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the selection CID e.g "//A/15" (residue 15 of chain A)
+   //!
+   //! @return a bool
+   bool residue_is_nucleic_acid(int imol, const std::string &cid) const;
+
    //! Get the residue CA position
    //!
    //! @param imol is the model molecule index
@@ -1354,6 +1364,12 @@ public:
    //!
    //! @return a list of residue specs
    std::vector<coot::residue_spec_t> get_residues_near_residue(int imol, const std::string &residue_cid, float dist) const;
+
+  //! get atom distances
+  //! other stuff here
+  std::vector<coot::atom_distance_t>
+  get_distances_between_atoms_of_residues(int imol, const std::string &cid_res_1, const std::string &cid_res_2,
+					  float dist_max) const;
 
    //! Superposition (using SSM)
    //!
@@ -1940,6 +1956,13 @@ public:
    //!
    //! @return 1 on successful deletion, return 0 on failure to delete.
    std::pair<int, unsigned int> delete_literal_using_cid(int imol, const std::string &cid);
+
+   //! delete all carbohydrate
+   //!
+   //! @param imol is the model molecule index
+   //!
+   //! @return true on successful deletion, return false on no deletion.
+   bool delete_all_carbohydrate(int imol);
 
    // (I should have) change(d) that stupid (alt) loc (I should have made you leave your key)
    //
@@ -3277,12 +3300,17 @@ public:
    //!
    //! The caller should make sure that the dictionary for the ligand has been loaded - this
    //! function won't do that. It will add hydrogen atoms if needed.
+   //! 
+   //! From time to time (depending on the ligand) this function will fail to produce a
+   //! result.
    //!
    //! Not const because get_monomer_restraints_at_least_minimal() is called. Hmm.
    //!
    //! @param imol is the model molecule index
    //! @param residue_cid is the cid for the residue
-   std::string get_svg_for_2d_ligand_environment_view(int imol, const std::string &residue_cid);
+   //! @param add_key should a key be added to the figure?
+   //! @return an svg string of the representation. On failure, return an empty string.
+   std::string get_svg_for_2d_ligand_environment_view(int imol, const std::string &residue_cid, bool add_key);
 
    //! Get non-standard residues in a model
    //!
@@ -3497,6 +3525,8 @@ public:
    std::vector<int>   get_triangles_for_blender(int imol);
 
    // -------------------------------- Other ---------------------------------------
+
+   void test_function(const std::string &s);
 
 #ifdef SWIG
 #if NB_VERSION_MAJOR

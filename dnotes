@@ -3980,6 +3980,7 @@ INFO::
    o Make sure RELEASE-NOTES are up to date and add a ----- marker at the top
      Make sure the release is called Release, not pre-release
    o change the version in configure.ac
+   o change the version in coot.appdata.xml - add release notes
    o change the PACKAGE_VERSION in CMakeLists.txt
    o Correct the version in the about_dialog in the coot-gtk4.ui file
    o Artists acknowledged in glade/aboutdialog?
@@ -4001,34 +4002,13 @@ INFO::
         configure and make check
    o git status # what did you forget to add?
    o are the shaders up to date?
+   o Transfer the dist tar to hal and build it there
    o git commit -a
    o git tag Release-0.x.y
    o git push origin Release-0.x.y  # publish the tag
    o git push # push the actual release commit
-   o Passes build (build-latest) on pc?
-     cd build-for-release, configure it, make and make dist.
-     So that works? Now use md...
-   o on charybdis: md: check that it builds, the build will put the release in the
-                   pre-release directory. So move it to release (and remove the
-                   revision tag)
-                   cd ~/fuse/ftp/coot/source/pre-releases/
-                   mv coot-0.9.4.1-revision-10273.tar.gz coot-0.9.4.1.tar.gz
-                   mv coot-0.9.4.1.tar.gz ../releases/
-                   give-read-permission coot-0.9.4.1.tar.gz
-   o on charybdis: disable the build-latest cron-job
-   o on charybdis: clear out coot/source/pre-releases
-   o on charybdis: cd /home/emsley/Projects/coot/git/coot-refinement/build-from-build-it
-                   unfortunately the 1.0 release complicated the extraction of the latest release for this.
-                   So the version is hard coded now! You will need to change it, line 1617
-   o on charybdis: bash wrap-build-it-for-release.sh
-                   that doesn't do the transfer to web server at the moment, so:
-                   cp ~/public_html/software/binaries/stable/coot-0.9.4.1-*  ~/fuse/ftp/coot/binaries/release/
-                   cd ~/fuse/ftp/coot/binaries/release/
-                   give-read-permission to the new files
-   o Build binaries on some hosts: ubuntu1604, gough (clear out the autobuild/building directory)
    o on charybdis: Update latest version info on coot web page:
                    cd Projects/coot/web/index.html
-                   bash transfer-the-file.sh
    o Blog post
    o Mail mailing list
 
@@ -11673,3 +11653,24 @@ fill_combobox_with_molecule_options_simple(GtkWidget *combobox) {
    g.fill_combobox_with_molecule_options(combobox, G_CALLBACK(nullptr), imol_active, mol_vec);
 }
 
+----
+Sun  2 Mar 15:22:53 GMT 2025
+
+  don't use
+  gtk_widget_set_size_request(drawing_area, 800, 600);
+  because it sets the minimum size
+
+  consider use
+  gtk_window_set_default_size(window, w, h);
+
+----
+Mon  3 Mar 16:23:38 GMT 2025
+    Key Atom Pair Distances:
+
+    Adenine-Thymine (A-T) Base Pairs:
+        N1 of Adenine to N3 of Thymine: Approximately 2.86 Å
+        N6 of Adenine to O4 of Thymine: Approximately 2.90 Å
+    Guanine-Cytosine (G-C) Base Pairs:
+        N1 of Guanine to N3 of Cytosine: Approximately 2.91 Å
+        N2 of Guanine to O2 of Cytosine: Approximately 2.89 Å
+        O6 of Guanine to N4 of Cytosine: Approximately 2.93 Å

@@ -830,16 +830,35 @@ molecules_container_t::get_HOLE(int imol,
 //! @param imol is the model molecule index
 //! @param residue_cid is the cid for the residue
 std::string
-molecules_container_t::get_svg_for_2d_ligand_environment_view(int imol, const std::string &residue_cid) {
+molecules_container_t::get_svg_for_2d_ligand_environment_view(int imol,
+                                                              const std::string &residue_cid,
+                                                              bool add_key) {
 
    float radius = 4.2; // pass this
    std::string s;
    if (is_valid_model_molecule(imol)) {
-      s = molecules[imol].get_svg_for_2d_ligand_environment_view(residue_cid, &geom);
-      std::cout << "in get_svg_for_2d_ligand_environment_view() s length " << s.length() << std::endl;
+      s = molecules[imol].get_svg_for_2d_ligand_environment_view(residue_cid, &geom, add_key);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
    return s;
 }
 
+
+
+//! delete all carbohydrate
+//!
+//! @param imol is the model molecule index
+//!
+//! @return true on successful deletion, return false on no deletion.
+bool
+molecules_container_t::delete_all_carbohydrate(int imol) {
+
+   bool status = false;
+   if (is_valid_model_molecule(imol)) {
+      status = molecules[imol].delete_all_carbohydrate();
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return status;
+}
