@@ -3772,7 +3772,7 @@ about_coot_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    GtkWidget *dialog = widget_from_builder("about_dialog");
    if (dialog) {
       set_transient_for_main_window(dialog);
-      gtk_widget_set_visible(dialog, TRUE);
+      gtk_window_present(GTK_WINDOW(dialog));
       // Add the Coot reference. Maybe more at some point ?!
       const gchar *ref_list[] = {
          "Emsley, P., Lohkamp, B., Scott, W. G. &amp; Cowtan, K. (2010).",
@@ -3790,7 +3790,6 @@ about_coot_action(G_GNUC_UNUSED GSimpleAction *simple_action,
             NULL });
 #endif
    }
-
 }
 
 void
