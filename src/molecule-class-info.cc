@@ -4246,11 +4246,14 @@ molecule_class_info_t::make_meshes_from_bonds_box_instanced_version() {
       }
    };
 
+   GLenum err = glGetError();
+   if (err) std::cout << "GL ERROR:: in make_glsl_bonds_type_checked() --- start ---\n";
+
    if (atom_sel.mol) {
 
       unsigned int num_subdivisions = 2;
       unsigned int n_slices = 8;
-      unsigned int n_stacks = 2; // try 1
+      unsigned int n_stacks = 2;
       // do smooth
       if (graphics_info_t::bond_smoothness_factor == 1) {
          num_subdivisions = 1;
@@ -4277,10 +4280,10 @@ molecule_class_info_t::make_meshes_from_bonds_box_instanced_version() {
       // radius_scale *= atom_radius_scale_factor;
 
       if (false) {
-         std::cout << "DEBUG:: ************* model_representation_mode: BALL_AND_STICK " << int(Mesh::representation_mode_t::BALL_AND_STICK) << std::endl;
-         std::cout << "DEBUG:: ************* model_representation_mode: BALLS_NOT_BONDS " << int(Mesh::representation_mode_t::BALLS_NOT_BONDS) << std::endl;
-         std::cout << "DEBUG:: ************* model_representation_mode: VDW_BALLS " << int(Mesh::representation_mode_t::VDW_BALLS) << std::endl;
-         std::cout << "DEBUG:: ************* model_representation_mode: " << int(model_representation_mode) << std::endl;
+         std::cout << "DEBUG:: ********** model_representation_mode: BALL_AND_STICK " << int(Mesh::representation_mode_t::BALL_AND_STICK) << std::endl;
+         std::cout << "DEBUG:: ********** model_representation_mode: BALLS_NOT_BONDS " << int(Mesh::representation_mode_t::BALLS_NOT_BONDS) << std::endl;
+         std::cout << "DEBUG:: ********** model_representation_mode: VDW_BALLS " << int(Mesh::representation_mode_t::VDW_BALLS) << std::endl;
+         std::cout << "DEBUG:: ********** model_representation_mode: " << int(model_representation_mode) << std::endl;
       }
 
       if (model_representation_mode == Mesh::representation_mode_t::BALLS_NOT_BONDS) {
@@ -4290,10 +4293,11 @@ molecule_class_info_t::make_meshes_from_bonds_box_instanced_version() {
       }
 
       std::vector<glm::vec4> colour_table = make_colour_table();
-
       // print_colour_table(" ");
 
-      // std::cout << "DEBUG:: ************* atom_radius: " << atom_radius << std::endl;
+      err = glGetError();
+      if (err) std::cout << "error in make_glsl_bonds_type_checked() pre molecules_as_mesh\n";
+
       model_molecule_meshes.make_graphical_bonds(imol_no, bonds_box, atom_radius, bond_radius,
                                                  show_atoms_as_aniso_flag, // class member - user setable
                                                  show_aniso_atoms_as_ortep_flag, // ditto
@@ -4302,7 +4306,7 @@ molecule_class_info_t::make_meshes_from_bonds_box_instanced_version() {
       if (true) // test that model_molecule_meshes is not empty()
          draw_it = 1;
 
-      GLenum err = glGetError();
+      err = glGetError();
       if (err) std::cout << "error in make_glsl_bonds_type_checked() post molecules_as_mesh\n";
    } else {
       std::cout << "ERROR:: Null mol in make_glsl_bonds_type_checked() " << std::endl;
@@ -4371,12 +4375,37 @@ void molecule_class_info_t::make_glsl_bonds_type_checked(const char *caller) {
 void
 molecule_class_info_t::make_glsl_symmetry_bonds() {
 
+   auto pastelize_colour_table = [] (const std::vector<glm::vec4> &colour_table) {
+      glm::vec4 grey(0.5, 0.5, 0.5, 1.0);
+      std::vector<glm::vec4> new_colour_table = colour_table;
+      for (unsigned int i=0; i<colour_table.size(); i++)
+         new_colour_table[i] = (colour_table[i] + grey * 2.0f) * 0.33f;
+      return new_colour_table;
+   };
+
    // do things with symmetry_bonds_box;
    // std::vector<std::pair<graphical_bonds_container, std::pair<symm_trans_t, Cell_Translation> > > symmetry_bonds_box;
    graphics_info_t::attach_buffers();
+
+#if 0
    mesh_for_symmetry_atoms.make_symmetry_atoms_bond_lines(symmetry_bonds_box, // boxes
                                                           graphics_info_t::symmetry_colour,
                                                           graphics_info_t::symmetry_colour_merge_weight);
+#endif
+
+   float atom_radius = 0.1;
+   float bond_radius = 0.1;
+   int num_subdivisions = 2;
+   int n_slices = 8;
+   int n_stacks = 2;
+   std::vector<glm::vec4> colour_table = make_colour_table();
+
+   std::vector<glm::vec4> new_colour_table = pastelize_colour_table(colour_table);
+
+   meshes_for_symmetry_atoms.make_symmetry_bonds(imol_no, symmetry_bonds_box,
+                                                 atom_radius, bond_radius,
+                                                 num_subdivisions, n_slices, n_stacks,
+                                                 new_colour_table);
 }
 
 // either we have licorice/ball-and-stick (licorice is a form of ball-and-stick) or big-ball-no-bonds
@@ -4492,11 +4521,27 @@ molecule_class_info_t::draw_symmetry(Shader *shader_p,
                                      const glm::vec4 &background_colour,
                                      bool do_depth_fog) {
 
-   if (draw_it)
-      if (show_symmetry)
-         if (this_molecule_has_crystallographic_symmetry)
+   if (draw_it) {
+      if (show_symmetry) {
+         if (this_molecule_has_crystallographic_symmetry) {
+
+#if 0 // 20250312-PE old line symmetry
             mesh_for_symmetry_atoms.draw_symmetry(shader_p, mvp, view_rotation, lights,
                                                   eye_position, background_colour, do_depth_fog);
+#endif
+
+            Shader *shader_for_simple_mesh = &graphics_info_t::shader_for_model_as_meshes;
+            Shader *shader_for_instances = &graphics_info_t::shader_for_instanced_objects;
+            float opacity = 1.0;
+            bool gl_lines_mode = false;
+            bool show_just_shadows = false;
+            meshes_for_symmetry_atoms.draw(shader_for_simple_mesh, shader_for_instances, mvp, view_rotation,
+                                           lights, eye_position, opacity, background_colour,
+                                           gl_lines_mode, do_depth_fog, show_just_shadows);
+
+         }
+      }
+   }
 }
 
 

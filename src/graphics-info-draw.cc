@@ -2320,8 +2320,6 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
    // graphics_info_t::draw_instanced_meshes() A Molecule 2: Ligand Contact Dots vdw-surface
    // graphics_info_t::draw_instanced_meshes() A Molecule 2: Ligand Contact Dots big-overlap
 
-   // std::cout << "------------- draw_molecules_other_meshes() " << std::endl;
-
    bool draw_meshes = true;
    bool draw_mesh_normals = false;
 
@@ -2368,7 +2366,7 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
          // std::cout << "   Here A in draw_meshed_generic_display_object_meshes() " << std::endl;
          glDisable(GL_BLEND);
          for (int ii=n_molecules()-1; ii>=0; ii--) {
-            // std::cout << "Here B in draw_meshed_generic_display_object_meshes() " << ii  << std::endl;
+
             molecule_class_info_t &m = molecules[ii]; // not const because the shader changes
             if (! is_valid_model_molecule(ii)) continue;
             for (unsigned int jj=0; jj<m.meshes.size(); jj++) {
@@ -2376,7 +2374,7 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
                Mesh &mesh = m.meshes[jj];
 
                if (false)
-                  std::cout << "mesh jj " << jj << " of " << m.meshes.size()
+                  std::cout << "debug:: mesh jj " << jj << " of " << m.meshes.size()
                             << " instanced: " << m.meshes[jj].is_instanced << std::endl;
 
                if (mesh.is_instanced) {
@@ -2387,13 +2385,15 @@ graphics_info_t::draw_molecules_other_meshes(unsigned int pass_type) {
                                       model_rotation, lights, eye_position,
                                       bg_col, do_depth_fog, transferred_colour_is_instanced);
                } else {
+
                   if (pass_type == PASS_TYPE_STANDARD) {
                      bool show_just_shadows = false;
                      bool wireframe_mode = false;
                      float opacity = 1.0f;
-                     m.meshes[jj].draw(&shader_for_meshes_with_shadows, mvp,
+                     m.meshes[jj].draw(&shader_for_moleculestotriangles, mvp,
                                        model_rotation, lights, eye_position, rc, opacity, bg_col,
                                        wireframe_mode, do_depth_fog, show_just_shadows);
+
                   }
                   if (pass_type == PASS_TYPE_SSAO) {
                      bool do_orthographic_projection = ! perspective_projection_flag;
@@ -3296,6 +3296,7 @@ graphics_info_t::draw_hud_fps() {
 void
 graphics_info_t::show_atom_pull_toolbar_buttons() {
 
+#if 0 // this is old-school graphics/gui, isn't it?
    if (use_graphics_interface_flag) {
       GtkWidget *button_1 = get_widget_from_builder("clear_atom_pull_restraints_toolbutton");
       GtkWidget *button_2 = get_widget_from_builder("auto_clear_atom_pull_restraints_togglebutton");
@@ -3309,6 +3310,7 @@ graphics_info_t::show_atom_pull_toolbar_buttons() {
       else
          std::cout << "in show_atom_pull_toolbar_buttons() missing button2" << std::endl;
    }
+#endif
 }
 
 
@@ -3330,7 +3332,8 @@ void
 graphics_info_t::show_accept_reject_hud_buttons() {
 
 
-   std::cout << "--------------------- show_accept_reject_hud_buttons() " << std::endl;
+   if (false)
+      std::cout << "--------------------- show_accept_reject_hud_buttons() " << std::endl;
 
    // add some HUD buttons
 
@@ -4144,7 +4147,16 @@ graphics_info_t::check_if_hud_button_moused_over_or_act_on_hit(double x, double 
                                                     button.set_button_colour_for_mode(HUD_button_info_t::BASIC);
                                                  }
                                               }
+                                              GLenum err = glGetError();
+                                              if (err) std::cout << "GL ERROR:: highlight_just_button_with_index pos-B "
+                                                                 << err << std::endl;
+                                              attach_buffers();
+                                              err = glGetError();
+                                              if (err) std::cout << "GL ERROR:: highlight_just_button_with_index pos-C "
+                                                                 << err << std::endl;
                                               mesh_for_hud_buttons.update_instancing_buffer_data(hud_button_info);
+                                              if (err) std::cout << "GL ERROR:: highlight_just_button_with_index pos-D "
+                                                                 << err << std::endl;
                                               graphics_draw(); // let's see the changes then
                                            };
    auto unhighlight_all_buttons = [] () {
@@ -4152,7 +4164,17 @@ graphics_info_t::check_if_hud_button_moused_over_or_act_on_hit(double x, double 
                                                  auto &button = hud_button_info[i];
                                                  button.set_button_colour_for_mode(HUD_button_info_t::BASIC);
                                               }
+                                              GLenum err = glGetError();
+                                              if (err) std::cout << "GL ERROR:: unhighlight_all_buttons pos-B "
+                                                                 << err << std::endl;
+                                              attach_buffers();
+                                              err = glGetError();
+                                              if (err) std::cout << "GL ERROR:: unhighlight_all_buttons pos-C "
+                                                                 << err << std::endl;
                                               mesh_for_hud_buttons.update_instancing_buffer_data(hud_button_info);
+                                              err = glGetError();
+                                              if (err) std::cout << "GL ERROR:: unhighlight_all_buttons pos-D "
+                                                                 << err << std::endl;
                                   };
 
    bool status = false;
@@ -4440,7 +4462,7 @@ graphics_info_t::render_3d_scene_for_ssao() {
 }
 
 
-
+// these are both optional arguments.
 gboolean
 graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &output_file_name) {
 
@@ -5226,9 +5248,21 @@ graphics_info_t::update_bad_nbc_atom_pair_marker_positions() {
             bad_nbc_atom_pair_marker_positions.push_back(coord_orth_to_glm(baddies[i].mid_point));
          }
 
+         GLenum err = glGetError();
+         if (err)
+            std::cout << "GL ERROR:: update_bad_nbc_atom_pair_marker_positions() pos-B " << stringify_error_message(err) << std::endl;
+
          attach_buffers();
+         err = glGetError();
+         if (err)
+            std::cout << "GL ERROR:: update_bad_nbc_atom_pair_marker_positions() pos-C - post attach_buffers "
+                      << stringify_error_message(err) << std::endl;
          tmesh_for_bad_nbc_atom_pair_markers.draw_this_mesh = true;
          tmesh_for_bad_nbc_atom_pair_markers.update_instancing_buffer_data(bad_nbc_atom_pair_marker_positions);
+         err = glGetError();
+         if (err)
+            std::cout << "GL ERROR:: update_bad_nbc_atom_pair_marker_positions() pos-C - post update_instancing_buffer_data "
+                      << stringify_error_message(err) << std::endl;
          if (! bad_nbc_atom_pair_marker_positions.empty())
             draw_bad_nbc_atom_pair_markers_flag = true;
 

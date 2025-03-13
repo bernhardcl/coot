@@ -46,6 +46,7 @@
 #include "read-phs.h"
 #include "gtk-manual.h"
 #include "c-interface-refine.h"
+#include "cc-interface.hh" // 20250310-PE for set_use_primary_mouse_button_for_view_rotation()
 #include "utils/coot-utils.hh"
 
 #include "widget-from-builder.hh"
@@ -139,11 +140,11 @@ on_preferences_reset_button_clicked    (GtkButton       *button,
 }
 
 extern "C" G_MODULE_EXPORT
-void
-on_preferences_destroy                 (GtkWidget       *object,
-                                        gpointer         user_data)
-{
-  clear_preferences();
+gboolean
+on_preferences_close_request(GtkWidget       *dialog,
+                             gpointer         user_data) {
+   gtk_widget_set_visible(dialog, FALSE);
+   return TRUE; // has been handled - no need to find another handler.
 }
 
 void set_use_trackpad(short int state); // or #include cc-interface.hh
@@ -154,10 +155,12 @@ on_preferences_view_rotation_left_mouse_checkbutton_toggled(GtkCheckButton *chec
                                                             gpointer         user_data) {
    if (gtk_check_button_get_active(checkbutton)) {
       preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 1);
-      set_use_trackpad(1);
+      // set_use_trackpad(1);
+      set_use_primary_mouse_button_for_view_rotation(1);
    } else {
       preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 0);
-      set_use_trackpad(0);
+      // set_use_trackpad(0);
+      set_use_primary_mouse_button_for_view_rotation(0);
    }
 }
 
