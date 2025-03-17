@@ -993,7 +993,9 @@ coot::molecule_t::get_HOLE(const clipper::Coord_orth &start_pos, const clipper::
    return m;
 }
 
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
 #include "pli/flev.hh"
+#endif
 
 // Put this in coot-molecule-analysis one day
 //
@@ -1008,9 +1010,12 @@ coot::molecule_t::get_svg_for_2d_ligand_environment_view(const std::string &resi
                                                          coot::protein_geometry *geom,
                                                          bool add_key) const {
 
+   std::string s;
+
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+
    float radius = 4.2; // pass this, I think.
 
-   std::string s;
    mmdb::Residue *residue_p = get_residue(residue_cid);
    if (residue_p) {
       std::string chain_id = residue_p->GetChainID();
@@ -1020,6 +1025,7 @@ coot::molecule_t::get_svg_for_2d_ligand_environment_view(const std::string &resi
                                                                chain_id, res_no, ins_code, radius, add_key);
       s = svgc.compose(true);
    }
+#endif
    return s;
 }
 
