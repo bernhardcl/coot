@@ -656,7 +656,7 @@ handle_start_scripts() {
 #endif
    scripts = xdg.get_python_config_scripts();
    for (const auto &script : scripts) {
-      std::cout << "Load python config script " << script.c_str() << std::endl;
+      std::cout << "Load python config script " << script.string().c_str() << std::endl;
       run_python_script(script.string().c_str());
    }
 #ifdef USE_GUILE
@@ -673,6 +673,7 @@ handle_start_scripts() {
       if (graphics_info_t::run_state_file_status) {
          std::pair<bool, std::filesystem::path> script = xdg.get_python_state_script();
          if (script.first) {
+            std::cout << "BL DEBUG:: Load python state script " << script.second.string().c_str() << std::endl;
             run_python_script(script.second.string().c_str());
          }
       }
@@ -895,12 +896,12 @@ new_startup_application_activate(GtkApplication *application,
       if (activate_data->cld.do_graphics)
          graphics_info.use_graphics_interface_flag = true;
 
+      // old way
       // create the preference defaults
-      make_preferences_internal();
+      //make_preferences_internal();
       // new way
+      // just getting default values
       initialize_preferences();
-      coot_preferences.savePreferencesToScript("test_def_pref.py");
-      coot_preferences.loadPreferencesFromScript("test_def_pref2.py");
 
       guint id = gtk_application_window_get_id(GTK_APPLICATION_WINDOW(app_window));
       // std::cout << "debug:: new_startup_application_activate(): Window id: " << id << std::endl;

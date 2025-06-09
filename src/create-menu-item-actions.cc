@@ -918,7 +918,6 @@ show_preferences_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                         G_GNUC_UNUSED GVariant *parameter,
                         G_GNUC_UNUSED gpointer user_data) {
    show_preferences();
-   update_preference_gui();
 }
 
 

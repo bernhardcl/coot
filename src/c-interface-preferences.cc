@@ -73,6 +73,10 @@
 
 #include "widget-from-builder.hh"
 
+#include <glm/gtc/type_ptr.hpp>
+// FIXME only for debug
+#include "glm/gtx/string_cast.hpp"
+
 /* insert some new stuff with the new method */
 
 // Define preference value types
@@ -83,8 +87,8 @@ preferences_manager coot_preferences;
 // Register a preference with setter/getter functions
 void preferences_manager::register_preference(
       const std::string& key,
-      const std::function<void(const preferences_value&)>& setter,
-      const std::function<preferences_value()>& getter,
+      const std::function<void(const preferences_value&)>& set_function,
+      const std::function<preferences_value()>& get_function,
       const preferences_value& default_value) {
 
    if (preferences_registry.find(key) != preferences_registry.end()) {
@@ -92,12 +96,16 @@ void preferences_manager::register_preference(
    }
 
    // Store the custom getter and setter
-   preferences_registry[key] = {setter, getter};
+   preferences_registry[key] = {set_function, get_function};
 
    // Set the default value
    preferences_defaults[key] = default_value;
+
+   // Set an actual value (the current one; should be default!?)
+   preferences_values[key] = get_function();
+
    try {
-      setter(default_value); // Initialize with the default value
+      set_function(default_value); // Initialize with the default value
    } catch (std::bad_variant_access) {
       std::cout<<"BL INFO:: try to set the wrong value for key " << key <<
                  " should be return of setter but is index " << default_value.index()<<std::endl;
@@ -106,9 +114,16 @@ void preferences_manager::register_preference(
 
 // Set a preference value
 void preferences_manager::set_preference(const std::string& key, const preferences_value& value) {
-   auto it = preferences_registry.find(key);
-   if (it != preferences_registry.end()) {
-      it->second.preference_set_function(value); // Call the setter function
+   auto it = preferences_values.find(key);
+   if (it != preferences_values.end()) {
+     preferences_values.at(key) = value; // Save the value
+     // now set the value too...
+     auto itt = preferences_registry.find(key);
+     if (itt != preferences_registry.end()) {
+       itt->second.preference_set_function(value); // Call the setter function
+     } else {
+       throw std::runtime_error("Preference key not registered: " + key);
+     }
    } else {
       throw std::runtime_error("Preference key not registered: " + key);
    }
@@ -116,34 +131,42 @@ void preferences_manager::set_preference(const std::string& key, const preferenc
 
 // Get a preference value
 preferences_value preferences_manager::get_preference(const std::string& key) const {
-   auto it = preferences_registry.find(key);
-   if (it != preferences_registry.end()) {
-      return it->second.preference_get_function(); // Call the getter function
+   auto it = preferences_values.find(key);
+   if (it != preferences_values.end()) {
+      return preferences_values.at(key); // Get the value
    } else if (preferences_defaults.find(key) != preferences_defaults.end()) {
       return preferences_defaults.at(key); // Return default if not explicitly set
    }
    throw std::runtime_error("Preference key not registered: " + key);
 }
 
-// Reset a preference to its default value
+// Reset a preference by key to its default value
 void preferences_manager::reset_preference_to_default(const std::string& key) {
    auto def_it = preferences_defaults.find(key);
    if (def_it != preferences_defaults.end()) {
       set_preference(key, def_it->second); // Use the default value
    } else {
-      throw std::runtime_error("No default value for preference: " + key);
+      throw std::runtime_error("BL ERROR:: No default value to reset for preference: " + key);
+   }
+}
+
+// get the default value for a specific reference
+preferences_value preferences_manager::get_preference_default(const std::string& key) const {
+   if (preferences_defaults.find(key) != preferences_defaults.end()) {
+      return preferences_defaults.at(key); // Return default if not explicitly set
+   } else {
+      throw std::runtime_error("BL ERROR:: No default value to return for preference: " + key);
    }
 }
 
 // List all registered preferences
-// do we need this function?
+// do we need this function at this point?
 void preferences_manager::list_preferences() const {
    for (const auto& [key, callbacks] : preferences_registry) {
       std::cout << key << " = ";
       try {
       auto value = get_preference(key);
 
-      // other way?
       // Serialize the value to Python syntax
       if (std::holds_alternative<bool>(value)) {
          std::cout << (std::get<bool>(value) ? "True" : "False");
@@ -178,19 +201,21 @@ void preferences_manager::reset_all_preferences_to_defaults() {
 }
 
 /* save/load preferences */
-
-// maybe should use another/previous function!?
-void preferences_manager::savePreferencesToScript(const std::string& filename) {
+int preferences_manager::save_preferences_to_file(const std::string& filename) {
+   int istat;
    std::ofstream file(filename);
    if (!file.is_open()) {
-      throw std::runtime_error("Unable to open file for saving preferences: " + filename);
+      istat = 0;
+      std::cout<<"WARNING:: Unable to open file for saving preferences: " << filename <<std::endl;
+      return istat;
       }
 
    int precision = 2;
    double double_value;
    // Write preferences as Python code
    file << "# Auto-generated coot preferences script\n";
-   file << "# Modify this file to customize preferences\n\n";
+   file << "# Modify this file to customize preferences.\n\n";
+   file << "# Manually added commands will be executed but not saved.\n\n";
    file << "import coot\n\n";
 
    for (const auto& [key, callbacks] : preferences_registry) {
@@ -205,7 +230,7 @@ void preferences_manager::savePreferencesToScript(const std::string& filename) {
           file << std::get<int>(value);
       } else if (std::holds_alternative<double>(value)) {
          double_value = std::get<double>(value);
-         double_value < 1. ? precision = 6 : precision = 2;
+         double_value <= 1. ? precision = 6 : precision = 2;
          file << std::fixed << std::setprecision(precision) << double_value;
       } else if (std::holds_alternative<std::string>(value)) {
           file << "\"" << std::get<std::string>(value) << "\"";
@@ -213,23 +238,28 @@ void preferences_manager::savePreferencesToScript(const std::string& filename) {
           const auto& vec = std::get<std::vector<float>>(value);
           file << "[";
           for (size_t i = 0; i < vec.size(); ++i) {
-             vec[i] < 1. ? precision = 6 : precision = 2;
+             vec[i] <= 1. ? precision = 6 : precision = 2;
              file << std::setprecision(precision) << vec[i];
              if (i < vec.size() - 1) file << ", ";
              }
           file << "]";
       }
       file << ")\n";
+
       } catch (...) {
       // Skip if the preference cannot be retrieved
       }
    }
 
+   istat = 1;
    file.close();
+   std::cout << "Preferences file " << filename << " written." << std::endl;
+
+   return istat;
 }
 
-// probbaly dont need, should use existing function.
-void preferences_manager::loadPreferencesFromScript(const std::string& filename) {
+// probbaly dont need this, we just read the python file...
+void preferences_manager::load_preferences_from_file(const std::string& filename) {
    FILE* file = fopen(filename.c_str(), "r");
    if (!file) {
       throw std::runtime_error("Unable to open file for loading preferences: " + filename);
@@ -302,20 +332,109 @@ void initialize_preferences() {
    g.smooth_scroll_limit);
    std::cout<<"BL DEBUG:: done with 7" <<std::endl;
 
+   // Bond colour map rotation
+   coot_preferences.register_preference("bond_colour_map_rotation",[](const preferences_value& value) {
+      set_colour_map_rotation_on_read_pdb(std::get<double>(value));},
+         []() -> preferences_value { graphics_info_t gg; return gg.rotate_colour_map_on_read_pdb;},
+   g.rotate_colour_map_on_read_pdb);
 
-   // ask read state
-   coot_preferences.register_preference("map_radius",
-                                        [](const preferences_value& value) {
+   // Bond colour rotation C only
+   coot_preferences.register_preference("bond_colour_map_rotation_c_only",[](const preferences_value& value) {
+      set_colour_map_rotation_on_read_pdb_c_only_flag(std::get<int>(value));},
+         []() -> preferences_value { return get_colour_map_rotation_on_read_pdb_c_only_flag();},
+   g.rotate_colour_map_on_read_pdb_c_only_flag);
+
+   // map radius
+   coot_preferences.register_preference("map_radius", [](const preferences_value& value) {
        set_map_radius(std::get<double>(value));},
           []() -> preferences_value { return get_map_radius();},
     g.box_radius_xray);
-    def_vec = {g.font_colour.red, g.font_colour.green, g.font_colour.blue};
 
+    // map isolevel increment
+    coot_preferences.register_preference("map_iso_level_increment", [](const preferences_value& value) {
+       set_iso_level_increment(std::get<double>(value));},
+          []() -> preferences_value { return get_iso_level_increment();},
+    g.iso_level_increment);
+
+    // diff map isolevel increment
+    coot_preferences.register_preference("diff_map_iso_level_increment", [](const preferences_value& value) {
+       set_diff_map_iso_level_increment(std::get<double>(value));},
+          []() -> preferences_value { return get_diff_map_iso_level_increment();},
+    g.diff_map_iso_level_increment);
+
+    // map sampling rate
+    coot_preferences.register_preference("map_sampling_rate", [](const preferences_value& value) {
+       set_map_sampling_rate(std::get<double>(value));},
+          []() -> preferences_value { return get_map_sampling_rate();},
+    g.map_sampling_rate);
+
+    // dynamic map sampling
+    coot_preferences.register_preference("dynamic_map_sampling", [](const preferences_value& value) {
+       graphics_info_t gg; gg.dynamic_map_resampling = std::get<int>(value);},
+          []() -> preferences_value { return get_dynamic_map_sampling();},
+    g.dynamic_map_resampling);
+
+    // dynamic map sampling
+    coot_preferences.register_preference("dynamic_map_display_size", [](const preferences_value& value) {
+       graphics_info_t gg; gg.dynamic_map_size_display = std::get<int>(value);},
+          []() -> preferences_value { return get_dynamic_map_size_display();},
+    g.dynamic_map_size_display);
+
+    // swap difference map colours (O type)
+    coot_preferences.register_preference("swap_diff_map_colours", [](const preferences_value& value) {
+       set_swap_difference_map_colours(std::get<int>(value));},
+          []() -> preferences_value { return swap_difference_map_colours_state();},
+    g.swap_difference_map_colours);
+
+    // map colour map rotation
+    coot_preferences.register_preference("map_colour_map_rotation", [](const preferences_value& value) {
+       set_colour_map_rotation_for_map(std::get<double>(value));},
+          []() -> preferences_value { graphics_info_t gg; return gg.rotate_colour_map_for_map;},
+    g.rotate_colour_map_for_map);
+
+    // map drag
+    coot_preferences.register_preference("map_drag", [](const preferences_value& value) {
+       set_active_map_drag_flag(std::get<int>(value));},
+          []() -> preferences_value { return get_active_map_drag_flag();},
+    g.GetActiveMapDrag());
+
+    // default b-factor
+    coot_preferences.register_preference("default_b_factor", [](const preferences_value& value) {
+       set_default_temperature_factor_for_new_atoms(std::get<double>(value));},
+          []() -> preferences_value { return default_new_atoms_b_factor();},
+    g.default_new_atoms_b_factor);
+
+    // background colour
+    def_vec = {g.background_colour[0], g.background_colour[1], g.background_colour[2]};
+    coot_preferences.register_preference("background_colour", [](const preferences_value& value) {
+       set_background_colour(std::get<std::vector<float>>(value)[0],std::get<std::vector<float>>(value)[1],std::get<std::vector<float>>(value)[2]);},
+          []() -> preferences_value { graphics_info_t gg;
+                                      std::vector<float> ret = {gg.background_colour[0],
+                                      gg.background_colour[1], gg.background_colour[2]};
+                                      return ret;},
+    def_vec);
+
+    // font colour
+    def_vec = {g.font_colour.red, g.font_colour.green, g.font_colour.blue};
     coot_preferences.register_preference("font_colour", [](const preferences_value& value) {
        set_font_colour(std::get<std::vector<float>>(value)[0],std::get<std::vector<float>>(value)[1],std::get<std::vector<float>>(value)[2]);},
           []() -> preferences_value { graphics_info_t gg; std::vector<float> ret = {gg.font_colour.red,
                                       gg.font_colour.green,gg.font_colour.blue}; return ret;},
     def_vec);
+
+    // console commands
+    coot_preferences.register_preference("console_display_commands", [](const preferences_value& value) {
+       set_console_display_commands_state(std::get<bool>(value));},
+          []() -> preferences_value { graphics_info_t gg;
+                                      return gg.console_display_commands.display_commands_flag;},
+    g.console_display_commands.display_commands_flag);
+
+    // pink pointer size
+    coot_preferences.register_preference("rotation_centre_cube_size", [](const preferences_value& value) {
+       set_rotation_centre_size(std::get<double>(value));},
+          []() -> preferences_value { graphics_info_t gg; return gg.rotation_centre_cube_size;},
+    g.rotation_centre_cube_size);
+
 }
 
 /* FIXME: check ref counting as well, could this just be void!? or we could/should return something
@@ -414,26 +533,34 @@ void preferences() {
 
 void show_preferences() {
 
-   GtkWidget *w = widget_from_preferences_builder("preferences_dialog");
+   GtkWidget *w;
+   w = graphics_info_t::preferences_widget;
 
-   graphics_info_t::preferences_widget = w;
+   if (!w) {
+      w = widget_from_preferences_builder("preferences_dialog");
 
-   GtkWidget *scrolled_win_model_toolbar = widget_from_preferences_builder("preferences_model_toolbar_icons_scrolledwindow");
-   fill_preferences_model_toolbar_icons(w, scrolled_win_model_toolbar);
-   GtkWidget *scrolled_win_main_toolbar = widget_from_preferences_builder("preferences_main_toolbar_icons_scrolledwindow");
-   fill_preferences_main_toolbar_icons(w, scrolled_win_main_toolbar);
+      graphics_info_t::preferences_widget = w;
 
-   // we don't want to see the non-General tabs when we first start
-   GtkWidget *togglebutton = widget_from_preferences_builder("preferences_general_radiotoolbutton");
-   show_hide_preferences_tabs(GTK_TOGGLE_BUTTON(togglebutton), COOT_GENERAL_PREFERENCES);
+      GtkWidget *scrolled_win_model_toolbar = widget_from_preferences_builder("preferences_model_toolbar_icons_scrolledwindow");
+      fill_preferences_model_toolbar_icons(w, scrolled_win_model_toolbar);
+      GtkWidget *scrolled_win_main_toolbar = widget_from_preferences_builder("preferences_main_toolbar_icons_scrolledwindow");
+      fill_preferences_main_toolbar_icons(w, scrolled_win_main_toolbar);
 
-   set_transient_for_main_window(w);
+      // we don't want to see the non-General tabs when we first start
+      GtkWidget *togglebutton = widget_from_preferences_builder("preferences_general_radiotoolbutton");
+      show_hide_preferences_tabs(GTK_TOGGLE_BUTTON(togglebutton), COOT_GENERAL_PREFERENCES);
+
+      set_transient_for_main_window(w);
+      update_preference_gui();
+   }
    gtk_widget_set_visible(w, TRUE);
 }
 
 void clear_preferences() {
 
-   graphics_info_t::preferences_widget = NULL;
+   if (graphics_info_t::preferences_widget) {
+      gtk_widget_set_visible(graphics_info_t::preferences_widget, FALSE);
+   }
 
 }
 
@@ -550,13 +677,17 @@ void update_preference_gui() {
   GtkWidget *colour_button = nullptr;
   GtkAdjustment *adjustment;
   GtkWidget *entry;
+  GdkRGBA rgba;
   std::string text;
+  std::vector<float> colour_vector;
+  std::vector<float> default_colour;
   int preference_type;
   int ivalue;
   int ivalue2;
   float fval1;
   float fval2;
   float fval3;
+  // digital places
   unsigned short int v = 4;
   graphics_info_t g;
 
@@ -567,65 +698,242 @@ void update_preference_gui() {
 
   GtkWidget *dialog = widget_from_preferences_builder("preferences");
 
-  if (debug)
-     std::cout << "--------------------------- update_preference_gui() preferences internal size "
-               << g.preferences_internal.size() << std::endl;
+  // maybe there is a clever way to iterate of this!? Possibly - with a map and keys similar to list_preferences
+  // not for now
+  preferences_value value;
 
-  for (unsigned int i=0; i<g.preferences_internal.size(); i++) {
-     auto preference_type = g.preferences_internal[i].preference_type;
-     if (debug)
-        std::cout << " -------------- update_preference_gui() "
-                  << preference_type << " " << g.preferences_internal[i].ivalue1 << " "
-                  << g.preferences_internal[i].fvalue1 << std::endl;
+  value = coot_preferences.get_preference("bond_colour_map_rotation");
+  std::cout<<"BL DEBUG:: get pref bond map (top update)" <<std::get<double>(value) <<std::endl;
+
+  // General preferences
+  // case PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON:
+  w = widget_from_preferences_builder("preferences_view_rotation_right_mouse_checkbutton");
+  value = coot_preferences.get_preference("use_trackpad");
+  if (std::get<bool>(value)) {
+     w = widget_from_preferences_builder("preferences_view_rotation_left_mouse_checkbutton");;
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
+  std::cout<<"BL DEBUG:: set left button to (true is left)" <<std::get<bool>(value) <<std::endl;
+
+  // case PREFERENCES_VT_SURFACE:
+  w = widget_from_preferences_builder("preferences_hid_spherical_radiobutton");
+  value = coot_preferences.get_preference("virtual_trackball");
+  if (!std::get<int>(value)) {
+     w = widget_from_preferences_builder("preferences_hid_flat_radiobutton");
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
+
+  // case PREFERENCES_PHYSICS:
+  w = widget_from_preferences_builder("noughties_physics_off_checkbutton");
+  value = coot_preferences.get_preference("noughty_refinement_physics");
+  if (std::get<int>(value)) {
+     // i.e. on
+     w = widget_from_preferences_builder("noughties_physics_on_checkbutton");
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
+
+  // case PREFERENCES_RECENTRE_PDB:
+  w = widget_from_preferences_builder("preferences_recentre_pdb_on_radiobutton");
+  value = coot_preferences.get_preference("recentre_coordinates");
+  if (!std::get<int>(value)) {
+     // i.e. off
+     w = widget_from_preferences_builder("preferences_recentre_pdb_off_radiobutton");
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
+
+  // case PREFERENCES_SMOOTH_SCROLL:
+  w = widget_from_preferences_builder("preferences_smooth_scroll_on_radiobutton");
+  value = coot_preferences.get_preference("smooth_scroll");
+  if (!std::get<int>(value)) {
+     w = widget_from_preferences_builder("preferences_smooth_scroll_off_radiobutton");
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w),TRUE);
+
+  // case PREFERENCES_SMOOTH_SCROLL_STEPS:
+  w = widget_from_preferences_builder("preferences_smooth_scroll_steps_entry");
+  value = coot_preferences.get_preference("smooth_scroll_steps");
+  text = graphics_info_t::int_to_string(std::get<int>(value));
+  gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
+
+  // case PREFERENCES_SMOOTH_SCROLL_LIMIT:
+  w = widget_from_preferences_builder("preferences_smooth_scroll_limit_entry");
+  value = coot_preferences.get_preference("smooth_scroll_limit");
+  text = graphics_info_t::float_to_string(std::get<double>(value));
+  gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
+
+  // Bond preferences
+  // case PREFERENCES_BOND_COLOURS_MAP_ROTATION:
+  w = widget_from_preferences_builder("preferences_bond_colours_adjustment");
+  value = coot_preferences.get_preference("bond_colour_map_rotation");
+  gtk_adjustment_set_value(GTK_ADJUSTMENT(w), std::get<double>(value));
+
+  //case PREFERENCES_BOND_COLOUR_ROTATION_C_ONLY:
+  w = widget_from_preferences_builder("preferences_bond_colours_checkbutton");
+  value = coot_preferences.get_preference("bond_colour_map_rotation_c_only");
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), std::get<int>(value));
+
+  // Map preferences
+  // PREFERENCES_MAP_RADIUS:
+  w = widget_from_preferences_builder("preferences_map_radius_entry");
+  value = coot_preferences.get_preference("map_radius");
+  text = graphics_info_t::float_to_string(std::get<double>(value));
+  gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
+
+  //case PREFERENCES_MAP_ISOLEVEL_INCREMENT:
+  w = widget_from_preferences_builder("preferences_map_increment_size_entry");
+  value = coot_preferences.get_preference("map_iso_level_increment");
+  text = graphics_info_t::float_to_string_using_dec_pl(std::get<double>(value), v);
+  gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
+
+  // case PREFERENCES_DIFF_MAP_ISOLEVEL_INCREMENT:
+  w = widget_from_preferences_builder("preferences_map_diff_increment_entry");
+  value = coot_preferences.get_preference("diff_map_iso_level_increment");
+  text = graphics_info_t::float_to_string_using_dec_pl(std::get<double>(value), v);
+  gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
+
+  // PREFERENCES_MAP_SAMPLING_RATE:
+  w = widget_from_preferences_builder("preferences_map_sampling_entry");
+  value = coot_preferences.get_preference("map_sampling_rate");
+  text = graphics_info_t::float_to_string_using_dec_pl(std::get<double>(value), v);
+  gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
+
+  // case PREFERENCES_DYNAMIC_MAP_SAMPLING:
+  w = widget_from_preferences_builder("preferences_map_dynamic_sampling_checkbutton");
+  value = coot_preferences.get_preference("dynamic_map_sampling");
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), std::get<int>(value));
+
+  // case PREFERENCES_DYNAMIC_MAP_SIZE_DISPLAY:
+  w = widget_from_preferences_builder("preferences_map_dynamic_size_checkbutton");
+  value = coot_preferences.get_preference("dynamic_map_display_size");
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), std::get<int>(value));
+
+  // case PREFERENCES_SWAP_DIFF_MAP_COLOURS:
+  w = widget_from_preferences_builder("preferences_diff_map_colours_coot_radiobutton");
+  value = coot_preferences.get_preference("swap_diff_map_colours");
+  if (std::get<int>(value)) {
+     w = widget_from_preferences_builder("preferences_diff_map_colours_o_radiobutton");
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
+
+  // case PREFERENCES_MAP_COLOURS_MAP_ROTATION:
+  w = widget_from_preferences_builder("preferences_map_colours_adjustment");
+  value = coot_preferences.get_preference("map_colour_map_rotation");
+  gtk_adjustment_set_value(GTK_ADJUSTMENT(w), std::get<double>(value));
+
+  // case PREFERENCES_MAP_DRAG:
+  w = widget_from_preferences_builder("preferences_map_drag_on_radiobutton");
+  value = coot_preferences.get_preference("map_drag");
+  if (!std::get<int>(value)) {
+     w = widget_from_preferences_builder("preferences_map_drag_off_radiobutton");
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
+
+  // case PREFERENCES_DEFAULT_B_FACTOR:
+  w = widget_from_preferences_builder("preferences_default_b_factor_entry");
+  value = coot_preferences.get_preference("default_b_factor");
+  text = coot::util::float_to_string(std::get<double>(value));
+  gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
+
+
+  // case PREFERENCES_BG_COLOUR:
+  // first check if numbers are the same, i.e. are potentially set colours,
+  // the use comparison to set values and finally own button.
+  value = coot_preferences.get_preference("background_colour");
+  colour_vector = std::get<std::vector<float>>(value);
+  double min_val = *std::min_element(colour_vector.begin(), colour_vector.end());
+  double max_val = *std::max_element(colour_vector.begin(), colour_vector.end());
+  int do_own_button = 0;
+  std::cout<<"BL DEBUG:: min " << min_val << " max " <<max_val<<std::endl;
+  std::cout<<"BL DEBUG:: close num " << coot::util::close_double_p(min_val, max_val)<<std::endl;
+  if (coot::util::close_double_p(min_val, max_val)) {
+     // all the same, likely to be a preset number (could use a colour enum?)
+     if (coot::util::close_double_p(colour_vector[0], 0.)) {
+        w = widget_from_preferences_builder("preferences_bg_colour_black_radiobutton");
+     } else if (coot::util::close_double_p(colour_vector[0], 0.035)) {
+        w = widget_from_preferences_builder("preferences_bg_colour_nearlyblack_radiobutton");
+     } else if (coot::util::close_double_p(colour_vector[0], 0.067)) {
+        // actually 0.7 in the normal menu
+        w = widget_from_preferences_builder("preferences_bg_colour_darkgrey_radiobutton");
+     } else if (coot::util::close_double_p(colour_vector[0], 0.207)) {
+        w = widget_from_preferences_builder("preferences_bg_colour_semidarkgrey_radiobutton");
+     } else if (coot::util::close_double_p(colour_vector[0], 0.83)) {
+        w = widget_from_preferences_builder("preferences_bg_colour_lightgrey_radiobutton");
+     } else if (coot::util::close_double_p(colour_vector[0], 1.)) {
+        w = widget_from_preferences_builder("preferences_bg_colour_white_radiobutton");
+     } else {
+        do_own_button = 1;
+     }
+  } else {
+     do_own_button = 1;
   }
 
-  preferences_value value;
-  //case PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON:
-  w = widget_from_preferences_builder("preferences_view_rotation_left_mouse_checkbutton");
-  value = coot_preferences.get_preference("use_trackpad");
-  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), std::get<bool>(value));
+  if (do_own_button) {
+     w = widget_from_preferences_builder("preferences_bg_colour_own_radiobutton");
+     // custom colour so set the button accordingly
+     colour_button = widget_from_preferences_builder("preferences_background_color_button");
+     rgba.red   = colour_vector[0]; // Assign red component
+     rgba.green = colour_vector[1]; // Assign green component
+     rgba.blue  = colour_vector[2]; // Assign blue component
+     rgba.alpha = 1.0;      // Set full opacity
+     gtk_color_dialog_button_set_rgba(GTK_COLOR_DIALOG_BUTTON(colour_button), &rgba);
+  }
+  // now show the selection
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
 
-  for (unsigned int i=0; i<g.preferences_internal.size(); i++) {
-     preference_type = g.preferences_internal[i].preference_type;
+  // case PREFERENCES_FONT_COLOUR:
+  value = coot_preferences.get_preference("font_colour");
+  colour_vector = std::get<std::vector<float>>(value);
+  value = coot_preferences.get_preference_default("font_colour");
+  default_colour = std::get<std::vector<float>>(value);
+  do_own_button = 1;
+  // convert to glm and use glm funcn epsilonEqual. Not sure if better/faster
+  // than iterating over it "manually"
+  glm::vec3 vec1 = glm::make_vec3(colour_vector.data());
+  glm::vec3 vec2 = glm::make_vec3(default_colour.data());
+  bool equal = glm::all(glm::epsilonEqual(vec1, vec2, 1e-6f));
+  if (equal) {
+     std::cout<<"BL DEBUG:: have equal vector/colour"<<std::endl;
+     do_own_button = 0;
+  }
 
-     if (debug)
-        std::cout << "----------------------------------------- update_preference_gui() "
-                  << preference_type << " " << g.preferences_internal[i].ivalue1 << " "
-                  << g.preferences_internal[i].fvalue1 << std::endl;
+  if (!do_own_button) {
+     // default font colour
+     w = widget_from_preferences_builder("preferences_font_colour_default_radiobutton");
+  } else {
+     // other (own) font colour
+     w = widget_from_preferences_builder("preferences_font_colour_own_radiobutton");
+     // set custom font colour of button
+     colour_button = widget_from_preferences_builder("preferences_font_color_button");
+     if (colour_button) {
+       std::cout<<"BL DEBUG:: have button, so set to colour " <<colour_vector[0]<<std::endl;
+     } else {
+       std::cout<<"BL DEBUG:: NO button, oddly??? "<<std::endl;
+     }
+     rgba.red   = colour_vector[0]; // Assign red component
+     rgba.green = colour_vector[1]; // Assign green component
+     rgba.blue  = colour_vector[2]; // Assign blue component
+     rgba.alpha = 1.0;      // Set full opacity
+     gtk_color_dialog_button_set_rgba(GTK_COLOR_DIALOG_BUTTON(colour_button), &rgba);
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
 
-     switch (preference_type) {
-      
-//     case PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON:
-//        w = widget_from_preferences_builder("preferences_view_rotation_left_mouse_checkbutton");
-//        ivalue = g.preferences_internal[i].ivalue1;
-//        if (ivalue == 1)
-//           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-//        else
-//           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), FALSE);
-//        break;
 
-        case PREFERENCES_VT_SURFACE:
-           w = widget_from_preferences_builder("preferences_hid_spherical_radiobutton");
-           ivalue = g.preferences_internal[i].ivalue1;
-           if (ivalue == 2) {
-              gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-           } else {
-              w = widget_from_preferences_builder("preferences_hid_flat_radiobutton");
-              gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-           }
-           break;
+  // case PREFERENCES_CONSOLE_COMMANDS:
+  w = widget_from_preferences_builder("preferences_console_info_off_radiobutton");
+  value = coot_preferences.get_preference("console_display_commands");
+  if (std::get<bool>(value)) {
+     w = widget_from_preferences_builder("preferences_console_info_on_radiobutton");
+  }
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
 
-     case PREFERENCES_RECENTRE_PDB:
-        w = widget_from_preferences_builder("preferences_recentre_pdb_on_radiobutton");
-        if (g.preferences_internal[i].ivalue1) {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        } else {
-           w = widget_from_preferences_builder("preferences_recentre_pdb_off_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        }
-        break;
+     // case PREFERENCES_PINK_POINTER:
+     w = widget_from_preferences_builder("preferences_pink_pointer_entry");
+     value = coot_preferences.get_preference("rotation_centre_cube_size");
+     text = graphics_info_t::float_to_string(std::get<double>(value));
+     gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
 
-     // 20240916-PE this has gone
+
+  // 20240916-PE this has gone
      // case PREFERENCES_BONDS_THICKNESS:
      //    w = widget_from_preferences_builder("preferences_bond_width_combobox");
      //    ivalue = g.preferences_internal[i].ivalue1;
@@ -633,112 +941,13 @@ void update_preference_gui() {
      //    gtk_combo_box_set_active(GTK_COMBO_BOX(w), ivalue);
      //    break;
 
-     case PREFERENCES_BOND_COLOURS_MAP_ROTATION:
-        w = widget_from_preferences_builder("preferences_bond_colours_hscale");
-        fval1 = g.preferences_internal[i].fvalue1;
-        adjustment = gtk_range_get_adjustment(GTK_RANGE(w));
-        gtk_adjustment_set_value(adjustment, fval1);
-        break;
+  for (unsigned int i=0; i<g.preferences_internal.size(); i++) {
+       auto preference_type = g.preferences_internal[i].preference_type;
+     switch (preference_type) {
 
-     case PREFERENCES_BOND_COLOUR_ROTATION_C_ONLY:
-        w = widget_from_preferences_builder("preferences_bond_colours_checkbutton");
-        if (g.preferences_internal[i].ivalue1 == 1) {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        } else {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), FALSE);
-        }
-        break;
 
-     case PREFERENCES_MAP_RADIUS:
-        w = widget_from_preferences_builder("preferences_map_radius_entry");
-        text = graphics_info_t::float_to_string(g.preferences_internal[i].fvalue1);
-        gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
-        break;
 
-     case PREFERENCES_MAP_ISOLEVEL_INCREMENT:
-        w = widget_from_preferences_builder("preferences_map_increment_size_entry");
-        text = graphics_info_t::float_to_string_using_dec_pl(g.preferences_internal[i].fvalue1, v);
-        gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
-        break;
 
-     case PREFERENCES_DIFF_MAP_ISOLEVEL_INCREMENT:
-        w = widget_from_preferences_builder("preferences_map_diff_increment_entry");
-        text = graphics_info_t::float_to_string_using_dec_pl(g.preferences_internal[i].fvalue1, v);
-        gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
-        break;
-
-     case PREFERENCES_MAP_SAMPLING_RATE:
-        w = widget_from_preferences_builder("preferences_map_sampling_entry");
-        text = graphics_info_t::float_to_string_using_dec_pl(g.preferences_internal[i].fvalue1, v);
-        gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
-        break;
-
-     case PREFERENCES_DYNAMIC_MAP_SAMPLING:
-        w = widget_from_preferences_builder("preferences_map_dynamic_sampling_checkbutton");
-        if (g.preferences_internal[i].ivalue1 == 1) {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        } else {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), FALSE);
-        }
-        break;
-
-     case PREFERENCES_DYNAMIC_MAP_SIZE_DISPLAY:
-        w = widget_from_preferences_builder("preferences_map_dynamic_size_checkbutton");
-        if (g.preferences_internal[i].ivalue1 == 1) {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        } else {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), FALSE);
-        }
-        break;
-
-     case PREFERENCES_SWAP_DIFF_MAP_COLOURS:
-        w = widget_from_preferences_builder("preferences_diff_map_colours_o_radiobutton");
-        if (g.preferences_internal[i].ivalue1) {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        } else {
-           w = widget_from_preferences_builder("preferences_diff_map_colours_coot_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        }
-        break;
-
-     case PREFERENCES_MAP_COLOURS_MAP_ROTATION:
-        w = widget_from_preferences_builder("preferences_map_colours_hscale");
-        fval1 = g.preferences_internal[i].fvalue1;
-        adjustment = gtk_range_get_adjustment(GTK_RANGE(w));
-        gtk_adjustment_set_value(adjustment, fval1);
-        break;
-
-     case PREFERENCES_SMOOTH_SCROLL:
-        w = widget_from_preferences_builder("preferences_smooth_scroll_on_radiobutton");
-        if (g.preferences_internal[i].ivalue1) {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        } else {
-           w = widget_from_preferences_builder("preferences_smooth_scroll_off_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        }
-        break;
-
-     case PREFERENCES_SMOOTH_SCROLL_STEPS:
-        w = widget_from_preferences_builder("preferences_smooth_scroll_steps_entry");
-        text = graphics_info_t::int_to_string(g.preferences_internal[i].ivalue1);
-        gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
-        break;
-
-     case PREFERENCES_SMOOTH_SCROLL_LIMIT:
-        w = widget_from_preferences_builder("preferences_smooth_scroll_limit_entry");
-        text = graphics_info_t::float_to_string(g.preferences_internal[i].fvalue1);
-        gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
-        break;
-
-     case PREFERENCES_MAP_DRAG:
-        w = widget_from_preferences_builder("preferences_map_drag_on_radiobutton");
-        if (g.preferences_internal[i].ivalue1) {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        } else {
-           w = widget_from_preferences_builder("preferences_map_drag_off_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        }
-        break;
 
      // case PREFERENCES_MARK_CIS_BAD:
      //    w = widget_from_preferences_builder("preferences_geometry_cis_peptide_bad_yes_radiobutton");
@@ -750,89 +959,6 @@ void update_preference_gui() {
      //    }
      //    break;
 
-     case PREFERENCES_DEFAULT_B_FACTOR:
-        w = widget_from_preferences_builder("preferences_defaults_b_factor_entry");
-        {
-           std::string s = coot::util::float_to_string(graphics_info_t::default_new_atoms_b_factor);
-           gtk_editable_set_text(GTK_EDITABLE(w), s.c_str());
-        }
-        break;
-
-     case PREFERENCES_BG_COLOUR:
-
-        fval1 = g.preferences_internal[i].fvalue1;  // red
-        fval2 = g.preferences_internal[i].fvalue2;  // green
-        fval3 = g.preferences_internal[i].fvalue3;  // blue
-
-        GdkRGBA bg_colour;
-
-        if (fval1 < 0.01 && fval2 < 0.01 && fval3 < 0.01) {
-           // black
-           w = widget_from_preferences_builder("preferences_bg_colour_black_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-           bg_colour.red = 0;
-           bg_colour.green = 0;
-           bg_colour.blue = 0;
-        } else if (fval1 > 0.99 && fval2 > 0.99 && fval3 > 0.99) {
-           // white
-           w = widget_from_preferences_builder("preferences_bg_colour_white_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-           bg_colour.red = 65535;
-           bg_colour.green = 65535;
-           bg_colour.blue = 65535;
-        } else {
-           // other colour
-           w = widget_from_preferences_builder("preferences_bg_colour_own_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-           bg_colour.red = (guint)(fval1 * 65535);
-           bg_colour.green = (guint)(fval2 * 65535);
-           bg_colour.blue = (guint)(fval3 * 65535);
-        }
-        {
-           GtkWidget *colour_button_box = widget_from_preferences_builder("preferences_bg_colour_vbox");
-           if (colour_button_box) {
-              std::cout << "about to gtk_color_button_set_color() colour_button: " << colour_button
-                        << " bg_colour " << bg_colour.red << " " << bg_colour.green << " " << bg_colour.blue << std::endl;
-
-              if (colour_button_box) {
-                 GtkWidget *child_item = gtk_widget_get_first_child(colour_button_box);
-                 if (child_item) {
-                    // the colour button has already been added
-                 } else {
-
-                    // c.f. colour button in wrapped_create_show_symmetry_window()
-
-                    // 20230513-PE color dialog is not in GTK 4.4.0 (it is in 4.10+)
-#if GTK_MAJOR_VERSION == 5 && GTK_MINOR_VERSION >= 10
-                    GtkWidget *col_dialog = gtk_color_dialog_new();
-                    // this will need a callback
-                    GtkWidget *colour_button_dialog = gtk_color_dialog_button_new(col_dialog);
-                    gtk_box_append(GTK_BOX(box_for_colour_button), colour_button_dialog);
-#else
-
-                    auto on_color_set_func = +[] (GtkColorButton *self, gpointer user_data) {
-                       GdkRGBA rgba;
-                       gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(self), &rgba);
-                       // std::cout << "Selected color: " << gdk_rgba_to_string(&rgba) << std::endl;
-                       float fval1 = static_cast<float>(rgba.red);
-                       float fval2 = static_cast<float>(rgba.green);
-                       float fval3 = static_cast<float>(rgba.blue);
-                       preferences_internal_change_value_float3(PREFERENCES_BG_COLOUR, fval1, fval2, fval3);
-                       // std::cout << "........  " << fval1 << " " << fval2 << " " << fval3 << std::endl;
-                       set_background_colour(fval1, fval2, fval3);
-                       graphics_info_t::graphics_draw();
-                    };
-
-                    GtkWidget *colour_button = gtk_color_button_new_with_rgba(&bg_colour);
-                    gtk_box_append(GTK_BOX(colour_button_box), colour_button);
-                    g_signal_connect(G_OBJECT(colour_button), "color-set", G_CALLBACK(on_color_set_func), nullptr);
-#endif
-                 }
-              }
-           }
-        }
-        break;
-
         // case PREFERENCES_ANTIALIAS:
         //    w = widget_from_preferences_builder("preferences_antialias_on_radiobutton");
         //    if (g.preferences_internal[i].ivalue1) {
@@ -843,68 +969,7 @@ void update_preference_gui() {
         //    }
         //    break;
 
-     case PREFERENCES_CONSOLE_COMMANDS:
-        w = widget_from_preferences_builder("preferences_console_info_on_radiobutton");
-        if (g.preferences_internal[i].ivalue1) {
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        } else {
-           w = widget_from_preferences_builder("preferences_console_info_off_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        }
-        break;
 
-     case PREFERENCES_FONT_COLOUR:
-
-        fval1 = g.preferences_internal[i].fvalue1;  // red
-        fval2 = g.preferences_internal[i].fvalue2;  // green
-        fval3 = g.preferences_internal[i].fvalue3;  // blue
-        colour_button = widget_from_preferences_builder("preferences_font_colorbutton");
-
-        GdkRGBA font_colour;
-
-        if (fval1 >= 0.999 &&
-            fval2 >= 0.799 && fval2 <= 0.801 &&
-            fval3 >= 0.799 && fval3 <= 0.801) {
-           // default
-           w = widget_from_preferences_builder("preferences_font_colour_default_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-           font_colour.red   = (guint)(1.0 * 65535);
-           font_colour.green = (guint)(0.8 * 65535);
-           font_colour.blue  = (guint)(0.8 * 65535);
-
-        } else {
-           // other colour
-
-           w = widget_from_preferences_builder("preferences_font_colour_own_radiobutton");
-           gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-           font_colour.red   = (guint)(fval1 * 65535);
-           font_colour.green = (guint)(fval2 * 65535);
-           font_colour.blue  = (guint)(fval3 * 65535);
-        }
-
-        if (colour_button)
-           std::cout << "about to gtk_color_button_set_color() colour_button: " << colour_button
-                     << " font_colour " << font_colour.red << " " << font_colour.green << " " << font_colour.blue << std::endl;
-        else
-           std::cout << "about to gtk_color_button_set_color() null colour_button: "
-                     << " font_colour " << font_colour.red << " " << font_colour.green << " " << font_colour.blue << std::endl;
-
-
-        break;
-
-     case PREFERENCES_PINK_POINTER:
-        w = widget_from_preferences_builder("preferences_pink_pointer_entry");
-        text = graphics_info_t::float_to_string(g.preferences_internal[i].fvalue1);
-        gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
-        break;
-
-     case PREFERENCES_PHYSICS:
-        w = widget_from_preferences_builder("noughties_physics_on_checkbutton");
-        {
-           int state = get_refine_use_noughties_physics_state();
-           if (state)
-              gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-        }
      }
   }
 }
@@ -933,7 +998,8 @@ void save_preferences() {
    preferences_name = "coot_preferences.py";
    full_file_name_path = xdg.get_config_home().append(preferences_name);
    il = 2;
-   istat = g.save_preference_file(full_file_name_path.string(), il);
+   istat = coot_preferences.save_preferences_to_file(full_file_name_path.string());
+   //istat = g.save_preference_file(full_file_name_path.string(), il);
    if (istat == 0) {
       std::cout << "WARNING:: failed to save preferences " << full_file_name_path.string() << std::endl;
    }

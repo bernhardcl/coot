@@ -48,21 +48,23 @@ class preferences_manager {
    // using map it will be alphabetically sorted by key...
    std::map<std::string, preferences_callbacks> preferences_registry;
    std::map<std::string, preferences_value> preferences_defaults;
+   std::map<std::string, preferences_value> preferences_values;
 
 public:
    void register_preference(
        const std::string& key,
        const std::function<void(const preferences_value&)>& set_function,
        const std::function<preferences_value()>& get_function,
-       const preferences_value& defaultValue);
+       const preferences_value& default_value);
    void set_preference(const std::string& key, const preferences_value& value);
    preferences_value get_preference(const std::string& key) const;
    void reset_preference_to_default(const std::string& key);
+   preferences_value get_preference_default(const std::string& key) const;
    void list_preferences() const;
    void reset_all_preferences_to_defaults();
    // these may be replaced by old/existing functions.
-   void savePreferencesToScript(const std::string& filename);
-   void loadPreferencesFromScript(const std::string& filename);
+   int save_preferences_to_file(const std::string& filename);
+   void load_preferences_from_file(const std::string& filename);
 };
 
 extern preferences_manager coot_preferences;

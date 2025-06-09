@@ -127,15 +127,19 @@ on_preferences_ok_button_clicked       (GtkButton       *button,
   GtkWidget *w = widget_from_preferences_builder("preferences_dialog");
   save_preferences();
   gtk_widget_set_visible(w, FALSE);
-  clear_preferences();
+  // clear_preferences();
 }
 
 extern "C" G_MODULE_EXPORT
 void
 on_preferences_reset_button_clicked    (GtkButton       *button,
-                                                            gpointer         user_data)
+                                        gpointer         user_data)
 {
-  reset_preferences();
+  GtkWidget *w = widget_from_preferences_builder("preferences_dialog");
+  reset_all_preferences();
+  update_preference_gui();
+  // hide or not after reset?
+  //gtk_widget_set_visible(w, FALSE);
 }
 
 extern "C" G_MODULE_EXPORT
@@ -152,14 +156,20 @@ extern "C" G_MODULE_EXPORT
 void
 on_preferences_view_rotation_left_mouse_checkbutton_toggled(GtkCheckButton *checkbutton,
                                                             gpointer         user_data) {
-//   if (gtk_check_button_get_active(checkbutton)) {
-//      preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 1);
-//      set_use_trackpad(1);
-//   } else {
-//      preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 0);
-//      set_use_trackpad(0);
-//   }
-   coot_preferences.set_preference("use_trackpad", (bool)gtk_check_button_get_active(checkbutton));
+   coot_preferences.set_preference("use_trackpad",
+                                   static_cast<bool>(gtk_check_button_get_active(checkbutton)));
+   std::cout <<"BL DEBUG:: left mouse toggledd with state " << gtk_check_button_get_active(checkbutton) <<std::endl;
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_preferences_view_rotation_right_mouse_checkbutton_toggled(GtkCheckButton *checkbutton,
+                                                            gpointer         user_data) {
+   // not used FIXME
+   std::cout<<"BL DEBUG:: shouldnt be here"<<std::endl;
+   coot_preferences.set_preference("use_trackpad",
+                                   static_cast<bool>(gtk_check_button_get_active(checkbutton)));
+
 }
 
 extern "C" G_MODULE_EXPORT
@@ -167,17 +177,9 @@ void
 on_preferences_hid_spherical_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                  gpointer         user_data) {
 
-   if (gtk_check_button_get_active(checkbutton)) {
-      coot_preferences.set_preference("virtual_trackball", 2);
-   } else {
-      coot_preferences.set_preference("virtual_trackball", 1);
-      std::cout<< "BL DEBUG:: set HID to 1"<<std::endl;
-   }
+   coot_preferences.set_preference("virtual_trackball",
+                                   static_cast<int>(gtk_check_button_get_active(checkbutton)) + 1);
 
-//   if (gtk_check_button_get_active(checkbutton)) {
-//      preferences_internal_change_value_int(PREFERENCES_VT_SURFACE, 2);
-//      vt_surface(2);
-//   }
 }
 
 
@@ -186,7 +188,9 @@ void
 on_preferences_hid_flat_radiobutton_toggled(GtkCheckButton *checkbutton,
                                             gpointer         user_data) {
 
-   // Acutally not needed...
+   // Acutally not needed... FIXME
+
+   std::cout<< "BL DEBUG:: HID flat toggle with activity "<<gtk_check_button_get_active(checkbutton)<<std::endl;
 
 //   if (gtk_check_button_get_active(checkbutton)) {
 //      preferences_internal_change_value_int(PREFERENCES_VT_SURFACE, 1);
@@ -204,7 +208,7 @@ on_preferences_default_b_factor_entry_activate(GtkEntry        *entry,
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
    try {
       float f = coot::util::string_to_float(std::string(text));
-      set_default_temperature_factor_for_new_atoms(f);
+      coot_preferences.set_preference("default_b_factor", f);
    }
    catch (const std::runtime_error &e) {
       std::cout << "WARNING:: in on_preferences_default_b_factor_entry_activate(): " << e.what() << std::endl;
@@ -221,8 +225,7 @@ on_preferences_bond_colours_hscale_value_changed(GtkRange        *range,
    float fvalue;
    adjustment = gtk_range_get_adjustment(GTK_RANGE(range));
    fvalue = gtk_adjustment_get_value(adjustment);
-   preferences_internal_change_value_float(PREFERENCES_BOND_COLOURS_MAP_ROTATION, fvalue);
-   set_colour_map_rotation_on_read_pdb(fvalue);
+   coot_preferences.set_preference("bond_colour_map_rotation", fvalue);
 }
 
 extern "C" G_MODULE_EXPORT
@@ -230,13 +233,8 @@ void
 on_preferences_bond_colours_checkbutton_toggled(GtkCheckButton *checkbutton,
                                                 gpointer         user_data) {
 
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_BOND_COLOUR_ROTATION_C_ONLY, 1);
-      set_colour_map_rotation_on_read_pdb_c_only_flag(1);
-   } else {
-      preferences_internal_change_value_int(PREFERENCES_BOND_COLOUR_ROTATION_C_ONLY, 0);
-      set_colour_map_rotation_on_read_pdb_c_only_flag(0);
-   }
+   coot_preferences.set_preference("bond_colour_map_rotation_c_only",
+                                   static_cast<int>(gtk_check_button_get_active(checkbutton)));
 
 }
 
@@ -246,22 +244,65 @@ void
 on_preferences_bg_colour_black_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                    gpointer         user_data) {
 
+   std::vector<float> bg_colour(3, 0.);
    if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_float3(PREFERENCES_BG_COLOUR, 0, 0, 0);
-      set_background_colour(0, 0, 0);
+      coot_preferences.set_preference("background_colour", bg_colour);
    }
 }
 
 
 extern "C" G_MODULE_EXPORT
 void
+on_preferences_bg_colour_nearlyblack_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                                   gpointer         user_data) {
+
+   std::vector<float> bg_colour(3, 0.035);
+   if (gtk_check_button_get_active(checkbutton)) {
+      coot_preferences.set_preference("background_colour", bg_colour);
+   }
+}
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_preferences_bg_colour_darkgrey_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                                   gpointer         user_data) {
+   std::vector<float> bg_colour(3, 0.07);
+   if (gtk_check_button_get_active(checkbutton)) {
+      coot_preferences.set_preference("background_colour", bg_colour);
+   }
+}
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_preferences_bg_colour_semidarkgrey_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                                   gpointer         user_data) {
+   std::vector<float> bg_colour(3, 0.207);
+   if (gtk_check_button_get_active(checkbutton)) {
+      coot_preferences.set_preference("background_colour", bg_colour);
+   }
+}
+
+
+extern "C" G_MODULE_EXPORT
+void
+on_preferences_bg_colour_lightgrey_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                                   gpointer         user_data) {
+   std::vector<float> bg_colour(3, 0.83);
+   if (gtk_check_button_get_active(checkbutton)) {
+      coot_preferences.set_preference("background_colour", bg_colour);
+   }
+}
+
+extern "C" G_MODULE_EXPORT
+void
 on_preferences_bg_colour_white_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                    gpointer         user_data) {
+   std::vector<float> bg_colour = {1., 1., 1.};
    if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_float3(PREFERENCES_BG_COLOUR, 1, 1, 1);
-      set_background_colour(1, 1, 1);
+      coot_preferences.set_preference("background_colour", bg_colour);
    }
-
 }
 
 
@@ -333,42 +374,60 @@ on_preferences_bg_colour_colorbutton_clicked(GtkButton       *button,
 
 
 
+// Needed?? BL Fixme
 extern "C" G_MODULE_EXPORT
 void
 on_preferences_map_radius_entry_activate(GtkEntry        *entry,
-					 gpointer         user_data) {
+                                         gpointer         user_data) {
+   // not needed FIXME
 
+   std::cout << "debug:: on_preferences_map_radius_entry_activate() entry " << entry << std::endl;
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
    float fval = 0;
    fval = atof(text);
    if ((fval > 0) && (fval <1000)) {
-      preferences_internal_change_value_float(PREFERENCES_MAP_RADIUS, fval);
+      coot_preferences.set_preference("map_radius", fval);
       set_map_radius(fval);
    }
 
 }
 
+guint timeout_id;
 
+// maybe this for all and one general function!? But then need to make a struct for
+// the user_data pointer to hold all arguments. FIXME maybe
+gboolean
+process_map_radius_entry_text(gpointer user_data) {
+
+   if (!user_data) return G_SOURCE_REMOVE;
+
+   const gchar* text = gtk_editable_get_text(GTK_EDITABLE(user_data));
+   float fval = 0;
+   fval = atof(text);
+   if ((fval > 0) && (fval <1999.9)) {
+      coot_preferences.set_preference("map_radius", fval);
+   }
+
+   timeout_id = 0; // Reset timeout ID
+   return G_SOURCE_REMOVE; // Remove timeout
+}
+
+// use a timeout function as not to process the entry change whilst editing (at least not too much)
 extern "C" G_MODULE_EXPORT
 void
 on_preferences_map_radius_entry_changed(GtkEditable     *editable,
                                         gpointer         user_data) {
 
-   //GtkEntry *entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(editable), "preferences_map_radius_entry"));
    GtkEntry *entry = GTK_ENTRY(widget_from_preferences_builder("preferences_map_radius_entry"));
-   std::cout << "debug:: on_preferences_map_radius_entry_changed() entry " << entry << std::endl;
    if (entry) {
-      const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
-      float fval = 0;
-      fval = atof(text);
-      if ((fval > 0) && (fval <200)) {
-         preferences_internal_change_value_float(PREFERENCES_MAP_RADIUS, fval);
-         set_map_radius(fval);
+      // Remove existing timeout if present
+      if (timeout_id) {
+          g_source_remove(timeout_id);
       }
-   } else {
-      std::cout << "ERROR:: in on_preferences_map_radius_entry_changed() failed to lookup "
-                << "preferences_map_radius_entry" << std::endl;
-   }
+
+      // Set a timeout and pass the entry as user_data
+      timeout_id = g_timeout_add(400, process_map_radius_entry_text, entry);
+    }
 
 }
 
@@ -377,12 +436,13 @@ extern "C" G_MODULE_EXPORT
 void
 on_preferences_map_increment_size_entry_activate(GtkEntry        *entry,
                                                  gpointer         user_data) {
+   // not used any more. FIXME
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
+   std::cout << "debug:: on_preferences_map_increment_size_entry_activate() text " << text << std::endl;
    float fval = 0;
    fval = atof(text);
    if (fval > 0) {
-      preferences_internal_change_value_float(PREFERENCES_MAP_ISOLEVEL_INCREMENT, fval);
-      set_iso_level_increment(fval);
+      coot_preferences.set_preference("map_iso_level_increment", fval);
    }
 }
 
@@ -394,11 +454,12 @@ on_preferences_map_increment_size_entry_changed(GtkEditable     *editable,
 
    GtkEntry *entry = GTK_ENTRY(widget_from_preferences_builder("preferences_map_increment_size_entry"));
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
+   std::cout << "debug:: on_preferences_map_increment_size_entry_changed() text " << text << std::endl;
+   // do we need to catch? what can go wrong?
    try {
-      float fval = coot::util::string_to_float(text);
+      float fval = atof(text);
       if (fval > 0) {
-         preferences_internal_change_value_float(PREFERENCES_MAP_ISOLEVEL_INCREMENT, fval);
-         set_iso_level_increment(fval);
+         coot_preferences.set_preference("map_iso_level_increment", fval);
       }
    }
    catch (const std::runtime_error &e) {
@@ -412,12 +473,12 @@ void
 on_preferences_map_diff_increment_entry_activate(GtkEntry        *entry,
                                                  gpointer         user_data) {
 
+   // not used any more FIXME
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
    float fval = 0;
    fval = atof(text);
    if (fval > 0) {
-      preferences_internal_change_value_float(PREFERENCES_DIFF_MAP_ISOLEVEL_INCREMENT, fval);
-      set_diff_map_iso_level_increment(fval);
+      coot_preferences.set_preference("diff_map_iso_level_increment", fval);
    }
 
 }
@@ -435,8 +496,7 @@ on_preferences_map_diff_increment_entry_changed
    float fval = 0;
    fval = atof(text);
    if (fval > 0) {
-      preferences_internal_change_value_float(PREFERENCES_DIFF_MAP_ISOLEVEL_INCREMENT, fval);
-      set_diff_map_iso_level_increment(fval);
+      coot_preferences.set_preference("diff_map_iso_level_increment", fval);
    }
 
 }
@@ -448,12 +508,12 @@ on_preferences_map_sampling_entry_activate
                                         (GtkEntry        *entry,
                                         gpointer         user_data)
 {
+   // not used any more FIXME
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
   float fval = 0;
   fval = atof(text);
   if ((fval < 100) && (fval > 1)) {
-    preferences_internal_change_value_float(PREFERENCES_MAP_SAMPLING_RATE, fval);
-    set_map_sampling_rate(fval);
+    coot_preferences.set_preference("map_sampling_rate", fval);
   }
 
 }
@@ -465,14 +525,12 @@ on_preferences_map_sampling_entry_changed
                                         (GtkEditable     *editable,
                                         gpointer         user_data)
 {
-   // GtkEntry *entry = GTK_ENTRY(lookup_widget(GTK_WIDGET(editable), "preferences_map_sampling_entry"));
    GtkEntry *entry = GTK_ENTRY(widget_from_preferences_builder("preferences_map_sampling_entry"));
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
    float fval = 0;
    fval = atof(text);
    if ((fval < 100) && (fval > 1)) {
-      preferences_internal_change_value_float(PREFERENCES_MAP_SAMPLING_RATE, fval);
-      set_map_sampling_rate(fval);
+      coot_preferences.set_preference("map_sampling_rate", fval);
    }
 
 }
@@ -481,16 +539,11 @@ on_preferences_map_sampling_entry_changed
 extern "C" G_MODULE_EXPORT
 void
 on_preferences_map_dynamic_sampling_checkbutton_toggled
-                                        (GtkToggleButton *togglebutton,
+                                        (GtkCheckButton *checkbutton,
                                         gpointer         user_data)
 {
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    preferences_internal_change_value_int(PREFERENCES_DYNAMIC_MAP_SAMPLING, 1);
-    set_dynamic_map_sampling_on();
-  } else {
-    preferences_internal_change_value_int(PREFERENCES_DYNAMIC_MAP_SAMPLING, 0);
-    set_dynamic_map_sampling_off();
-  }
+    coot_preferences.set_preference("dynamic_map_sampling",
+                                    static_cast<int>(gtk_check_button_get_active(checkbutton)));
 
 }
 
@@ -499,13 +552,8 @@ extern "C" G_MODULE_EXPORT
 void
 on_preferences_map_dynamic_size_checkbutton_toggled(GtkCheckButton *checkbutton,
                                                     gpointer         user_data) {
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_DYNAMIC_MAP_SIZE_DISPLAY, 1);
-      set_dynamic_map_size_display_on();
-   } else {
-      preferences_internal_change_value_int(PREFERENCES_DYNAMIC_MAP_SIZE_DISPLAY, 0);
-      set_dynamic_map_size_display_off();
-   }
+      coot_preferences.set_preference("dynamic_map_display_size",
+                                      static_cast<int>(gtk_check_button_get_active(checkbutton)));
 }
 
 
@@ -513,10 +561,10 @@ extern "C" G_MODULE_EXPORT
 void
 on_preferences_diff_map_colours_coot_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                          gpointer        user_data) {
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_SWAP_DIFF_MAP_COLOURS, 0);
-      set_swap_difference_map_colours(0);
-   }
+   std::cout<<"BL DEBUG:: coot colour toggled; active? " << gtk_check_button_get_active(checkbutton) <<
+              " and inverse " << !gtk_check_button_get_active(checkbutton) <<std::endl;
+   coot_preferences.set_preference("swap_diff_map_colours",
+                                   static_cast<int>(!gtk_check_button_get_active(checkbutton)));
 }
 
 
@@ -524,10 +572,10 @@ extern "C" G_MODULE_EXPORT
 void
 on_preferences_diff_map_colours_o_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                       gpointer         user_data) {
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_SWAP_DIFF_MAP_COLOURS, 1);
-      set_swap_difference_map_colours(1);
-   }
+   // should not be used!? FIXME
+   std::cout <<"BL DEBUG:: the o button toggled with state " <<gtk_check_button_get_active(checkbutton)<< std::endl;
+//   coot_preferences.set_preference("swap_diff_map_colours",
+//                                   static_cast<int>(gtk_check_button_get_active(checkbutton)));
 }
 
 
@@ -539,8 +587,7 @@ on_preferences_map_colours_hscale_value_changed(GtkRange        *range,
    float fvalue;
    adjustment = gtk_range_get_adjustment(GTK_RANGE(range));
    fvalue = gtk_adjustment_get_value(adjustment);
-   preferences_internal_change_value_float(PREFERENCES_MAP_COLOURS_MAP_ROTATION, fvalue);
-   set_colour_map_rotation_for_map(fvalue);
+   coot_preferences.set_preference("map_colour_map_rotation", fvalue);
 }
 
 
@@ -549,10 +596,9 @@ void
 on_preferences_smooth_scroll_on_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                     gpointer        user_data) {
 
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_SMOOTH_SCROLL, 1);
-      set_smooth_scroll_flag(1);
-   }
+   coot_preferences.set_preference("smooth_scroll",
+                                   static_cast<int>(gtk_check_button_get_active(checkbutton)));
+
 }
 
 
@@ -561,6 +607,7 @@ void
 on_preferences_smooth_scroll_off_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                      gpointer        user_data) {
 
+   // not used FIXME
    if (gtk_check_button_get_active(checkbutton)) {
       preferences_internal_change_value_int(PREFERENCES_SMOOTH_SCROLL, 0);
       set_smooth_scroll_flag(0);
@@ -573,6 +620,7 @@ extern "C" G_MODULE_EXPORT
 void
 on_preferences_smooth_scroll_steps_entry_activate(GtkEntry        *entry,
                                                   gpointer         user_data) {
+   // not needed FIXME
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
    try {
       int ival = coot::util::string_to_int(text);
@@ -583,6 +631,7 @@ on_preferences_smooth_scroll_steps_entry_activate(GtkEntry        *entry,
       }
    }
    catch (const std::runtime_error &e) {
+      std::cout << "BL DEBUG:: text is (smooth scroll steps act) " << text << std::endl;
       std::cout << "WARNING::" << e.what() << std::endl;
    }
 
@@ -598,12 +647,12 @@ on_preferences_smooth_scroll_steps_entry_changed(GtkEditable     *editable,
    try {
       int ival = coot::util::string_to_int(text);
       if ((ival < 100000) && (ival > 0)) {
-         preferences_internal_change_value_int(PREFERENCES_SMOOTH_SCROLL_STEPS, ival);
+         coot_preferences.set_preference("smooth_scroll_steps", ival);
          std::cout << "EPH set_smooth_scroll " << ival << std::endl;
-         set_smooth_scroll_steps(ival);
       }
    }
    catch (const std::runtime_error &e) {
+      std::cout << "BL DEBUG:: text is (smooth scroll steps chang) " << text << std::endl;
       std::cout << "WARNING::" << e.what() << std::endl;
    }
 
@@ -615,6 +664,7 @@ void
 on_preferences_smooth_scroll_limit_entry_activate(GtkEntry        *entry,
                                                   gpointer         user_data) {
 
+   // not used FIXME
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
 
    try {
@@ -626,6 +676,7 @@ on_preferences_smooth_scroll_limit_entry_activate(GtkEntry        *entry,
       }
    }
    catch (const std::runtime_error &e) {
+      std::cout << "BL DEBUG:: text is (smooth scroll limit act) " << text << std::endl;
       std::cout << "WARNING::" << e.what() << std::endl;
    }
 
@@ -642,10 +693,14 @@ on_preferences_smooth_scroll_limit_entry_changed
    GtkEntry *entry = GTK_ENTRY(widget_from_preferences_builder("preferences_smooth_scroll_limit_entry"));
    const gchar *text = gtk_editable_get_text(GTK_EDITABLE(entry));
    float fval = 0;
+   try {
    fval = atof(text);
    if ((fval < 1000) && (fval > 0)) {
-      preferences_internal_change_value_float(PREFERENCES_SMOOTH_SCROLL_LIMIT, fval);
-      set_smooth_scroll_limit(fval);
+      coot_preferences.set_preference("smoth_scroll_limit", fval);
+      }
+   }
+   catch (const std::runtime_error &e) {
+      std::cout << "WARNING::" << e.what() << std::endl;
    }
 
 }
@@ -656,10 +711,8 @@ void
 on_preferences_map_drag_on_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                gpointer         user_data) {
 
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_MAP_DRAG, 1);
-      set_active_map_drag_flag(1);
-   }
+   coot_preferences.set_preference("map_drag",
+                                   static_cast<int>(gtk_check_button_get_active(checkbutton)));
 
 }
 
@@ -669,6 +722,7 @@ void
 on_preferences_map_drag_off_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                 gpointer         user_data) {
 
+   // not used any more FIXME
    if (gtk_check_button_get_active(checkbutton)) {
       preferences_internal_change_value_int(PREFERENCES_MAP_DRAG, 0);
       set_active_map_drag_flag(0);
@@ -894,10 +948,8 @@ void
 on_preferences_recentre_pdb_on_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                    gpointer         user_data) {
 
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_RECENTRE_PDB, 1);
-      set_recentre_on_read_pdb(1);
-   }
+   coot_preferences.set_preference("recentre_coordinates",
+                                   static_cast<int>(gtk_check_button_get_active(checkbutton)));
 
 }
 
@@ -907,6 +959,7 @@ void
 on_preferences_recentre_pdb_off_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                     gpointer         user_data) {
 
+   // not used FIXME
    if (gtk_check_button_get_active(checkbutton)) {
       preferences_internal_change_value_int(PREFERENCES_RECENTRE_PDB, 0);
       set_recentre_on_read_pdb(0);
@@ -920,10 +973,9 @@ void
 on_preferences_console_info_on_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                    gpointer         user_data) {
 
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_CONSOLE_COMMANDS, 1);
-      set_console_display_commands_state(1);
-   }
+   coot_preferences.set_preference("console_display_commands",
+                                   static_cast<bool>(gtk_check_button_get_active(checkbutton)));
+   std::cout<<"BL DEBUG:: console toggled to state "<< gtk_check_button_get_active(checkbutton) <<std::endl;
 
 }
 
@@ -1131,6 +1183,7 @@ on_preferences_font_colorbutton_color_set (GtkColorButton  *colorbutton,
 
    GdkRGBA col;
    // 20230716-PE change to GtkColorDialogButton when moving to 4.12
+   // BL says:: done this now..r. around 010525
    gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(colorbutton), &col);
    // std::cout << "col: " << col.red << " " << col.green << " " << col.blue << " " << col.alpha << std::endl;
    preferences_internal_change_value_int(PREFERENCES_FONT_OWN_COLOUR_FLAG, 1); // checked in above function
@@ -1191,6 +1244,7 @@ on_preferences_bond_width_combobox_changed
                                         (GtkComboBox     *combobox,
                                         gpointer         user_data)
 {
+   // not used any more FIXME
   gint val;
   val = gtk_combo_box_get_active(combobox);
   val += 1;  /* offset */
@@ -1324,8 +1378,28 @@ void
 on_noughties_physics_checkbutton_toggled(GtkCheckButton *toggletoolbutton,
                                          gpointer         user_data) {
 
-   if (gtk_check_button_get_active(toggletoolbutton))
-      set_refine_use_noughties_physics(1);
-   else
-      set_refine_use_noughties_physics(0);
+   coot_preferences.set_preference("noughty_refinement_physics",
+                                   static_cast<int>(gtk_check_button_get_active(toggletoolbutton)));
+
 }
+
+extern "C" G_MODULE_EXPORT
+void on_preferences_background_color_selected(GtkColorDialogButton *button,
+                                              GParamSpec *pspec, gpointer user_data) {
+
+   const GdkRGBA *color = gtk_color_dialog_button_get_rgba(button);
+
+   set_background_colour(color->red, color->green, color->blue);
+
+}
+
+extern "C" G_MODULE_EXPORT
+void on_preferences_font_color_selected(GtkColorDialogButton *button,
+                                        GParamSpec *pspec, gpointer user_data) {
+
+   const GdkRGBA *color = gtk_color_dialog_button_get_rgba(button);
+
+   set_font_colour(color->red, color->green, color->blue);
+
+}
+
