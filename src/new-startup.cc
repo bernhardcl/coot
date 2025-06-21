@@ -900,8 +900,9 @@ new_startup_application_activate(GtkApplication *application,
       // create the preference defaults
       //make_preferences_internal();
       // new way
-      // just getting default values
+      // get default values and then setup the gui but dont show it
       initialize_preferences();
+      setup_preferences_gui();
 
       guint id = gtk_application_window_get_id(GTK_APPLICATION_WINDOW(app_window));
       // std::cout << "debug:: new_startup_application_activate(): Window id: " << id << std::endl;

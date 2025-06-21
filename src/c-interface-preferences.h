@@ -100,6 +100,7 @@ BEGIN_C_DECLS
 /* section Preferences */
 void preferences();
 void show_preferences();
+void setup_preferences_gui();
 void clear_preferences();
 void set_mark_cis_peptides_as_bad(int istate); /* in geometry graph */
 int show_mark_cis_peptides_as_bad_state();

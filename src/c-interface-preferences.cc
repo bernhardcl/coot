@@ -531,7 +531,7 @@ void preferences() {
 
 }
 
-void show_preferences() {
+void setup_preferences_gui() {
 
    GtkWidget *w;
    w = graphics_info_t::preferences_widget;
@@ -553,7 +553,19 @@ void show_preferences() {
       set_transient_for_main_window(w);
       update_preference_gui();
    }
+   gtk_widget_set_visible(w, FALSE);
+}
+
+void show_preferences() {
+
+  GtkWidget *w;
+   w = graphics_info_t::preferences_widget;
+
+   if (!w) {
+     std::cout<<"BL WARNING:: no [preference gui found. This shouldnt happen!"<<std::endl;
+   }
    gtk_widget_set_visible(w, TRUE);
+
 }
 
 void clear_preferences() {
