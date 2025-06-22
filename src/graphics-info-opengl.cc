@@ -689,11 +689,15 @@ graphics_info_t::setup_cylinder_clashes(const coot::atom_overlaps_dots_container
          std::cout << "zero clashes" << std::endl;
       std::string clashes_name = get_clashes_object_name(imol);
       int clashes_obj_index = generic_object_index(clashes_name);
+      // std::cout << "debug:: setup_cylinder_clashes() here with clashes_obj_index " << clashes_obj_index << std::endl;
       if (clashes_obj_index == -1) {
          clashes_obj_index = g.new_generic_object_number_for_molecule(clashes_name, imol); // make static?
-         if (imol == -1)
-            g.generic_display_objects[clashes_obj_index].attach_to_intermediate_atoms();
+         if (imol == -1) {
+	    // std::cout << "........ attaching to intermediate atoms!" << std::endl;
+	    g.generic_display_objects[clashes_obj_index].attach_to_intermediate_atoms();
+	 }
       } else {
+	 std::cout << "clearing clashes..." << std::endl;
          g.generic_display_objects[clashes_obj_index].clear();
          if (imol == -1)
             g.generic_display_objects[clashes_obj_index].attach_to_intermediate_atoms();
@@ -707,6 +711,7 @@ graphics_info_t::setup_cylinder_clashes(const coot::atom_overlaps_dots_container
          if (imol == -1)
             g.generic_display_objects[clashes_obj_index].attach_to_intermediate_atoms();
       } else {
+	 // std::cout << "clearing (2) clashes..." << std::endl;
          g.generic_display_objects[clashes_obj_index].clear();
          if (imol == -1)
             g.generic_display_objects[clashes_obj_index].attach_to_intermediate_atoms();
@@ -726,6 +731,7 @@ graphics_info_t::setup_cylinder_clashes(const coot::atom_overlaps_dots_container
 
       // instancing for capped cylinders
       meshed_generic_display_object &obj = g.generic_display_objects[clashes_obj_index];
+      // std::cout << ":::::::::: in setup_cylinder_clashes() obj.get_imol() " << obj.get_imol() << std::endl;
       float line_radius = 0.062f;
       line_radius = tube_radius;
       const unsigned int n_slices = 16;
@@ -1241,7 +1247,7 @@ graphics_info_t::init_joey_ssao_stuff(int w, int h) {
    err = glGetError();
    if (err)
       std::cout << "ERROR init_joey_ssao_stuff() end err is " << err << std::endl;
-   
+
 }
 
 void
@@ -1445,13 +1451,13 @@ graphics_info_t::read_some_test_models() {
    }
 }
 
-void
+int
 graphics_info_t::load_gltf_model(const std::string &gltf_file_name) {
 
    attach_buffers();
 
-   Mesh e("some name"); // extract/replace this from the gltf data
-   e.load_from_glTF(gltf_file_name);
+   TextureMesh tm("some name"); // extract/replace this from the gltf data
+   tm.load_from_glTF(gltf_file_name);
    // e.invert_normals(); // it is shiny on the inside either way around - hmm.
 
    // why do this?
@@ -1462,11 +1468,20 @@ graphics_info_t::load_gltf_model(const std::string &gltf_file_name) {
       mat.ambient  = glm::vec4(0.7, 0.7, 0.7, 1.0);
       mat.diffuse  = glm::vec4(0.7, 0.7, 0.7, 1.0);
       mat.turn_specularity_on(true);
-      e.set_material(mat); // override the material extracted from the gltf
+      // tm.set_material(mat); // override the material extracted from the gltf
    }
    Model e_model;
-   e_model.add_mesh(e);
+   e_model.add_tmesh(tm);
    add_model(e_model);
+
+   // add continuous updating
+   if (! tick_function_is_active()) {
+      tick_function_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
+   }
+   do_tick_constant_draw = true;
+
+   return models.size() - 1;
+
 }
 
 

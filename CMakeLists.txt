@@ -54,7 +54,7 @@ endif(WIN32)
 
 set(coot_src ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1.1.14"
+add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1.1.17"
   -DHAVE_CXX_THREAD -DHAVE_SSMLIB -DHAVE_BOOST -DUSE_LIBPNG=1 -DCLIPPER_HAS_TOP8000 -DUSE_GEMMI -DHAVE_BOOST_THREAD -DHAVE_GSL
   -DPKGDATADIR="${CMAKE_INSTALL_PREFIX}/share/coot" -DXDATADIR="${CMAKE_INSTALL_PREFIX}/share")
 
@@ -88,8 +88,6 @@ add_library(cootapi SHARED
             ${coot_src}/lidia-core/cod-atom-type-t.cc
             ${coot_src}/lidia-core/rdkit-interface.cc
             ${coot_src}/lidia-core/bond-table-record-t.cc
-            ${coot_src}/src/coot-hydrogens.cc
-            ${coot_src}/src/cfc.cc
             ${coot_src}/MoleculesToTriangles/CXXSurface/CXXBall.cpp
             ${coot_src}/MoleculesToTriangles/CXXSurface/CXXChargeTable.cpp
             ${coot_src}/MoleculesToTriangles/CXXSurface/CXXCircle.cpp
@@ -177,6 +175,7 @@ add_library(cootapi SHARED
             ${coot_src}/api/coot-molecule-refine.cc
             ${coot_src}/api/coot-molecule-replace-fragment.cc
             ${coot_src}/api/ghost-molecule-display.cc
+            ${coot_src}/api/model-analysis.cc
             ${coot_src}/api/molecules-container.cc
             ${coot_src}/api/molecules-container-blender.cc
             ${coot_src}/api/molecules-container-bucca-ml-growing.cc
@@ -212,6 +211,7 @@ add_library(cootapi SHARED
             ${coot_src}/skeleton/dm-utils.cc
             ${coot_src}/skeleton/BuildCas.cc
             ${coot_src}/skeleton/graphical_skel.cc
+            ${coot_src}/ideal/add-linked-cho.cc
             ${coot_src}/ideal/pepflip.cc
             ${coot_src}/ideal/parallel-planes.cc
             ${coot_src}/ideal/simple-restraint.cc
@@ -254,6 +254,7 @@ add_library(cootapi SHARED
             ${coot_src}/utils/setup-syminfo.cc
             ${coot_src}/utils/split-indices.cc
             ${coot_src}/utils/logging.cc
+            ${coot_src}/utils/static-logging.cc
             ${coot_src}/utils/threads.cc
             ${coot_src}/utils/win-compat.cc
             ${coot_src}/db-main/db-strands.cc
@@ -276,8 +277,11 @@ add_library(cootapi SHARED
             ${coot_src}/pli/pi-stacking.cc
             ${coot_src}/pli/sdf-interface.cc
             ${coot_src}/pli/specs.cc
+            ${coot_src}/coot-utils/cfc.cc
             ${coot_src}/coot-utils/coot-align.cc
+            ${coot_src}/coot-utils/dict-link-info.cc
             ${coot_src}/coot-utils/cmtz-interface.cc
+            ${coot_src}/coot-utils/dict-link-info.cc
             ${coot_src}/coot-utils/lidia-core-functions.cc
             ${coot_src}/coot-utils/atom-selection-container.cc
             ${coot_src}/coot-utils/merge-atom-selections.cc
@@ -338,6 +342,7 @@ add_library(cootapi SHARED
             ${coot_src}/coot-utils/positron.cc
             ${coot_src}/coot-utils/maps-spherical.cc
             ${coot_src}/coot-utils/peak-search.cc
+            ${coot_src}/coot-utils/pugixml.cpp
             ${coot_src}/coot-utils/xmap-stats.cc
             ${coot_src}/coot-utils/sfcalc-genmap.cc
             ${coot_src}/coot-utils/reduce.cc
@@ -461,19 +466,24 @@ add_library(cootapi SHARED
 nanobind_add_module(coot_headless_api ${coot_src}/api/molecules-container-nanobind.cc
                                       ${coot_src}/api/molecules-container-nanobind-functions.cc)
 
+# on macOS only?
+# target_compile_options(cootapi PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+# target_link_libraries(cootapi PRIVATE -fsanitize=address) # Linker flags
+
+# thanks Jordan (install coot_headless_api.pyi in the right place)
 nanobind_add_stub(coot_headless_api_ext_stub
   MODULE coot_headless_api
-  OUTPUT coot_headless_api.pyi
+  OUTPUT ${Python_SITELIB}/coot_headless_api.pyi
   PYTHON_PATH $<TARGET_FILE_DIR:coot_headless_api>
   DEPENDS coot_headless_api
-  MARKER_FILE py.typed
 )
+# MARKER_FILE py.typed
 
 # use MMDB2_INCLUDE_DIR to find the RDKIT for now.
 target_include_directories(cootapi PRIVATE ${coot_src} ${coot_src}/coords ${coot_src}/utils ${coot_src}/ccp4mg-utils ${coot_src}/ccp4mg-utils/util ${coot_src}/ccp4mg-utils/pygl ${MMDB2_INCLUDE_DIR} ${SSM_INCLUDE_DIR} ${CLIPPER-CORE_INCLUDE_DIR} ${CLIPPER-MMDB_INCLUDE_DIR} ${CLIPPER-CCP4_INCLUDE_DIR} ${FFTW2_INCLUDE_DIRS} ${RDKit_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${GSL_INCLUDE_DIRS} ${PNG_PNG_INCLUDE_DIR} ${RDKit_INCLUDE_DIR})
 
 # Charles adds Boost::iostreams Boost::filesystem Boost::system. I don't know why Boost::filesystem was added - I have removed it.
-target_link_libraries(cootapi PRIVATE ${SSM_LIBRARY} ${CLIPPER-MINIMOL_LIBRARY} ${CLIPPER-MMDB_LIBRARY} ${CLIPPER-CIF_LIBRARY} ${CLIPPER-CORE_LIBRARY} ${CLIPPER-CCP4_LIBRARY} ${CLIPPER-CONTRIB_LIBRARY} ${FFTW2_LIBRARY} ${RFFTW2_LIBRARY} ${MMDB2_LIBRARY} ${CCP4C_LIBRARY} ${ZLIB_LIBRARIES} ${GSL_LIBRARIES} ${GSL_CBLAS_LIBRARY} ${RDKit_libs_for_libcootapi} ${PNG_LIBRARY} Boost::iostreams Boost::system gemmi::gemmi_cpp ${libdwarf} ${libelf})
+target_link_libraries(cootapi PRIVATE ${SSM_LIBRARY} ${CLIPPER-MINIMOL_LIBRARY} ${CLIPPER-MMDB_LIBRARY} ${CLIPPER-CIF_LIBRARY} ${CLIPPER-CORE_LIBRARY} ${CLIPPER-CCP4_LIBRARY} ${CLIPPER-CONTRIB_LIBRARY} ${FFTW2_LIBRARY} ${RFFTW2_LIBRARY} ${MMDB2_LIBRARY} ${CCP4C_LIBRARY} ${ZLIB_LIBRARIES} ${GSL_LIBRARIES} ${GSL_CBLAS_LIBRARY} ${RDKit_libs_for_libcootapi} ${PNG_LIBRARY} Boost::thread Boost::iostreams Boost::system gemmi::gemmi_cpp ${libdwarf} ${libelf})
 
 target_compile_features(cootapi PRIVATE cxx_std_17)
 
@@ -515,15 +525,15 @@ target_compile_features(res-tracer-libcootapi PRIVATE cxx_std_17)
 
 target_link_libraries(coot_headless_api PUBLIC cootapi  ${CLIPPER-CORE_LIBRARY} ${CLIPPER-CCP4_LIBRARY} ${MMDB2_LIBRARY} ${libdwarf} ${libelf})
 
-target_include_directories(findligand PRIVATE ${MMDB2_INCLUDE_DIR} ${coot_src})
+target_include_directories(findligand PRIVATE ${MMDB2_INCLUDE_DIR} ${CLIPPER-CORE_INCLUDE_DIR} ${coot_src})
 
-target_include_directories(findwaters PRIVATE ${MMDB2_INCLUDE_DIR} ${coot_src})
+target_include_directories(findwaters PRIVATE ${MMDB2_INCLUDE_DIR} ${CLIPPER-CORE_INCLUDE_DIR} ${coot_src})
 
 target_include_directories(coot-mini-rsr PRIVATE ${MMDB2_INCLUDE_DIR} ${coot_src} ${PNG_INCLUDE_DIR})
 
 target_include_directories(res-tracer-libcootapi PRIVATE ${MMDB2_INCLUDE_DIR} ${coot_src} ${PNG_INCLUDE_DIR})
 
-target_link_libraries(findligand PUBLIC cootapi ${CLIPPER-CORE_LIBRARY} ${CLIPPER-CCP4_LIBRARY} ${MMDB2_LIBRARY} Threads::Threads)
+target_link_libraries(findligand PUBLIC cootapi ${CLIPPER-CORE_LIBRARY} ${CLIPPER-CCP4_LIBRARY} ${MMDB2_LIBRARY} Boost::thread Threads::Threads)
 
 target_link_libraries(findwaters PUBLIC cootapi ${CLIPPER-CORE_LIBRARY} ${CLIPPER-CCP4_LIBRARY} ${MMDB2_LIBRARY})
 
@@ -535,7 +545,7 @@ target_include_directories(test-molecules-container PRIVATE ${coot_src} ${coot_s
 
 target_link_libraries(test-molecules-container PUBLIC cootapi ${SSM_LIBRARY} ${CLIPPER-MINIMOL_LIBRARY} ${CLIPPER-MMDB_LIBRARY} ${CLIPPER-CIF_LIBRARY} ${CLIPPER-CORE_LIBRARY} ${CLIPPER-CCP4_LIBRARY} ${CLIPPER-CONTRIB_LIBRARY} ${FFTW2_LIBRARY} ${RFFTW2_LIBRARY} ${MMDB2_LIBRARY} ${CCP4C_LIBRARY} ${ZLIB_LIBRARIES} ${GSL_LIBRARIES} ${RDKit_libs_for_libcootapi} ${PNG_LIBRARY} gemmi::gemmi_cpp ${libdwarf} ${libelf} Threads::Threads)
 
-target_include_directories(mmcif-tests PRIVATE ${CLIPPER-MMDB_INCLUDE_DIR})
+target_include_directories(mmcif-tests PRIVATE ${MMDB2_INCLUDE_DIR} ${CLIPPER-MMDB_INCLUDE_DIR})
 
 target_link_libraries(mmcif-tests PUBLIC ${MMDB2_LIBRARY})
 
@@ -549,15 +559,21 @@ set_target_properties(coot_headless_api PROPERTIES INSTALL_RPATH_USE_LINK_PATH T
 
 install(TARGETS cootapi)
 
-install(FILES standard-residues.pdb DESTINATION share/coot)
+install(FILES standard-residues.pdb  DESTINATION share/coot)
 
-install(FILES data/syminfo.lib      DESTINATION share/coot/data)
+install(FILES data/syminfo.lib       DESTINATION share/coot/data)
 
-install(DIRECTORY pdb-templates     DESTINATION share/coot)
+install(DIRECTORY rama-data          DESTINATION share/coot)
 
-install(DIRECTORY rama-data         DESTINATION share/coot)
+install(DIRECTORY data/metal         DESTINATION share/coot/data)
 
-install(DIRECTORY data/metal        DESTINATION share/coot/data)
+install(DIRECTORY data/cho-acedrg    DESTINATION share/coot/data)
+
+install(DIRECTORY data/cho-models    DESTINATION share/coot/data)
+
+install(DIRECTORY data/cho-links     DESTINATION share/coot/data)
+
+install(DIRECTORY data/pdb-templates DESTINATION share/coot/data)
 
 # Thanks Charles B.
 install(TARGETS coot_headless_api DESTINATION ${Python_SITELIB})

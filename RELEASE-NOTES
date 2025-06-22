@@ -1,4 +1,96 @@
 
+  Release Notes for 1.1.17
+
+ o BUG-FIX: Save symmetry coordinates is fixed
+
+ o BUG-FIX: Colour-by-B-factor colours are fixed
+
+ o BUG-FIX: Place atom at pointer fixed
+
+ o BUG-FIX: Optional Gemmi usage restored
+
+-----
+
+  Release Notes for 1.1.16
+
+ o FEATURE: Local B-factor display
+
+ o FEATURE: Built-in logging (started) - view it by clicking the "Log" button
+
+ o FEATURE: Full doxygen documentation transferred to chapi nanobind functions
+
+ o FEATURE: Anisotropic probability radius scaling (thanks ClAuS Flensburg)
+
+ o CHANGE:  For packagers: Now a commonly-used fragment of the monomer library
+            is bundled with Coot. Unknown monomers are now downloaded from GitHub
+            and cached using XDG Base Directory Specification
+
+ o CHANGE:  For packagers: Now the reference structures are bundled
+            with the source code (and installed) - no longer do they need
+            to be a separate dependency
+
+ o CHANGE:  If a map has a PANDDA:: or APPLY-SYMMETRY:: label then Coot now
+            properly handles that (turns off "is-EM-map" status)
+
+ o CHANGE:  Atoms with Zero Occupancy results now moved into the
+            main window
+
+ o CHANGE:  Boron atoms are now pinky-beige - like Jmol
+
+ o BUG-FIX: Fix crash on adding an atom [Clément Bousquet]
+
+ o BUG-FIX: Symmetry atoms are now clickable for distances and labels
+
+ o BUG-FIX: Fix the non-drawn clashes post model update
+
+ o BUG-FIX: "Add Other Solvent Molecules" dialog has been depythonized
+            and now will work on macOS
+
+ o BUG-FIX: "Copy Molecule" dialog has been depythonized and is now an
+            overlay and now will work on macOS
+
+ o BUG-FIX: Fix the problem of focus-grab when using Tutorial Model & Data
+
+ o BUG-FIX: Fix the "Close" button in the Restraints Editor
+
+ o KNOWN-BUGS: (that I looked at at but don't know how to resolve):
+      - Ramachandran plot on macOS
+      - Menu items that use targets on macOS
+      (I suspect OpenGL driver bugs and GLib problems on macOS)
+
+-----
+
+  Release 1.1.15
+
+ o FEATURE: Drag and drop (partial - it works from the file browser,
+            but not from CCP4i2)
+
+ o FEATURE: set_use_vertex_gradients_for_map_normals() added to the Coot API
+
+ o CHANGE:  Fixed atoms are now draggable
+
+ o CHANGE:  max-closeness is no longer used to filter peaks in map_peaks_py()
+
+ o CHANGE:  Backtick for selection now also shows the residue range
+            (if set)
+
+ o BUG-FIX: Track-pad zooming fixed
+
+ o BUG-FIX: Residue Info dialog buttons now on the right hand side
+
+ o BUG-FIX: Fix and Unfix atom now work as expected
+
+ o BUG-FIX: Remove erroneous "No ligands Found" dialog when ligand fitting
+
+ o BUG-FIX: Select Map for Fitting dialog now behaves has expected
+            on reopen
+
+ o BUG-FIX: Merge Molecules dialog now behaves has expected on reopen
+
+ o BUG-FIX: Choose a better contour level for masked maps
+
+-----
+
   Release 1.1.14
 
   o FEATURE: Clark&Labute-like 2D-ligand environment view in Coot,

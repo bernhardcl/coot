@@ -91,6 +91,10 @@
 #include "utils/coot-utils.hh"
 #include "read-molecule.hh"
 
+#include "utils/logging.hh"
+extern logging logger;
+
+
 void set_show_paths_in_display_manager(int i) {
    std::string cmd = "set-show-paths-in-display-manager";
    std::vector<coot::command_arg_t> args;
@@ -2910,24 +2914,6 @@ void show_main_toolbar() {
    }
 }
 
-// functions for the main toolbar style
-// should be generic!? FIXME BL
-void set_main_toolbar_style(int istate) {
-
-   // main_toolbar no longer exists - do I still want this function?
-
-   graphics_info_t::main_toolbar_style_state = istate;
-   if (graphics_info_t::use_graphics_interface_flag) {
-      GtkWidget *toolbar = widget_from_builder("main_toolbar");
-      if (!toolbar) {
-	 std::cout << "set_main_toolbar_style(): failed to lookup main toolbar" << std::endl;
-      }
-   }
-}
-
-int main_toolbar_style_state() {
-  return graphics_info_t::main_toolbar_style_state;
-}
 
 /*  ------------------------------------------------------------------------ */
 // other modelling tools
@@ -4066,27 +4052,30 @@ void save_symmetry_coords_from_filechooser(GtkWidget *filechooser) {
    coot::Symm_Atom_Pick_Info_t *symm_info = (coot::Symm_Atom_Pick_Info_t *) g_object_get_data(G_OBJECT(filechooser), "symm_info");
 
    // const gchar *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(fileselection));
-   GFile *file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(filechooser));
-   GError *error = NULL;
-   GFileInfo *file_info = g_file_query_info(file, G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
-                                            G_FILE_QUERY_INFO_NONE, NULL, &error);
-   const char *filename = g_file_info_get_name(file_info);
 
-   if (symm_info) {
-      // std::cout << "Preshift to origin:  " << symm_info->pre_shift_to_origin << std::endl;
-      save_symmetry_coords(symm_info->imol,
-			   filename,
-			   symm_info->symm_trans.isym(),
-			   symm_info->symm_trans.x(),
-			   symm_info->symm_trans.y(),
-			   symm_info->symm_trans.z(),
-			   symm_info->pre_shift_to_origin.us,
-			   symm_info->pre_shift_to_origin.vs,
-			   symm_info->pre_shift_to_origin.ws);
+   std::cout << "debug:: symm_info: " << symm_info << std::endl;
+   std::cout << "debug:: symm_info->imol: " << symm_info->imol << std::endl;
+
+   GFile *file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(filechooser));
+   if (file) {
+      const char *file_name = g_file_get_path(file);
+      if (file_name) {
+         if (symm_info) {
+            // std::cout << "Preshift to origin:  " << symm_info->pre_shift_to_origin << std::endl;
+            save_symmetry_coords(symm_info->imol,
+                                 file_name,
+                                 symm_info->symm_trans.isym(),
+                                 symm_info->symm_trans.x(),
+                                 symm_info->symm_trans.y(),
+                                 symm_info->symm_trans.z(),
+                                 symm_info->pre_shift_to_origin.us,
+                                 symm_info->pre_shift_to_origin.vs,
+                                 symm_info->pre_shift_to_origin.ws);
+         }
+      }
    } else {
-      std::cout << "ERROR:: failed to get user data from save symmetry coords fileselection"
-                << std::endl;
-      std::cout << "ERROR:: saving of symmetry coordinates failed" << std::endl;
+      logger.log(log_t::WARNING, logging::function_name_t("save_symmetry_coords_from_filechooser"),
+                 "No file");
    }
 }
 
@@ -4426,55 +4415,6 @@ void on_export_map_dialog_ok_button_clicked_cc(GtkButton *button) {
 //
 // }
 
-
-// -----------ancient interface code --------------------------------------
-
-// functions to dock the accept/reject dialog
-void set_accept_reject_dialog_docked(int istate){
-
-   if (graphics_info_t::use_graphics_interface_flag) {
-     // we should destroy/hide the dialog if existing
-     if (graphics_info_t::accept_reject_dialog) {
-       // changing state?
-       if (istate != graphics_info_t::accept_reject_dialog_docked_flag) {
-         if (istate == 0) {
-           gtk_widget_set_visible(graphics_info_t::accept_reject_dialog, FALSE);
-         } else {
-           gtk_widget_set_visible(graphics_info_t::accept_reject_dialog, FALSE);
-           // reset the widget upon change of mode
-           set_accept_reject_dialog(0);
-         }
-       }
-     }
-     // now change the state
-     graphics_info_t::accept_reject_dialog_docked_flag = istate;
-   }
-}
-
-int accept_reject_dialog_docked_state(){
-  return graphics_info_t::accept_reject_dialog_docked_flag;
-}
-
-// functions to show/hide/sensitise docked accept/reject dialog
-void set_accept_reject_dialog_docked_show(int state){
-
-   if (graphics_info_t::use_graphics_interface_flag) {
-      graphics_info_t::accept_reject_dialog_docked_show_flag = state;
-      if (state == 0) {
-         // GtkWidget *dialog = lookup_widget(GTK_WIDGET(graphics_info_t::get_main_window()), "accept_reject_dialog_frame_docked");
-         GtkWidget *dialog = widget_from_builder("accept_reject_dialog_frame_docked");
-         // hide the widget and make sensitive again
-         gtk_widget_set_sensitive(dialog, TRUE);
-         gtk_widget_set_visible(dialog, FALSE);
-         // reset the widget
-         set_accept_reject_dialog(0);
-      }
-   }
-}
-
-int accept_reject_dialog_docked_show_state() {
-  return graphics_info_t::accept_reject_dialog_docked_show_flag;
-}
 
 void store_geometry_dialog(GtkWidget *w) {
 

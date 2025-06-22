@@ -29,6 +29,7 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <filesystem>
 
 #include <stdio.h>
 
@@ -61,6 +62,10 @@
 
 #include "coot-utils/pae.hh"
 
+#include "utils/logging.hh"
+extern logging logger;
+
+
 // return 0 on success
 #ifdef USE_LIBCURL
 int coot_get_url(const std::string &url, const std::string  &file_name) {
@@ -89,7 +94,7 @@ int coot_curl_progress_callback(void *clientp,
    if(dltotal == 0) {
       dltotal++;
    }
-   g_debug("Inside coot_curl_progress_callback(); dlnow=%li, dltotal=%li", dlnow, dltotal);
+   // g_debug("Inside coot_curl_progress_callback(); dlnow=%li, dltotal=%li", dlnow, dltotal);
    notifier_ptr->update_progress((float)dlnow/(float)dltotal);
    return 0;
 }
@@ -121,6 +126,40 @@ int coot_get_url_and_activate_curl_hook(const std::string &url,
          if (line.find("html") != std::string::npos)
             return true;
          return false;
+   };
+
+   // 20250526-PE
+   // github returns a file with contents "404: Not Found" (no newline) when the file is not
+   // on the server.
+   // Gnarly.
+   auto is_error_message = [] (const std::string &file_name) {
+
+#if 0 // I don't understand why this doesn't work (size is 0)
+      std::ifstream f(file_name.c_str());
+      if (f) {
+         std::filebuf *frdbuf = f.rdbuf();
+         std::size_t size = frdbuf->pubseekoff(0, f.end, f.in);
+         frdbuf->pubseekpos(0, f.in);
+         std::cout << "............. size " << size << std::endl;
+         std::string file_contents;
+         if (file_contents.find("404: ") != std::string::npos) {
+            std::cout << "............... found the 404" << std::endl;
+            return true;
+         } else {
+            std::cout << "................... no find the 404" << std::endl;
+         }
+         std::cout << "................. file_contents: " << file_contents << "\n" << std::endl;
+      }
+      return false;
+#endif
+
+      bool status = false;
+      std::filesystem::path p(file_name);
+      std::uintmax_t file_size = std::filesystem::file_size(p);
+      if (file_size < 10)
+         status = true;
+      return status;
+
    };
 
    // write binary
@@ -181,13 +220,24 @@ int coot_get_url_and_activate_curl_hook(const std::string &url,
 #endif /* USE_GUILE	*/
 	 g.remove_curl_handle_with_file_name(file_name);
       } else {
+         // 20250526-PE unfortunately curl_easy_perform() is returning 0 even
+         // if the file was not on the server.
 	 success = curl_easy_perform(c);
          if (coot::file_exists(file_name)) {
             if (is_html(file_name)) {
                success = CURLcode(23); // CURL write error (say)
                int rm_status = remove(file_name.c_str()); // Ciao Bella
                if (rm_status == 0)
-                  std::cout << "INFO:: " << file_name << " removed" << std::endl;
+                  logger.log(log_t::INFO, logging::function_name_t("coot_get_url_and_activate_curl_hook"),
+                             file_name, "removed (failed download)");
+            } else {
+               if (is_error_message(file_name)) {
+                  success = CURLcode(23); // CURL write error (say)
+                  int rm_status = remove(file_name.c_str()); // Ciao Bella
+                  if (rm_status == 0)
+                     logger.log(log_t::INFO, logging::function_name_t("coot_get_url_and_activate_curl_hook"),
+                                file_name, "removed (failed download)");
+               }
             }
          } else {
             success = CURLcode(23); // CURL write error (say)
@@ -224,7 +274,7 @@ std::string coot_get_url_as_string_internal(const char *url) {
    user_agent += " https://www2.mrc-lmb.cam.ac.uk/Personal/pemsley/coot/";
    char buff[1024];
 
-   long int no_signal = 1; 
+   long int no_signal = 1;
    CURL *c = curl_easy_init();
    curl_easy_setopt(c, CURLOPT_URL, url);
    curl_easy_setopt(c, CURLOPT_NOSIGNAL, no_signal);
@@ -834,3 +884,128 @@ void set_python_draw_function(const std::string &s) {
 }
 #endif // USE_PYTHON
 
+#include "get-monomer.hh"
+
+void get_monomer_dictionary_in_subthread(const std::string &comp_id,
+					 bool run_get_monomer_post_fetch_flag) {
+
+   struct cif_data {
+      int fetch_done;
+      bool run_get_monomer_post_fetch_flag;
+      std::string comp_id;
+   };
+
+   auto delete_cif_file_if_exists = [] (std::filesystem::path cif_file_path) {
+
+      if (std::filesystem::exists(cif_file_path)) {
+         std::filesystem::remove(cif_file_path);
+      }
+   };
+
+   auto get_dict = [delete_cif_file_if_exists] (const std::string &comp_id, struct cif_data *c) {
+
+      // https://raw.githubusercontent.com/MonomerLibrary/monomers/refs/heads/master/l/L36.cif
+      // put it in xdg cache monomers/l/L36.cif
+
+      const char rs = comp_id[0];
+      const char v = tolower(rs); // get the sub directory name
+      std::string letter(1, v);
+      std::string cif_file_name = comp_id + ".cif";
+      std::filesystem::path github = "https://raw.githubusercontent.com/MonomerLibrary/monomers/refs/heads/master";
+      std::filesystem::path url_path = github / letter / cif_file_name;
+
+      xdg_t xdg;
+
+      std::filesystem::path ch = xdg.get_cache_home();
+
+      if (! std::filesystem::exists(ch))
+	 std::filesystem::create_directories(ch);
+
+      if (! std::filesystem::exists(ch))
+	 std::filesystem::create_directories(ch);
+      std::filesystem::path monomers_path = ch / "monomers";
+      if (!std::filesystem::exists(monomers_path))
+	 std::filesystem::create_directories(monomers_path);
+      std::filesystem::path letter_dir_path = monomers_path / letter;
+      if (!std::filesystem::exists(letter_dir_path))
+	 std::filesystem::create_directories(letter_dir_path);
+
+      if (std::filesystem::exists(ch)) {
+	 std::filesystem::path monomers_path = ch / "monomers";
+	 if (std::filesystem::exists(monomers_path)) {
+	    std::filesystem::path letter_dir_path = monomers_path / letter;
+	    if (std::filesystem::exists(letter_dir_path)) {
+	       std::filesystem::path cif_file_path = letter_dir_path / cif_file_name;
+               // return 0 on success
+	       int status = coot_get_url(url_path.string(), cif_file_path.string());
+               logger.log(log_t::DEBUG, logging::function_name_t("get_monomer_dictionary_in_subthread()"),
+                          "coot_get_url() returned status ", status);
+               if (status != 0)
+                  delete_cif_file_if_exists(cif_file_path);
+	    } else {
+	       // std::cout << "INFO:: " << letter_dir_path << " does not exist " << std::endl;
+	       logger.log(log_t::INFO, letter_dir_path, "does not exist");
+	    }
+	 } else {
+	    //std::cout << "INFO:: " << monomers_path << " does not exist " << std::endl;
+	    logger.log(log_t::INFO, monomers_path, "does not exist");
+	 }
+      } else {
+	 // std::cout << "INFO:: " << ch << " does not exist " << std::endl;
+	 logger.log(log_t::INFO, ch, "does not exist");
+      }
+      c->fetch_done = 1;
+   };
+
+   if (! comp_id.empty()) {
+      // std::cout << "INFO:: Get " << comp_id << " in a sub-thread" << std::endl;
+      logger.log(log_t::INFO, "Get", comp_id, "in a sub-thread");
+
+      struct cif_data *c = new cif_data;
+      c->fetch_done = 0;
+      c->comp_id = comp_id;
+      c->run_get_monomer_post_fetch_flag = run_get_monomer_post_fetch_flag;
+
+      std::thread thread(get_dict, comp_id, c);
+      thread.detach();
+
+      auto timeout_func = +[] (gpointer data) {
+         int s = 1;
+	 struct cif_data *cif_data = static_cast<struct cif_data *>(data);
+	 if (cif_data->fetch_done == 1) s = 0;
+         if (! cif_data->comp_id.empty()) {
+            const char rs = cif_data->comp_id[0];
+            const char v = tolower(rs); // get the sub directory name
+            std::string letter(1, v);
+            std::string cif_file_name = cif_data->comp_id + ".cif";
+            xdg_t xdg;
+            std::filesystem::path ch = xdg.get_cache_home();
+            std::filesystem::path monomers_path = ch / "monomers";
+            std::filesystem::path letter_dir_path = monomers_path / letter;
+            std::filesystem::path cif_file_path = letter_dir_path / cif_file_name;
+            // std::cout << "INFO:: call read_cif_dictionary() on this cif "
+            // << cif_file_path << std::endl;
+            if (std::filesystem::exists(cif_file_path)) {
+               logger.log(log_t::INFO, "call read_cif_dictionary() on this cif", cif_file_path);
+               int read_status = read_cif_dictionary(cif_file_path.string());
+               if (read_status > 0) {
+                  if (cif_data->run_get_monomer_post_fetch_flag)
+                     get_monomer(cif_data->comp_id);
+               } else {
+                  logger.log(log_t::WARNING, logging::function_name_t("get_monomer_dictionary_in_subthread"),
+                             "Failed to read", cif_file_path);
+               }
+            } else {
+               // failed to download:
+               logger.log(log_t::WARNING, logging::function_name_t("get_monomer_dictionary_in_subthread"),
+                          "File does not exist", cif_file_path);
+               std::string message = std::string("Failed to download ") + cif_file_path.string() +
+                  std::string(" from github monomers");
+               info_dialog(message.c_str());
+            }
+         }
+	 return gboolean(s);
+      };
+      g_timeout_add(500, GSourceFunc(timeout_func), c);
+   }
+}

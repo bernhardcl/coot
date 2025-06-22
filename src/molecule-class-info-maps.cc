@@ -89,6 +89,8 @@
 #include "coot-utils/coot-map-heavy.hh"
 #include "ligand/ligand.hh"
 
+#include "utils/logging.hh"
+extern logging logger;
 
 void
 molecule_class_info_t::gtk3_draw() {
@@ -1721,13 +1723,15 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
 	 if (is_anomalous_flag) {
 	    fix_anomalous_phases(&fphidata);
 	 }
-         std::cout << "INFO:: finding ASU unique map points with sampling rate "
-                   << map_sampling_rate	<< std::endl;
+         // std::cout << "INFO:: finding ASU unique map points with sampling rate "
+         //           << map_sampling_rate	<< std::endl;
+         logger.log(log_t::INFO, "finding ASU unique map points with sampling rate:", map_sampling_rate);
          clipper::Grid_sampling gs(fphidata.spacegroup(),
                                    fphidata.cell(),
                                    fft_reso,
                                    map_sampling_rate);
-         std::cout << "INFO:: grid sampling..." << gs.format() << std::endl;
+         // std::cout << "INFO:: grid sampling..." << gs.format() << std::endl;
+         logger.log(log_t::INFO, "grid sampling", gs.format());
          xmap.init(fphidata.spacegroup(), fphidata.cell(), gs);
 
 
@@ -1796,14 +1800,21 @@ molecule_class_info_t::map_fill_from_mtz_with_reso_limits(std::string mtz_file_n
 	 // long T4 = glutGet(GLUT_ELAPSED_TIME);
 	 // std::cout << "INFO:: " << float(T4-T3)/1000.0 << " seconds for statistics\n";
 
-	 std::cout << "      Map extents: ..... "
-		   << xmap.grid_sampling().nu() << " "
-		   << xmap.grid_sampling().nv() << " "
-		   << xmap.grid_sampling().nw() << " " << std::endl;
-	 std::cout << "      Map mean: ........ " << map_mean_ << std::endl;
-	 std::cout << "      Map sigma: ....... " << map_sigma_ << std::endl;
-	 std::cout << "      Map maximum: ..... " << map_max_ << std::endl;
-	 std::cout << "      Map minimum: ..... " << map_min_ << std::endl;
+	 // std::cout << "      Map extents: ..... "
+	 //           << xmap.grid_sampling().nu() << " "
+	 //           << xmap.grid_sampling().nv() << " "
+	 //           << xmap.grid_sampling().nw() << " " << std::endl;
+	 // std::cout << "      Map mean: ........ " << map_mean_ << std::endl;
+	 // std::cout << "      Map sigma: ....... " << map_sigma_ << std::endl;
+	 // std::cout << "      Map maximum: ..... " << map_max_ << std::endl;
+	 // std::cout << "      Map minimum: ..... " << map_min_ << std::endl;
+
+         logger.log(log_t::INFO, "Map extents",
+                    xmap.grid_sampling().nu(), xmap.grid_sampling().nv(), xmap.grid_sampling().nw());
+         logger.log(log_t::INFO, "Map mean:    ", map_mean_);
+         logger.log(log_t::INFO, "Map sigma:   ", map_sigma_);
+         logger.log(log_t::INFO, "Map maximum: ", map_max_);
+         logger.log(log_t::INFO, "Map minimum: ", map_min_);
 
          if (! updating_existing_map_flag)
             set_initial_contour_level();
@@ -2353,21 +2364,27 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
 
    if (map_file_type == CCP4) {
 
-      bool done = false;
-      if (coot::util::is_basic_em_map_file(filename)) {
+      int rr = int(coot::util::is_basic_em_map_file(filename));
+
+      coot::util::slurp_map_result_t done = coot::util::slurp_map_result_t::UNRESOLVED;
+
+      if (coot::util::is_basic_em_map_file(filename) == coot::util::slurp_map_result_t::IS_SLURPABLE_EM_MAP) {
          // fill xmap
          auto tp_1 = std::chrono::high_resolution_clock::now();
          bool check_only = false;
-         done = coot::util::slurp_fill_xmap_from_map_file(filename, &xmap, check_only);
+
+         coot::util::slurp_map_result_t filled =
+            coot::util::slurp_fill_xmap_from_map_file(filename, &xmap, check_only);
 
          auto tp_2 = std::chrono::high_resolution_clock::now();
          auto d21 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_2 - tp_1).count();
-         std::cout << "INFO:: map read in " << d21 << " milliseconds" << std::endl;
+         std::cout << "INFO:: map read in " << d21 << " milliseconds with status: "
+		   << int(done) << std::endl;
 
          // Now set is_em_map_cached_flag and set the rotation centres.
          // I think that we only need set the is_em_map_cached_flag.
          //
-         if (done) {
+         if (done != coot::util::slurp_map_result_t::OK) {
             if (is_gzip) {
                em = true;
                is_em_map_cached_flag = true; // who else gzip map files?
@@ -2382,7 +2399,7 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
                try {
                   clipper_map_file_wrapper file;
                   file.open_read(filename);
-                  set_is_em_map(file); // sets is_em_map_cached_flag
+                  set_is_em_map(file, filename); // sets is_em_map_cached_flag
                   em = is_em_map_cached_flag;
                   if (imol_no == 0) {
                      clipper::Cell c = file.cell();
@@ -2400,15 +2417,14 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
          }
       }
 
-
-      if (! done) {
+      if (done != coot::util::slurp_map_result_t::OK) {
          std::cout << "INFO:: attempting to read CCP4 map: " << filename << std::endl;
          // clipper::CCP4MAPfile file;
          clipper_map_file_wrapper file;
          try {
             file.open_read(filename);
 
-            em = set_is_em_map(file);
+            em = set_is_em_map(file, filename);
 
             bool use_xmap = true; // not an nxmap
             if (true) {
@@ -2455,9 +2471,10 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
                coot::Cartesian m(0.5*c.descr().a(), 0.5*c.descr().b(), 0.5*c.descr().c());
                new_centre.first = true;
                new_centre.second = m;
-               std::cout << "INFO:: map appears to be EM map."<< std::endl;
+               // std::cout << "INFO:: map appears to be EM map."<< std::endl;
+               logger.log(log_t::INFO, "map appears to be an EM map");
             }
-            std::cout << "INFO:: closing CCP4 map: " << filename << std::endl;
+            // std::cout << "INFO:: closing CCP4 map file: " << filename << std::endl;
             file.close_read();
 
             if (new_centre.first) {
@@ -2466,6 +2483,7 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
             }
          }
       }
+
 
    } else {
       std::cout << "INFO:: attempting to read CNS map: " << filename << std::endl;
@@ -2492,7 +2510,7 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
       mean_and_variance<float> mv = map_density_distribution(xmap, 20, true, ipz);
       auto tp_1 = std::chrono::high_resolution_clock::now();
       auto d10 = std::chrono::duration_cast<std::chrono::milliseconds>(tp_1 - tp_0).count();
-      std::cout << "INFO:: map_density_distribution() took " << d10 << " milliseconds" << std::endl;
+      std::cout << "DEBUG:: map_density_distribution() took " << d10 << " milliseconds" << std::endl;
 
       float mean = mv.mean;
       float var = mv.variance;
@@ -2514,16 +2532,27 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
 
       set_initial_contour_level();
 
-      std::cout << "INFO:: ------  em " << em << " contour_level " << contour_level << std::endl;
+      // /std::cout << "INFO:: ------  em " << em << " contour_level " << contour_level << std::endl;
+      logger.log(log_t::INFO, logging::function_name_t(__FUNCTION__),
+                 "EM status: ", em, "contour_level", contour_level);
 
-      std::cout << "      Map extents: ..... "
-		<< xmap.grid_sampling().nu() << " "
-		<< xmap.grid_sampling().nv() << " "
-		<< xmap.grid_sampling().nw() << " " << std::endl;
-      std::cout << "      Map mean: ........ " << map_mean_ << std::endl;
-      std::cout << "      Map rmsd: ........ " << map_sigma_ << std::endl;
-      std::cout << "      Map maximum: ..... " << map_max_ << std::endl;
-      std::cout << "      Map minimum: ..... " << map_min_ << std::endl;
+      // std::cout << "      Map extents: ..... "
+      //   	<< xmap.grid_sampling().nu() << " "
+      //   	<< xmap.grid_sampling().nv() << " "
+      //   	<< xmap.grid_sampling().nw() << " " << std::endl;
+      // std::cout << "      Map mean: ........ " << map_mean_ << std::endl;
+      // std::cout << "      Map rmsd: ........ " << map_sigma_ << std::endl;
+      // std::cout << "      Map maximum: ..... " << map_max_ << std::endl;
+      // std::cout << "      Map minimum: ..... " << map_min_ << std::endl;
+
+      logger.log(log_t::INFO, "Map extents: ",
+                 xmap.grid_sampling().nu(),
+                 xmap.grid_sampling().nv(),
+                 xmap.grid_sampling().nw());
+      logger.log(log_t::INFO, "Map mean: ", map_mean_);
+      logger.log(log_t::INFO, "Map rmsd: ", map_sigma_);
+      logger.log(log_t::INFO, "Map maximum: ", map_max_);
+      logger.log(log_t::INFO, "Map minimum: ", map_min_);
 
       // save state strings
       // c.f. std::string sc = state_command("coot", "set-draw-hydrogens", command_args, il);
@@ -2548,7 +2577,9 @@ molecule_class_info_t::read_ccp4_map(std::string filename, int is_diff_map_flag,
 // NXmap, not the xmap)
 //
 bool
-molecule_class_info_t::set_is_em_map(const clipper_map_file_wrapper &file) {
+molecule_class_info_t::set_is_em_map(const clipper_map_file_wrapper &file,
+				     const std::string &file_name) {
+
 
    // Even if mapdump says that the spacegroup is 0, file.spacegroup()
    // will be "P1".  So this returns true for maps with spacegroup 0
@@ -2561,17 +2592,31 @@ molecule_class_info_t::set_is_em_map(const clipper_map_file_wrapper &file) {
 	  ((file.cell().descr().beta()  - M_PI/2) <  0.0001) &&
 	  ((file.cell().descr().gamma() - M_PI/2) > -0.0001) &&
 	  ((file.cell().descr().gamma() - M_PI/2) <  0.0001)) {
-	 if (file.starts_at_zero()) {
+
+#if 0 // 20250519-PE why did I need starts_at_zero() to be true? 901b738c98ee739b0788e868d4b9121800047668
+      // map clement/initial_map.ccp4 does not start at 0 and is an em map (fragment, I guess).
+         if (file.starts_at_zero()) {
 	    is_em_map_cached_flag = 1; // yes
 	 } else {
 	    is_em_map_cached_flag = 0;
 	 }
+#endif
+         is_em_map_cached_flag = true;
+
+
       } else {
 	 is_em_map_cached_flag = 0;
       }
    } else {
       is_em_map_cached_flag = 0;
    }
+
+   // now we check if we have a PANDDA:: map
+   bool pandda_status = coot::util::map_labels_contain_PANDDA(file_name);
+   if (pandda_status) {
+      is_em_map_cached_flag = false;
+   }
+
    return false; // not a useful return value, because flag can have 3 values
 }
 
@@ -2602,7 +2647,7 @@ molecule_class_info_t::is_em_map_cached_state() {
 }
 
 // user-setting over-ride internal rules for P1&909090 means EM
-void 
+void
 molecule_class_info_t::set_map_has_symmetry(bool is_em_map) {
 
    is_em_map_cached_flag = is_em_map;
@@ -2633,6 +2678,8 @@ molecule_class_info_t::install_new_map(const clipper::Xmap<float> &map_in, std::
 
       float mean = mv.mean;
       float var = mv.variance;
+
+      std::cout << "debug:: in install_new_map() contour_level is " << contour_level << " from " << mean << " " << sqrt(var) << std::endl;
       contour_level  = nearest_step(mean + 1.5*sqrt(var), 0.05);
       update_map_in_display_control_widget();
 
@@ -2643,6 +2690,42 @@ molecule_class_info_t::install_new_map(const clipper::Xmap<float> &map_in, std::
       update_map(true);
    }
 }
+
+void
+molecule_class_info_t::install_new_map_with_contour_level(const clipper::Xmap<float> &map_in, std::string name_in, float contour_level_in,
+                                                          bool is_em_map_flag_in) {
+
+   xmap = map_in;
+   if (is_em_map_flag_in)
+      is_em_map_cached_flag = 1;
+   // the map name is filled by using set_name(std::string)
+   // sets name_ to name_in:
+   initialize_map_things_on_read_molecule(name_in, false, false, false); // not a diff_map
+
+   // 20240702-PE now we can install empty maps (which get quickly overwritten by sensible maps)
+   // (adding servalcat interface)
+   //
+   if (! xmap.is_null()) {
+
+      bool ipz = graphics_info_t::ignore_pseudo_zeros_for_map_stats;
+      bool write_output_flag = false;
+      mean_and_variance<float> mv = map_density_distribution(xmap, 40, write_output_flag, ipz);
+
+      float mean = mv.mean;
+      float var = mv.variance;
+
+      std::cout << "debug:: in install_new_map_with_contour_level() contour_level is " << contour_level << std::endl;
+      contour_level  = contour_level_in;
+      update_map_in_display_control_widget();
+
+      // fill class variables
+      map_mean_ = mv.mean;
+      map_sigma_ = sqrt(mv.variance);
+
+      update_map(true);
+   }
+}
+
 
 void
 molecule_class_info_t::set_mean_and_sigma(bool show_terminal_output, bool ignore_pseudo_zeroes) {
@@ -4756,7 +4839,8 @@ molecule_class_info_t::colour_map_using_map(const clipper::Xmap<float> &xmap, fl
                                               // (position_to_colour_using_other_map(co))
       other_map_for_colouring_p = &xmap;
 
-      std::cout << "debug:: in colour_map_using_map() other_map_for_colouring_p is set to " << other_map_for_colouring_p << std::endl;
+      std::cout << "debug:: in colour_map_using_map() other_map_for_colouring_p is set to "
+		<< other_map_for_colouring_p << std::endl;
       other_map_for_colouring_min_value = table_bin_start;
       other_map_for_colouring_max_value = table_bin_start + colours.size() * table_bin_size;
       other_map_for_colouring_colour_table = colours;

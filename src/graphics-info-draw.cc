@@ -24,13 +24,13 @@
  *
  */
 
-#include "glm/matrix.hpp"
 #ifdef USE_PYTHON
 #include <Python.h>
 #endif // USE_PYTHON
 
 #include "compat/coot-sysdep.h"
 
+#include "glm/matrix.hpp"
 #define GLM_ENABLE_EXPERIMENTAL // # for norm things
 // #include <glm/ext.hpp>
 #include <glm/gtx/string_cast.hpp>  // to_string()
@@ -58,6 +58,11 @@
 #include "vnc-vertex-to-generic-vertex.hh"
 
 #include "screendump-tga.hh"
+#include "widget-from-builder.hh"
+
+#include "utils/logging.hh"
+extern logging logger;
+
 
 enum {VIEW_CENTRAL_CUBE, ORIGIN_CUBE};
 
@@ -379,7 +384,7 @@ graphics_info_t::mouse_zoom_by_scale_factor_inner(double sf) {
    } else {
 
       // stabilize the scale factor
-      if (sf < 0.1) sf = 0.1;
+      if (sf < 0.5) sf = 0.5;
       if (sf > 2.0) sf = 2.0;
       graphics_info_t::eye_position.z *= sf;
 
@@ -1015,10 +1020,29 @@ graphics_info_t::draw_molecule_atom_labels(molecule_class_info_t &m,
    int n_symm_atoms_to_label = m.labelled_symm_atom_index_list.size();
 
    // std::cout << "draw_molecule_atom_labels " << n_atoms_to_label << " " << n_symm_atoms_to_label << std::endl;
-   if (n_atoms_to_label == 0 && n_symm_atoms_to_label == 0) return;
 
-   m.draw_atom_labels(brief_atom_labels_flag, seg_ids_in_atom_labels_flag,
-                      label_colour, mvp, view_rotation);
+   if (n_atoms_to_label == 0 && n_symm_atoms_to_label == 0) {
+   } else {
+      m.draw_atom_labels(brief_atom_labels_flag, seg_ids_in_atom_labels_flag,
+                         label_colour, mvp, view_rotation);
+   }
+
+   // this is draw_generic_texts() - but not in its own function
+
+   if (! generic_texts.empty()) {
+      auto atom_label_colour = label_colour;
+      for (unsigned int i=0; i<generic_texts.size(); i++) {
+         const coot::generic_text_object_t gto = generic_texts[i];
+         const std::string &label = gto.s;
+         glm::vec3 position(gto.x, gto.y, gto.z);
+         tmesh_for_labels.draw_atom_label(label, position, atom_label_colour,
+                                          &shader_for_atom_labels, mvp, view_rotation,
+                                          glm::vec4(background_colour, 1.0),
+                                          shader_do_depth_fog_flag,
+                                          perspective_projection_flag);
+      }
+   }
+
 
    glDisable(GL_BLEND);
 
@@ -2066,8 +2090,6 @@ graphics_info_t::draw_molecules_atom_labels() {
          }
       }
    }
-
-
 }
 
 
@@ -2138,9 +2160,24 @@ graphics_info_t::draw_environment_graphics_object() {
 }
 
 #include "molecular-mesh-generator.hh"
+#include "pulse-data.hh"
 
 void
 graphics_info_t::update_mesh_for_outline_of_active_residue(int imol, const coot::atom_spec_t &spec, int n_press) {
+
+   // if the range was not valid, but n_press was 5, we want some visual feedback - use
+   // the invalid residue pulse (maybe it needs a new name then?). It uses delete_item_pulse_centres
+   // for the centres of the pulses.
+   auto setup_invalid_residue_pulse_for_invalid_range_outine = [] () {
+      std::cout << "debug:: update_mesh_for_outline_of_active_residue: lambda start " << std::endl;
+      bool broken_line_mode = false;
+      lines_mesh_for_identification_pulse.setup_red_pulse(broken_line_mode);
+      pulse_data_t *pulse_data = new pulse_data_t(0, 12);
+      gpointer user_data = reinterpret_cast<void *>(pulse_data);
+      std::vector<glm::vec3> positions = { get_rotation_centre() };
+      delete_item_pulse_centres = positions;
+      gtk_widget_add_tick_callback(glareas[0], generic_pulse_function, user_data, NULL);
+   };
 
 
    if (is_valid_model_molecule(imol)) {
@@ -2153,13 +2190,43 @@ graphics_info_t::update_mesh_for_outline_of_active_residue(int imol, const coot:
             int bond_width = 9;
             int model_number = residue_p->GetModelNum();
             molecular_mesh_generator_t mmg;
+
+            // setup the range, if the user had defined one in this molecule
+            molecular_mesh_generator_t::range_t range;
+            int imol_1 = in_range_first_picked_atom.int_user_data;
+            int imol_2 = in_range_second_picked_atom.int_user_data;
+            if (imol_1 == imol_2) {
+               if (imol_1 == imol) {
+                  coot::atom_spec_t spec_1 = in_range_first_picked_atom;
+                  coot::atom_spec_t spec_2 = in_range_second_picked_atom;
+                  if (spec_1.chain_id == spec_2.chain_id) {
+                     int rn1 = spec_1.res_no;
+                     int rn2 = spec_2.res_no;
+                     if (rn2 < rn1) std::swap(rn1, rn2);
+                     range = molecular_mesh_generator_t::range_t(spec_1.chain_id, rn1, rn2);
+                  }
+               }
+            }
+
             std::pair<std::vector<s_generic_vertex>, std::vector<g_triangle> > p =
                mmg.get_molecular_triangles_mesh_for_active_residue(imol, mol, model_number, residue_p, Geom_p(),
-                                                                   bond_width, n_press);
+                                                                   bond_width, range, n_press);
+
+            // if the range was not valid, but n_press was 5, we want some visual feedback - use
+            // the invalid residue pulse (maybe it needs a new name then?) It uses delete_item_pulse_centres
+            // for the centres of the pulses
+            if (n_press == 5) {
+               if (! range.is_valid) {
+                  setup_invalid_residue_pulse_for_invalid_range_outine();
+               }
+            }
+
             mesh_for_outline_of_active_residue.clear();
-            mesh_for_outline_of_active_residue.import(p);
-            Material mat;
-            mesh_for_outline_of_active_residue.setup(mat);
+            if (!p.first.empty()) {
+               mesh_for_outline_of_active_residue.import(p);
+               Material mat;
+               mesh_for_outline_of_active_residue.setup(mat);
+            }
          }
       }
    }
@@ -5803,7 +5870,7 @@ graphics_info_t::setup_delete_item_pulse(mmdb::Residue *residue_p) {
    delete_item_pulse_centres = positions;
    gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
    bool broken_line_mode = true;
-   lines_mesh_for_delete_item_pulse.setup_pulse(broken_line_mode);
+   lines_mesh_for_delete_item_pulse.setup_red_pulse(broken_line_mode);
    gtk_widget_add_tick_callback(glareas[0], delete_item_pulse_func, user_data, NULL);
 
 };
@@ -5811,11 +5878,11 @@ graphics_info_t::setup_delete_item_pulse(mmdb::Residue *residue_p) {
 void
 graphics_info_t::setup_delete_residues_pulse(const std::vector<mmdb::Residue *> &residues) {
 
-   // next you use this functionn make it a member of graphics_info_t
+   // next you use this function make it a member of graphics_info_t
    // gboolean delete_item_pulse_func(GtkWidget *widget,
    //                                 GdkFrameClock *frame_clock,
    //                                 gpointer data)
-   // 
+   //
    auto delete_item_pulse_func = [] (GtkWidget *widget,
                                      GdkFrameClock *frame_clock,
                                      gpointer data) {
@@ -5846,15 +5913,12 @@ graphics_info_t::setup_delete_residues_pulse(const std::vector<mmdb::Residue *> 
    delete_item_pulse_centres = all_positions;
    gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
    bool broken_line_mode = true;
-   lines_mesh_for_delete_item_pulse.setup_pulse(broken_line_mode);
+   lines_mesh_for_delete_item_pulse.setup_red_pulse(broken_line_mode);
    gtk_widget_add_tick_callback(glareas[0], delete_item_pulse_func, user_data, NULL);
 
 };
 
 
-// I think that this function should be part of glarea_tick_func().
-// (bring glarea_tick_func() into graphics_info_t.)
-//
 // static
 gboolean
 graphics_info_t::invalid_residue_pulse_function(GtkWidget *widget,
@@ -5876,6 +5940,28 @@ graphics_info_t::invalid_residue_pulse_function(GtkWidget *widget,
    return gboolean(continue_status);
 }
 
+// static
+gboolean
+graphics_info_t::generic_pulse_function(GtkWidget *widget,
+                                        GdkFrameClock *frame_clock,
+                                        gpointer data) {
+
+   gboolean continue_status = 1;
+   pulse_data_t *pulse_data = reinterpret_cast<pulse_data_t *>(data);
+   pulse_data->n_pulse_steps += 1;
+   if (pulse_data->n_pulse_steps > pulse_data->n_pulse_steps_max) {
+      continue_status = 0;
+      lines_mesh_for_identification_pulse.clear();
+      delete_item_pulse_centres.clear();
+   } else {
+      float f = 1.03f;
+      lines_mesh_for_identification_pulse.update_buffers_by_resize(f);
+   }
+   graphics_draw();
+   return gboolean(continue_status);
+}
+
+
 void
 graphics_info_t::setup_invalid_residue_pulse(mmdb::Residue *residue_p) {
 
@@ -5885,7 +5971,7 @@ graphics_info_t::setup_invalid_residue_pulse(mmdb::Residue *residue_p) {
    delete_item_pulse_centres = residue_positions; // sneakily use a wrongly named function
    gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
    bool broken_line_mode = false;
-   lines_mesh_for_identification_pulse.setup_pulse(broken_line_mode);
+   lines_mesh_for_identification_pulse.setup_red_pulse(broken_line_mode);
    gtk_widget_add_tick_callback(glareas[0], invalid_residue_pulse_function, user_data, NULL);
 
 }
@@ -6205,8 +6291,11 @@ graphics_info_t::idle_contour_function(gpointer data) {
 	   continue_status = 0;
            float cl = g.molecules[imol].contour_level;
            float r = cl/map_rmsd;
-           std::cout << "DEBUG:: idle_contour_function() imol: " << imol << " contour level: "
-                     << g.molecules[imol].contour_level << " n-rmsd: " << r << std::endl;
+           // std::cout << "DEBUG:: idle_contour_function() imol: " << imol << " contour level: "
+	   // << g.molecules[imol].contour_level << " n-rmsd: " << r << std::endl;
+	   logger.log(log_t::DEBUG, logging::function_name_t("idle_contour_function"),
+		      {imol, "contour_level", g.molecules[imol].contour_level, "n-rmsd:",
+		       r});
            g.set_density_level_string(imol, g.molecules[imol].contour_level);
            std::string s = "Map " + std::to_string(imol) + "  contour_level " +
               coot::util::float_to_string_using_dec_pl(cl, 3) + "  n-rmsd: " +
@@ -6274,7 +6363,7 @@ graphics_info_t::setup_key_bindings() {
    auto l6 = []() {
 
                 if (do_tick_spin) {
-                  std::cout << "removing tick spin flag" << std::endl;
+                   std::cout << "removing tick spin flag" << std::endl;
                    do_tick_spin = false;
                 } else {
                    std::cout << "adding tick spin flag A" << std::endl;
@@ -6529,7 +6618,7 @@ graphics_info_t::setup_key_bindings() {
          if (! tick_function_is_active()) {
             int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
          }
-         outline_for_active_residue_frame_count = 30;
+         outline_for_active_residue_frame_count = 40;
          do_tick_outline_for_active_residue = true;
       }
       return gboolean(TRUE);
@@ -6594,8 +6683,28 @@ graphics_info_t::setup_key_bindings() {
    };
 
    auto l41 = [] () {
-      box_radius_xray *= (1.0/1.15);
-      box_radius_em *= (1.0/1.15);
+      bool is_all_em   = true;
+      bool is_all_xray = true;
+      for (int ii=0; ii<n_molecules(); ii++) {
+         if (is_valid_map_molecule(ii)) {
+            if (molecules[ii].is_EM_map()) {
+               is_all_xray = false;
+            } else {
+               is_all_em = false;
+            }
+         }
+      }
+      if (is_all_xray)
+         box_radius_xray *= (1.0/1.15);
+      if (is_all_em)
+         box_radius_em   *= (1.0/1.15);
+
+      // 20250531-PE as it used to be:
+      if ((! is_all_em) && (! is_all_em)) {
+         box_radius_xray *= (1.0/1.15);
+         box_radius_em   *= (1.0/1.15);
+      }
+
       // is there an "update maps" function?
       for (int ii=0; ii<n_molecules(); ii++) {
          if (is_valid_map_molecule(ii))
@@ -6947,10 +7056,13 @@ graphics_info_t::contour_level_scroll_scrollable_map(int direction) {
       if (direction ==  1) molecules[imol_scroll].pending_contour_level_change_count--;
       if (direction == -1) molecules[imol_scroll].pending_contour_level_change_count++;
 
-      std::cout << "INFO:: contour level for map " << imol_scroll << " is "
-                << molecules[imol_scroll].contour_level
-                << " pending: " << molecules[imol_scroll].pending_contour_level_change_count
-                << std::endl;
+      // std::cout << "INFO:: contour level for map " << imol_scroll << " is "
+      //           << molecules[imol_scroll].contour_level
+      //           << " pending: " << molecules[imol_scroll].pending_contour_level_change_count
+      //           << std::endl;
+      logger.log(log_t::INFO, "contour level for map", imol_scroll, "is",
+		 molecules[imol_scroll].contour_level, "pending",
+		 molecules[imol_scroll].pending_contour_level_change_count);
 
       set_density_level_string(imol_scroll, molecules[imol_scroll].contour_level);
       display_density_level_this_image = 1;
@@ -6958,8 +7070,6 @@ graphics_info_t::contour_level_scroll_scrollable_map(int direction) {
       graphics_draw(); // queue
    }
 }
-
-#include "widget-from-builder.hh"
 
 //static
 void

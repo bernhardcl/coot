@@ -169,7 +169,6 @@ graphics_info_t::stop_refinement_internal() {
    if (continue_threaded_refinement_loop) {
       continue_threaded_refinement_loop = false;
       threaded_refinement_needs_to_clear_up = true;
-      std::cout << "..................................... clear HUD buttons! " << std::endl;
       clear_hud_buttons(); // if a refinement was running and Esc was pressed, here is where we catch it.
    }
    // now wait until refinement stops... (before we call clear_up_moving_atoms (from the
@@ -370,6 +369,28 @@ graphics_info_t::copy_mol_and_refine(int imol_for_atoms,
 
    return rr;
 }
+
+void
+graphics_info_t::show_missing_refinement_residues_dialog(const std::vector<std::string> &res_names,
+							 bool run_get_monomer_post_fetch_flag) {
+
+   GtkWidget *dialog = widget_from_builder("download_monomers_dialog");
+   gtk_widget_set_visible(dialog, TRUE);
+   GtkWidget *vbox = widget_from_builder("download_monomers_dialog_vbox_inner");
+   gtk_widget_set_visible(vbox, TRUE);
+   clear_out_container(vbox);
+   for (const auto &rn : res_names) {
+      GtkWidget *label = gtk_label_new(rn.c_str());
+      char* ccx = new char[rn.size() + 1];
+      for (unsigned int ii=0; ii<=rn.size(); ii++) ccx[ii] = 0;
+      std::copy(rn.begin(), rn.end(), ccx);
+      g_object_set_data(G_OBJECT(label), "comp_id", ccx); // read in on_download_monomers_ok_button_clicked()
+      gtk_box_append(GTK_BOX(vbox), label);
+   }
+   g_object_set_data(G_OBJECT(dialog), "run_get_monomer_post_fetch_flag",
+		     GINT_TO_POINTER(run_get_monomer_post_fetch_flag));
+}
+
 
 // static
 void
@@ -1477,6 +1498,13 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 					      mmdb::Manager *mol,
 					      bool use_map_flag) {
 
+   if (false) {
+      std::cout << "debug:: ----- start generate_molecule_and_refine() " << std::endl;
+      for (unsigned int i=0; i<residues_in.size(); i++) {
+	 std::cout << "   residue " << i << " of residues_in is " << residues_in[i] << std::endl;
+      }
+   }
+
 
    auto tp_0 = std::chrono::high_resolution_clock::now();
 
@@ -1548,10 +1576,15 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 		  int nres = chain_p->GetNumberOfResidues();
 		  for (int ires=0; ires<nres; ires++) {
 		     mmdb::Residue *residue_p = chain_p->GetResidue(ires);
-		     std::cout << "residues_mol_and_res_vec mol:   residue "
-			       << coot::residue_spec_t(residue_p) << " residue "
-			       << residue_p << " chain " << residue_p->chain << " index "
-			       << residue_p->index << std::endl;
+		     if (residue_p) {
+			std::cout << "residues_mol_and_res_vec mol:   residue "
+				  << coot::residue_spec_t(residue_p) << " residue "
+				  << residue_p << " chain " << residue_p->chain << " index "
+				  << residue_p->index << std::endl;
+		     } else {
+			std::cout << "residues_mol_and_res_vec: residue " << ires << " was null"
+				  << std::endl;
+		     }
 		  }
 	       }
 	    }
@@ -1620,7 +1653,8 @@ graphics_info_t::generate_molecule_and_refine(int imol,
 	 std::pair<int, std::vector<std::string> > icheck =
 	    check_dictionary_for_residue_restraints(imol, residues);
 	 if (icheck.first == 0) {
-	    info_dialog_missing_refinement_residues(icheck.second);
+	    // info_dialog_missing_refinement_residues(icheck.second);
+	    show_missing_refinement_residues_dialog(icheck.second, false);
 	 }
       }
    }
@@ -1936,6 +1970,10 @@ graphics_info_t::check_dictionary_for_residue_restraints(int imol, const std::ve
    std::vector<std::string> types;
    for (unsigned int i=0; i<residues.size(); i++)
       types.push_back(residues[i]->GetResName());
+
+   if (false)
+     for (unsigned int i=0; i<types.size(); i++)
+       std::cout << " type :" << types[i] << ":" << std::endl;
 
    bool r_status = geom_p->have_restraints_dictionary_for_residue_types(types, imol, cif_dictionary_read_number++);
    if (! r_status) {
@@ -2637,7 +2675,7 @@ graphics_info_t::refine(int imol, short int auto_range_flag, int i_atom_no_1, in
    if (imol_map == -1) { // magic number check,
       // if not -1, then it has been set by user
 
-      show_select_map_dialog();
+      show_select_map_frame();
 
    } else {
 
@@ -2783,7 +2821,7 @@ graphics_info_t::refine_residue_range(int imol,
 
    if (imol_map == -1) { // magic number check,
       // if not -1, then it has been set by user
-      show_select_map_dialog();
+      show_select_map_frame();
 
    } else {
 
@@ -2851,7 +2889,7 @@ graphics_info_t::refine_residue_range(int imol,
 	 } else {
 	    std::cout << "Can't refine to a closed map.  Choose another map"
 		      << std::endl;
-	    show_select_map_dialog();
+	    show_select_map_frame();
 	 }
       }
    } // same chains test
@@ -2966,7 +3004,7 @@ graphics_info_t::execute_rigid_body_refine(short int auto_range_flag) {
       //
       std::cout << "Please set a map against which the refinement should occur"
 		<< std::endl;
-      show_select_map_dialog();  // protected
+      show_select_map_frame();  // protected
    } else {
 
       coot::minimol::molecule mol(molecules[imol_rigid_body_refine].atom_sel.mol);
@@ -3760,7 +3798,7 @@ graphics_info_t::execute_simple_nucleotide_addition(int imol, const std::string 
 void
 graphics_info_t::execute_rotate_translate_ready() { // manual movement
 
-   std::cout << "execute_rotate_translate_ready() --- start ---" << std::endl;
+   // std::cout << "execute_rotate_translate_ready() --- start ---" << std::endl;
 
    // now we are called by chain and molecule pick (as well as the old
    // zone pick).
@@ -4758,14 +4796,34 @@ graphics_info_t::drag_intermediate_atom(const coot::atom_spec_t &atom_spec, cons
 
 // static
 void
-graphics_info_t::mark_atom_as_fixed(int imol, const coot::atom_spec_t &atom_spec, bool state) {
+graphics_info_t::while_moving_atoms_active_mark_atom_as_fixed(int imol, const coot::atom_spec_t &atom_spec, bool state) {
 
-   std::cout << "Here in mark_atom_as_fixed() 1 - " << moving_atoms_asc << std::endl;
+   std::cout << "Here in while_moving_atoms_active_mark_atom_as_fixed() --- start --- maa: " << moving_atoms_asc << std::endl;
 
    // 20211202-PE I don't understand how this test works or why it is here.
-   if (!moving_atoms_asc) {
-      std::cout << "WARNING:: No intermediate atoms - fail" << std::endl;
+   if (moving_atoms_asc) {
+      std::cout << "Here in while_moving_atoms_active_mark_atom_as_fixed() 2" << std::endl;
+      if ((imol >=0) && (imol < n_molecules())) {
+         std::cout << "Here in while_moving_atoms_active_mark_atom_as_fixed() 3" << std::endl;
+         if (graphics_info_t::molecules[imol].has_model()) {
+            std::cout << "Here in while_moving_atoms_active_mark_atom_as_fixed() 4" << std::endl;
+            graphics_info_t::molecules[imol].mark_atom_as_fixed(atom_spec, state);
+            graphics_info_t g;
+            g.setup_draw_for_anchored_atom_markers();
+         }
+      }
    } else {
+      std::cout << "WARNING:: in while_moving_atoms_active_mark_atom_as_fixed() No intermediate atoms - fail" << std::endl;
+   }
+}
+
+// static
+void
+graphics_info_t::mark_atom_as_fixed(int imol, const coot::atom_spec_t &atom_spec, bool state) {
+
+   std::cout << "debug:: mark_atom_as_fixed() --- start --- maa: " << moving_atoms_asc << std::endl;
+
+   if (true) {
       std::cout << "Here in mark_atom_as_fixed() 2" << std::endl;
       if ((imol >=0) && (imol < n_molecules())) {
          std::cout << "Here in mark_atom_as_fixed() 3" << std::endl;
@@ -5060,30 +5118,26 @@ graphics_info_t::place_dummy_atom_at_pointer() {
 void
 graphics_info_t::place_typed_atom_at_pointer(const std::string &type) {
 
-   int imol = user_pointer_atom_molecule;
-   if (! is_valid_model_molecule(imol)) {
-      // try to find one
-      // imol = get_latest_model_molecule(); 20230519-PE
-      // 20230519-PE that's not good - let's try something else.
-      imol = get_biggest_model_molecule();
-   }
-
-   if (is_valid_model_molecule(imol)) {
-      if (molecules[imol].is_displayed_p()) {
-         std::pair<bool, std::string > status_mess =
-            molecules[imol].add_typed_pointer_atom(RotationCentre(), type); // update bonds
-         update_environment_distances_by_rotation_centre_maybe(imol);
-         graphics_draw();
-         if (status_mess.first == false) {
-            std::string m = "WARNING:: disallowed ";
-            m += status_mess.second;
-            info_dialog(m);
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+   if (pp.first) {
+      int imol = pp.second.first;
+      if (is_valid_model_molecule(imol)) {
+         if (molecules[imol].is_displayed_p()) {
+            std::pair<bool, std::string > status_mess =
+               molecules[imol].add_typed_pointer_atom(RotationCentre(), type); // update bonds
+            update_environment_distances_by_rotation_centre_maybe(imol);
+            graphics_draw();
+            if (status_mess.first == false) {
+               std::string m = "WARNING:: disallowed ";
+               m += status_mess.second;
+               info_dialog(m);
+            }
+         } else {
+            std::string message = "WARNING:: disallowed addition of ";
+            message += type;
+            message += "\nas the target molecule is not displayed";
+            info_dialog(message);
          }
-      } else {
-         std::string message = "WARNING:: disallowed addition of ";
-         message += type;
-         message += "\nas the target molecule is not displayed";
-         info_dialog(message);
       }
    }
 }
@@ -5985,6 +6039,6 @@ graphics_info_t::auto_fit_rotamer_ng(int imol, const coot::residue_spec_t &res_s
       graphics_draw();
       run_post_manipulation_hook(imol, 0);
    } else {
-      show_select_map_dialog();
+      show_select_map_frame();
    }
 }

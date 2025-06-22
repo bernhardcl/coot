@@ -456,8 +456,10 @@ molecules_container_t::minimize_energy(int imol, const std::string &atom_selecti
       unsigned int smoothness_factor = 1;
       bool show_atoms_as_aniso_flag = false;
       bool show_aniso_atoms_as_ortep = false;
+      float aniso_probability = 0.5f;
       im = molecules[imol].get_bonds_mesh_instanced(mode, &geom, true, 0.12, 1.4,
                                                     show_atoms_as_aniso_flag,
+                                                    aniso_probability,
                                                     show_aniso_atoms_as_ortep,
                                                     smoothness_factor,
                                                     draw_hydrogen_atoms_flag, draw_missing_residue_loops_flag);
@@ -833,7 +835,6 @@ std::string
 molecules_container_t::get_svg_for_2d_ligand_environment_view(int imol,
                                                               const std::string &residue_cid,
                                                               bool add_key) {
-
    float radius = 4.2; // pass this
    std::string s;
    if (is_valid_model_molecule(imol)) {

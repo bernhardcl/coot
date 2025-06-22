@@ -48,8 +48,10 @@ phi-psi-prob.hh          saved-strand-info.hh       simple-molecule.hh          
 generic-3d-lines.hh      cell.hh                    coot-simple-molecule.hh                \
 api-cell.hh              bond-colour.hh             make-instanced-graphical-bonds.hh      \
 symmetry-info.hh         instancing.hh              merge-molecule-results-info-t.hh       \
-coot-molecule-bonds.hh   clipper-ccp4-map-file-wrapper.hh blender-mesh.hh plain-atom-overlap.hh \
-ncs-ghosts.hh            moved-atom.hh              moved-residue.hh
+coot-molecule-bonds.hh   clipper-ccp4-map-file-wrapper.hh blender-mesh.hh                  \
+ncs-ghosts.hh            moved-atom.hh              moved-residue.hh \
+filo-tests.hh            plain-atom-overlap.hh      test-molecules-container.hh \
+lucrezia-tests.hh        user-defined-colour-table.hh positioned-atom-spec.hh
 
 lib_LTLIBRARIES=libcoot-api.la
 
@@ -65,7 +67,7 @@ coot-molecule-refine.cc      molecules-container-superpose.cc                 ri
 moorhen-h-bonds.cc           molecules-container-bucca-ml-growing.cc          instancing.cc  \
 molecules-container-maps.cc  coot-molecule-change-chain-id.cc                 coot-molecule-modelling.cc \
 blender-mesh.cc              coot-molecule-blender.cc                         molecules-container-blender.cc \
-ghost-molecule-display.cc
+ghost-molecule-display.cc    model-analysis.cc
 
 libcoot_api_la_LDFLAGS = $(SHARED_LDFLAGS)            \
    $(top_builddir)/MoleculesToTriangles/CXXClasses/libMoleculesToTrianglesCXXClasses.la \

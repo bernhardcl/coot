@@ -4978,7 +4978,7 @@ int test_gltf_export(molecules_container_t &mc) {
    float contour_level = 0.4;
    std::cout << "-------------------------------------------------- map mesh " << std::endl;
    coot::simple_mesh_t map_mesh = mc.get_map_contours_mesh(imol_map, p.x(), p.y(), p.z(), radius, contour_level);
-   map_mesh.export_to_gltf("map-around-ligand.glb", true);
+   map_mesh.export_to_gltf("map-around-ligand.glb", 0.5, 0.5, true);
 
    std::cout << "-------------------------------------------------- ligand mesh " << std::endl;
 
@@ -4988,7 +4988,7 @@ int test_gltf_export(molecules_container_t &mc) {
    std::cout << "test_gltf_export() imol_frag " << imol_frag << std::endl;
    coot::instanced_mesh_t im    = mc.get_bonds_mesh_instanced(imol_frag, mode, true, 0.1, 1.0, false, false, true, 1);
    coot::simple_mesh_t sm_lig = coot::instanced_mesh_to_simple_mesh(im);
-   sm_lig.export_to_gltf("lig.glb", true);
+   sm_lig.export_to_gltf("lig.glb", 0.5, 0.5, true);
 
    std::cout << "-------------------------------------------------- neighbour mesh " << std::endl;
    std::vector<coot::residue_spec_t> neighbs = mc.get_residues_near_residue(imol, "//A/1299", 4.2);
@@ -4996,7 +4996,7 @@ int test_gltf_export(molecules_container_t &mc) {
    mc.set_draw_missing_residue_loops(false);
    coot::instanced_mesh_t im_neighbs = mc.get_bonds_mesh_for_selection_instanced(imol, multi_cid, mode, true, 0.15, 1.0, false, false, true, 1);
    coot::simple_mesh_t sm_neighbs = coot::instanced_mesh_to_simple_mesh(im_neighbs);
-   sm_neighbs.export_to_gltf("neighbs.glb", true);
+   sm_neighbs.export_to_gltf("neighbs.glb", 0.5f, 0.5f, true);
 
    struct stat buf_1;
    int istat_1 = stat("lig.glb", &buf_1);
@@ -5025,7 +5025,7 @@ int test_gltf_export_via_api(molecules_container_t &mc) {
    int status = 0;
 
    mc.set_use_gemmi(true); // 20240727-PE there seems to be a memory problem when using gemmi atm
-                            // so for now, let's not use gemmi for the tests.
+                           // so for now, let's not use gemmi for the tests.
 
    int imol     = mc.read_pdb(reference_data("2vtq.cif"));
    int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
@@ -5070,7 +5070,7 @@ int test_5char_ligand_merge(molecules_container_t &mc) {
    int status = 0;
    int imol_enc = coot::protein_geometry::IMOL_ENC_ANY;
 
-   int imol     = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
    mc.import_cif_dictionary(reference_data("acedrg-7z-new.cif"), imol_enc);
    int imol_lig = mc.get_monomer("7ZTVU");
    if (mc.is_valid_model_molecule(imol)) {
@@ -6336,6 +6336,8 @@ int test_scale_map(molecules_container_t &mc) {
       float f = r_2 / r_1;
       if (close_float(f, sf))
          status = 1;
+   } else {
+      std::cout << "ERROR:: failed to read moorhen-tutorial-map-number-1.mtz" << std::endl;
    }
    return status;
 }
@@ -6468,6 +6470,96 @@ int test_delete_all_carbohydrate(molecules_container_t &mc) {
    }
    return status;
 }
+
+int test_map_vertices_histogram(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   auto make_n_stars = [] (int counts) {
+      std::string n_stars = "";
+      for (int i=0; i<counts; i+=2000)
+	 n_stars += "*";
+      return n_stars;
+   };
+
+   int imol_map_1 = mc.read_ccp4_map(reference_data("emd_16890.map"), false);
+   int imol_map_2 = mc.read_ccp4_map(reference_data("scale_res_emd_16890.mrc"), false);
+   if (mc.is_valid_map_molecule(imol_map_1)) {
+      if (mc.is_valid_map_molecule(imol_map_2)) {
+	 unsigned int n_bins = 40;
+	 coot::molecule_t::histogram_info_t histo =
+	    mc.get_map_vertices_histogram(imol_map_1, imol_map_2,
+					  160, 160, 160,
+					  100, 0.16, n_bins);
+	 unsigned int n_bins_hist = histo.counts.size();
+	 std::cout << "n_bins_hist " << n_bins_hist << std::endl;
+	 for (unsigned int i=0; i<n_bins_hist; i++) {
+	    int counts = histo.counts[i];
+	    float f_min = histo.base + static_cast<float>(i)   * histo.bin_width;
+	    float f_max = histo.base + static_cast<float>(i+1) * histo.bin_width;
+	    std::string n_stars = make_n_stars(counts);
+	    std::cout << "   " << std::setw(9) << f_min << " " << std::setw(9) << f_max
+		      << " " << std::setw(6) << counts << " " << n_stars << std::endl;
+	    if (n_bins_hist >= 40)
+	       if (counts > 100000)
+		  status = 1;
+	 }
+      }
+   }
+   return status;
+}
+
+int test_non_XYZ_EM_map_status(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   // the test here is that we shouldd be seeing zero vertices outside the unit cell box
+   // when the map is an EM map.
+
+   int imol = mc.read_ccp4_map("initial_map_clement.ccp4", 0);
+   if (mc.is_valid_map_molecule(imol)) {
+      bool em_status = mc.is_EM_map(imol);
+      if (em_status) {
+         float radius = 20.0;
+         float contour_level = 0.1;
+         coot::simple_mesh_t map_mesh = mc.get_map_contours_mesh(imol, -111, 111, 111, radius, contour_level);
+         std::cout << "n-vertices: " << map_mesh.vertices.size() << std::endl;
+         std::cout << "n-triangles: " << map_mesh.triangles.size() << std::endl;
+         if (map_mesh.triangles.size() == 0)
+            status = 1;
+      } else {
+         std::cout << "ERROR:: in " << __FUNCTION__ << " the EM map is marked as a non-EM map" << std::endl;
+      }
+   } else {
+      std::cout << "Failed to read initial_map_clement.ccp4 " << std::endl;
+   }
+
+   return status;
+}
+
+int test_radius_of_gyration(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   if (mc.is_valid_model_molecule(imol)) {
+      double rg = mc.get_radius_of_gyration(imol);
+      std::cout << "Radius of gyration: " << rg << std::endl;
+      // Expect a positive value for a valid molecule
+      if (rg > 0.0 && rg < 100.0)
+         status = 1;
+      else
+         std::cout << "Unexpected radius of gyration value: " << rg << std::endl;
+   } else {
+      std::cout << "Invalid model molecule for radius of gyration test." << std::endl;
+   }
+   mc.close_molecule(imol);
+   return status;
+}
+
 
 int test_template(molecules_container_t &mc) {
 
@@ -6789,16 +6881,19 @@ int main(int argc, char **argv) {
          // status += run_test(test_dictionary_atom_name_match, "dictionary atom names match", mc);
          // status += run_test(test_average_position_functions, "average position functions", mc);
 
-         status += run_test(test_get_torsion, "get_torsion", mc);
-         status += run_test(test_set_occupancy, "set occupancy", mc);
-         status += run_test(test_missing_residues, "missing residues", mc);
-         status += run_test(test_mutation_info, "mutation info", mc);
-         status += run_test(test_scale_map, "scale_map", mc);
-         status += run_test(test_add_RNA_residue, "add RNA residue", mc);
-         status += run_test(test_HOLE, "HOLE", mc);
-         status += run_test(test_is_nucleic_acid, "is nucleic acid?", mc);
-         status += run_test(test_delete_all_carbohydrate, "delete all carbohydrate", mc);
-         status += run_test(test_instanced_goodsell_style_mesh, "instanced goodsell style mesh", mc);
+         // status += run_test(test_get_torsion, "get_torsion", mc);
+         // status += run_test(test_set_occupancy, "set occupancy", mc);
+         // status += run_test(test_missing_residues, "missing residues", mc);
+         // status += run_test(test_mutation_info, "mutation info", mc);
+         // status += run_test(test_scale_map, "scale_map", mc);
+         // status += run_test(test_add_RNA_residue, "add RNA residue", mc);
+         // status += run_test(test_HOLE, "HOLE", mc);
+         // status += run_test(test_is_nucleic_acid, "is nucleic acid?", mc);
+         // status += run_test(test_delete_all_carbohydrate, "delete all carbohydrate", mc);
+         // status += run_test(test_instanced_goodsell_style_mesh, "instanced goodsell style mesh", mc);
+         // status += run_test(test_map_vertices_histogram, "map vertices histogram", mc);
+         // status += run_test(test_non_XYZ_EM_map_status, "non-XYZ map status", mc);
+         status += run_test(test_radius_of_gyration, "radius of gyration", mc);
          if (status == n_tests) all_tests_status = 0;
 
          print_results_summary();

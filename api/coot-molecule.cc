@@ -354,11 +354,32 @@ coot::molecule_t::get_number_of_hydrogen_atoms() const {
 float
 coot::molecule_t::get_molecule_diameter() const {
 
+   // sample atom pairs
+
    float f = -1;
    if (atom_sel.mol) {
       f = coot::get_molecule_diameter(atom_sel);
    }
    return f;
+}
+
+//! Get Radius of Gyration
+//!
+//! @param imol is the model molecule index
+//!
+//! @return the molecule centre. If the number is less than zero, there
+//! was a problem finding the molecule or atoms.
+double
+coot::molecule_t::get_radius_of_gyration() const {
+
+   double d = -1.0;
+   if (is_valid_model_molecule()) {
+      std::pair<bool, double> rgp = coot::radius_of_gyration(atom_sel.mol);
+      if (rgp.first) {
+	 d = rgp.second;
+      }
+   }
+   return d;
 }
 
 
@@ -4014,6 +4035,21 @@ coot::molecule_t::fill_partial_residues(const clipper::Xmap<float> &xmap, protei
    return status;
 }
 
+
+#include "ideal/add-linked-cho.hh"
+void
+coot::molecule_t::add_named_glyco_tree(const std::string &glycosylation_name, const std::string &chain_id, int res_no,
+                                       const clipper::Xmap<float> &xmap,
+                                       coot::protein_geometry *geom) {
+
+   // the atom selection gets updated.
+   coot::cho::add_named_glyco_tree(glycosylation_name, &atom_sel, imol_no,
+                                   xmap, geom, chain_id, res_no);
+
+}
+
+
+
 // --------------- rigid body fit
 #include "rigid-body-fit.hh"
 int
@@ -4280,8 +4316,11 @@ coot::molecule_t::add_target_position_restraint_and_refine(const std::string &at
    unsigned int smoothness_factor = 1;
    bool show_atoms_as_aniso_flag = false;
    bool show_aniso_atoms_as_ortep_flag = false;
+   float aniso_probability = 0.5f;
    m = get_bonds_mesh_instanced(mode, geom_p, true, 0.1, 1.4,
-                                show_atoms_as_aniso_flag, show_aniso_atoms_as_ortep_flag,
+                                show_atoms_as_aniso_flag,
+                                aniso_probability,
+                                show_aniso_atoms_as_ortep_flag,
                                 smoothness_factor, true, true);
    return m;
 
@@ -4570,7 +4609,7 @@ coot::molecule_t::export_map_molecule_as_gltf(clipper::Coord_orth &p, float radi
 
    coot::simple_mesh_t map_mesh = get_map_contours_mesh(p, radius, contour_level, false, nullptr);
    bool as_binary = true; // test the extension of file_name
-   map_mesh.export_to_gltf(file_name, as_binary);
+   map_mesh.export_to_gltf(file_name, gltf_pbr_roughness, gltf_pbr_metalicity, as_binary);
 
 }
 
@@ -4596,7 +4635,7 @@ coot::molecule_t::export_model_molecule_as_gltf(const std::string &mode,
 
    coot::simple_mesh_t sm = coot::instanced_mesh_to_simple_mesh(im);
    bool as_binary = true; // test the extension of file_name
-   sm.export_to_gltf(file_name, as_binary);
+   sm.export_to_gltf(file_name, gltf_pbr_roughness, gltf_pbr_metalicity, as_binary);
 
 }
 
@@ -4608,7 +4647,7 @@ coot::molecule_t::export_molecular_representation_as_gltf(const std::string &ato
 
    coot::simple_mesh_t sm = get_molecular_representation_mesh(atom_selection_cid, colour_scheme, style, secondary_structure_usage_flag);
    bool as_binary = true; // test the extension of file_name
-   sm.export_to_gltf(file_name, as_binary);
+   sm.export_to_gltf(file_name, gltf_pbr_roughness, gltf_pbr_metalicity, as_binary);
 }
 
 void
@@ -4618,7 +4657,7 @@ coot::molecule_t::export_chemical_features_as_gltf(const std::string &cid,
 
    coot::simple_mesh_t sm = get_chemical_features_mesh(cid, geom);
    bool as_binary = true; // test the extension of file_name
-   sm.export_to_gltf(file_name, as_binary);
+   sm.export_to_gltf(file_name, gltf_pbr_roughness, gltf_pbr_metalicity, as_binary);
 }
 
 
@@ -5188,3 +5227,4 @@ coot::molecule_t::set_temperature_factors_using_cid(const std::string &cid, floa
       atom_sel.mol->DeleteSelection(selHnd);
    }
 }
+

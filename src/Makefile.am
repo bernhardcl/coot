@@ -147,7 +147,7 @@ coot_wrap_guile_pre.cc:      $(top_srcdir)/src/c-interface.h    \
                              $(top_srcdir)/src/c-interface-refine.hh \
                              $(top_srcdir)/src/c-interface-ligands-swig.hh \
                              $(top_srcdir)/src/c-interface-generic-objects.h \
-                             $(top_srcdir)/src/cfc.hh \
+                             $(top_srcdir)/src/pythonic-cfc.hh \
                              $(top_srcdir)/src/curlew.h \
                              $(top_srcdir)/src/curlew.hh \
                              $(top_srcdir)/src/validation.hh \
@@ -176,7 +176,7 @@ coot_wrap_python_pre.cc: $(top_srcdir)/src/c-interface.h      \
                          $(top_srcdir)/src/c-interface-refine.hh \
                          $(top_srcdir)/src/c-interface-ligands-swig.hh \
                          $(top_srcdir)/src/c-interface-generic-objects.h \
-                         $(top_srcdir)/src/cfc.hh \
+                         $(top_srcdir)/src/pythonic-cfc.hh \
                          $(top_srcdir)/src/curlew.h \
                          $(top_srcdir)/src/curlew.hh \
                          $(top_srcdir)/src/validation.hh \
@@ -321,7 +321,7 @@ endif
 
 dist_bin_SCRIPTS = coot coot-density-score-by-residue
 
-check_PROGRAMS = test-coot-align test-cholesky
+check_PROGRAMS = test-coot-align test-cholesky test-tubular-spline
 
 #coot_fix_nomenclature_errors_SOURCES = \
 #	fix-nomenclature.cc    \
@@ -512,9 +512,13 @@ libcootsumo_la_SOURCES = \
 	cc-interface-user-defined-atom-colours.cc \
 	cc-interface-molecular-representation.hh  \
 	canvas-fixes.hh          \
-	cfc.cc cfc.hh            \
+	pythonic-cfc.cc pythonic-cfc.hh            \
 	cfc-widgets.hh           \
 	cfc-widgets-c-interface.h \
+	cfc-2025.cc              \
+	cfc-2025.hh              \
+	cfc-gui.cc               \
+	cfc-gui.hh               \
 	change-dir.cc		 \
 	change-dir.hh		 \
 	cmtz-interface-gui.hh	 \
@@ -626,6 +630,7 @@ libcootsumo_la_SOURCES = \
 	graphics-info-render-scene.cc \
 	graphics-info-residues.cc     \
 	graphics-info-refine.cc	 \
+	graphics-info-restraints-editor.cc \
 	graphics-info-scripting.cc	\
 	graphics-info-state.cc	 \
 	graphics-info-statics.cc \
@@ -720,10 +725,12 @@ libcootsumo_la_SOURCES = \
 	molecular-mesh-generator.hh \
 	mtz-column-auto-read.hh  \
 	named-rotamer-score.hh   \
+	new-molecule-by-symmetry-matrix.hh \
 	nsv.hh                   \
 	obj_loader.h obj_loader.cc \
 	pisa-interface.hh	 \
-	pick.hh pick.cc	 \
+	pisa-internal.hh         \
+	pick.hh pick.cc	         \
 	positioned-widgets.h     \
 	positron-plot.cc         \
 	pre-load.hh              \
@@ -927,6 +934,11 @@ test_cholesky_LDADD =	\
 	$(top_builddir)/utils/libcoot-utils.la            \
         $(RDKIT_LIBS) \
 	$(CLIPPER_LIBS) $(MMDB_LIBS) $(gsl_LIBS)
+
+test_tubular_spline_SOURCES = test-tubular-spline.cc
+test_tubular_spline_LDADD = \
+	$(top_builddir)/coot-utils/libcoot-coord-utils.la \
+	$(top_builddir)/MoleculesToTriangles/CXXClasses/libMoleculesToTrianglesCXXClasses.la
 
 # testmap_SOURCES = testmap.cc xmap-interface.cc
 # testmap_LDADD = $(COOT_EXTRA_LIBS) $(SURFACE_LIB) $(CLIPPER_LIBS)

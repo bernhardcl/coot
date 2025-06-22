@@ -26,7 +26,7 @@ dnl
 dnl Process this file with autoconf to produce a configure script.
 
 
-AC_INIT([coot],[1.1.14])
+AC_INIT([coot],[1.1.17])
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -528,7 +528,6 @@ dnl Set PACKAGE_LOCALE_DIR in config.h.
 AC_CONFIG_FILES([
 Makefile
 macros/Makefile
-pdb-templates/Makefile
 scheme/Makefile
 python/Makefile
 compat/Makefile
@@ -557,10 +556,13 @@ doc/Makefile
 validation-graphs/Makefile
 python/coot_load_modules.py
 data/Makefile
-data/rama-coeffs/Makefile
-data/metal/Makefile
 data/cho-models/Makefile
 data/cho-acedrg/Makefile
+data/cho-links/Makefile
+data/pdb-templates/Makefile
+data/rama-coeffs/Makefile
+data/metal/Makefile
+monomers/Makefile
 glTF/Makefile
 pixmaps/Makefile
 pixmaps/icons/Makefile
@@ -568,6 +570,7 @@ textures/Makefile
 sounds/Makefile
 rama-data/Makefile
 man/Makefile
+reference-structures/Makefile
 api/Makefile
 pli/Makefile
 fonts/Makefile

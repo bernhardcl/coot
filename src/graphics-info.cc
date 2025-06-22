@@ -315,7 +315,7 @@ graphics_info_t::get_biggest_model_molecule() {
    int n = n_molecules();
    for(int ii=0; ii<n; ii++) {
       if (is_valid_model_molecule(ii)) {
-         int n_atoms_mol = molecules[imol].atom_sel.n_selected_atoms;
+         int n_atoms_mol = molecules[ii].atom_sel.n_selected_atoms;
          if (n_atoms_mol > n_atoms_max) {
             imol = ii;
             n_atoms_max = n_atoms_mol;
@@ -894,7 +894,6 @@ graphics_info_t::get_closest_atom() const {
    return std::pair<int, int>(index_close, imol_close);
 }
 
-#ifndef EMSCRIPTEN // 20220724-PE for now (just to get things compiling - should be restored)
 void
 graphics_info_t::setRotationCentre(const symm_atom_info_t &symm_atom_info) {
 
@@ -915,7 +914,6 @@ graphics_info_t::setRotationCentre(const symm_atom_info_t &symm_atom_info) {
       std::cout << "ERROR:: NULL atom in setRotationCentre(symm_atom_info_t)\n";
    }
 }
-#endif
 
 void
 graphics_info_t::setRotationCentre(const coot::clip_hybrid_atom &hybrid_atom) {
@@ -1263,7 +1261,7 @@ graphics_info_t::setRotationCentre(coot::Cartesian new_centre, bool force_jump) 
          identification_pulse_centre = cartesian_to_glm(current_centre);
          gtk_gl_area_attach_buffers(GTK_GL_AREA(glareas[0]));
          bool broken_line_mode = true;
-         lines_mesh_for_identification_pulse.setup_pulse(broken_line_mode);
+         lines_mesh_for_identification_pulse.setup_green_pulse(broken_line_mode);
          gtk_widget_add_tick_callback(glareas[0], identification_pulse_func, user_data, NULL);
 
       }
@@ -1694,7 +1692,7 @@ graphics_info_t::accept_moving_atoms() {
       } else {
          if (moving_atoms_asc_type == coot::NEW_COORDS_REPLACE) {
             molecules[imol_moving_atoms].replace_coords(*moving_atoms_asc, 0, mzo);
-            update_validation(imol_moving_atoms);
+            // update_validation(imol_moving_atoms);
          } else {
             if (moving_atoms_asc_type == coot::NEW_COORDS_INSERT) {
                molecules[imol_moving_atoms].insert_coords(*moving_atoms_asc);
@@ -1711,6 +1709,7 @@ graphics_info_t::accept_moving_atoms() {
          }
       }
    }
+
 
    // reset the b-factor?
    if (graphics_info_t::reset_b_factor_moved_atoms_flag) {
@@ -6885,7 +6884,7 @@ int
 graphics_info_t::get_n_pressed_for_leftquote_tap(std::chrono::time_point<std::chrono::high_resolution_clock> tp) {
 
    unsigned int s = leftquote_press_times.size();
-   unsigned int r = s % 4 + 1;
+   unsigned int r = s % 5 + 1;
    if (s != 0) {
       auto tpl = leftquote_press_times.back();
       auto d10 = std::chrono::duration_cast<std::chrono::milliseconds>(tp - tpl).count();

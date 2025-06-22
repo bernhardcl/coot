@@ -1,74 +1,86 @@
 
 --- Items ---
 
+o arwen, alejandro, santosh, dorothee
+
+o make a function that returns the secondary structure for libcootapi/chapi
+
+o Get monomer "ALA" - I don't want to see a github monomer message
+
+--- Other Items ---
+
+o Add ability to rotate view around z axis :: 0.5
+
+o auto-scale the make-a-difference map
+  think about create power-matched option also? :: 1
+
+o colour stops for b-factor analysis, rather than colour wheel. :: 1
+
+o have another look at Rama plot :: 1
+
+o address-sanitizer for coot
+
+o Fix the "Fetch" buttons - new GTK4/glib? :: 2
+
+o "Proportional editing" molecule rotation :: 2
+  Actually "fragment" rotation makes more sense.
+
+o Get in touch with Kay for the display of h,k,l as atoms (cif)
+* Done. Progress has been made.
+
+o Atom sphere radius depends on B-factor - proportional to cube root maybe?
+  set_atom_radius_by_b_factor_mode(imol, state)
+  atom_radius_by_b_factor_scale_factor(imol, sf)
+
+o draw 9c1h with molecular symmetry colouring :: 1
+  turn on set_colour_by_ncs_chain(imol, 1)
+
+o "Proportional editing" molecule rotation :: 2
+  Actually "fragment" rotation makes more sense.
+
+o try texture atlas for text - make a new test app from scratch :: 4
+
+o WTA carbohydrate :: 6
+
+o what does "RenameVerticesAndTriangles()" do? Do we need it?
+
+o Cross-out "Screenshot" unless we have OpenGL 4.2 or later :: 0.5
+
+o Highlight the chain neighbours in the Rama plot. Bring back the green square.
+
+o how do I make the HUD buttons have rounded edges? Can I make the health bars
+  have rounded edges?
+
+o Rama and Rota graphs validation graphs have terrible scaling - difficult to fix :: 4
+
+o Have a look at contact dots during refinement - with the 3a3a say, there is hang, and the
+  final refined structure is shown - there is no animation :: 2
+
+o Have a look at the poly-TRP problem of sequence identification. :: 4
+
+o  It was a strange bit of code in get_group().
+   Now the issue is duplication of the model on writing. mmdb bug.
+   Solved now? Am I using the right version?
+
 --- Done Items ---
 
-What's up with Ribbon diagrams? ::: 1
-* Done. Use the correct shader for ribbons.
-
-Fix the super-atoms in svg-molecule/flev ::: 1
-
-Double-clicking on a HUD button does a "go to blob" ::: 1
-
-Add a function is_nucleic_acid(imol, cid) ::: 1
-
-G2F in 5a3h flev needs fixing? Can we see something? ::: 2
-* Empty return value - that will have to do for now.
-
-In FLEV make "Hoh" say "Water" - smaller font needed maybe ::: 0.5
+o swig should not be a dependency if building chapi
 * Done.
 
-In FLEV, use the tweaks to position the text ::: 0.5
-* Done. Nice.
+o Process Stuart's outliers file ::: 1
+* Done
 
-Change chapi/mc to coot_headless_api/chapi ::: 0.5
-* OK. There will be pain.
+o fix the colour wheel in B-factor analysis ::: 1
+  1geh B-factor colour ramp looks wrong
 
-delete_all_carbohydrate() needs a test. Move it to coot-utils and
-give moorhen/chapi access to it ::: 0.6
-
-Get FLEV into Coot ::: 2
-
-FLEV needs a key ::: 2
-
-Coot: picking should use the non-drawn atom indices vector ::: 0.2
-
-Add add_hydrogen_atoms() to the api (just a wrapper need) ::: 0.2
-there is coot_add_hydrogen_atoms().
-
-Fix Jordan's unwritable xdg cache-dir download directory bug ::: 0.3
-
-Clipping of key for FLEV in moorhen - text goes beyond residue circles in x ::: 0.5
-
-Bring PAE to Coot :: 1
-
-Open the "About" dialog twice - it can't be destroyed/hidden now. ::: 0.5
-
-Can you fix this?
-    GL ERROR:: Mesh::setup_buffers() "mesh_for_extra_distance_restraints" --- start --- ::: 1
-* Yes 000793e22792439053238833cb9587dd9a4bfaf9.
-
-revisit the chapi ligand-fit build script. ::: 0.5
-* I did. I won't fix it for this release.
-
-When user selects left-mouse for view rotation, make the right
-mouse do zoom ::: 1
+o Add Metals to Coot startup, Moorhen and chapi ::: 0.2
 * Done.
 
-Fix this crash:
-#7    Object "/app/lib/libcootsumo.so.0.0.0", at 0x7fbe9dfa5211, in graphics_info_t::regenerate_intermediate_atoms_bonds_timeout_function_and_draw(void*)
-#6    Object "/app/lib/libcootsumo.so.0.0.0", at 0x7fbe9dfa50ce, in graphics_info_t::regenerate_intermediate_atoms_bonds_timeout_function()
-#5    Object "/app/lib/libcootsumo.so.0.0.0", at 0x7fbe9df468f8, in graphics_info_t::update_bad_nbc_atom_pair_marker_positions()
-#4    Object "/app/lib/libcootsumo.so.0.0.0", at 0x7fbe9e21573e, in TextureMesh::update_instancing_buffer_data(std::vector<glm::vec<3, float, (glm::qualifier)0>, std::allocator<glm::vec<3, float, (glm::qualifier)0> > > const&)
-#3    Object "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33", at 0x7fbe9b6e8c1c, in std::__glibcxx_assert_fail(char const*, int, char const*, char const*)
-::: 1
-* Hopefully done! TextureMesh::update_instancing_buffer_data() reworked extensively.
+o Save symmetry coordinates.
+* Done
 
-
-Fix HUDTexture mesh crash when/after refining ::: 1
-* Done - hopefully.
-
-
-Replace line symmetry with 3d model ::: 3
+o what is the radius of gyration? Make a function. ::: 1
 * Done.
+
+o remove GEMMI hack at top of atom-selection-container.cc ::: 0.2
 

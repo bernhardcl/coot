@@ -114,6 +114,9 @@ const double pi = M_PI;
 
 #include "widget-from-builder.hh"
 
+#include "utils/logging.hh"
+extern logging logger;
+
 
 glm::vec3
 cartesian_to_glm(const coot::Cartesian &c) {
@@ -457,15 +460,16 @@ molecule_class_info_t::handle_read_draw_molecule(int imol_no_in,
 
       // LINK info:
       int n_models = atom_sel.mol->GetNumberOfModels();
-      std::cout << "INFO:: Found " << n_models << " models\n";
+      // std::cout << "INFO:: Found " << n_models << " models\n";
+      logger.log(log_t::INFO, "Found", n_models, " models");
       for (int imod=1; imod<=n_models; imod++) {
          mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
          if (model_p) {
             int n_links = model_p->GetNumberOfLinks();
-            std::cout << "   Model "  << imod << " had " << n_links
-                      << " links\n";}
+            // std::cout << "   Model "  << imod << " had " << n_links << " links\n";}
+            logger.log(log_t::INFO, "Model", imod, "had", n_links, "links");
+         }
       }
-
 
       //
       // and move mol_class_info to indexed molecule[n_molecules];
@@ -1105,6 +1109,9 @@ molecule_class_info_t::get_bond_colour_basic(int colour_index, bool against_a_da
       case DARK_VIOLET:
          col = coot::colour_t(0.58, 0.0, 0.83);
          break;
+      case BORON_PINK:
+         col = coot::colour_t(0.98, 0.78, 0.69); // 0.98 0.72 0.63
+         break;
       default:
          col = coot::colour_t (0.7, 0.8, 0.8);
       }
@@ -1227,6 +1234,9 @@ molecule_class_info_t::get_bond_colour_by_mol_no(int colour_index, bool against_
             case DARK_VIOLET:
                rgb[0] = 0.58; rgb[1] = 0.0; rgb[2] = 0.83;
                break;
+            case BORON_PINK:
+               rgb[0] = 0.98; rgb[1] = 0.78; rgb[2] = 0.69;
+               break;
             default:
                rgb[0] = 0.8; rgb[1] =  0.2; rgb[2] =  0.2;
                rgb.rotate(colour_index*26.0/360.0);
@@ -1288,6 +1298,9 @@ molecule_class_info_t::get_bond_colour_by_mol_no(int colour_index, bool against_
                break;
             case DARK_VIOLET:
                rgb[0] = 0.58; rgb[1] = 0.0; rgb[2] = 0.83;
+               break;
+            case BORON_PINK:
+               rgb[0] = 0.98; rgb[1] = 0.78; rgb[2] = 0.69;
                break;
 
             default:
@@ -1389,7 +1402,7 @@ molecule_class_info_t::set_bond_colour_by_colour_wheel_position(int i, int bonds
                 << " box_type " << bonds_box_type << " vs " << coot::COLOUR_BY_USER_DEFINED_COLOURS____BONDS
                 << std::endl;
 
-   if (bonds_box_type == coot::CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR) {
+   if (bonds_box_type == coot::CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR || bonds_box_type == coot::COLOUR_BY_B_FACTOR_BONDS) {
       rgb[0] = 0.3f; rgb[1] =  0.3f; rgb[2] =  0.95f;
       const unsigned int n_b_factor_colours = 48; // matches index_for_b_factor() in my_atom_colour_map_t
       float f = static_cast<float>(i)/static_cast<float>(n_b_factor_colours);
@@ -1450,7 +1463,7 @@ molecule_class_info_t::get_bond_colour_by_colour_wheel_position(int icol, int bo
                 << " box_type " << bonds_box_type << " vs " << coot::COLOUR_BY_USER_DEFINED_COLOURS____BONDS
                 << std::endl;
 
-   if (bonds_box_type == coot::CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR) {
+   if (bonds_box_type == coot::CA_BONDS_PLUS_LIGANDS_B_FACTOR_COLOUR || bonds_box_type == coot::COLOUR_BY_B_FACTOR_BONDS) {
       rgb[0] = 0.3f; rgb[1] =  0.3f; rgb[2] =  0.95f;
       const unsigned int n_b_factor_colours = 48; // matches index_for_b_factor() in my_atom_colour_map_t
       float f = static_cast<float>(icol)/static_cast<float>(n_b_factor_colours);
@@ -1476,6 +1489,7 @@ molecule_class_info_t::get_bond_colour_by_colour_wheel_position(int icol, int bo
                       << "  rgb " << std::setw(6) << rgb[0] << " " << std::setw(6) << rgb[1] << " "
                       << std::setw(6) << rgb[2] << std::endl;
       } else {
+	 // std::cout << "this fallback block...." << std::endl;
          float rotation_size = 1.0 - float(icol-offset) * 0.7/max_colour + bonds_colour_map_rotation/360.0;
          rgb = rotate_rgb(rgb, rotation_size);
       }
@@ -2356,7 +2370,7 @@ molecule_class_info_t::is_in_labelled_symm_list(int i) {
 }
 
 
-int molecule_class_info_t::add_atom_label(char *chain_id, int iresno, char *atom_id) {
+int molecule_class_info_t::add_atom_label(const char *chain_id, int iresno, const char *atom_id) {
 
    // int i = atom_index(chain_id, iresno, atom_id);
    int i = atom_spec_to_atom_index(std::string(chain_id),
@@ -2423,11 +2437,55 @@ molecule_class_info_t::add_labels_for_all_CAs() {
    }
 }
 
+void
+molecule_class_info_t::local_b_factor_display(bool state,
+                                              const coot::Cartesian &screen_centre) {
+
+   float close_dist = 8.0;
+   float close_dist_sqrd = close_dist * close_dist;
+   if (state) {
+      int imod = 1;
+      if (! atom_sel.mol) return;
+      mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
+      if (model_p) {
+         std::vector<coot::generic_text_object_t> text_objects;
+         int n_chains = model_p->GetNumberOfChains();
+         for (int ichain=0; ichain<n_chains; ichain++) {
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
+            int n_res = chain_p->GetNumberOfResidues();
+            for (int ires=0; ires<n_res; ires++) {
+               mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+               if (residue_p) {
+                  int n_atoms = residue_p->GetNumberOfAtoms();
+                  for (int iat=0; iat<n_atoms; iat++) {
+                     mmdb::Atom *at = residue_p->GetAtom(iat);
+                     if (! at->isTer()) {
+                        float dx = at->x - screen_centre.x();
+                        float dy = at->y - screen_centre.y();
+                        float dz = at->z - screen_centre.z();
+                        float dd = dx * dx + dy * dy + dz * dz;
+                        if (dd < close_dist_sqrd) {
+                           int handle = -1; // not set
+                           std::string label = coot::util::float_to_string_using_dec_pl(at->tempFactor, 1);
+                           coot::generic_text_object_t gto(label, handle, at->x + 0.2, at->y, at->z);
+                           text_objects.push_back(gto);
+                        }
+                     }
+                  }
+               }
+            }
+         }
+         if (! text_objects.empty())
+            graphics_info_t::generic_texts = text_objects;
+      }
+   } else {
+      graphics_info_t::generic_texts.clear();
+   }
+}
 
 
 
-
-int molecule_class_info_t::remove_atom_label(char *chain_id, int iresno, char *atom_id) {
+int molecule_class_info_t::remove_atom_label(const char *chain_id, int iresno, const char *atom_id) {
 
    int i = atom_index(chain_id, iresno, atom_id);
    if (i > 0)
@@ -3654,6 +3712,7 @@ molecule_class_info_t::makebonds(const coot::protein_geometry *geom_p,
    bonds_box_type = coot::NORMAL_BONDS;
    if (! draw_hydrogens_flag)
       bonds_box_type = coot::BONDS_NO_HYDROGENS;
+
    if (false)
       std::cout << "   makebonds() C calls make_glsl_bonds_type_checked() imol "
                 << imol_no << " " << name_
@@ -3871,6 +3930,8 @@ molecule_class_info_t::make_bonds_type_checked(const char *caller) {
    coot::protein_geometry *geom_p = g.Geom_p();
 
    std::set<int> dummy;
+
+   // std::cout << "bonds_box_type " << bonds_box_type << std::endl;
 
    if (bonds_box_type == coot::NORMAL_BONDS) {
       if (debug)
@@ -4247,6 +4308,9 @@ molecule_class_info_t::make_meshes_from_bonds_box_instanced_version() {
       }
    };
 
+   if (false)
+      std::cout << "debug:: make_meshes_from_bonds_box_instanced_version() --- start --- " << std::endl;
+
    GLenum err = glGetError();
    if (err) std::cout << "GL ERROR:: in make_glsl_bonds_type_checked() --- start ---\n";
 
@@ -4298,9 +4362,11 @@ molecule_class_info_t::make_meshes_from_bonds_box_instanced_version() {
 
       err = glGetError();
       if (err) std::cout << "error in make_glsl_bonds_type_checked() pre molecules_as_mesh\n";
+      float aniso_probability = graphics_info_t::show_aniso_atoms_probability;
 
       model_molecule_meshes.make_graphical_bonds(imol_no, bonds_box, atom_radius, bond_radius,
                                                  show_atoms_as_aniso_flag, // class member - user setable
+                                                 aniso_probability,
                                                  show_aniso_atoms_as_ortep_flag, // ditto
                                                  num_subdivisions, n_slices, n_stacks, colour_table);
 
@@ -4668,8 +4734,8 @@ void
 molecule_class_info_t::make_bonds_type_checked(const std::set<int> &no_bonds_to_these_atom_indices,
                                                const char *caller) {
 
-   if (false)
-      std::cout << "debug:: ---- in make_bonds_type_checked() --- start ---" << std::endl;
+   if (true)
+      std::cout << "debug:: ---- in make_bonds_type_checked(2args) --- start ---" << std::endl;
 
    if (false) {
       std::string caller_s = "NULL";
@@ -8942,13 +9008,17 @@ molecule_class_info_t::store_refmac_params(const std::string &mtz_filename,
    refmac_r_free_col = r_free_col;
    refmac_r_free_flag_sensible = r_free_flag;
 
-   std::cout << "INFO:: Stored refmac parameters: "
-             << refmac_fobs_col << " "
-             << refmac_sigfobs_col;
-   if (r_free_flag)
-      std::cout << " " << refmac_r_free_col << " is sensible." << std::endl;
-   else
-      std::cout << " the r-free-flag is not sensible" << std::endl;
+   if (r_free_flag) {
+      // std::cout << "INFO:: Stored refmac parameters: " << refmac_fobs_col << " "  << refmac_sigfobs_col
+      // << " " << refmac_r_free_col << " is sensible." << std::endl;
+      logger.log(log_t::INFO, "Stored refmac parameters", refmac_fobs_col, refmac_sigfobs_col,
+                 refmac_r_free_col, std::string("is sensible"));
+   } else {
+      // std::cout << "INFO:: Stored refmac parameters: " << refmac_fobs_col << " "  << refmac_sigfobs_col
+      // << " the r-free-flag is not sensible" << std::endl;
+      logger.log(log_t::INFO, "Stored refmac parameters", refmac_fobs_col, refmac_sigfobs_col,
+                 refmac_r_free_col, std::string("is not sensible"));
+   }
 }
 
 void
@@ -9194,7 +9264,7 @@ molecule_class_info_t::append_to_molecule(const coot::minimol::molecule &water_m
             mmdb::Residue *new_residue_p;
 
             new_chain_p = new mmdb::Chain;
-            std::cout << "DEBUG INFO:: chain id of new chain :"
+            std::cout << "DEBUG:: chain id of new chain :"
                       << water_mol[ifrag].fragment_id << ":" << std::endl;
             new_chain_p->SetChainID(water_mol[ifrag].fragment_id.c_str());
             model_p->AddChain(new_chain_p);

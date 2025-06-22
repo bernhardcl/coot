@@ -73,7 +73,7 @@ enum {CONTOUR_UP, CONTOUR_DOWN};
 #include <glm/glm.hpp>
 
 #ifndef __NVCC__
-#ifdef HAVE_BOOST
+#ifdef HAVE_BOOST_THREAD // now consistent with ideal/simple-restraint.hh
 #define HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
 #include "utils/ctpl.h"
 #endif // HAVE_CXX_THREAD
@@ -596,7 +596,7 @@ class molecule_class_info_t {
    // NXmap, not the xmap)
    //
    // bool is_em_map(const clipper::CCP4MAPfile &file) const;
-   bool set_is_em_map(const clipper_map_file_wrapper &file);
+   bool set_is_em_map(const clipper_map_file_wrapper &file, const std::string &file_name);
 
    // for quads/triangle strip for the bond representation (rather
    // than gl_lines).
@@ -1323,12 +1323,14 @@ public:        //                      public
    // functions, add a label to the atom with the characteristics
    // (using atom_index).
    //
-   int    add_atom_label(char *chain_id, int iresno, char *atom_id);
-   int remove_atom_label(char *chain_id, int iresno, char *atom_id);
+   int    add_atom_label(const char *chain_id, int iresno, const char *atom_id);
+   int remove_atom_label(const char *chain_id, int iresno, const char *atom_id);
    void remove_atom_labels(); // and symm labels
    int add_atom_labels_for_residue(mmdb::Residue *residue_p);
 
    void add_labels_for_all_CAs();
+
+   void local_b_factor_display(bool state, const coot::Cartesian &screen_centre);
 
    // xmap information
    //
@@ -1616,6 +1618,8 @@ public:        //                      public
 
    void install_new_map(const clipper::Xmap<float> &mapin, std::string name, bool is_em_map_in);
 
+   void install_new_map_with_contour_level(const clipper::Xmap<float> &mapin, std::string name, float contour_level, bool is_em_map_in);
+
    void set_name(std::string name); // you are encouraged not to use
 				    // this (only for use after having
 				    // imported an xmap).
@@ -1739,6 +1743,8 @@ public:        //                      public
 							   mmdb::realtype alignment_wgap,
 							   mmdb::realtype alignment_wspace,
 							   bool is_nucleic_acid_flag = false) const;
+
+   std::vector<std::string> get_types_in_molecule() const;
 
 
    //

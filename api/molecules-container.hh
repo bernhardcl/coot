@@ -36,6 +36,8 @@
 #include "svg-store-key.hh"
 #include "moorhen-h-bonds.hh"
 #include "header-info.hh"
+#include "positioned-atom-spec.hh"
+#include "user-defined-colour-table.hh"
 
 //! the container of molecules. The class for all **libcootapi** functions.
 class molecules_container_t {
@@ -365,48 +367,7 @@ class molecules_container_t {
    // --------------------- init --------------------------
 #ifdef SKIP_FOR_PYTHON_DOXYGEN
 #else
-   //! init (private)
-   void init() {
-
-      use_gemmi = true;
-      imol_refinement_map = -1;
-      imol_difference_map = -1;
-      thread_pool.resize(8);
-      setup_syminfo();
-      mmdb::InitMatType();
-      geometry_init_standard(); // do this by default now
-      refinement_immediate_replacement_flag = true; // 20221018-PE for WebAssembly for the moment
-      imol_moving_atoms = -1;
-      refinement_is_quiet = true;
-      show_timings = true;
-      cif_dictionary_read_number = 40;
-      // refinement
-      continue_threaded_refinement_loop = false;
-      particles_have_been_shown_already_for_this_round_flag = false;
-      map_weight = 50.0;
-      geman_mcclure_alpha = 0.01;
-      map_sampling_rate = 1.8;
-      draw_missing_residue_loops_flag = true;
-      read_standard_residues();
-      interrupt_long_term_job = false;
-      contouring_time = 0;
-      make_backups_flag = true;
-
-      use_rama_plot_restraints = false;
-      rama_plot_restraints_weight = 1.0;
-
-      use_torsion_restraints = false;
-      torsion_restraints_weight = 1.0;
-
-      map_is_contoured_using_thread_pool_flag = false;
-
-      ligand_water_to_protein_distance_lim_max = 3.4;
-      ligand_water_to_protein_distance_lim_min = 2.4;
-      ligand_water_variance_limit = 0.1;
-      ligand_water_sigma_cut_off = 1.75; // max moorhen points for tutorial 1.
-
-      // debug();
-   }
+   void init(); // private
 #endif
 
 #ifdef SKIP_FOR_PYTHON_DOXYGEN
@@ -421,10 +382,13 @@ class molecules_container_t {
 public:
 
    //! the one and only constructor
-   explicit molecules_container_t(bool verbose=true) : ramachandrans_container(ramachandrans_container_t()) {
+   explicit molecules_container_t(bool verbose=true) :
+      ramachandrans_container(ramachandrans_container_t()),
+      thread_pool(8) {
+
       if (! verbose) geom.set_verbose(false);
       init();
-      // std::cout << "in constructor map_sampling_rate: " << map_sampling_rate << std::endl;
+
    }
 
    ~molecules_container_t();
@@ -886,6 +850,9 @@ public:
    std::map<std::string, std::string>
    dictionary_atom_name_map(const std::string &comp_id_1, int imol_1, const std::string &comp_id_2, int imol_2);
 
+   //! get types
+   std::vector<std::string> get_types_in_molecule(int imol) const;
+
    // 20221030-PE nice to have one day:
    // int get_monomer_molecule_by_network_and_dict_gen(const std::string &text);
 
@@ -1081,6 +1048,7 @@ public:
    //! @param colour_scheme is one of "colorRampChainsScheme", "colorBySecondaryScheme", "Chain"
    //! @param style "Ribbon" or "MolecularSurface"
    //! @param secondary_structure_usage_flag  0 (USE_HEADER), 1 (DONT_USE) or 2 (CALC_SECONDARY_STRUCTURE)
+   //! @param file_name of the glTF (the file will be compressed, so choose ".glb" as the extension)
    void export_molecular_representation_as_gltf(int imol, const std::string &atom_selection_cid,
                                                const std::string &colour_scheme, const std::string &style,
                                                int secondary_structure_usage_flag,
@@ -1090,6 +1058,18 @@ public:
    //!
    void export_chemical_features_as_gltf(int imol, const std::string &cid,
                                          const std::string &file_name) const;
+
+   //! set the gltf PBR roughness factor
+   //!
+   //! @param imol is the model molecule index
+   //! @param roughness_factor is the factor for the roughness (0.0 to 1.0)
+   void set_gltf_pbr_roughness_factor(int imol, float roughness_factor);
+
+   //! set the gltf PBR metalicity factor
+   //!
+   //! @param imol is the model molecule index
+   //! @param metalicity is the factor for the roughness (0.0 to 1.0)
+   void set_gltf_pbr_metalicity_factor(int imol, float metalicity);
 
    //! Get colour table (for testing)
    //!
@@ -1365,21 +1345,24 @@ public:
    //! @return a list of residue specs
    std::vector<coot::residue_spec_t> get_residues_near_residue(int imol, const std::string &residue_cid, float dist) const;
 
-  //! get atom distances
-  //! other stuff here
+   //! Get atom distances
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid_res_1 is the first atom selection CID e.g "//A/15/OH" (atom OH in residue 15 of chain A)
+   //! @param cid_res_2 is the second atom selection CID e.g "//A/17/NH" (atom NH in residue 17 of chain A)
+   //! @param dist is the distance in Angstrom
   std::vector<coot::atom_distance_t>
   get_distances_between_atoms_of_residues(int imol, const std::string &cid_res_1, const std::string &cid_res_2,
 					  float dist_max) const;
 
    //! Superposition (using SSM)
    //!
+   //! The specified chain of the moving molecule is superposed onto the chain in the reference molecule (if possible).
+   //!
    //! @param imol_ref the reference model molecule index
    //! @param chain_id_ref the chain ID for the reference chain
    //! @param imol_mov the moving model molecule index
    //! @param chain_id_mov the chain ID for the moving chain
-   //!
-   //! The specified chain of the moving molecule is superposed onto the chain in the reference molecule (if possible).
-   // std::pair<std::string, std::string>
    superpose_results_t SSM_superpose(int imol_ref, const std::string &chain_id_ref,
                                      int imol_mov, const std::string &chain_id_mov);
 
@@ -1416,7 +1399,8 @@ public:
    //!
    //! @param imol_ref the reference model molecule index
    //! @param imol_mov the moving model molecule index
-   void lsq_superpose(int imol_ref, int imol_mov);
+   //! @return the success status, i.e. whether or not there were enough atoms to superpose
+   bool lsq_superpose(int imol_ref, int imol_mov);
 
    //! Transform a map and create a new map
    //!
@@ -1764,6 +1748,24 @@ public:
    //! @param s is the map saturation, e.g. a number between 0 and 1, where 0 is grey and 1 is "lego-like" colour scheme.
    //!        0.5 is a nice middle value
    void set_map_colour_saturation(int imol, float s);
+   void set_colour_map_for_map_coloured_by_other_map(std::vector<std::pair<double, std::vector<double> > > colour_table );
+
+   user_defined_colour_table_t colour_map_by_other_map_user_defined_table;
+
+   //! Get map vertices histogram
+   //!
+   //! Note not const because get_map_contours_mesh() is not const
+   //!
+   //! @param imol is the map molecule index
+   //! @param n_bins is the number of bins - 40 is a reasonable default.
+   //!
+   //! @return the map vertices histogram
+   coot::molecule_t::histogram_info_t get_map_vertices_histogram(int imol, int imol_map_for_sampling,
+								 double position_x, double position_y, double position_z,
+								 float radius, float contour_level,
+								 unsigned int n_bins);
+
+
 
    //! Get the latest sfcalc stats
    //!
@@ -2104,6 +2106,17 @@ public:
    //! @return 1 on a successful fill, 0 on failure.
    int fill_partial_residues(int imol);
 
+   //! Add N-linked glycosylation
+   //!
+   //! @param imol_model is the model molecule index
+   //! @param imol_map is the map molecule index
+   //! @param glycosylation_name is the type of glycosylation, one of:
+   //!       "NAG-NAG-BMA" or "high-mannose" or "hybrid" or "mammalian-biantennary" or "plant-biantennary"
+   //! @param asn_chain_id is the chain-id of the ASN to which the carbohydrate is to be added
+   //! @param asn_res_no is the residue number of the ASN to which the carbohydrate is to be added
+   void add_named_glyco_tree(int imol_model, int imol_map, const std::string &glycosylation_name,
+                             const std::string &asn_chain_id, int asn_res_no);
+
    //! Flip peptide
    //!
    //! @param imol is the model molecule index
@@ -2186,6 +2199,14 @@ public:
    //! @return the molecule centre
    coot::Cartesian get_molecule_centre(int imol) const;
 
+   //! Get Radius of Gyration
+   //!
+   //! @param imol is the model molecule index
+   //!
+   //! @return the molecule centre. If the number is less than zero, there
+   //! was a problem finding the molecule or atoms.
+   double get_radius_of_gyration(int imol) const;
+
    //! Copy the molecule
    //!
    //! @param imol the specified molecule
@@ -2209,7 +2230,7 @@ public:
    //! so that those residues can be used for links and non-bonded contact restraints.
    //!
    //! @param imol is the model molecule index
-   //! @param multi_cids is a "||"-separated list of residues CIDs, e.g. "//A/12-52||//A/14-15||/B/56-66"
+   //! @param multi_cids is a "||"-separated list of residues CIDs, e.g. "//A/12-52||//A/14-15||//B/56-66"
    //!
    //! @return the new molecule number (or -1 on no atoms selected)
    int copy_fragment_for_refinement_using_cid(int imol, const std::string &multi_cid);
@@ -2495,6 +2516,11 @@ public:
    //! @param imol is the model molecule index
    void turn_off_when_close_target_position_restraint(int imol);
 
+   //! Control the logging
+   //!
+   //! @param level is the logging level, level is either "LOW" or "HIGH" or "DEBUGGING"
+   void set_logging_level(const std::string &level);
+
    //! Turn on or off rama restraints
    //!
    //! @param state is True to mean that it is enabled
@@ -2656,6 +2682,12 @@ public:
    int servalcat_refine_xray(int imol, int imol_map, const std::string &output_prefix);
 
 #if NB_VERSION_MAJOR
+   //! Use servalcat keywords
+   //!
+   //! @param imol is the model molecule index
+   //! @param imol_map is the map molecule index
+   //! @param output_prefix is the prefix of the output filename, e.g. "ref-1"
+   //! @param key_value_pairs is a dictionary of key-value pairs for the servalcat keywords, e.g. resolution: 2.05
    //!
    //! @return the imol of the refined model.
    int servalcat_refine_xray_with_keywords(int imol, int imol_map, const std::string &output_prefix,
@@ -2830,14 +2862,29 @@ public:
    //! @param cid_ligand is the ligand selection CID e.g "//A/15" (ligand 15 of chain A)
    coot::atom_overlaps_dots_container_t get_overlap_dots_for_ligand(int imol, const std::string &cid_ligand);
 
+   //! Gat Atom Overlaps
    // not const because it can dynamically add dictionaries
    //! @param imol is the model molecule index
+   //! @return a vector of atom overlap objects
    std::vector<coot::plain_atom_overlap_t> get_overlaps(int imol);
 
+   //! Gat Atom Overlaps for a ligand or residue
    // not const because it can dynamically add dictionaries
    //! @param imol is the model molecule index
    //! @param cid_ligand is the ligand selection CID e.g "//A/15" (ligand 15 of chain A)
+   //! @return a vector of atom overlap objects
    std::vector<coot::plain_atom_overlap_t> get_overlaps_for_ligand(int imol, const std::string &cid_ligand);
+
+   //! Get the atom differences between two molecules
+   //! typically after refinement
+   //!
+   //! @param imol1 is the first model molecule index
+   //! @param imol2 is the second model molecule index
+   //!
+   //! @return a vector/list of `positioned_atom_spec_t`
+   std::vector <positioned_atom_spec_t>
+   get_atom_differences(int imol1, int imol2);
+
 
    // -------------------------------- Coordinates and map validation ----------------------
    //! \name Coordinates and Map Validation
@@ -2959,6 +3006,11 @@ public:
                       bool ignore_part_occ_contact_flag,
                       bool ignore_zero_occ_flag);
 
+   //! Get HOLE
+   //! 
+   //! HOLE is a program for the analysis of the pore dimesions of ion channels. See Smart et al., 1996.
+   //!
+   //! @return a list of spheres on the surface of the pore
    coot::instanced_mesh_t get_HOLE(int imol,
                                    float start_pos_x, float start_pos_y, float start_pos_z,
                                    float end_pos_x, float end_pos_y, float end_pos_z) const;
@@ -3201,7 +3253,7 @@ public:
    //! @param imol_protein is the model molecule index
    //! @param imol_map is the map molecule index
    //! @param imol_ligand is the ligand molecule index
-   //! @param n_rmsd number of sd, e.g. 4.8
+   //! @param n_rmsd the number of sd used as a cut-off for the map level when finding clusters, e.g. 1.2
    //! @param use_conformers is True for flexible ligands
    //! @param n_conformers set the number of conformers
    //!
