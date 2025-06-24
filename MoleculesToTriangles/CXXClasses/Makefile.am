@@ -27,8 +27,10 @@ libMoleculesToTrianglesCXXClasses_la_SOURCES=AtomPropertyRampColorRule.cpp	 \
 # I don't think that's how pkg-config works - oh well).
 #
 # is $(CPPFLAGS) needed here?
+# need libcoot-coord-utils for simple-mesh
 libMoleculesToTrianglesCXXClasses_la_CPPFLAGS=$(AM_CPPFLAGS) \
    $(MoleculesToTrianglesCXXSurface_CFLAGS) $(MMDB_CFLAGS) \
+   $(top_builddir)/coot-utils/libcoot-coord-utils.la       \
    $(OPENMP_CXXFLAGS) $(COOT_WINDOWS_CFLAGS)
 
 # rather than specifying the libs directly, you should test for clipper in configure
