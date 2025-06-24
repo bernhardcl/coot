@@ -911,8 +911,15 @@ void get_monomer_dictionary_in_subthread(const std::string &comp_id,
       const char v = tolower(rs); // get the sub directory name
       std::string letter(1, v);
       std::string cif_file_name = comp_id + ".cif";
+      // BL says:: an URL is not a filesystem type but a string (certainly messes up things on
+      // Windows... I'll keep the wrong way in case Paul thinks different...
+#ifdef WINDOWS_MINGW
+      std::string github = "https://raw.githubusercontent.com/MonomerLibrary/monomers/refs/heads/master";
+      std::string url_path = github + "/" +  letter + "/" + cif_file_name;
+#else
       std::filesystem::path github = "https://raw.githubusercontent.com/MonomerLibrary/monomers/refs/heads/master";
       std::filesystem::path url_path = github / letter / cif_file_name;
+#endif
 
       xdg_t xdg;
 
@@ -937,7 +944,11 @@ void get_monomer_dictionary_in_subthread(const std::string &comp_id,
 	    if (std::filesystem::exists(letter_dir_path)) {
 	       std::filesystem::path cif_file_path = letter_dir_path / cif_file_name;
                // return 0 on success
+#ifdef WINDOWS_MINGW
+	       int status = coot_get_url(url_path, cif_file_path.u8string());
+#else
 	       int status = coot_get_url(url_path.string(), cif_file_path.string());
+#endif
                logger.log(log_t::DEBUG, logging::function_name_t("get_monomer_dictionary_in_subthread()"),
                           "coot_get_url() returned status ", status);
                if (status != 0)
