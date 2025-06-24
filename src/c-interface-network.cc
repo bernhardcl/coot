@@ -955,15 +955,15 @@ void get_monomer_dictionary_in_subthread(const std::string &comp_id,
                   delete_cif_file_if_exists(cif_file_path);
 	    } else {
 	       // std::cout << "INFO:: " << letter_dir_path << " does not exist " << std::endl;
-	       logger.log(log_t::INFO, letter_dir_path, "does not exist");
+	       logger.log(log_t::INFO, letter_dir_path.u8string(), "does not exist");
 	    }
 	 } else {
 	    //std::cout << "INFO:: " << monomers_path << " does not exist " << std::endl;
-	    logger.log(log_t::INFO, monomers_path, "does not exist");
+	    logger.log(log_t::INFO, monomers_path.u8string(), "does not exist");
 	 }
       } else {
 	 // std::cout << "INFO:: " << ch << " does not exist " << std::endl;
-	 logger.log(log_t::INFO, ch, "does not exist");
+	 logger.log(log_t::INFO, ch.u8string(), "does not exist");
       }
       c->fetch_done = 1;
    };
@@ -997,19 +997,19 @@ void get_monomer_dictionary_in_subthread(const std::string &comp_id,
             // std::cout << "INFO:: call read_cif_dictionary() on this cif "
             // << cif_file_path << std::endl;
             if (std::filesystem::exists(cif_file_path)) {
-               logger.log(log_t::INFO, "call read_cif_dictionary() on this cif", cif_file_path);
+               logger.log(log_t::INFO, "call read_cif_dictionary() on this cif", cif_file_path.u8string());
                int read_status = read_cif_dictionary(cif_file_path.string());
                if (read_status > 0) {
                   if (cif_data->run_get_monomer_post_fetch_flag)
                      get_monomer(cif_data->comp_id);
                } else {
                   logger.log(log_t::WARNING, logging::function_name_t("get_monomer_dictionary_in_subthread"),
-                             "Failed to read", cif_file_path);
+                             "Failed to read", cif_file_path.u8string());
                }
             } else {
                // failed to download:
                logger.log(log_t::WARNING, logging::function_name_t("get_monomer_dictionary_in_subthread"),
-                          "File does not exist", cif_file_path);
+                          "File does not exist", cif_file_path.u8string());
                std::string message = std::string("Failed to download ") + cif_file_path.string() +
                   std::string(" from github monomers");
                info_dialog(message.c_str());

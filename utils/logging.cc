@@ -79,6 +79,12 @@ logging::ltw::ltw(const unsigned long &i_in) {
    i = i_in;
 }
 
+logging::ltw::ltw(const size_t &i_in) {
+   // slightly naughty
+   type = type_t::INT_TYPE;
+   i = i_in;
+}
+
 logging::ltw::ltw(float f_in) {
    type = type_t::FLOAT_TYPE;
    f = f_in;

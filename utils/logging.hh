@@ -27,6 +27,8 @@
 #include <string>
 #include <vector>
 
+#include "compat/coot-sysdep.h"
+
 #ifdef _MSC_VER
 #undef WARNING
 #undef ERROR
@@ -69,6 +71,7 @@ public:
       ltw(const unsigned long &i);
       ltw(float f);
       ltw(const double &d);
+      ltw(const size_t &i);
       std::string to_string() const;
    };
 
