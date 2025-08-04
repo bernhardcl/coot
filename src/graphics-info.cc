@@ -23,7 +23,6 @@
 
 
 #ifdef USE_PYTHON
-#include "Python.h"  // before system includes to stop "POSIX_C_SOURCE" redefined problems
 #include "python-3-interface.hh"
 #endif
 
@@ -39,9 +38,7 @@
 #include <vector>
 #endif
 
-#ifndef EMSCRIPTEN
 #include <gtk/gtk.h>  // must come after mmdb_manager on MacOS X Darwin
-#endif
 
 #include <iostream>
 #ifdef _MSC_VER
@@ -60,11 +57,10 @@
 #endif
 
 #include <mmdb2/mmdb_manager.h>
-#include "coords/mmdb-extras.h"
+#include "coords/mmdb-extras.hh"
 #include "coords/mmdb.hh"
-#include "coords/mmdb-crystal.h"
-#include "coords/Cartesian.h"
-#include "coords/Bond_lines.h"
+#include "coords/mmdb-crystal.hh"
+#include "coords/Bond_lines.hh"
 
 #include "clipper/core/map_utils.h" // Map_stats
 #include "skeleton/graphical_skel.h"
@@ -143,6 +139,14 @@ graphics_info_t::valid_map_molecules() const {
       if (is_valid_map_molecule(i))
     v.push_back(i);
    return v;
+}
+
+// static
+GtkAllocation graphics_info_t::get_glarea_allocation() {
+   GtkAllocation allocation;
+   if (!glareas.empty())
+      gtk_widget_get_allocation(glareas[0], &allocation);
+   return allocation;
 }
 
 
@@ -1124,10 +1128,7 @@ graphics_info_t::display_all_model_molecules() {
       int state = 1;
       if (is_valid_model_molecule(i)) {
          molecules[i].set_mol_is_displayed(state);
-#ifndef EMSCRIPTEN
-         if (display_control_window())
-            set_display_control_button_state(i, "Displayed", state);
-#endif
+         set_display_control_button_state(i, "Displayed", state);
       }
    }
 }
@@ -1145,12 +1146,8 @@ graphics_info_t::undisplay_all_model_molecules_except(int imol) {
       if (is_valid_model_molecule(i)) {
          molecules[i].set_mol_is_displayed(state); // raw, no callbacks
          molecules[i].set_mol_is_active(state);    //
-#ifndef EMSCRIPTEN
-         if (display_control_window()) {
-            set_display_control_button_state(imol, "Displayed", state);
-            set_display_control_button_state(imol, "Active",   state);
-         }
-#endif
+         set_display_control_button_state(imol, "Displayed", state);
+         set_display_control_button_state(imol, "Active",   state);
       }
    }
 }
@@ -1174,12 +1171,8 @@ graphics_info_t::undisplay_all_model_molecules_except(const std::vector<int> &ke
       if (is_valid_model_molecule(i)) {
          molecules[i].set_mol_is_displayed(state);
          molecules[i].set_mol_is_active(state);
-#ifndef EMSCRIPTEN
-         if (display_control_window())
-            set_display_control_button_state(i, "Displayed", state);
-         if (display_control_window())
-            set_display_control_button_state(i, "Active", state);
-#endif
+         set_display_control_button_state(i, "Displayed", state);
+         set_display_control_button_state(i, "Active", state);
       }
    }
 }
@@ -1218,8 +1211,6 @@ graphics_info_t::setRotationCentre(coot::Cartesian new_centre, bool force_jump) 
       setRotationCentreSimple(new_centre);
       return true;
    }
-
-#ifndef EMSCRIPTEN
 
    // smooth_scroll_maybe
 
@@ -1287,9 +1278,6 @@ graphics_info_t::setRotationCentre(coot::Cartesian new_centre, bool force_jump) 
          }
       }
    }
-#else
-   std::cout << "Force rotation centre jump here " << std::endl;
-#endif
 
    return needs_centre_jump;
 }
@@ -3212,6 +3200,18 @@ graphics_info_t::from_generic_object_remove_last_item(int object_number) {
    graphics_draw();
 }
 
+// static
+bool
+graphics_info_t::is_valid_generic_display_object_number(int obj_no) {
+
+   bool status = false;
+   if (obj_no >= 0) {
+      int ss = generic_display_objects.size();
+      if (obj_no < ss)
+         status = true;
+   }
+   return status;
+}
 
 
 void

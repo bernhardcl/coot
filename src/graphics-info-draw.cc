@@ -1135,7 +1135,7 @@ graphics_info_t::update_rama_balls(std::vector<Instanced_Markup_Mesh_attrib_t> *
    // the calling function calls
    // rama_balls_mesh.update_instancing_buffers(balls) after this function
 
-   auto rr = saved_dragged_refinement_results;
+   const auto &rr = saved_dragged_refinement_results;
 
    balls->clear();
 
@@ -1861,7 +1861,7 @@ graphics_info_t::draw_molecules() {
 
    draw_atom_pull_restraints();
 
-   draw_meshed_generic_display_object_meshes(PASS_TYPE_STANDARD);
+   // return; // no draw
 
    draw_molecules_other_meshes(PASS_TYPE_STANDARD);
 
@@ -1872,8 +1872,6 @@ graphics_info_t::draw_molecules() {
    draw_unit_cells();
 
    draw_environment_graphics_object();
-
-   draw_generic_objects(PASS_TYPE_STANDARD);
 
    draw_hydrogen_bonds_mesh(); // like boids
 
@@ -1898,6 +1896,11 @@ graphics_info_t::draw_molecules() {
    // transparent things...
 
    draw_map_molecules(true); // transparent
+
+   draw_generic_objects(PASS_TYPE_STANDARD);
+
+   // moved down
+   draw_meshed_generic_display_object_meshes(PASS_TYPE_STANDARD);
 
 }
 
@@ -2268,6 +2271,8 @@ graphics_info_t::draw_unit_cells() {
 void
 graphics_info_t::draw_meshed_generic_display_object_meshes(unsigned int pass_type) {
 
+   // non-instanced.
+
    // std::cout << "draw_meshed_generic_display_object_meshes() with pass_type " << pass_type << std::endl;
 
    auto have_generic_display_objects_to_draw = [] () {
@@ -2284,15 +2289,19 @@ graphics_info_t::draw_meshed_generic_display_object_meshes(unsigned int pass_typ
    };
 
    if (pass_type == PASS_TYPE_STANDARD) {
+
+      glEnable(GL_BLEND); // 20250714-PE
       if (have_generic_display_objects_to_draw()) {
          glm::mat4 model_rotation = get_model_rotation();
          glm::mat4 mvp = get_molecule_mvp();
          glm::vec4 bg_col(background_colour, 1.0);
          bool wireframe_mode = false;
-         float opacity = 1.0f;
+         float opacity = 0.5;
          auto ccrc = RotationCentre();
          glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
          for (unsigned int i=0; i<generic_display_objects.size(); i++) {
+            if (false)
+               std::cout << "drawing i " << i << std::endl;
             generic_display_objects[i].mesh.draw(&shader_for_moleculestotriangles,
                                                  mvp, model_rotation, lights, eye_position, rc, opacity,
                                                  bg_col, wireframe_mode, false, show_just_shadows);
@@ -2784,12 +2793,16 @@ void print_opengl_info() {
       std::string ss2(s2);
       std::string ss3(s3);
       std::string ss4(s4);
-      std::cout << "INFO:: GL Version:                  " << ss1 << std::endl;
-      std::cout << "INFO:: GL Shading Language Version: " << ss2 << std::endl;
-      std::cout << "INFO:: GL Renderer:                 " << ss3 << std::endl;
-      std::cout << "INFO:: GL Vendor:                   " << ss4 << std::endl;
+      // std::cout << "INFO:: GL Version:                  " << ss1 << std::endl;
+      // std::cout << "INFO:: GL Shading Language Version: " << ss2 << std::endl;
+      // std::cout << "INFO:: GL Renderer:                 " << ss3 << std::endl;
+      // std::cout << "INFO:: GL Vendor:                   " << ss4 << std::endl;
+      logger.log(log_t::INFO, "GL Version:",                  ss1);
+      logger.log(log_t::INFO, "GL Shading Language Version:", ss2);
+      logger.log(log_t::INFO, "GL Renderer:",                 ss3);
+      logger.log(log_t::INFO, "GL Vendor:",                   ss4);
    } else {
-      std::cout << "error:: on_glarea_realize() null from glGetString()" << std::endl;
+      std::cout << "ERROR:: on_glarea_realize() null from glGetString()" << std::endl;
    }
 
 }
@@ -3175,6 +3188,26 @@ graphics_info_t::draw_hud_buttons() {
       }
    }
 }
+
+void
+graphics_info_t::setup_draw_for_translation_gizmo() {
+
+   attach_buffers();
+
+   size_t s = translation_gizmo.mesh.vertices.size();
+   std::vector<s_generic_vertex> cv(s); //  conveted vertices
+   for (unsigned int i=0; i<cv.size(); i++) {
+      cv[i].pos    = translation_gizmo.mesh.vertices[i].pos;
+      cv[i].normal = translation_gizmo.mesh.vertices[i].normal;
+      cv[i].color  = translation_gizmo.mesh.vertices[i].color;
+   }
+   translation_gizmo_mesh.clear(); // so that we don't add to the mesh!
+   translation_gizmo_mesh.import(cv, translation_gizmo.mesh.triangles);
+   translation_gizmo_mesh.setup_buffers();
+   translation_gizmo_mesh.set_draw_this_mesh(true); // for debugging
+
+}
+
 
 void
 graphics_info_t::clear_gl_rama_plot() {
@@ -4480,6 +4513,8 @@ graphics_info_t::render_3d_scene(GtkGLArea *gl_area) {
 
    draw_pointer_distances_objects();
 
+   draw_translation_gizmo(); // maybe rotation gizmo too, later.
+
    draw_texture_meshes();
 
 }
@@ -5323,19 +5358,19 @@ graphics_info_t::update_bad_nbc_atom_pair_marker_positions() {
 
          GLenum err = glGetError();
          if (err)
-            std::cout << "GL ERROR:: update_bad_nbc_atom_pair_marker_positions() pos-B " << stringify_error_message(err) << std::endl;
+            std::cout << "GL ERROR:: update_bad_nbc_atom_pair_marker_positions() pos-B " << stringify_error_code(err) << std::endl;
 
          attach_buffers();
          err = glGetError();
          if (err)
             std::cout << "GL ERROR:: update_bad_nbc_atom_pair_marker_positions() pos-C - post attach_buffers "
-                      << stringify_error_message(err) << std::endl;
+                      << stringify_error_code(err) << std::endl;
          tmesh_for_bad_nbc_atom_pair_markers.draw_this_mesh = true;
          tmesh_for_bad_nbc_atom_pair_markers.update_instancing_buffer_data(bad_nbc_atom_pair_marker_positions);
          err = glGetError();
          if (err)
             std::cout << "GL ERROR:: update_bad_nbc_atom_pair_marker_positions() pos-C - post update_instancing_buffer_data "
-                      << stringify_error_message(err) << std::endl;
+                      << stringify_error_code(err) << std::endl;
          if (! bad_nbc_atom_pair_marker_positions.empty())
             draw_bad_nbc_atom_pair_markers_flag = true;
 
@@ -5640,8 +5675,8 @@ graphics_info_t::setup_draw_for_boids() {
 
       meshed_generic_display_object m;
       coot::colour_holder col(0.4, 0.5, 0.6);
-      std::pair<glm::vec3, glm::vec3> start_end(glm::vec3(0.95,0,0), glm::vec3(-0.95,0,0));
-      m.add_cone(start_end, col, 1.0, 0.0, 12, false, true,
+      std::pair<glm::vec3, glm::vec3> start_end(glm::vec3(1.95,0,0), glm::vec3(-1.95,0,0));
+      m.add_cone(start_end, col, 3.0, 0.0, 24, false, true,
                  meshed_generic_display_object::FLAT_CAP,
                  meshed_generic_display_object::FLAT_CAP);
       mesh_for_boids = m.mesh;
@@ -5649,7 +5684,6 @@ graphics_info_t::setup_draw_for_boids() {
       std::vector<glm::mat4>    mats(n_boids);
       std::vector<glm::vec4> colours(n_boids);
       for (unsigned int i=0; i<n_boids; i++) {
-         const fun::boid boid = boids[i];
          mats[i] = glm::mat4(1.0f);
          colours[i] = glm::vec4(0.2, 0.6, 0.4, 1.0);
       }
@@ -6057,6 +6091,43 @@ graphics_info_t::draw_pointer_distances_objects() {
 }
 
 void
+graphics_info_t::draw_translation_gizmo() { // maybe rotation gizmo too, later.
+
+   if (translation_gizmo_mesh.get_draw_this_mesh()) {
+      bool do_it = false;
+      int tgagdo_num = translation_gizmo.attached_to_generic_display_object_number;
+      int tgam_num   = translation_gizmo.attached_to_molecule_number;
+      if (tgagdo_num != translation_gizmo_t::UNATTACHED)
+         if (tgagdo_num >= 0)
+            if (tgagdo_num < int(generic_display_objects.size()))
+               if (generic_display_objects[tgagdo_num].mesh.get_draw_this_mesh())
+                  do_it = true;
+      if (is_valid_model_molecule(tgam_num))
+         if (molecules[tgagdo_num].get_mol_is_displayed())
+            do_it = true;
+      if (is_valid_map_molecule(tgam_num))
+         if (molecules[tgagdo_num].is_displayed_p())
+            do_it = true;
+      if (do_it) {
+         Shader &shader = shader_for_moleculestotriangles;
+         glm::mat4 mvp = get_molecule_mvp();
+         glm::mat4 model_rotation_matrix = get_model_rotation();
+         glm::vec4 bg_col(background_colour, 1.0);
+         bool show_just_shadows = false;
+         bool wireframe_mode = false;
+         float opacity = 1.0f;
+         auto ccrc = RotationCentre();
+         glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
+         translation_gizmo_mesh.draw(&shader, mvp, model_rotation_matrix, lights, eye_position, rc, opacity,
+                                     bg_col, wireframe_mode, shader_do_depth_fog_flag, show_just_shadows);
+      }
+   }
+
+}
+
+
+
+void
 graphics_info_t::make_extra_distance_restraints_objects() {
 
    // c.f. update_hydrogen_bond_mesh().
@@ -6312,719 +6383,6 @@ graphics_info_t::idle_contour_function(gpointer data) {
 
    // std::cout << "--- debug:: idle_contour_function() done " << continue_status << std::endl;
    return continue_status;
-}
-
-// can't be a lambda funtion because of capture issues
-
-void keypad_translate_xyz(short int axis, short int direction) {
-
-      graphics_info_t g;
-      if (axis == 3) {
-         coot::Cartesian v = screen_z_to_real_space_vector(graphics_info_t::glareas[0]);
-         v *= 0.05 * float(direction);
-         g.add_vector_to_RotationCentre(v);
-      } else {
-         gdouble x_diff, y_diff;
-         x_diff = y_diff = 0;
-         coot::CartesianPair vec_x_y = screen_x_to_real_space_vector(graphics_info_t::glareas[0]);
-         if (axis == 1) x_diff = 1;
-         if (axis == 2) y_diff = 1;
-         g.add_to_RotationCentre(vec_x_y, x_diff * 0.1 * float(direction),
-                                 y_diff * 0.1 * float(direction));
-         if (g.GetActiveMapDrag() == 1) {
-            for (int ii=0; ii<g.n_molecules(); ii++) {
-               g.molecules[ii].update_map(true); // to take account
-               // of new rotation centre.
-            }
-         }
-         for (int ii=0; ii<g.n_molecules(); ii++) {
-            g.molecules[ii].update_symmetry();
-         }
-         g.graphics_draw();
-      }
- }
-
-
-
-#include "rsr-functions.hh"
-
-void
-graphics_info_t::setup_key_bindings() {
-
-   graphics_info_t g;
-
-   // if we are serious about user-defined key-bindings all of these functions should be thunks in the user API
-   // (and returning gboolean).
-
-   auto l1 = []() { graphics_info_t g; g.adjust_clipping(-0.1); return gboolean(TRUE); };
-   auto l2 = []() { graphics_info_t g; g.adjust_clipping( 0.1); return gboolean(TRUE); };
-   auto l5 = []() { graphics_info_t g; g.blob_under_pointer_to_screen_centre(); return gboolean(TRUE); };
-
-   auto l6 = []() {
-
-                if (do_tick_spin) {
-                   std::cout << "removing tick spin flag" << std::endl;
-                   do_tick_spin = false;
-                } else {
-                   std::cout << "adding tick spin flag A" << std::endl;
-                   if (! tick_function_is_active()) {
-                      std::cout << "adding tick spin flag B" << std::endl;
-                      int spin_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
-                      // this is not a good name if we are storing a generic tick function id.
-                      idle_function_spin_rock_token = spin_tick_id;
-                   }
-                   do_tick_spin = true;
-                }
-                return gboolean(TRUE);
-             };
-
-   auto l7 = []() {
-                int imol_scroll = graphics_info_t::scroll_wheel_map;
-                if (graphics_info_t::is_valid_map_molecule(imol_scroll))
-                   graphics_info_t::molecules[imol_scroll].pending_contour_level_change_count--;
-                if (graphics_info_t::glareas.size() > 0)
-                   int contour_idle_token = g_idle_add(idle_contour_function, graphics_info_t::glareas[0]);
-                graphics_info_t g;
-                g.set_density_level_string(imol_scroll, graphics_info_t::molecules[imol_scroll].contour_level);
-                graphics_info_t::display_density_level_this_image = 1;
-                return gboolean(TRUE);
-             };
-
-   auto l8 = []() {
-                int imol_scroll = graphics_info_t::scroll_wheel_map;
-                if (graphics_info_t::is_valid_map_molecule(imol_scroll))
-                   graphics_info_t::molecules[imol_scroll].pending_contour_level_change_count++;
-                if (graphics_info_t::glareas.size() > 0)
-                   int contour_idle_token = g_idle_add(idle_contour_function, graphics_info_t::glareas[0]);
-                graphics_info_t g;
-                g.set_density_level_string(imol_scroll, graphics_info_t::molecules[imol_scroll].contour_level);
-                graphics_info_t::display_density_level_this_image = 1;
-                return gboolean(TRUE);
-             };
-
-   auto l9 = [] () {
-                update_go_to_atom_from_current_position();
-                return gboolean(TRUE);
-             };
-
-   auto l10 = []() { graphics_info_t::zoom *= 0.9; return gboolean(TRUE); };
-
-   auto l11 = []() { graphics_info_t::zoom *= 1.1; return gboolean(TRUE); };
-
-   auto l12 = []() { graphics_info_t g; g.move_forwards(); return gboolean(TRUE); };
-
-   auto l13 = []() { graphics_info_t g; g.move_backwards(); return gboolean(TRUE); };
-
-   auto l13l = []() { graphics_info_t g; g.step_screen_left();   return gboolean(TRUE); };
-   auto l13r = []() { graphics_info_t g; g.step_screen_right(); return gboolean(TRUE); };
-
-   //    auto l14 = []() { safe_python_command("import ncs; ncs.skip_to_next_ncs_chain('forward')"); return gboolean(TRUE); };
-
-   // auto l14 = []() { /* use l28 */ return gboolean(TRUE); };
-
-   // auto l15 = []() { /* use l28 */ return gboolean(TRUE); };
-
-   auto l16 = []() { graphics_info_t g; g.undo_last_move(); return gboolean(TRUE); };
-
-   auto l18 = []() { graphics_info_t g; g.clear_hud_buttons(); g.accept_moving_atoms(); return gboolean(TRUE); };
-
-   auto l18_space = []() {
-                       graphics_info_t g;
-                       if (g.hud_button_info.size()) {
-                          g.clear_hud_buttons(); g.accept_moving_atoms();
-                       } else {
-
-                          // Move the view - don't click the button
-
-                          // g.reorienting_next_residue_mode = false; // hack
-                          bool reorienting = graphics_info_t::reorienting_next_residue_mode;
-                          if (reorienting) {
-                             if (graphics_info_t::shift_is_pressed) {
-                                g.reorienting_next_residue(false); // backwards
-                             } else {
-                                g.reorienting_next_residue(true); // forwards
-                             }
-                          } else {
-                             // old/standard simple translation
-                             if (graphics_info_t::shift_is_pressed) {
-                                g.intelligent_previous_atom_centring(g.go_to_atom_window);
-                             } else {
-                                g.intelligent_next_atom_centring(g.go_to_atom_window);
-                             }
-                          }
-                       }
-                       return gboolean(TRUE);
-                    };
-
-   auto l19 = []() {
-                 graphics_info_t g;
-                 if (g.moving_atoms_asc) {
-                    g.clear_up_moving_atoms_wrapper(); g.clear_gl_rama_plot();
-                 } else {
-                    unfullscreen();
-                 }
-                 return gboolean(TRUE);
-              };
-
-   auto l20 = []() { graphics_info_t g; g.eigen_flip_active_residue(); return gboolean(TRUE); };
-
-   auto l21 = []() { graphics_info_t g; g.try_label_unlabel_active_atom(); return gboolean(TRUE); };
-
-   auto l22 = []() {
-                  graphics_info_t g;
-                  g.setup_draw_for_particles();
-                  return gboolean(TRUE);
-             };
-
-   // boids
-   auto l23 = [] () {
-      graphics_info_t g;
-
-      if (false) {
-         if (! graphics_info_t::do_tick_boids)
-            graphics_info_t::do_tick_boids = true;
-         else
-            graphics_info_t::do_tick_boids = false;
-         g.setup_draw_for_boids();
-         if (! graphics_info_t::do_tick_boids)
-            std::cout << "--------- key press ----------- do_tick_boids "
-                      << graphics_info_t::do_tick_boids << std::endl;
-      }
-      return gboolean(TRUE);
-   };
-
-   auto l24 = [] () {
-                 // using the C API
-                 // do_add_terminal_residue(1); // waits for user click :-)
-                 graphics_info_t g;
-                 g.add_terminal_residue_using_active_atom();
-                 return gboolean(TRUE);
-      };
-
-   auto l25 = [] () {
-                 graphics_info_t g;
-                 std::pair<bool, std::pair<int, coot::atom_spec_t> > aa_spec_pair = active_atom_spec();
-                 if (aa_spec_pair.first) {
-                    int imol = aa_spec_pair.second.first;
-                    mmdb::Atom *at = molecules[imol].get_atom(aa_spec_pair.second.second);
-                    mmdb::Residue *residue_p = at->GetResidue();
-                    int imol_map = g.imol_refinement_map;
-                    if (residue_p) {
-                       mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
-                       coot::residue_spec_t residue_spec(residue_p);
-                       g.molecules[imol].fill_partial_residue(residue_spec, g.Geom_p(), imol_map);
-
-                       // now refine that
-                       int saved_state = g.refinement_immediate_replacement_flag;
-                       g.refinement_immediate_replacement_flag = 1;
-                       std::string alt_conf("");
-                       std::vector<mmdb::Residue *> rs = { residue_p };
-                       g.refine_residues_vec(imol, rs, alt_conf, mol);
-                       g.conditionally_wait_for_refinement_to_finish();
-                       g.accept_moving_atoms();
-                       g.refinement_immediate_replacement_flag = saved_state;
-                    }
-                 }
-                 return gboolean(TRUE);
-              };
-
-
-   auto l26 = [] () {
-                 graphics_info_t g;
-                 std::pair<bool, std::pair<int, coot::atom_spec_t> > aa_spec_pair = active_atom_spec();
-                 if (aa_spec_pair.first) {
-                    int imol = aa_spec_pair.second.first;
-                    mmdb::Atom *at = molecules[imol].get_atom(aa_spec_pair.second.second);
-                    mmdb::Residue *residue_p = at->GetResidue();
-                    if (residue_p) {
-                       coot::residue_spec_t residue_spec(residue_p);
-                       g.molecules[imol].delete_residue_sidechain(residue_spec);
-                    }
-                 }
-                 return gboolean(TRUE);
-              };
-
-   auto l28 = [] () {
-
-                 std::cout << "@@@@@@@@@@@@@@@@@@@@@@@ l28" << std::endl;
-
-                 std::pair<bool, std::pair<int, coot::atom_spec_t> > aa_spec_pair = active_atom_spec();
-                 if (aa_spec_pair.first) {
-                    int imol = aa_spec_pair.second.first;
-                    mmdb::Atom *at = molecules[imol].get_atom(aa_spec_pair.second.second);
-                    mmdb::Residue *residue_p = at->GetResidue();
-                    if (residue_p) {
-                       std::string this_chain_id = residue_p->GetChainID();
-                       coot::residue_spec_t residue_spec(residue_p);
-                       std::vector<std::vector<std::string> > ghost_chains_sets = molecules[imol].ncs_ghost_chains();
-                       unsigned int n_ghost_chain_sets = ghost_chains_sets.size();
-                       for (unsigned int i=0; i<n_ghost_chain_sets; i++) {
-                          const std::vector<std::string> &chain_ids = ghost_chains_sets[i];
-                          if (std::find(chain_ids.begin(), chain_ids.end(), this_chain_id) != chain_ids.end()) {
-                             unsigned int idx_next = 0;
-                             for (unsigned int j=0; j<chain_ids.size(); j++) {
-                                if (chain_ids[j] == this_chain_id) {
-                                   idx_next = j + 1;
-                                   if (idx_next == chain_ids.size())
-                                      idx_next = 0;
-                                   break;
-                                }
-                             }
-                             std::string chain_id_next = chain_ids[idx_next];
-                             clipper::Coord_orth current_position = coot::co(at);
-                             bool forward_flag = true;
-                             glm::mat4 quat_mat = glm::toMat4(view_quaternion);
-                             clipper::Mat33<double> current_view_mat = glm_to_mat33(quat_mat);
-
-                             if (molecules[imol].ncs_ghosts_have_rtops_p() == 0)
-                                molecules[imol].fill_ghost_info(1, ncs_homology_level);
-
-                             std::pair<bool, clipper::RTop_orth> new_ori =
-                                molecules[imol].apply_ncs_to_view_orientation(current_view_mat,
-                                                                              current_position,
-                                                                              this_chain_id, chain_id_next,
-                                                                              forward_flag);
-                             if (new_ori.first) {
-
-                                clipper::Coord_orth t(new_ori.second.trn());
-                                set_rotation_centre(t);
-
-				view_quaternion = matrix_to_quaternion(new_ori.second.rot());
-
-                                graphics_info_t g;
-                                g.update_things_on_move(); // not static
-                             }
-                             break;
-                          }
-                       }
-                    } else {
-                       std::cout << "ERROR:: no residue" << std::endl;
-                    }
-                 }
-                 graphics_draw();
-                 return gboolean(TRUE);
-              };
-
-   auto l29 = [] () {
-
-      graphics_info_t g;
-      auto tp_now = std::chrono::high_resolution_clock::now();
-      int n_press = g.get_n_pressed_for_leftquote_tap(tp_now);
-      // std::cout << "highlighting active residue " << n_press << std::endl;
-      std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
-      if (pp.first) {
-         int imol = pp.second.first;
-         g.update_mesh_for_outline_of_active_residue(imol, pp.second.second, n_press);
-         if (! tick_function_is_active()) {
-            int new_tick_id = gtk_widget_add_tick_callback(glareas[0], glarea_tick_func, 0, 0);
-         }
-         outline_for_active_residue_frame_count = 40;
-         do_tick_outline_for_active_residue = true;
-      }
-      return gboolean(TRUE);
-   };
-
-   auto l31 = [] () {
-                 graphics_info_t g;
-                 g.decrease_clipping_front();
-                 return gboolean(TRUE);
-              };
-
-   auto l32 = [] () {
-                 graphics_info_t g;
-                 g.increase_clipping_front();
-                 return gboolean(TRUE);
-              };
-
-   auto l33 = [] () {
-                 graphics_info_t g;
-                 g.decrease_clipping_back();
-                 return gboolean(TRUE);
-              };
-
-   auto l34 = [] () {
-                 graphics_info_t g;
-                 g.increase_clipping_back();
-                 return gboolean(TRUE);
-              };
-
-   auto l35 = [] () {
-                 graphics_info_t g;
-                 g.wrapped_create_display_control_window();
-                 return gboolean(TRUE);
-              };
-
-   auto l36 = [] () {
-                 graphics_info_t g;
-                 g.triple_refine_auto_accept();
-                 return gboolean(TRUE);
-              };
-
-   auto l37 = [] {
-      graphics_info_t g;
-      g.display_next_map(); // one at a time, all, none.
-      return gboolean(TRUE);
-   };
-
-   auto l38 = [] () {
-      graphics_info_t g;
-      g.toggle_display_of_last_model();
-      return gboolean(TRUE);
-   };
-
-   auto l40 = [] () {
-      rsr_sphere_refine_plus();
-      return gboolean(TRUE);
-   };
-
-   auto l40c = [] () {
-      rsr_refine_chain();
-      return gboolean(TRUE);
-   };
-
-   auto l41 = [] () {
-      bool is_all_em   = true;
-      bool is_all_xray = true;
-      for (int ii=0; ii<n_molecules(); ii++) {
-         if (is_valid_map_molecule(ii)) {
-            if (molecules[ii].is_EM_map()) {
-               is_all_xray = false;
-            } else {
-               is_all_em = false;
-            }
-         }
-      }
-      if (is_all_xray)
-         box_radius_xray *= (1.0/1.15);
-      if (is_all_em)
-         box_radius_em   *= (1.0/1.15);
-
-      // 20250531-PE as it used to be:
-      if ((! is_all_em) && (! is_all_em)) {
-         box_radius_xray *= (1.0/1.15);
-         box_radius_em   *= (1.0/1.15);
-      }
-
-      // is there an "update maps" function?
-      for (int ii=0; ii<n_molecules(); ii++) {
-         if (is_valid_map_molecule(ii))
-            molecules[ii].update_map(true);
-      }
-      return gboolean(TRUE);
-   };
-
-   auto l42 = [] () {
-      box_radius_xray *= 1.15;
-      box_radius_em *= 1.15;
-      for (int ii=0; ii<n_molecules(); ii++) {
-         if (is_valid_map_molecule(ii))
-            molecules[ii].update_map(true);
-      }
-      return gboolean(TRUE);
-   };
-
-   auto l43 = [] () {
-      bool done = false;
-      int scroll_wheel_map_prev = scroll_wheel_map;
-      for (int ii=0; ii<n_molecules(); ii++) {
-         if (is_valid_map_molecule(ii)) {
-            if (ii > scroll_wheel_map) {
-               scroll_wheel_map = ii;
-               done = true;
-               break;
-            }
-         }
-      }
-      if (! done) {
-         for (int ii=0; ii<n_molecules(); ii++) {
-            if (is_valid_map_molecule(ii)) {
-               scroll_wheel_map = ii;
-               break;
-            }
-         }
-      }
-      if (scroll_wheel_map != scroll_wheel_map_prev) {
-         // we need to update the Display Manager
-         graphics_info_t g;
-         g.set_scrollable_map(scroll_wheel_map); // calls activate_scroll_radio_button_in_display_manager()
-      }
-      return gboolean(TRUE);
-   };
-
-   auto l44 = [] () {
-      graphics_info_t g;
-      if (moving_atoms_asc) {
-         if (moving_atoms_asc->mol) {
-            g.backrub_rotamer_intermediate_atoms();
-         }
-      } else {
-         std::pair<int, mmdb::Atom *> aa = g.get_active_atom();
-         int imol = aa.first;
-         if (is_valid_model_molecule(imol)) {
-            std::string alt_conf = aa.second->altLoc;
-            coot::residue_spec_t res_spec(coot::atom_spec_t(aa.second));
-            g.auto_fit_rotamer_ng(imol, res_spec, alt_conf);
-         }
-      }
-      return gboolean(TRUE);
-   };
-
-   auto l45 = [] () {
-
-      std::cout << "------------------- Here l45 start " << moving_atoms_asc << std::endl;
-      graphics_info_t g;
-      bool done = false;
-      // I need to be consistent about checking for moving_atoms_asc or moving_atoms_asc->mol
-      // being null to mean if moving atoms are being displayed.
-      // init() does a `new` for moving_atoms_asc.
-      if (moving_atoms_asc) {
-         if (moving_atoms_asc->mol) {
-            g.pepflip_intermediate_atoms();
-            done = true;
-         }
-      }
-
-      if (! done) {
-         std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
-         int imol = pp.second.first;
-         if (is_valid_model_molecule(imol)) {
-            coot::atom_spec_t as(pp.second.second);
-            g.pepflip(imol, as);
-         }
-      }
-      return gboolean(TRUE);
-   };
-
-   // Note to self, Space and Shift Space are key *Release* functions
-
-   std::vector<std::pair<keyboard_key_t, key_bindings_t> > kb_vec;
-   // kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_d,      key_bindings_t(l1, "increase clipping")));
-   kb_vec.push_back(std::make_pair(GDK_KEY_d, key_bindings_t(l13r, "step right")));
-   kb_vec.push_back(std::make_pair(GDK_KEY_a, key_bindings_t(l13l, "step left")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_e,      key_bindings_t(l44, "Auto-fit Rotamer")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_f,      key_bindings_t(l2, "decrease clipping")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_g,      key_bindings_t(l5, "go to blob")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_h,      key_bindings_t(l36, "Triple Refine with Auto-accept")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_i,      key_bindings_t(l6, "spin")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_plus,   key_bindings_t(l8, "increase contour level")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_equal,  key_bindings_t(l8, "increase contour level")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_minus,  key_bindings_t(l7, "decrease contour level")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_p,      key_bindings_t(l9, "update go-to atom by position")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_q,      key_bindings_t(l45, "Pep-flip")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_n,      key_bindings_t(l10, "Zoom in")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_m,      key_bindings_t(l11, "Zoom out")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_w,      key_bindings_t(l12, "Move forward")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_s,      key_bindings_t(l13, "Move backward")));
-   // kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_o,      key_bindings_t(l14, "NCS Skip forward")));
-   // kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_O,      key_bindings_t(l15, "NCS Skip backward")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_u,      key_bindings_t(l16, "Undo Move")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_Return, key_bindings_t(l18, "Accept Moving Atoms")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_Escape, key_bindings_t(l19, "Reject Moving Atoms")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_l,      key_bindings_t(l21, "Label/Unlabel Active Atom")));
-   // kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_b,      key_bindings_t(l23, "Murmuration")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_y,      key_bindings_t(l24, "Add Terminal Residue")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_k,      key_bindings_t(l25, "Fill Partial Residue")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_K,      key_bindings_t(l26, "Delete Sidechain")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_o,      key_bindings_t(l28, "NCS Other Chain")));
-
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_A,      key_bindings_t(l38, "Toggle Display of Last Model")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_E,      key_bindings_t(l40c, "Chain Refine")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_R,      key_bindings_t(l40, "Sphere Refine")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_Q,      key_bindings_t(l37, "Display Next Map")));
-
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_space,  key_bindings_t(l18_space, "Accept Moving Atoms")));
-
-   // clipping
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_1,      key_bindings_t(l31, "Clipping Front Expand")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_2,      key_bindings_t(l32, "Clipping Front Reduce")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_3,      key_bindings_t(l33, "Clipping Back Reduce")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_4,      key_bindings_t(l34, "Clipping Back Expand")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_F8,     key_bindings_t(l35, "Show Display Manager")));
-
-   // map radius
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_bracketleft,  key_bindings_t(l41, "Decrease Map Radius")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_bracketright, key_bindings_t(l42, "Increase Map Radius")));
-
-   // scroll-wheel map change
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_W, key_bindings_t(l43, "Change Scroll-wheel map")));
-
-   // control
-   // meh - ugly and almost useless. Try again.
-   // kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_asciitilde, key_bindings_t(l29, "Highlight Active Residue")));
-   // try backtick:
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_quoteleft, key_bindings_t(l29, "Highlight Active Residue")));
-
-   // control keys
-
-   auto lc_copy = [] () { graphics_info_t g; g.copy_active_atom_molecule(); return gboolean(TRUE); };
-   key_bindings_t copy_mol_key_binding(lc_copy, "Copy Model Molecule");
-   std::pair<keyboard_key_t, key_bindings_t> p_copy(keyboard_key_t(GDK_KEY_c, true), copy_mol_key_binding);
-   kb_vec.push_back(p_copy);
-
-   auto lc1 = []() { show_go_to_residue_keyboarding_mode_window(); return gboolean(TRUE); };
-   key_bindings_t go_to_residue_key_binding(lc1, "Show Go To Residue Keyboarding Window");
-   std::pair<keyboard_key_t, key_bindings_t> p1(keyboard_key_t(GDK_KEY_g, true), go_to_residue_key_binding);
-   kb_vec.push_back(p1);
-
-   auto lc2 = []() { graphics_info_t g; g.apply_undo(); return gboolean(TRUE); };
-   key_bindings_t undo_key_binding(lc2, "Undo");
-   std::pair<keyboard_key_t, key_bindings_t> p2(keyboard_key_t(GDK_KEY_z, true), undo_key_binding);
-   kb_vec.push_back(p2);
-
-   auto lc3 = []() { graphics_info_t g; g.apply_redo(); return gboolean(TRUE);};
-   key_bindings_t redo_key_binding(lc3, "Redo");
-   std::pair<keyboard_key_t, key_bindings_t> p3(keyboard_key_t(GDK_KEY_y, true), redo_key_binding);
-   kb_vec.push_back(p3);
-
-   auto lc_res_info = []() {
-      // this blob was copied from residue_info_action() - it could be refactored
-      std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
-      if (pp.first) {
-         int imol = pp.second.first;
-         coot::residue_spec_t res_spec(pp.second.second);
-         output_residue_info_dialog(imol, res_spec);
-      }
-      return gboolean(TRUE);
-   };
-   key_bindings_t residue_info_key_binding(lc_res_info, "Residue Info");
-   std::pair<keyboard_key_t, key_bindings_t> p_res_info(keyboard_key_t(GDK_KEY_i, true), residue_info_key_binding);
-   kb_vec.push_back(p_res_info);
-
-   auto ldr = [] () {
-                 graphics_info_t g;
-                 std::pair<bool, std::pair<int, coot::atom_spec_t> > aa_spec_pair = active_atom_spec();
-                 if (aa_spec_pair.first) {
-                    int imol = aa_spec_pair.second.first;
-                    mmdb::Atom *at = molecules[imol].get_atom(aa_spec_pair.second.second);
-                    mmdb::Residue *residue_p = at->GetResidue();
-                    if (residue_p) {
-                       // for this to work I need to move setup_delete_item_pulse() into
-                       // graphics_info_t. Not today.
-                       g.setup_delete_item_pulse(residue_p);
-                       coot::residue_spec_t residue_spec(residue_p);
-                       g.molecules[imol].delete_residue(residue_spec);
-                    }
-                 }
-                 return gboolean(TRUE);
-              };
-   key_bindings_t delete_residue_key_binding(ldr, "Delete Residue");
-   std::pair<keyboard_key_t, key_bindings_t> pdel(keyboard_key_t(GDK_KEY_d, true), delete_residue_key_binding);
-   kb_vec.push_back(pdel);
-
-   // Direction is either +1 or -1 (in or out)
-   //
-
-   // ctrl left
-   auto lc4 = []() {
-                 if (true) { // we don't get here unless Ctrl is pressed. No need to test it again here.
-                    if (graphics_info_t::shift_is_pressed)
-                       graphics_info_t::nudge_active_residue_by_rotate(GDK_KEY_Left);
-                    else
-                       graphics_info_t::nudge_active_residue(GDK_KEY_Left);
-                 } else {
-                    keypad_translate_xyz(1, 1);
-                 }
-                 return gboolean(TRUE);
-              };
-
-   // ctrl right
-   auto lc5 = []() {
-                 if (true) { // we don't get here unless Ctrl is pressed.
-                    if (graphics_info_t::shift_is_pressed)
-                       graphics_info_t::nudge_active_residue_by_rotate(GDK_KEY_Right);
-                    else
-                       graphics_info_t::nudge_active_residue(GDK_KEY_Right);
-                 } else {
-                    keypad_translate_xyz(1, -1);
-                 }
-                 return gboolean(TRUE);
-              };
-
-   // ctrl up
-   auto lc6 = []() {
-                 if (true) { // we don't get here unless Ctrl is pressed.
-                    if (graphics_info_t::shift_is_pressed)
-                       graphics_info_t::nudge_active_residue_by_rotate(GDK_KEY_Up);
-                    else
-                       graphics_info_t::nudge_active_residue(GDK_KEY_Up);
-                 } else {
-                    keypad_translate_xyz(2, 1);
-                 }
-                 return gboolean(TRUE);
-              };
-   // ctrl down
-   auto lc7 = []() {
-                 if (true) { // we don't get here unless Ctrl is pressed.
-                    if (graphics_info_t::shift_is_pressed)
-                       graphics_info_t::nudge_active_residue_by_rotate(GDK_KEY_Down);
-                    else
-                       graphics_info_t::nudge_active_residue(GDK_KEY_Down);
-                 } else {
-                    keypad_translate_xyz(2, -1);
-                 }
-                 return gboolean(TRUE);
-              };
-
-   auto lc_qsa = [] () {
-                    graphics_info_t g;
-                    g.quick_save();
-                    g.graphics_grab_focus();
-                    return gboolean(TRUE);
-                 };
-
-   auto lc_toggle_validation_side_panel = [] () {
-      GtkWidget* pane = widget_from_builder("main_window_ramchandran_and_validation_pane");
-      if (pane) {
-         if (gtk_widget_get_visible(pane) == TRUE) {
-            gtk_widget_set_visible(pane, FALSE);
-         } else {
-            gtk_widget_set_visible(pane, TRUE);
-         }
-      }
-      return gboolean(TRUE);
-   };
-
-   auto lc_toggle_alt_conf_view = [] () {
-      graphics_info_t g;
-      std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
-      const std::string &current_alt_conf = pp.second.second.alt_conf;
-      if (pp.first) {
-         int imol = pp.second.first;
-         g.molecules[imol].alt_conf_view_next_alt_conf(current_alt_conf);
-      }
-      return gboolean(TRUE);
-   };
-
-   key_bindings_t ctrl_arrow_left_key_binding(lc4, "R/T Left");
-   key_bindings_t ctrl_arrow_right_key_binding(lc5, "R/T Right");
-   key_bindings_t ctrl_arrow_up_key_binding(lc6, "R/T Up");
-   key_bindings_t ctrl_arrow_down_key_binding(lc7, "R/T Down");
-   key_bindings_t ctrl_eigen_flip(l20, "Eigen-Flip");
-   key_bindings_t ctrl_quick_save(lc_qsa, "Quick Save");
-   key_bindings_t ctrl_toggle_panel(lc_toggle_validation_side_panel, "Toggle Validation Panel");
-   key_bindings_t ctrl_toggle_alt_conf_view(lc_toggle_alt_conf_view, "Toggle Alt Conf View");
-
-   std::pair<keyboard_key_t, key_bindings_t> p4(keyboard_key_t(GDK_KEY_Left,  true), ctrl_arrow_left_key_binding);
-   std::pair<keyboard_key_t, key_bindings_t> p5(keyboard_key_t(GDK_KEY_Right, true), ctrl_arrow_right_key_binding);
-   std::pair<keyboard_key_t, key_bindings_t> p6(keyboard_key_t(GDK_KEY_Up,    true), ctrl_arrow_up_key_binding);
-   std::pair<keyboard_key_t, key_bindings_t> p7(keyboard_key_t(GDK_KEY_Down,  true), ctrl_arrow_down_key_binding);
-   std::pair<keyboard_key_t, key_bindings_t> p11(keyboard_key_t(GDK_KEY_a,    true), ctrl_toggle_alt_conf_view);
-   std::pair<keyboard_key_t, key_bindings_t> p10(keyboard_key_t(GDK_KEY_b,    true), ctrl_toggle_panel);
-   std::pair<keyboard_key_t, key_bindings_t>  p8(keyboard_key_t(GDK_KEY_e,    true), ctrl_eigen_flip);
-   std::pair<keyboard_key_t, key_bindings_t>  p9(keyboard_key_t(GDK_KEY_s,    true), ctrl_quick_save);
-
-   kb_vec.push_back(p4);
-   kb_vec.push_back(p5);
-   kb_vec.push_back(p6);
-   kb_vec.push_back(p7);
-   kb_vec.push_back(p8);
-   kb_vec.push_back(p9);
-   kb_vec.push_back(p10);
-
-   std::vector<std::pair<keyboard_key_t, key_bindings_t> >::const_iterator it;
-   for (it=kb_vec.begin(); it!=kb_vec.end(); ++it)
-     g.key_bindings_map[it->first] = it->second;
-
 }
 
 

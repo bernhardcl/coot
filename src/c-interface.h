@@ -69,7 +69,10 @@ p  So we need to have this function external for c++ linking.
 #ifdef __cplusplus
 #ifdef USE_GUILE
 #include <cstdio> /* for std::FILE in gmp.h for libguile.h */
-#include <libguile.h>		/* for SCM type (returned by safe_scheme_command) */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvolatile"
+#include <libguile.h>
+#pragma GCC diagnostic pop
 #else
 #include <string> /* for std::string; included (sic!) in above for guile */
 #endif /*  USE_GUILE */
@@ -136,7 +139,6 @@ int prefer_python();
 /*  ------------------------------------------------------------------------ */
 /*  File system Utility function: maybe there is a better place for it... */
 
-
 /*  Return like mkdir: mkdir returns zero on success, or -1 if an error */
 /*  occurred */
 
@@ -146,16 +148,6 @@ int prefer_python();
 /* section File System Functions */
 /*!  \name File System Functions */
 /*! \{ */
-
-/*! \brief make a directory dir (if it doesn't exist) and return error code
-
-   If it can be created, create the directory dir, return the success status
-   like mkdir: mkdir
-
-   @return zero on success, or -1 if an  error  occurred.
-   If dir already exists as a directory, return 0 of course.
- */
-int make_directory_maybe(const char *dir);
 
 /*! \brief Show Paths in Display Manager?
 

@@ -491,6 +491,7 @@ libcootsumo_la_SOURCES = \
 	c-interface.cc		 \
 	c-interface-test.cc      \
 	cc-interface.hh		 \
+	cc-interface-utils.cc    \
 	cc-interface-alignment.cc \
 	cc-interface-graphics.cc \
 	cc-interface-graphics.hh \
@@ -566,7 +567,6 @@ libcootsumo_la_SOURCES = \
 	density-results-container-t.hh \
 	dots-representation.hh   \
 	draw.cc                  \
-	graphics-info-tick-function.cc \
 	draw.hh                  \
 	draw-2.hh                \
 	drag-and-drop.hh         \
@@ -578,6 +578,8 @@ libcootsumo_la_SOURCES = \
 	eyes.cc eyes.hh		 \
 	event-controller-callbacks.hh \
 	event-controller-callbacks.cc \
+	file-system-utils.cc     \
+	file-system-utils.hh     \
 	fit-loop-gui.cc          \
 	fit-loop-gui.hh          \
 	flev.hh			 \
@@ -611,11 +613,15 @@ libcootsumo_la_SOURCES = \
 	graphics-info-defines.cc \
 	graphics-info-defines-gtk4.cc \
 	graphics-info-draw.cc    \
+	graphics-info-draw-utils.cc \
 	graphics-info-draw-models.cc \
+	graphics-info-enums.hh \
+	graphics-info-geometry-graphs.cc \
 	graphics-info-graphs.cc	 \
 	graphics-info-gui.cc	 \
 	graphics-info-init.cc	 \
 	graphics-info-intermediate.cc    \
+	graphics-info-keybindings.cc     \
 	graphics-info-modelling.cc       \
 	graphics-info-navigation.cc	 \
 	graphics-info-navigation-gtk2.cc \
@@ -635,7 +641,9 @@ libcootsumo_la_SOURCES = \
 	graphics-info-state.cc	 \
 	graphics-info-statics.cc \
 	graphics-info-superpose.cc	\
+	graphics-info-tick-function.cc \
 	graphics-info-trackball.cc	\
+	graphics-info-utils.cc	 \
 	graphics-ligand-view.cc	 \
 	graphics-ligand-view.hh	 \
 	graphics-ligand-mesh-molecule.cc \
@@ -652,6 +660,7 @@ libcootsumo_la_SOURCES = \
 	gtk-utils.hh \
 	guile-fixups.h		 \
 	history_list.hh		 \
+	intermediate-atom.hh     \
 	HUDMesh.cc               \
 	HUDMesh.hh               \
 	HUDTextureMesh.cc        \
@@ -728,6 +737,7 @@ libcootsumo_la_SOURCES = \
 	new-molecule-by-symmetry-matrix.hh \
 	nsv.hh                   \
 	obj_loader.h obj_loader.cc \
+	pae-interface.cc         \
 	pisa-interface.hh	 \
 	pisa-internal.hh         \
 	pick.hh pick.cc	         \
@@ -778,14 +788,17 @@ libcootsumo_la_SOURCES = \
 	startup-utils.cc         \
 	startup-scripts.hh       \
 	startup-scripts.hh       \
+	stringify-error-code.hh  \
 	testing.cc testing-2.cc  \
 	testing-data.hh          \
 	testing.hh               \
 	Texture.cc Texture.hh    \
 	TextureMesh.cc TextureMesh.hh \
-	tomo-tools.cc \
+	tomo-tools.cc            \
+	translation-gizmo.cc     \
+	translation-gizmo.hh     \
 	triangle-extras.h        \
-	user-mods.hh user-mods.cc\
+	user-mods.hh user-mods.cc \
 	xmap-utils.cc 		 \
 	xmap-utils.h             \
 	remarks-browser-gtk-widgets.hh \

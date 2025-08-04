@@ -10,7 +10,9 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+# C++20 is only used because newest versions of RDKit (March 2025 and newer) seems to require it
+# Without RDKit, Coot currently needs C++17
+set(CMAKE_CXX_STANDARD 20)
 
 if (APPLE)
 else()
@@ -24,18 +26,18 @@ find_package(GEMMI REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Python REQUIRED)
 
-find_package(Boost COMPONENTS iostreams system python regex thread serialization REQUIRED)
+find_package(Boost COMPONENTS iostreams system regex thread serialization REQUIRED)
 find_package(glm REQUIRED)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-# Charles wants 3.9 here, but if I change to 3.9 then it will not build for me
-# Hmm...
-# What do I need to do here so that Charles can specify on the command line what the version of Python should be?
-find_package(Python 3.12.4
+find_package(Python 3
   REQUIRED COMPONENTS Interpreter Development.Module
   OPTIONAL_COMPONENTS Development.SABIModule)
 
+# This is flaky.
+# If it doesn't work, first try setting nanobind_DIR to wherever_your_python_is/lib/python3.$your_python_version/site-packages/nanobind/cmake
+# If that doesn't work, make sure that CMAKE_INSTALL_PREFIX is set
 find_package(nanobind CONFIG REQUIRED)
 
 # only via homebrew on macOS (not tried to compile them myself) - see below also though.
@@ -54,7 +56,7 @@ endif(WIN32)
 
 set(coot_src ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1.1.17"
+add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1.1.18"
   -DHAVE_CXX_THREAD -DHAVE_SSMLIB -DHAVE_BOOST -DUSE_LIBPNG=1 -DCLIPPER_HAS_TOP8000 -DUSE_GEMMI -DHAVE_BOOST_THREAD -DHAVE_GSL
   -DPKGDATADIR="${CMAKE_INSTALL_PREFIX}/share/coot" -DXDATADIR="${CMAKE_INSTALL_PREFIX}/share")
 
@@ -67,7 +69,8 @@ find_package(RDKit CONFIG COMPONENTS RDGeneral REQUIRED)
 set(RDKit_libs_for_libcootapi RDKit::rdkit_base RDKit::Descriptors RDKit::ForceFieldHelpers RDKit::ForceField RDKit::Optimizer RDKit::MolDraw2D  RDKit::MolChemicalFeatures)
 
 # we can be on Apple, and also have access to homebrew dwarf and elf - but this typically not the case
-# should this actually be ENABLE_BACKWARD? (util/backward.cpp is not conditionally compiled)
+# should this actually be ENABLE_BACKWARD? (util/backward.cpp is not conditionally compiled).
+# This doesn't seem to wort at the moment though - maybe a  problem with libdwarf.
 if (ENABLE_DWARF_ELF)
    find_library(libelf elf)
    find_library(libdwarf dw)
@@ -470,14 +473,29 @@ nanobind_add_module(coot_headless_api ${coot_src}/api/molecules-container-nanobi
 # target_compile_options(cootapi PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 # target_link_libraries(cootapi PRIVATE -fsanitize=address) # Linker flags
 
-# thanks Jordan (install coot_headless_api.pyi in the right place)
-nanobind_add_stub(coot_headless_api_ext_stub
-  MODULE coot_headless_api
-  OUTPUT ${Python_SITELIB}/coot_headless_api.pyi
-  PYTHON_PATH $<TARGET_FILE_DIR:coot_headless_api>
-  DEPENDS coot_headless_api
-)
-# MARKER_FILE py.typed
+if (MAKE_COOT_HEADLESS_API_PYI)
+  # thanks Jordan (install coot_headless_api.pyi in the right place)
+  nanobind_add_stub(coot_headless_api_ext_stub
+    MODULE coot_headless_api
+    OUTPUT ${Python_SITELIB}/coot_headless_api.pyi
+    PYTHON_PATH $<TARGET_FILE_DIR:coot_headless_api>
+    DEPENDS coot_headless_api
+  )
+  # MARKER_FILE py.typed
+endif()
+
+# macOS doesn't have libelf
+if (ENABLE_DWARF)
+  # find_library(libdwarf dw)
+  #  add_definitions(-DBACKWARD_HAS_DW)
+  #  message("-- Enabled dwarf (macOS)")
+  find_library(LIBDWARF dwarf PATHS /opt/homebrew/lib)
+     if (NOT LIBDWARF)
+        message(FATAL_ERROR "libdwarf not found. Please install with 'brew install libdwarf'")
+     endif()
+  target_link_libraries(cootapi PRIVATE ${LIBDWARF})
+endif()
+
 
 # use MMDB2_INCLUDE_DIR to find the RDKIT for now.
 target_include_directories(cootapi PRIVATE ${coot_src} ${coot_src}/coords ${coot_src}/utils ${coot_src}/ccp4mg-utils ${coot_src}/ccp4mg-utils/util ${coot_src}/ccp4mg-utils/pygl ${MMDB2_INCLUDE_DIR} ${SSM_INCLUDE_DIR} ${CLIPPER-CORE_INCLUDE_DIR} ${CLIPPER-MMDB_INCLUDE_DIR} ${CLIPPER-CCP4_INCLUDE_DIR} ${FFTW2_INCLUDE_DIRS} ${RDKit_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${GSL_INCLUDE_DIRS} ${PNG_PNG_INCLUDE_DIR} ${RDKit_INCLUDE_DIR})
@@ -574,6 +592,35 @@ install(DIRECTORY data/cho-models    DESTINATION share/coot/data)
 install(DIRECTORY data/cho-links     DESTINATION share/coot/data)
 
 install(DIRECTORY data/pdb-templates DESTINATION share/coot/data)
+
+install(DIRECTORY ${coot_src}/analysis     DESTINATION include/coot/analysis     FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/angles       DESTINATION include/coot/angles       FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/api          DESTINATION include/coot/api          FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/auxil        DESTINATION include/coot/auxil        FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/build        DESTINATION include/coot/build        FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/ccp4mg-utils DESTINATION include/coot/ccp4mg-utils FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/compat       DESTINATION include/coot/compat       FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/coot-utils   DESTINATION include/coot/coot-utils   FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/cootaneer    DESTINATION include/coot/cootaneer    FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/cootilus     DESTINATION include/coot/cootilus     FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/coords       DESTINATION include/coot/coords       FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/db-main      DESTINATION include/coot/db-main      FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/geometry     DESTINATION include/coot/geometry     FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/high-res     DESTINATION include/coot/high-res     FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/ideal        DESTINATION include/coot/ideal        FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/lidia-core   DESTINATION include/coot/lidia-core   FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/ligand       DESTINATION include/coot/ligand       FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/mini-mol     DESTINATION include/coot/mini-mol     FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/pli          DESTINATION include/coot/pli          FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/protein_db   DESTINATION include/coot/protein_db   FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/pyrogen      DESTINATION include/coot/pyrogen      FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/skeleton     DESTINATION include/coot/skeleton     FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/utils        DESTINATION include/coot/utils        FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/density-contour      DESTINATION include/coot/density-contour      FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+install(DIRECTORY ${coot_src}/MoleculesToTriangles DESTINATION include/coot/MoleculesToTriangles FILES_MATCHING PATTERN "*.hh" PATTERN "*.h")
+
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/monomers DESTINATION share/coot/lib/data
+        FILES_MATCHING PATTERN "*" PATTERN "*Makefile.*" EXCLUDE)
 
 # Thanks Charles B.
 install(TARGETS coot_headless_api DESTINATION ${Python_SITELIB})

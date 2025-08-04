@@ -66,7 +66,10 @@
 #ifdef __cplusplus
 #ifdef USE_GUILE
 #include <cstdio> /* for std::FILE in gmp.h for libguile.h */
-#include <libguile.h>		/* for SCM type (returned by safe_scheme_command) */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvolatile"
+#include <libguile.h>
+#pragma GCC diagnostic pop
 #else
 #include <string> /* for std::string; included (sic!) in above for guile */
 #endif /*  USE_GUILE */
@@ -563,7 +566,7 @@ void clear_restraints_editor_by_dialog(GtkWidget *dialog); /* close button press
 GtkWidget *wrapped_create_move_molecule_here_dialog();
 void move_molecule_here_by_widget(); /* no widget */
 int move_molecule_to_screen_centre_internal(int imol);
-void fill_move_molecule_here_dialog(GtkWidget *w);
+void fill_move_molecule_here_frame(GtkWidget *w);
 
 /* } */
 

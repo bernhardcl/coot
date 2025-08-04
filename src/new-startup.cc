@@ -30,7 +30,7 @@
 #include <epoxy/gl.h>
 
 #include <clipper/core/test_core.h>
-#include <clipper/contrib/test_contrib.h>
+ #include <clipper/contrib/test_contrib.h>
 
 #include "utils/xdg-base.hh"
 
@@ -99,7 +99,8 @@ void init_framebuffers(GtkWidget *glarea) {
 
 
 #include "text-rendering-utils.hh"
-std::string stringify_error_message(GLenum err);
+#include "stringify-error-code.hh"
+
 
 void
 new_startup_realize(GtkWidget *gl_area) {
@@ -116,19 +117,25 @@ new_startup_realize(GtkWidget *gl_area) {
          const char *monitor_description = gdk_monitor_get_description(monitor);
          const char *monitor_connection  = gdk_monitor_get_connector(monitor);
          if (monitor_description)
-            std::cout << "INFO:: monitor " << imon << " description " << monitor_description << std::endl;
+            // std::cout << "INFO:: monitor " << imon << " description " << monitor_description << std::endl;
+            logger.log(log_t::INFO, "monitor", std::to_string(imon), "description", monitor_description);
          else
-            std::cout << "INFO:: monitor " << imon << " no description " << std::endl;
+            // std::cout << "INFO:: monitor " << imon << " no description " << std::endl;
+            logger.log(log_t::INFO, "monitor", std::to_string(imon), "no description");
          if (monitor_connection)
-            std::cout << "INFO:: monitor " << imon << " connection "  << monitor_connection  << std::endl;
+            // std::cout << "INFO:: monitor " << imon << " connection "  << monitor_connection  << std::endl;
+            logger.log(log_t::INFO, "monitor ", std::to_string(imon), " connection ", monitor_connection);
          int monitor_refresh_rate = gdk_monitor_get_refresh_rate(monitor);
-         std::cout << "INFO:: monitor " << imon << " refresh rate " << monitor_refresh_rate << " mHz"  << std::endl;
+         // std::cout << "INFO:: monitor " << imon << " refresh rate " << monitor_refresh_rate << " mHz"  << std::endl;
+         logger.log(log_t::INFO, "monitor", imon, "refresh rate", monitor_refresh_rate, "mHz");
          int monitor_scale_factor = gdk_monitor_get_scale_factor(monitor);
-         std::cout << "INFO:: monitor " << imon << " scale_factor " << monitor_scale_factor << std::endl;
+         // std::cout << "INFO:: monitor " << imon << " scale_factor " << monitor_scale_factor << std::endl;
+         logger.log(log_t::INFO, "monitor", std::to_string(imon), "scale_factor", monitor_scale_factor);
 
 #if GTK_MINOR_VERSION >= 14
          double monitor_scale = gdk_monitor_get_scale(monitor);
-         std::cout << "INFO:: monitor " << imon << " scale " << monitor_scale << std::endl;
+         // std::cout << "INFO:: monitor " << imon << " scale " << monitor_scale << std::endl;
+         logger.log(log_t::INFO, "monitor", std::to_string(imon), "scale", monitor_scale);
 #endif
       }
    }
@@ -199,20 +206,25 @@ new_startup_realize(GtkWidget *gl_area) {
    Material material;
    GLenum err = glGetError();
    if (err)
-      std::cout << "ERROR:: new_startup_realize() pos-D err is " << stringify_error_message(err)
+      std::cout << "ERROR:: new_startup_realize() pos-D err is " << stringify_error_code(err)
                 << std::endl;
    // g.attach_buffers();
    err = glGetError();
    if (err)
       std::cout << "ERROR:: new_startup_realize() pos-E post attach_buffers() err is "
-                << stringify_error_message(err) << std::endl;
+                << stringify_error_code(err) << std::endl;
    g.mesh_for_extra_distance_restraints.setup_extra_distance_restraint_cylinder(material); // init
+
+   // scale the gizmo to the object being translated
+   // float scale_factor = 22.2;
+   // g.translation_gizmo.scale(scale_factor);
+   // g.setup_draw_for_translation_gizmo();
 
    g.setup_key_bindings();
 
    err = glGetError();
    if (err)
-      std::cout << "ERROR:: new_startup_realize() --end-- err is " << stringify_error_message(err)
+      std::cout << "ERROR:: new_startup_realize() --end-- err is " << stringify_error_code(err)
                 << std::endl;
 
    // Hmm! - causes weird graphics problems
@@ -708,7 +720,7 @@ create_local_picture(const std::string &local_filename) {
    GtkWidget *picture = 0;
 
    std::string pdd = coot::package_data_dir();
-   std::cout << "pdd " << pdd << std::endl;
+   // std::cout << "pdd " << pdd << std::endl;
    std::string icon_dir = coot::util::append_dir_file(pdd, "images");
    std::vector<std::string> pixmap_directories_gtk4 = {};
    pixmap_directories_gtk4.push_back(icon_dir);
@@ -745,7 +757,7 @@ new_startup_create_splash_screen_window() {
    GtkWidget *splash_screen_window = gtk_window_new();
    gtk_window_set_title(GTK_WINDOW(splash_screen_window), "Coot-Splash");
    gtk_window_set_decorated(GTK_WINDOW(splash_screen_window), FALSE);
-   GtkWidget *picture = create_local_picture("coot-1.1.17.png");
+   GtkWidget *picture = create_local_picture("coot-1.1.18.png");
 
    gtk_widget_set_hexpand(GTK_WIDGET(picture),TRUE);
    gtk_widget_set_vexpand(GTK_WIDGET(picture),TRUE);
@@ -1176,6 +1188,7 @@ int
 do_self_tests() {
 
    std::cout << "INFO:: Running internal self tests" << std::endl;
+
    // return true on success
    clipper::Test_core test_core;       bool result_core    = test_core();
    clipper::Test_contrib test_contrib; bool result_contrib = test_contrib();
@@ -1234,8 +1247,11 @@ int new_startup(int argc, char **argv) {
    load_css();
 
    // Tell us the GTK version
-   std::cout << "INFO:: built with GTK " << GTK_MAJOR_VERSION << "." << GTK_MINOR_VERSION << "." << GTK_MICRO_VERSION
-             << std::endl;
+   std::string gtk_version_string =
+      std::to_string(GTK_MAJOR_VERSION) + "." +
+      std::to_string(GTK_MINOR_VERSION) + "." +
+      std::to_string(GTK_MICRO_VERSION);
+   logger.log(log_t::INFO, "Built with GTK", gtk_version_string);
 
    GtkWidget *splash_screen = new_startup_create_splash_screen_window();
    gtk_widget_set_visible(splash_screen, TRUE);

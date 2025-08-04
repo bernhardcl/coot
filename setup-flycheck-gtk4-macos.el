@@ -7,8 +7,8 @@
 ;; "USE_MOLECULES_TO_TRIANGLES=1"
 ;; "HAVE_GOOCANVAS=1" 
 ;;
-(setq flycheck-gcc-definitions   (list "HAVE_CXX_THREAD=1" "HAVE_GSL=1" "VERSION=\"0.9.9-pre\"" "HAVE_BOOST=1" "HAVE_BOOST_BASED_THREAD_POOL_LIBRARY=1" "PKGDATADIR=11111" "USE_PYTHON=1" "PYTHONDIR=/asdf" "PKGPYTHONDIR=asdf" "USE_LIBCURL=1" "BUILD_CURLEW=1" "COOT_BUILD_INFO_STRING=x" "_OPENMP=1" "MAKE_ENHANCED_LIGAND_TOOLS=1" "WITH_SOUND=1" "USE_GEMMI=1"))
-(setq flycheck-clang-definitions (list "HAVE_CXX_THREAD=1" "HAVE_GSL=1" "VERSION=\"0.9.9-pre\"" "HAVE_BOOST=1" "HAVE_BOOST_BASED_THREAD_POOL_LIBRARY=1" "PKGDATADIR=11111" "USE_PYTHON=1" "PYTHONDIR=/asdf" "PKGPYTHONDIR=asdf" "USE_LIBCURL=1" "BUILD_CURLEW=1" "COOT_BUILD_INFO_STRING=x" "_OPENMP=1" "MAKE_ENHANCED_LIGAND_TOOLS=1" "WITH_SOUND=1" "USE_GEMMI=1"))
+(setq flycheck-gcc-definitions   (list "HAVE_CXX_THREAD=1" "HAVE_GSL=1" "VERSION=\"0.9.9-pre\"" "HAVE_BOOST=1" "HAVE_BOOST_BASED_THREAD_POOL_LIBRARY=1" "PKGDATADIR=11111" "USE_PYTHON=1" "PYTHONDIR=/asdf" "PKGPYTHONDIR=asdf" "USE_LIBCURL=1" "BUILD_CURLEW=1" "COOT_BUILD_INFO_STRING=x" "_OPENMP=1" "MAKE_ENHANCED_LIGAND_TOOLS=1" "WITH_SOUND=1" "USE_GEMMI=1"  "USE_MOLECULES_TO_TRIANGLES=1"))
+(setq flycheck-clang-definitions (list "HAVE_CXX_THREAD=1" "HAVE_GSL=1" "VERSION=\"0.9.9-pre\"" "HAVE_BOOST=1" "HAVE_BOOST_BASED_THREAD_POOL_LIBRARY=1" "PKGDATADIR=11111" "USE_PYTHON=1" "PYTHONDIR=/asdf" "PKGPYTHONDIR=asdf" "USE_LIBCURL=1" "BUILD_CURLEW=1" "COOT_BUILD_INFO_STRING=x" "_OPENMP=1" "MAKE_ENHANCED_LIGAND_TOOLS=1" "WITH_SOUND=1" "USE_GEMMI=1" "USE_MOLECULES_TO_TRIANGLES=1"))
 
 (setq flycheck-gcc-args   '("-Wno-unknown-pragmas" "-std=c++17"))
 (setq flycheck-clang-args '("-Wno-unknown-pragmas" "-std=c++17"))
@@ -36,15 +36,15 @@
    "/opt/homebrew/include/MoleculesToTriangles"
    "/opt/homebrew/include/gsl"
    "/opt/homebrew/include/gtk-4.0"
-   "/opt/homebrew/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/include/python3.13"
+   "/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/include/python3.13"
    "/opt/homebrew/Cellar/nanobind//2.7.0/share/nanobind/include"
    "/opt/homebrew/Cellar/glm/1.0.1/include"
-   "/opt/homebrew/Cellar/gtk4/4.18.4/include/gtk-4.0"
-   "/opt/homebrew/Cellar/glib/2.84.1/include/glib-2.0"
-   "/opt/homebrew/Cellar/glib/2.84.1/lib/glib-2.0/include"
+   "/opt/homebrew/Cellar/gtk4/4.18.6/include/gtk-4.0"
+   "/opt/homebrew/Cellar/glib/2.84.3/include/glib-2.0"
+   "/opt/homebrew/Cellar/glib/2.84.3/lib/glib-2.0/include"
    "/opt/homebrew/Cellar/cairo/1.18.4/include/cairo"
    "/opt/homebrew/Cellar/pango/1.56.3/include/pango-1.0"
-   "/opt/homebrew/Cellar//harfbuzz/11.0.1/include/harfbuzz"
+   "/opt/homebrew/Cellar/harfbuzz/11.2.1/include/harfbuzz"
    "/opt/homebrew/Cellar/gdk-pixbuf/2.42.12_1/include/gdk-pixbuf-2.0"
    "/opt/homebrew/Cellar/graphene/1.10.8/include/graphene-1.0"
    "/opt/homebrew/Cellar/graphene/1.10.8/lib/graphene-1.0/include"

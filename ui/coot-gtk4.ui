@@ -515,6 +515,10 @@
           <attribute name="action">app.superpose_ligands_action</attribute>
         </item>
         <item>
+          <attribute name="label">Split Water</attribute>
+          <attribute name="action">app.split_water_action</attribute>
+        </item>
+        <item>
           <attribute name="label">Symm Shift Reference Chain Here</attribute>
           <attribute name="action">app.symm_shift_reference_chain_here_action</attribute>
         </item>
@@ -594,7 +598,7 @@
             </submenu>
           </section>
           <item>
-            <attribute name="label">Screenshot</attribute>
+            <attribute name="label">̶S̶c̶r̶e̶e̶n̶s̶h̶o̶t̶</attribute>
             <attribute name="action">app.screenshot_action</attribute>
           </item>
           <item>
@@ -1498,7 +1502,7 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
     <property name="license-type">lgpl-3-0</property>
     <property name="logo-icon-name">coot</property>
     <property name="program-name">Coot</property>
-    <property name="version">1.1.17</property>
+    <property name="version">1.1.18</property>
     <property name="website">https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot</property>
     <property name="website-label">The Coot Website</property>
     <signal name="close-request" handler="on_about_dialog_close_request"/>
@@ -4294,83 +4298,6 @@ the Ctrl key when moving the mouse.</property>
     <signal name="response" handler="on_dataset_filechooser_dialog_response" swapped="no"/>
   </object>
 
-  <object class="GtkDialog" id="copy_fragment_dialog">
-    <property name="title" translatable="yes">Coot Copy Fragment</property>
-    <signal name="response" handler="on_copy_fragment_dialog_response" swapped="no"/>
-    <child>
-      <object class="GtkBox">
-        <property name="spacing">6</property>
-        <property name="orientation">vertical</property>
-        <property name="margin-start">6</property>
-        <property name="margin-end">6</property>
-        <property name="margin-bottom">6</property>
-        <property name="margin-top">6</property>
-
-        <child>
-          <object class="GtkLabel">
-            <property name="label" translatable="yes">Copy From Molecule</property>
-          </object>
-        </child>
-
-        <child>
-          <object class="GtkComboBoxText" id="copy_fragment_combobox">
-          </object>
-        </child>
-
-        <child>
-          <object class="GtkBox">
-            <property name="orientation">horizontal</property>
-            <property name="spacing">6</property>
-
-            <child>
-              <object class="GtkLabel">
-                <property name="label" translatable="yes"> Atom Selection for Fragment  </property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkEntry" id="copy_fragment_atom_selection_entry">
-                <property name="placeholder_text" translatable="yes">//A/1-10</property>
-              </object>
-            </child>
-          </object>
-        </child>
-
-        <child>
-          <object class="GtkBox">
-            <property name="orientation">horizontal</property>
-            <property name="spacing">6</property>
-            <child>
-              <object class="GtkCheckButton" id="copy_fragment_move_molecule_here_checkbutton">
-                <property name="label" translatable="yes">Move new molecule here</property>
-              </object>
-            </child>
-          </object>
-        </child>
-
-        <child>
-          <object class="GtkBox">
-            <property name="orientation">horizontal</property>
-            <property name="spacing">6</property>
-            <property name="halign">end</property>
-            <child>
-              <object class="GtkButton" id="copy_fragment_cancel_button">
-                <property name="label" translatable="yes"> Cancel </property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkButton" id="copy_fragment_ok_button">
-                <property name="label" translatable="yes">  OK  </property>
-              </object>
-            </child>
-          </object>
-        </child>
-      </object>
-    </child>
-    <action-widgets>
-      <action-widget response="-6">copy_fragment_cancel_button</action-widget>
-      <action-widget response="-5">copy_fragment_ok_button</action-widget>
-    </action-widgets>
-  </object>
 
   <object class="GtkDialog" id="replace_fragment_dialog">
     <property name="title" translatable="yes">Coot: Replace Fragment</property>
@@ -6845,6 +6772,26 @@ Do you want to continue?
               </child>
 
               <child>
+                <object class="GtkBox" id="subprocess_running_box">
+                  <property name="visible">False</property>
+                  <property name="orientation">vertical</property>
+                  <property name="valign">center</property>
+                  <child>
+                    <object class="GtkLabel" id="subprocess_running_label_1">
+                      <property name="label" translatable="yes">Running...</property>
+                      <property name="justify">center</property>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkLabel" id="subprocess_running_label_2">
+                      <property name="label" translatable="yes">🕘</property>
+                      <property name="justify">center</property>
+                    </object>
+                  </child>
+                </object>
+              </child>
+
+              <child>
                 <object class="GtkButton" id="coot-points-button">
                   <property name="label" translatable="yes">Coot Points</property>
                   <property name="can-focus">0</property>
@@ -7481,6 +7428,152 @@ Do you want to continue?
                         </child>
                       </object>
                     </child>
+		  </object>
+		</child>
+	      </object>
+	    </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="copy_fragment_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="spacing">6</property>
+                    <property name="orientation">vertical</property>
+                    <property name="margin-start">6</property>
+                    <property name="margin-end">6</property>
+                    <property name="margin-bottom">6</property>
+                    <property name="margin-top">6</property>
+
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Copy From Molecule</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkComboBoxText" id="copy_fragment_combobox">
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes"> Atom Selection for Fragment  </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="copy_fragment_atom_selection_entry">
+                            <property name="placeholder_text" translatable="yes">//A/1-10</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+                        <child>
+                          <object class="GtkCheckButton" id="copy_fragment_move_molecule_here_checkbutton">
+                            <property name="label" translatable="yes">Move new molecule here</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+                        <property name="halign">end</property>
+                        <child>
+                          <object class="GtkButton" id="copy_fragment_cancel_button">
+                            <property name="label" translatable="yes"> Cancel </property>
+                            <signal name="clicked" handler="on_copy_fragment_cancel_button_clicked" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="on_copy_fragment_ok_button">
+                            <property name="label" translatable="yes">  OK  </property>
+                            <signal name="clicked" handler="on_copy_fragment_ok_button_clicked" swapped="no"/>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="move_molecule_here_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+		<child>
+		  <object class="GtkBox" id="dialog-vbox95">
+		    <property name="spacing">4</property>
+		    <property name="orientation">vertical</property>
+		    <property name="spacing">6</property>
+		    <child>
+		      <object class="GtkBox" id="vbox184">
+			<property name="orientation">vertical</property>
+			<property name="baseline-position">top</property>
+			<child>
+			  <object class="GtkLabel" id="label287">
+			    <property name="label" translatable="yes">Move Molecule Here:</property>
+			    <property name="justify">center</property>
+			  </object>
+			</child>
+			<child>
+			  <object class="GtkComboBox" id="move_molecule_here_combobox">
+			  </object>
+			</child>
+		      </object>
+		    </child>
+		    <child type="action">
+		      <object class="GtkBox" id="hbox143">
+			<property name="spacing">4</property>
+                        <property name="halign">end</property>
+			<property name="margin-start">4</property>
+			<property name="margin-end">4</property>
+			<property name="margin-top">4</property>
+			<property name="margin-bottom">4</property>
+			<child>
+			  <object class="GtkButton" id="move_molecule_here_cancel_button">
+			    <property name="label" translatable="yes">Cancel</property>
+			    <property name="can-focus">1</property>
+			    <signal name="clicked" handler="on_move_molecule_here_cancel_button_clicked" swapped="no"/>
+			  </object>
+			</child>
+			<child>
+			  <object class="GtkButton" id="move_molecule_here_ok_button">
+			    <property name="label" translatable="yes">Move It</property>
+			    <property name="can-focus">1</property>
+			    <signal name="clicked" handler="on_move_molecule_here_ok_button_clicked" swapped="no"/>
+			    <style>
+			      <class name="suggested-action"/>
+			    </style>
+			  </object>
+			</child>
+		      </object>
+		    </child>
 		  </object>
 		</child>
 	      </object>
@@ -12037,59 +12130,6 @@ density (too big to be waters):
       </object>
     </child>
     <child type="titlebar">
-    </child>
-  </object>
-
-  <object class="GtkDialog" id="move_molecule_here_dialog">
-    <property name="title" translatable="yes">Move Molecule Here</property>
-    <child>
-      <object class="GtkBox" id="dialog-vbox95">
-        <property name="spacing">4</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">6</property>
-        <child>
-          <object class="GtkBox" id="vbox184">
-            <property name="orientation">vertical</property>
-            <property name="baseline-position">top</property>
-            <child>
-              <object class="GtkLabel" id="label287">
-                <property name="label" translatable="yes">Move Molecule Here:</property>
-                <property name="justify">center</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkComboBox" id="move_molecule_here_combobox">
-              </object>
-            </child>
-          </object>
-        </child>
-        <child type="action">
-          <object class="GtkBox" id="hbox143">
-            <property name="spacing">4</property>
-            <property name="margin-start">4</property>
-            <property name="margin-end">4</property>
-            <property name="margin-top">4</property>
-            <property name="margin-bottom">4</property>
-            <child>
-              <object class="GtkButton" id="move_molecule_here_cancel_button">
-                <property name="label" translatable="yes">Cancel</property>
-                <property name="can-focus">1</property>
-                <signal name="clicked" handler="on_move_molecule_here_cancel_button_clicked" swapped="no"/>
-              </object>
-            </child>
-            <child>
-              <object class="GtkButton" id="move_molecule_here_ok_button">
-                <property name="label" translatable="yes">Move It</property>
-                <property name="can-focus">1</property>
-                <signal name="clicked" handler="on_move_molecule_here_ok_button_clicked" swapped="no"/>
-                <style>
-                  <class name="suggested-action"/>
-                </style>
-              </object>
-            </child>
-          </object>
-        </child>
-      </object>
     </child>
   </object>
 
@@ -17968,6 +18008,12 @@ Move a copy?</property>
             </child>
             <child>
               <object class="GtkShortcutsShortcut">
+                 <property name="accelerator">&lt;Ctrl&gt;F</property>
+                <property name="title" translatable="yes">Make Bonds Smooth</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
                 <property name="accelerator">&lt;Shift&gt;A</property>
                 <property name="title" translatable="yes">Toggle Display of Last Model</property>
               </object>
@@ -18140,6 +18186,12 @@ Move a copy?</property>
               <object class="GtkShortcutsShortcut">
                 <property name="accelerator">&lt;Shift&gt;E</property>
                 <property name="title" translatable="yes">Chain Refine</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Ctrl&gt;W</property>
+                <property name="title" translatable="yes">Add Water</property>
               </object>
             </child>
           </object>

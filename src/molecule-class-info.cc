@@ -43,8 +43,11 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include <vector>
 #include <stdexcept>
+
+// For stat, mkdir:
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define _USE_MATH_DEFINES
 #include <cmath>
@@ -73,21 +76,17 @@ const double pi = M_PI;
 #include <clipper/contrib/sfscale.h>
 #include <clipper/contrib/sfweight.h>
 
-#include "coords/mmdb-extras.h"
+#include "coords/mmdb-extras.hh"
 #include "coords/mmdb.hh"
-#include "coords/mmdb-crystal.h"
+#include "coords/mmdb-crystal.hh"
 #include "gtk-manual.hh"
 
-// For stat, mkdir:
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include "coords/Bond_lines.h"
+#include "coords/Bond_lines.hh"
 
 #include "coot-utils/gl-matrix.h"
 #include "graphics-info.h"
 
-#include "coords/Bond_lines_ext.h"
+#include "coords/Bond_lines_ext.hh"
 
 #include "coot-utils/coot-coord-utils.hh"
 #include "utils/coot-utils.hh"
@@ -4370,8 +4369,11 @@ molecule_class_info_t::make_meshes_from_bonds_box_instanced_version() {
                                                  show_aniso_atoms_as_ortep_flag, // ditto
                                                  num_subdivisions, n_slices, n_stacks, colour_table);
 
-      if (true) // test that model_molecule_meshes is not empty()
-         draw_it = 1;
+      // 2025-07-28 10:14 I don't want to set this here, surely.
+      // There should be some other control.
+      // I want to be able to update the mesh without seeing the bonds (Ctrl F)
+      // if (true) // test that model_molecule_meshes is not empty()
+      //    draw_it = 1;
 
       err = glGetError();
       if (err) std::cout << "error in make_glsl_bonds_type_checked() post molecules_as_mesh\n";
@@ -5059,10 +5061,12 @@ molecule_class_info_t::update_extra_restraints_representation_geman_mcclure() {
       if (! ifound_1) {
          int idx = full_atom_spec_to_atom_index(rest.atom_1);
          if (idx != -1) {
-            at_1 = atom_sel.atom_selection[idx];
-            if (rest.atom_1.matches_spec(at_1)) {
-               p1 = clipper::Coord_orth(at_1->x, at_1->y, at_1->z);
-               ifound_1 = true;
+            if (idx < atom_sel.n_selected_atoms) {
+               at_1 = atom_sel.atom_selection[idx];
+               if (rest.atom_1.matches_spec(at_1)) {
+                  p1 = clipper::Coord_orth(at_1->x, at_1->y, at_1->z);
+                  ifound_1 = true;
+               }
             }
          }
       }
@@ -5078,10 +5082,12 @@ molecule_class_info_t::update_extra_restraints_representation_geman_mcclure() {
       if (! ifound_2) {
          int idx = full_atom_spec_to_atom_index(rest.atom_1);
          if (idx != -1) {
-            at_1 = atom_sel.atom_selection[idx];
-            if (rest.atom_2.matches_spec(at_2)) {
-               p2 = clipper::Coord_orth(at_2->x, at_2->y, at_2->z);
-               ifound_2 = true;
+            if (idx < atom_sel.n_selected_atoms) {
+               at_1 = atom_sel.atom_selection[idx];
+               if (rest.atom_2.matches_spec(at_2)) {
+                  p2 = clipper::Coord_orth(at_2->x, at_2->y, at_2->z);
+                  ifound_2 = true;
+               }
             }
          }
       }
@@ -6890,18 +6896,18 @@ molecule_class_info_t::close_yourself() {
 	 original_fphis_p = 0;
          delete tmp_p;
       }
-      
+
       if (original_fobs_sigfobs_filled) {
          delete original_fobs_sigfobs_p;
 	 original_fobs_sigfobs_p = 0;
       }
-      
+
       if (original_r_free_flags_p) { // no flag for filled?
          delete original_r_free_flags_p;
 	 original_r_free_flags_p = 0;
       }
    }
-      
+
    // delete from display manager combo box
    //
    graphics_info_t g;
@@ -7770,6 +7776,7 @@ molecule_class_info_t::add_typed_pointer_atom(coot::Cartesian pos, const std::st
          std::cout << "WARNING:: Can't find new chain for new atom\n";
       }
    }
+
    // or we could just use update_molecule_after_additions() there.
    return std::make_pair(status, message);
 }

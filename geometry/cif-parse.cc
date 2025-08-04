@@ -52,6 +52,9 @@
 
 #include "lbg-graph.hh"
 
+#include "utils/logging.hh"
+extern logging logger;
+
 void
 coot::protein_geometry::set_only_bonds(int dict_idx) {
 
@@ -188,8 +191,10 @@ coot::protein_geometry::init_refmac_mon_lib(std::string ciffilename, int read_nu
 
       } else {
          if (verbose_mode)
-            std::cout << "There are " << ciffile.GetNofData() << " data in "
-                      << ciffilename << std::endl;
+            // std::cout << "There are " << ciffile.GetNofData() << " data in "
+            //                       << ciffilename << std::endl;
+            logger.log(log_t::INFO, "There are ", std::to_string(ciffile.GetNofData()),
+                       " data in ", ciffilename);
 
          for(int idata=0; idata<ciffile.GetNofData(); idata++) {
 
@@ -2115,8 +2120,10 @@ coot::protein_geometry::init_standard() {
    std::string hardwired_default_place = util::append_dir_dir(pkg_data_dir, "lib");
    bool using_clibd_mon = false;
 
-   if (debug)
+   if (debug) {
+      std::cout << "DEBUG:: init_standard(): pkg_data_dir: " << pkg_data_dir << std::endl;
       std::cout << "DEBUG:: init_standard(): hardwired_default_place: " << hardwired_default_place << std::endl;
+   }
 
    std::string mon_lib_dir;
    short int env_dir_fails = 0;
@@ -2219,7 +2226,7 @@ coot::protein_geometry::init_standard() {
    }
 
    if (debug)
-      std::cout << "Here with mon_lib_dir set to " << mon_lib_dir << std::endl;
+      std::cout << "DEBUG:: Here with mon_lib_dir set to " << mon_lib_dir << std::endl;
 
    if (mon_lib_dir.length() > 0) {
       mon_lib_dir =  coot::util::intelligent_debackslash(mon_lib_dir);

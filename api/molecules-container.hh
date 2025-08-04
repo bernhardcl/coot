@@ -12,9 +12,13 @@
 #include <ssm/ssm_align.h>
 #endif
 
+#if NB_VERSION_MAJOR // for flychecking
+#include <nanobind/nanobind.h>
+#endif
+
 #include "compat/coot-sysdep.h"
 
-#include "coords/Cartesian.h"
+#include "coords/Cartesian.hh"
 #include "coords/ramachandran-container.hh"
 #include "coot-molecule.hh"
 #include "coot-utils/coot-rama.hh"
@@ -382,14 +386,7 @@ class molecules_container_t {
 public:
 
    //! the one and only constructor
-   explicit molecules_container_t(bool verbose=true) :
-      ramachandrans_container(ramachandrans_container_t()),
-      thread_pool(8) {
-
-      if (! verbose) geom.set_verbose(false);
-      init();
-
-   }
+   explicit molecules_container_t(bool verbose=true);
 
    ~molecules_container_t();
 
@@ -605,44 +602,18 @@ public:
 #ifdef DOXYGEN_SHOULD_PARSE_THIS
 #else
    //! don't use this in emscript
-   coot::molecule_t & operator[] (unsigned int imol) {
-      // maybe this should throw an exception on out-of-range?
-      return molecules[imol];
-   }
+   coot::molecule_t & operator[] (unsigned int imol);
 #endif
 #endif
 
 #ifdef DOXYGEN_SHOULD_PARSE_THIS
 #else
    //! don't use this in ecmascript
-   mmdb::Manager *get_mol(unsigned int imol) const { // 20221018-PE function name change
-
-
-      if (is_valid_model_molecule(imol)) {
-         return molecules[imol].atom_sel.mol;
-      } else {
-         return nullptr;
-      }
-   }
+   mmdb::Manager *get_mol(unsigned int imol) const;
 #endif
 
    //! Fill the rotamer probability tables (currently not ARG and LYS)
-   void fill_rotamer_probability_tables() {
-      if (! rot_prob_tables.tried_and_failed()) {
-
-         std::string tables_dir = coot::package_data_dir();
-         char *data_dir = getenv("COOT_DATA_DIR");
-         if (data_dir) {
-            tables_dir = data_dir;
-         }
-         tables_dir += "/rama-data";
-         rot_prob_tables.set_tables_dir(tables_dir);
-         bool ignore_lys_and_arg_flag = true; // 20221018-PE remove this flag when rotamer probabiity
-                                              // tables are read from a binary file (and is fast enough
-                                              // to include lys and arg).
-         rot_prob_tables.fill_tables(ignore_lys_and_arg_flag);
-      }
-   }
+   void fill_rotamer_probability_tables();
 
    //! Access to a compressed file that contains the rotamer probabilities
    //!
@@ -658,21 +629,10 @@ public:
    //! e.g. as yet not written to disk
    //!
    //! @return a flag of unsaved models state - e.g. if any of them are unsaved, then this returns True.
-   bool contains_unsaved_models() const {
-      for (const auto &m : molecules) {
-         if (m.have_unsaved_changes()) return true;
-      }
-      return false;
-   }
+   bool contains_unsaved_models() const;
 
    //! Save the unsaved model - this function has not yet been written!
-   void save_unsaved_model_changes() {
-      for (const auto &m : molecules) {
-         if (m.have_unsaved_changes()) {
-            // something fun here. - whatever it is though, don't put it in this header.
-         }
-      }
-   }
+   void save_unsaved_model_changes();
 
    // -------------------------------- geometry/dictionaries --------------------------------
    //! \name Geometry and Dictionaries
@@ -687,22 +647,24 @@ public:
    //! @return a vector/list of non-standard residues
    std::vector<std::string> non_standard_residue_types_in_model(int imol) const;
 
-#ifdef SWIG
-#else
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS
-   //! Result to be eaten by C++ only.
    //! Extract ligand restraints from the dictionary store and make an rdkit molecule
-   //! @return a null pointer on failure.
+   //! Result to be eaten by C++ only.
+   //!
+   //! @param residue_name the residue name
+   //! @param imol_enc the molecule for the ligand (typically is imol_enc_any)
+   //! @return an RDKit RDMol.
    RDKit::RWMol get_rdkit_mol(const std::string &residue_name, int imol_enc);
    //! get the 64base-encoded pickled string that represents the given residue/ligand name
    //!
-   //! @return a string, return a null string on failure.
+   //! @param residue_name the residue name
+   //! @param imol_enc the molecule for the ligand (typically is imol_enc_any)
+   //! @return a pickle string, return an empty string on failure.
    std::string get_rdkit_mol_pickle_base64(const std::string &residue_name, int imol_enc);
-#endif
 #endif
 
    // -------------------------------- coordinates utils -----------------------------------
-   //!  \name Coordinates Utils
+   //! \name Coordinates Utils
 
    //! Read a coordinates file (mmcif or PDB)
    //!
@@ -1193,16 +1155,40 @@ public:
    //! @return a `simple_mesh_t`
    coot::simple_mesh_t get_chemical_features_mesh(int imol, const std::string &cid) const;
 
+   //! get an (mmdb-style) atom
+   //!
+   //! If more than one atom is selected by the selection cid, then the first
+   //! atom is returned.
+   //!
+   //! Don't use this in emscript.
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the coordinate-id for the atom.
+   //! @returns either the specified atom or nullopt (None) if not found
+   mmdb::Atom *get_atom_using_cid(int imol, const std::string &cid) const;
+
+   //! get an (mmdb-style) residue
+   //!
+   //! If more than one residue is selected by the selection cid, then the first
+   //! residue is returned.
+   //!
+   //! Don't use this in emscript.
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the coordinate-id for the residue
+   //! @returns either the specified residue or nullopt (None) if not found
+   mmdb::Residue *get_residue_using_cid(int imol, const std::string &cid) const;
+
 #ifdef DOXYGEN_SHOULD_PARSE_THIS
 #else
+   //! get atom - internal (C++) usage only
+   //!
    //! @returns either the specified atom or null if not found - don't use this in emscript
    mmdb::Atom *get_atom(int imol, const coot::atom_spec_t &atom_spec) const;
+   //! get residue - internal (C++) usage only
+   //!
    //! @returns either the specified residue or null if not found - don't use this in emscript
    mmdb::Residue *get_residue(int imol, const coot::residue_spec_t &residue_spec) const;
-   //! @returns either the specified atom or null if not found - don't use this in emscript
-   mmdb::Atom *get_atom_using_cid(int imol, const std::string &cid) const;
-   //! @returns either the specified residue or null if not found - don't use this in emscript
-   mmdb::Residue *get_residue_using_cid(int imol, const std::string &cid) const;
    //! get the atom position - don't use this in emscript
    std::pair<bool, coot::Cartesian> get_atom_position(int imol, coot::atom_spec_t &atom_spec);
 #endif
@@ -2117,6 +2103,8 @@ public:
    void add_named_glyco_tree(int imol_model, int imol_map, const std::string &glycosylation_name,
                              const std::string &asn_chain_id, int asn_res_no);
 
+#if NB_VERSION_MAJOR
+#else
    //! Flip peptide
    //!
    //! @param imol is the model molecule index
@@ -2125,6 +2113,7 @@ public:
    //!
    //! @return 1 on a successful flip
    int flip_peptide(int imol, const coot::atom_spec_t &atom_spec, const std::string &alt_conf);
+#endif
 
    //! Flip peptide using cid
    //!
@@ -2521,7 +2510,12 @@ public:
    //! @param level is the logging level, level is either "LOW" or "HIGH" or "DEBUGGING"
    void set_logging_level(const std::string &level);
 
-   //! Turn on or off rama restraints
+   //! make the logging output go to a file
+   //!
+   //! @param file_name the looging file name
+   void set_logging_file(const std::string &file_name);
+
+   //! Turn on or off ramachandran restraints
    //!
    //! @param state is True to mean that it is enabled
    void set_use_rama_plot_restraints(bool state) { use_rama_plot_restraints = state; }
@@ -2665,7 +2659,7 @@ public:
    //! Read extra restraints (e.g. from ProSMART)
    //!
    //! @param imol is the model molecule index
-   void read_extra_restraints(int imol, const std::string &file_name);
+   int read_extra_restraints(int imol, const std::string &file_name);
 
    //! Clear the extra restraints
    //!
@@ -2862,11 +2856,17 @@ public:
    //! @param cid_ligand is the ligand selection CID e.g "//A/15" (ligand 15 of chain A)
    coot::atom_overlaps_dots_container_t get_overlap_dots_for_ligand(int imol, const std::string &cid_ligand);
 
-   //! Gat Atom Overlaps
+   //! Get Atom Overlaps
    // not const because it can dynamically add dictionaries
    //! @param imol is the model molecule index
    //! @return a vector of atom overlap objects
    std::vector<coot::plain_atom_overlap_t> get_overlaps(int imol);
+
+   //! Get the atom overlap score
+   //!
+   //! @param imol the model molecule index
+   //! @return the overlap score - a negative number indicates failure
+   float get_atom_overlap_score(int imol);
 
    //! Gat Atom Overlaps for a ligand or residue
    // not const because it can dynamically add dictionaries
@@ -2889,7 +2889,9 @@ public:
    // -------------------------------- Coordinates and map validation ----------------------
    //! \name Coordinates and Map Validation
 
-   //! Density fit validation information
+   //! Density fit validation information.
+   //!
+   //! This function returns the sum of the densiy of the atoms in the residue
    //!
    //! @param imol_model is the model molecule index
    //! @param imol_map is the map molecule index
@@ -2902,6 +2904,13 @@ public:
    double get_sum_density_for_atoms_in_residue(int imol, const std::string &cid,
                                                const std::vector<std::string> &atom_names,
                                                int imol_map);
+
+   //! get the number of atoms in a given residue
+   //!
+   //! @param imol is the model molecule index
+   //! @param residue_cid is the selection CID e.g "//A/15" (residue 15 of chain A)
+   //! @return the number of atoms in the residue, or -1 on failure
+   int get_number_of_atoms_in_residue(int imol, const std::string &residue_cid) const;
 
    //! Get the density correlation validation information
    //!
@@ -3007,7 +3016,7 @@ public:
                       bool ignore_zero_occ_flag);
 
    //! Get HOLE
-   //! 
+   //!
    //! HOLE is a program for the analysis of the pore dimesions of ion channels. See Smart et al., 1996.
    //!
    //! @return a list of spheres on the surface of the pore
@@ -3040,7 +3049,8 @@ public:
    //! @param imol_map_1 is the first map molecule index
    //! @param imol_map_2 is the second map molecule index
    //!
-   //! @return a vector/list or pairs of graph points (resolution, correlation). The resolution is in inverse Angstroms squared.
+   //! @return a vector/list or pairs of graph points (resolution, correlation). The resolution is in
+   //! inverse Angstroms squared.
    //! An empty list is returned on failure
    std::vector<std::pair<double, double> > fourier_shell_correlation(int imol_map_1, int imol_map_2) const;
 
@@ -3352,7 +3362,7 @@ public:
    //!
    //! The caller should make sure that the dictionary for the ligand has been loaded - this
    //! function won't do that. It will add hydrogen atoms if needed.
-   //! 
+   //!
    //! From time to time (depending on the ligand) this function will fail to produce a
    //! result.
    //!
@@ -3371,6 +3381,13 @@ public:
    //! @return a vector/list of residue specifiers - the residue name is encoded
    //! in the `string_user_data` data item of the residue specifier
    std::vector<coot::residue_spec_t> get_non_standard_residues_in_molecule(int imol) const;
+
+   //! Try to read the dictionaries for any residue type in imol that as yet does not have
+   //! a dictionary
+   //!
+   //! @param imol is the model molecule index
+   //! @return true if there were no dictionary for new types that couldn't be read.
+   bool try_read_dictionaries_for_new_residue_types(int imol);
 
    //! Get the conformers that can be generated by variation around rotatable bonds as described in the dictionary.
    //!
@@ -3580,12 +3597,11 @@ public:
 
    void test_function(const std::string &s);
 
-#ifdef SWIG
 #if NB_VERSION_MAJOR
    // skip this (old) block for nanobinds
 #else
 #ifdef DOXYGEN_SHOULD_PARSE_THIS
-#else
+
    //! \name Old Python functions
 
    //! old mesh mode: do not use with nanobind
@@ -3624,7 +3640,6 @@ public:
    //! make a "proper" simple  molecule python class one day.
    PyObject *get_pythonic_simple_molecule(int imol, const std::string &cid, bool include_hydrogen_atoms_flag);
 
-#endif
 #endif
 #endif
 

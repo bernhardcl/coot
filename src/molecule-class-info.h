@@ -94,10 +94,10 @@ enum {CONTOUR_UP, CONTOUR_DOWN};
 
 #include <clipper/ccp4/ccp4_map_io.h>
 
-#include "coords/Cartesian.h"
-#include "coords/mmdb-extras.h"
-#include "coords/mmdb-crystal.h"
-#include "coords/Bond_lines.h"
+#include "coords/Cartesian.hh"
+#include "coords/mmdb-extras.hh"
+#include "coords/mmdb-crystal.hh"
+#include "coords/Bond_lines.hh"
 
 #include "gtk-manual.h"
 
@@ -1733,6 +1733,18 @@ public:        //                      public
 				     const std::string &inscode,
 				     const std::string &altconf,
 				     coot::protein_geometry *geom_p);
+
+   int do_180_degree_side_chain_flip_protein(const std::string &chain_id,
+					     int resno,
+					     const std::string &inscode,
+					     const std::string &altconf,
+					     coot::protein_geometry *geom_p);
+
+   int do_180_degree_side_chain_flip_nucleic_acid(const std::string &chain_id,
+						  int resno,
+						  const std::string &inscode,
+						  const std::string &altconf,
+						  coot::protein_geometry *geom_p);
 
    // return "N', "C" or "not-terminal-residue"
    std::string get_term_type_old(int atom_index);

@@ -51,15 +51,16 @@
 
 
 #include <mmdb2/mmdb_manager.h>
-#include "coords/mmdb-extras.h"
+
+#include "coords/mmdb-extras.hh"
 #include "coords/mmdb.hh"
+#include "coords/mmdb-crystal.hh"
+#include "coords/Cartesian.hh"
+#include "coords/Bond_lines.hh"
 
 #include "globjects.h" //includes gtk/gtk.h
 
-#include "coords/mmdb-crystal.h"
 
-#include "coords/Cartesian.h"
-#include "coords/Bond_lines.h"
 
 #include "graphics-info.h"
 
@@ -613,7 +614,7 @@ PyObject *origin_pre_shift_py(int imol) {
      Py_INCREF(r);
    }
    return r;
-} 
+}
 #endif  /* USE_PYTHON */
 
 
@@ -631,10 +632,10 @@ void do_cis_trans_conversion_setup(int istate) {
       graphics_info_t::in_cis_trans_convert_define = 0;
       normal_cursor(); // depends on ctrl key for rotate
    }
-} 
+}
 
 // scriptable interface:
-// 
+//
 void
 cis_trans_convert(int imol, const char *chain_id, int resno, const char *inscode) {
 

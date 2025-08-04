@@ -88,11 +88,11 @@
 #include <string>
 
 #include <mmdb2/mmdb_manager.h>
-#include "coords/mmdb-extras.h"
+#include "coords/mmdb-extras.hh"
 #include "coords/mmdb.hh"
-#include "coords/mmdb-crystal.h"
-#include "coords/Cartesian.h"
-#include "coords/Bond_lines.h"
+#include "coords/mmdb-crystal.hh"
+#include "coords/Cartesian.hh"
+#include "coords/Bond_lines.hh"
 
 #include "utils/coot-utils.hh"
 #include "coot-utils/coot-map-utils.hh"
@@ -1948,8 +1948,10 @@ float density_score_residue(int imol, const char *chain_id, int res_no, const ch
             r->GetAtomTable(residue_atoms, n_residue_atoms);
             for (int iat=0; iat<n_residue_atoms; iat++) {
                mmdb::Atom *at = residue_atoms[iat];
-               float d_at = density_at_point(imol_map, at->x, at->y, at->z);
-               v += d_at * at->occupancy;
+               if (!at->isTer()) {
+                  float d_at = density_at_point(imol_map, at->x, at->y, at->z);
+                  v += d_at * at->occupancy;
+                }
             }
          }
       }
@@ -4435,13 +4437,6 @@ void test_fragment() {
    graphics_info_t g;
    g.rotamer_graphs(0);
 }
-
-// we redefine TRUE here somewhere...
-// #include <gdk/gdkglconfig.h>
-// #include <gtk/gtkgl.h>
-// #include <gdk/x11/gdkglx.h>
-// #include <gdk/x11/gdkglglxext.h>
-
 
 int write_connectivity(const char *monomer_name, const char *filename) {
 
@@ -8384,11 +8379,6 @@ int background_is_black_p() {
 //
 // if it already exists as a dir, return 0 of course.
 //
-int
-make_directory_maybe(const char *dir) {
-   return coot::util::create_directory(std::string(dir));
-}
-
 
 void add_coordinates_glob_extension(const char *ext) {
 
