@@ -115,8 +115,10 @@ curlew_dialog() {
       std::string url_prefix;
 #ifndef WINDOWS_MINGW
       url_prefix += "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot";
-#else
-      url_prefix += "https://bernhardcl.github.io/coot";
+#else 
+      // For now there is no difference and all is python so use Paul's
+      // url_prefix += "https://bernhardcl.github.io/coot";
+      url_prefix += "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot";
 #endif
 
       std::string coot_version_dir_prefix = "curlew-extensions/gtk4/Coot-1";

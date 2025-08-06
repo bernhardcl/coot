@@ -5453,7 +5453,9 @@ curlew_install_extension_file(const std::string &file_name, const std::string &c
       // std::string url_prefix = "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/";
       std::string url_prefix = "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/curlew-extensions/Coot-1/";
 #else
-       std::string url_prefix = "https://bernhardcl.github.io/coot/";
+      // Just use Paul's since they are in python anyway..
+      // std::string url_prefix = "https://bernhardcl.github.io/coot/";
+      std::string url_prefix = "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/curlew-extensions/Coot-1/";
 #endif
       url_prefix += "scripts";
       url_prefix += "/";
@@ -5588,7 +5590,9 @@ void curlew_dialog_install_extensions(GtkWidget *curlew_dialog, int n_extensions
 #ifndef WINDOWS_MINGW
               std::string url_prefix = "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/";
 #else
-              std::string url_prefix = "https://bernhardcl.github.io/coot/";
+	      // Just use Paul's for now, in python anway
+              // std::string url_prefix = "https://bernhardcl.github.io/coot/";
+              std::string url_prefix = "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/";
 #endif
 		     url_prefix += "extensions";
 		     url_prefix += "/";

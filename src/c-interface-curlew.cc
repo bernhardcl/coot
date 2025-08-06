@@ -182,7 +182,9 @@ void curlew_old() {
 #ifndef WINDOWS_MINGW
       std::string url_prefix = "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/";
 #else
-      std::string url_prefix = "https://bernhardcl.github.io/coot/";
+      // Just use Paul's for now since they are in python anyway..
+      // std::string url_prefix = "https://bernhardcl.github.io/coot/";
+      std::string url_prefix = "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/";
 #endif
       std::string coot_version_dir_prefix = url_prefix + "curlew-extensions/Coot-1";
       std::string scripts_dir_prefix = coot_version_dir_prefix + "/scripts";
