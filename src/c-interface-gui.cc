@@ -1279,7 +1279,7 @@ void graphics_window_size_and_position_to_preferences() {
    // BL says:: there is now...
    // BL tmp hack
    xdg_t xdg;
-   std::string h = xdg.get_config_home().u8string();
+   std::string h = xdg.get_config_home().string();
    if (!h.empty()) {
       // 20220507-PE pref_dir is now .coot
       // 20240223-BL: now there is a subdirectory xenops within .coot

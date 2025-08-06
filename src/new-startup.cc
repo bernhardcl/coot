@@ -690,7 +690,7 @@ handle_start_scripts() {
    for (const auto &script : scripts) {
       // std::cout << "Load python config script " << script.c_str() << std::endl;
       logger.log(log_t::INFO, logging::function_name_t(__FUNCTION__),
-		 "Load python script", script.u8string());
+		 "Load python script", script.string());
       run_python_script(script.string().c_str());
    }
 #ifdef USE_GUILE

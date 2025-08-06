@@ -969,7 +969,7 @@ std::string
 graphics_info_t::get_preferences_directory() const {
 
    xdg_t xdg;
-   std::string preferences_dir = xdg.get_config_home().u8string();
+   std::string preferences_dir = xdg.get_config_home().string();
    std::string pkgdatadir = coot::package_data_dir();
 
    std::string fn;

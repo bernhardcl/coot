@@ -1461,7 +1461,7 @@ on_ccp4i2_save_button_clicked(G_GNUC_UNUSED GtkButton       *button,
          std::filesystem::create_directory(save_dir);
       std::string s = g.molecules[imol].stripped_save_name_suggestion();
       std::filesystem::path fn = save_dir / s;
-      g.molecules[imol].save_coordinates(fn.u8string());
+      g.molecules[imol].save_coordinates(fn.string());
    }
 }
 

@@ -136,12 +136,12 @@ public:
          std::filesystem::path d = prog_data;
          d.append(package_name);
          //shoudl we use UTF8? I guess so
-         data_dirs = d.u8string();
+         data_dirs = d.string();
       }
       if (config_dirs.empty()) {
          std::filesystem::path d = prog_data;
          d.append(package_name);
-         config_dirs = d.u8string();
+         config_dirs = d.string();
       }
 #else
       if (data_home.empty()) {
@@ -233,14 +233,14 @@ public:
    // need to create the data dirs on windows as well
    std::string get_data_dirs() const {
       // make sure we have a corectly encoded path
-      const std::filesystem::path dd = std::filesystem::u8path(data_dirs);
+      const std::filesystem::path dd = std::filesystem::path(data_dirs);
       if (!std::filesystem::is_directory(dd))
          std::filesystem::create_directories(dd);
       return data_dirs;
    }
    std::string get_config_dirs() const {
       // make sure we have a corectly encoded path
-      const std::filesystem::path dd = std::filesystem::u8path(config_dirs);
+      const std::filesystem::path dd = std::filesystem::path(config_dirs);
       if (!std::filesystem::is_directory(dd))
          std::filesystem::create_directories(dd);
       return config_dirs;
@@ -288,7 +288,7 @@ public:
    std::string get_download_dir() const {
       std::filesystem::path c = get_cache_home();
       auto d = c / "coot-download";
-      return d;
+      return d.string();
    }
 };
 
