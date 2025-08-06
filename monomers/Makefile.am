@@ -1,7 +1,7 @@
 
 cootmonomersdir = $(pkgdatadir)/lib/data/monomers
 
-dist_cootmonomers_DATA = ener_lib.cif \
+cootmonomers_files = ener_lib.cif \
 1/1PE.cif               c/CU.cif                h/HOH.cif               p/PEG.cif \
 5/5MC.cif               c/CYS.cif               i/ILE.cif               p/PG4.cif \
 a/A.cif                 d/DA.cif                i/IMD.cif               p/PGE.cif \
@@ -38,5 +38,6 @@ install-data-local:
 	@for file in $(cootmonomers_files); do \
         cif_dir=$$(dirname $$file) ; \
 	mkdir -p "$(DESTDIR)$(cootmonomersdir)/$$cif_dir" ; \
+	echo "installing " "$(srcdir)/$$file" " to " "$(DESTDIR)$(cootmonomersdir)/$$file"; \
 	install -m 644 "$(srcdir)/$$file" "$(DESTDIR)$(cootmonomersdir)/$$file"; \
 	done
