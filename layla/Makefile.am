@@ -73,7 +73,12 @@ AM_CXXFLAGS = \
 
 dist_bin_SCRIPTS = layla
 
+if OS_WIN32
+# no more libexec for Windows...
+bin_PROGRAMS = layla-bin
+else
 libexec_PROGRAMS = layla-bin
+endif
 
 layla_bin_SOURCES = main.cpp
 

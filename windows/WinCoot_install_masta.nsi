@@ -241,7 +241,7 @@ Section "!WinCoot" SEC01
   File "${top_dir}\bin\coot-findwaters-bin.exe"
   File "${top_dir}\bin\coot-make-ligands-db.exe"
   File "${top_dir}\bin\coot-mmrrcc.exe"
-  File "${top_dir}\bin\layla.exe"
+  File "${top_dir}\bin\layla-bin.exe"
   File "${top_dir}\bin\mini-rsr-bin.exe"
   ; dynarama for now
 ;  File "${top_dir}\bin\dynarama-bin.exe"
@@ -576,6 +576,7 @@ Section Uninstall
   Delete "$INSTDIR\bin\iconv.exe"
   Delete "$INSTDIR\bin\layla.bat"
   Delete "$INSTDIR\bin\layla.exe"
+  Delete "$INSTDIR\bin\layla-bin.exe"
   Delete "$INSTDIR\bin\layla.ico"
   Delete "$INSTDIR\bin\lidia.bat"
   Delete "$INSTDIR\bin\lidia.exe"

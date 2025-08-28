@@ -9,4 +9,4 @@ set COOT_DATA_DIR=%COOT_SHARE%\coot
 
 set PATH=%COOT_PREFIX%\bin;%PATH%
 
-%~n0.exe %*
+%~n0-bin.exe %*
