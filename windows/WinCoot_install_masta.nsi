@@ -223,11 +223,15 @@ Section "!WinCoot" SEC01
   Var /GLOBAL have_bat
   StrCpy $have_bat "False"
 
-  IfFileExists "$INSTDIR\wincoot.bat" 0 +2
+  IfFileExists "$INSTDIR\wincoot.bat" 0 +3
     StrCpy $have_bat "True"
+    ; copy existing file to backup and deal with it in more detail later (FinishPagePreFunction)
+    ; remove any existing backup if exists...
+    Delete $INSTDIR\wincoot.bat.backup
+    Rename $INSTDIR\wincoot.bat $INSTDIR\wincoot.bat.backup
 
   SetOverwrite on
-  File /oname=$INSTDIR\wincoot.bat.tmp "${src_dir}\windows\wincoot.bat"
+  File /oname=$INSTDIR\wincoot.bat "${src_dir}\windows\wincoot.bat"
 
   SetOverwrite ifnewer
 ; bin DIR
@@ -276,7 +280,7 @@ Section "!WinCoot" SEC01
   File "C:\msys64\home\bernhard\autobuild\extras\ppm2bmp.exe"
 ; SHARE
   SetOutPath "$INSTDIR\share"
-  File /r /x monomers /x RDKit "${top_dir}\share\*.*"
+  File /r /x RDKit "${top_dir}\share\*.*"
 ; lib
   SetOutPath "$INSTDIR\lib"
   File /r /x cmake /x *.*a /x __pycache__ /x test "${top_dir}\lib\*.*"
@@ -361,7 +365,7 @@ SectionEnd
 ;
 ; SectionEnd
 
-Section /o "!Monomer Library" SEC03
+Section /o "Monomer Library" SEC03
   ; add size requirement in kb
   AddSize 1500000
   ; first download, then unzip
@@ -646,14 +650,24 @@ SectionEnd
 # 'BUILD-IN' FUNCTIONS
 ######################
 
+Function .onSelChange
+   ${If} ${SectionIsSelected} ${SEC03}
+      MessageBox MB_OK|MB_ICONEXCLAMATION "You have selected to download and install the full monomer library.$\r$\n\
+      $\r$\n\
+      Are you sure!?$\r$\n\
+      $\r$\n\
+      This is not really needed any more since Coot comes with the most frequent dictionaries \
+      and will download others is required. Or it will use the available dictionary from CCP4 (or Phenix).$\r$\n\
+      Installing the library is probably only needed if you want to work offline with available but \
+      uncommon momomers."
+   ${EndIf}
 # BL says:: disable for now, since no guile available anyway
 !ifdef WITH_GUILE
-Function .onSelChange
    ${If} ${SectionIsSelected} ${SEC05}
       MessageBox MB_OK|MB_ICONEXCLAMATION "You have with guile selected. Sure? This may not work perfectly.$\r$\n\"
    ${EndIf}
-FunctionEnd
 !endif
+FunctionEnd
 
 Function .onInit
   ClearErrors
@@ -928,25 +942,22 @@ Function FinishPagePreFunction
      ; check if wincootbats are different
      Var /Global bat_differ
      StrCpy $bat_differ "False"
-     ${TextCompare} "$INSTDIR\wincoot.bat" "$INSTDIR\wincoot.bat.tmp" "FastDiff" "TxtCompResult"
+     ${TextCompare} "$INSTDIR\wincoot.bat" "$INSTDIR\wincoot.bat.backup" "FastDiff" "TxtCompResult"
 
      ${If} $bat_differ == "True"
-        ; if different make backup copy and inform user (unless silent)
-        IfFileExists $INSTDIR\wincoot.bat.backup 0 +2
-          Delete $INSTDIR\wincoot.bat.backup
-        Rename "$INSTDIR\wincoot.bat" "$INSTDIR\wincoot.bat.backup"
-;        MessageBox MB_OK "BL DEBUG:: just renamed, or not? wincoot.bat"
+        ; if different keep backup copy and inform user (unless silent)
         ${If} $update = 0
           IfSilent +2
             MessageBox MB_ICONINFORMATION "You already have a (modified) WinCoot batch file (wincoot.bat).$\r$\n\
             You will find the copy wincoot.bat.backup in $INSTDIR"
         ${EndIf}  ; update
+     ${Else}
+        ; no difference between files so remove backup file
+        Delete "$INSTDIR\wincoot.bat.backup"
      ${EndIf}  ; bat_diff
    ${EndIf}  ; have_bat
 
    ; MessageBox MB_OK 'BL DEBUG:: just before renaming tmp to wincoot.bat !$\n$\r$\n$\r'
-
-   Rename "$INSTDIR\wincoot.bat.tmp" "$INSTDIR\wincoot.bat"
 
   ; executable access to everyone
   AccessControl::GrantOnFile /NOINHERIT "$INSTDIR\wincoot.bat" "(BA)" "FullAccess"
