@@ -62,9 +62,7 @@ public:
    preferences_value get_preference_default(const std::string& key) const;
    void list_preferences() const;
    void reset_all_preferences_to_defaults();
-   // these may be replaced by old/existing functions.
    int save_preferences_to_file(const std::string& filename);
-   void load_preferences_from_file(const std::string& filename);
 };
 
 extern preferences_manager coot_preferences;
@@ -113,29 +111,7 @@ void show_hide_preferences_tabs(GtkToggleToolButton *toggletoolbutton, int prefe
 #endif
 
 void update_preference_gui();
-void make_preferences_internal();
-void make_preferences_internal_default();
-void reset_preferences();
 void save_preferences();
-void preferences_internal_change_value_int(int preference_type, int ivalue);
-void preferences_internal_change_value_int2(int preference_type, int ivalue1, int ivalue2);
-void preferences_internal_change_value_float(int preference_type, float fvalue);
-void preferences_internal_change_value_float3(int preference_type, 
-					float fvalue1, float fvalue2, float fvalue3);
-void show_model_toolbar_icon(int pos);
-void hide_model_toolbar_icon(int pos);
-
-void show_main_toolbar_icon(int pos);
-void hide_main_toolbar_icon(int pos);
-
-int preferences_internal_font_own_colour_flag();
-
-#ifndef SWIG
-void fill_preferences_model_toolbar_icons(GtkWidget *preferences,
-				     	  GtkWidget *scrolled_window);
-void fill_preferences_main_toolbar_icons(GtkWidget *preferences,
-				     	  GtkWidget *scrolled_window);
-#endif
 
 END_C_DECLS
 

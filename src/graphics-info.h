@@ -395,48 +395,6 @@ namespace coot {
      }
    };
 
-  // for preferences
-  class preference_info_t {
-
-  public:
-    int preference_type;   // e.g. PREFERENCES_bla
-    int ivalue1;
-    int ivalue2;
-    float fvalue1;
-    float fvalue2;
-    float fvalue3;
-  };
-
-  class preferences_icon_info_t {
-
-  public:
-    int icon_pos;
-    std::string icon_filename;
-    std::string icon_text;
-    std::string icon_widget;
-    int show_hide_flag;
-    int default_show_flag;
-    preferences_icon_info_t(int icon_pos_in,
-			    std::string icon_filename_in,
-			    std::string icon_text_in,
-			    std::string icon_widget_in,
-			    int show_hide_flag_in,
-			    int default_show_flag_in) {
-	icon_pos = icon_pos_in;
-	icon_filename = icon_filename_in;
-	icon_text = icon_text_in;
-	icon_widget = icon_widget_in;
-	show_hide_flag = show_hide_flag_in;
-	default_show_flag = default_show_flag_in;
-    }
-    void hide() {
-	show_hide_flag = 0;
-    }
-    void show() {
-	show_hide_flag = 1;
-    }
-  };
-
   class command_line_commands_t {
   public:
     std::vector<std::string> commands;
@@ -3945,43 +3903,6 @@ public:
    static std::vector<std::string> preferences_other_tabs;
    static std::vector<std::string> preferences_all_tabs;
 
-   static std::vector<coot::preferences_icon_info_t> *model_toolbar_icons;
-   static std::vector<coot::preferences_icon_info_t> *main_toolbar_icons;
-
-   short int save_preference_file(const std::string &filename, short int il);
-   static std::vector<coot::preference_info_t> preferences_internal;
-   static std::vector<coot::preference_info_t> preferences_internal_default;
-   void make_preferences_internal();
-   void preferences_internal_change_value(int preference_type, int ivalue);
-   void preferences_internal_change_value(int preference_type, float fvalue);
-   void preferences_internal_change_value(int preference_type,
-					  float fvalue1, float fvalue2, float fvalue3);
-   void preferences_internal_change_value(int preference_type, int ivalue1, int ivalue);
-
-   static void preferences_model_toolbar_icon_toggled(GtkCellRendererToggle *button,
-					      gchar *path,
-		    			      gpointer data);
-   static void update_toolbar_icons(GtkTreeModel *model, int toolbar_index);
-   static void update_main_toolbar_icons(GtkTreeModel *model);
-   static void update_model_toolbar_icons(GtkTreeModel *model);
-   void fill_preferences_model_toolbar_icons(GtkWidget *preferences,
-					     GtkWidget *scrolled_window);
-   static void preferences_main_toolbar_icon_toggled(GtkCellRendererToggle *button,
-					      gchar *path,
-		    			      gpointer data);
-   static void preferences_toolbar_icon_toggled(GtkCellRendererToggle *button,
-					      gchar *path,
-		    			      gpointer data,
-                                              int toolbar_index);
-   void fill_preferences_main_toolbar_icons(GtkWidget *preferences,
-					     GtkWidget *scrolled_window);
-   void fill_preferences_toolbar_icons(GtkWidget *preferences,
-				       GtkWidget *scrolled_window,
-				       int toolbar_index);
-
-   void show_hide_toolbar_icon_pos(int pos, int show_hide_flag, int toolbar_index);
-   std::vector<int> get_model_toolbar_icons_list();
-   std::vector<int> get_main_toolbar_icons_list();
    void add_to_preferences(const std::string &file_name, const std::string &contents) const;
    std::string get_preferences_directory() const;
 

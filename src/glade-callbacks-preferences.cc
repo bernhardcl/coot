@@ -687,19 +687,6 @@ on_preferences_recentre_pdb_on_radiobutton_toggled(GtkCheckButton *checkbutton,
 }
 
 
-extern "C" G_MODULE_EXPORT
-void
-on_preferences_recentre_pdb_off_radiobutton_toggled(GtkCheckButton *checkbutton,
-                                                    gpointer         user_data) {
-
-   // not used FIXME
-   if (gtk_check_button_get_active(checkbutton)) {
-      preferences_internal_change_value_int(PREFERENCES_RECENTRE_PDB, 0);
-      set_recentre_on_read_pdb(0);
-   }
-
-}
-
 
 extern "C" G_MODULE_EXPORT
 void
@@ -820,47 +807,6 @@ on_preferences_pink_pointer_entry_changed
    }
 }
 
-/* BL remove?
-extern "C" G_MODULE_EXPORT
-void
-on_preferences_main_toolbar_style_icons_radiobutton_toggled
-                                        (GtkToggleButton *togglebutton,
-                                        gpointer         user_data)
-{
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    preferences_internal_change_value_int(PREFERENCES_MAIN_TOOLBAR_STYLE, 1);
-    set_main_toolbar_style(1);
-  }
-
-}
-
-
-extern "C" G_MODULE_EXPORT
-void
-on_preferences_main_toolbar_style_both_radiobutton_toggled
-                                        (GtkToggleButton *togglebutton,
-                                        gpointer         user_data)
-{
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    preferences_internal_change_value_int(PREFERENCES_MAIN_TOOLBAR_STYLE, 2);
-    set_main_toolbar_style(2);
-  }
-
-}
-
-
-extern "C" G_MODULE_EXPORT
-void
-on_preferences_main_toolbar_style_text_radiobutton_toggled(GtkToggleButton *togglebutton,
-                                                           gpointer         user_data) {
-  if (gtk_toggle_button_get_active(togglebutton)) {
-    preferences_internal_change_value_int(PREFERENCES_MAIN_TOOLBAR_STYLE, 3);
-    set_main_toolbar_style(3);
-  }
-
-}
-
-*/
 
 extern "C" G_MODULE_EXPORT
 void

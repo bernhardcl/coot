@@ -524,11 +524,6 @@ void setup_preferences_gui() {
 
       graphics_info_t::preferences_widget = w;
 
-      GtkWidget *scrolled_win_model_toolbar = widget_from_preferences_builder("preferences_model_toolbar_icons_scrolledwindow");
-      fill_preferences_model_toolbar_icons(w, scrolled_win_model_toolbar);
-      GtkWidget *scrolled_win_main_toolbar = widget_from_preferences_builder("preferences_main_toolbar_icons_scrolledwindow");
-      fill_preferences_main_toolbar_icons(w, scrolled_win_main_toolbar);
-
       // we don't want to see the non-General tabs when we first start
       GtkWidget *togglebutton = widget_from_preferences_builder("preferences_general_radiotoolbutton");
       show_hide_preferences_tabs(GTK_TOGGLE_BUTTON(togglebutton), COOT_GENERAL_PREFERENCES);
@@ -627,30 +622,6 @@ void show_hide_preferences_tabs(GtkToggleButton *toggletoolbutton, int preferenc
 }
 
 #include "c-interface-preferences.h"
-
-void make_preferences_internal() {
-
-  graphics_info_t g;
-  g.make_preferences_internal();
-}
-
-void make_preferences_internal_default() {
-
-  make_preferences_internal();
-  graphics_info_t g;
-  g.preferences_internal_default = g.preferences_internal;
-
-}
-
-void reset_preferences() {
-
-  graphics_info_t g;
-  //std::vector<coot::preference_info_t> *ret = g.preferences_internal_default;
-  g.preferences_internal = g.preferences_internal_default;
-  update_preference_gui();
-
-}
-
 
 // update and populate Preferences GUI according to (preference file) setting
 void update_preference_gui() {
@@ -928,69 +899,6 @@ void save_preferences() {
       std::cout << "WARNING:: failed to save preferences " << full_file_name_path.string() << std::endl;
    }
 
-}
- 
-
-void preferences_internal_change_value_int(int preference_type, int ivalue) {
-  graphics_info_t g;
-  g.preferences_internal_change_value(preference_type, ivalue);
-}
-
-void preferences_internal_change_value_int2(int preference_type, int ivalue1, int ivalue2) {
-  graphics_info_t g;
-  g.preferences_internal_change_value(preference_type, ivalue1, ivalue2);
-}
-
-void preferences_internal_change_value_float(int preference_type, float fvalue) {
-  graphics_info_t g;
-  g.preferences_internal_change_value(preference_type, fvalue);
-}
-
-void preferences_internal_change_value_float3(int preference_type,
-                                              float fvalue1, float fvalue2, float fvalue3) {
-  graphics_info_t g;
-  g.preferences_internal_change_value(preference_type, fvalue1, fvalue2, fvalue3);
-}
-
-// FIXME:: make this generic with TOOLBAR enums
-void
-show_model_toolbar_icon(int pos) {
-  graphics_info_t g;
-  g.show_hide_toolbar_icon_pos(pos, 1, MODEL_TOOLBAR);
-}
-
-void
-hide_model_toolbar_icon(int pos) {
-  graphics_info_t g;
-  g.show_hide_toolbar_icon_pos(pos, 0, MODEL_TOOLBAR);
-}
-
-void
-show_main_toolbar_icon(int pos) {
-  graphics_info_t g;
-  g.show_hide_toolbar_icon_pos(pos, 1, MAIN_TOOLBAR);
-}
-
-void
-hide_main_toolbar_icon(int pos) {
-  graphics_info_t g;
-  g.show_hide_toolbar_icon_pos(pos, 0, MAIN_TOOLBAR);
-}
-
-void
-fill_preferences_model_toolbar_icons(GtkWidget *preferences,
-				     GtkWidget *scrolled_window) {
-
-  graphics_info_t g;
-  g.fill_preferences_model_toolbar_icons(preferences, scrolled_window);
-}
-
-void
-fill_preferences_main_toolbar_icons(GtkWidget *preferences,
-				     GtkWidget *scrolled_window) {
-
-  graphics_info_t g;
-  g.fill_preferences_main_toolbar_icons(preferences, scrolled_window);
 }
 
 
@@ -1621,17 +1529,3 @@ void set_button_label_for_external_refinement(const char *button_label) {
    graphics_info_t::external_refinement_program_button_label = button_label;
 }
 
-
-int preferences_internal_font_own_colour_flag() {
-
-   int r = -1; 
-   graphics_info_t g;
-   for (unsigned int i=0; i<g.preferences_internal.size(); i++) {
-      if (g.preferences_internal[i].preference_type == PREFERENCES_FONT_OWN_COLOUR_FLAG) {
-	 r = g.preferences_internal[i].ivalue1;
-	 break;
-      }
-   }
-
-   return r;
-} 
