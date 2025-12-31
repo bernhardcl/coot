@@ -3943,6 +3943,7 @@ public:
    static std::vector<std::string> preferences_colour_tabs;
    static std::vector<std::string> preferences_map_tabs;
    static std::vector<std::string> preferences_other_tabs;
+   static std::vector<std::string> preferences_all_tabs;
 
    static std::vector<coot::preferences_icon_info_t> *model_toolbar_icons;
    static std::vector<coot::preferences_icon_info_t> *main_toolbar_icons;

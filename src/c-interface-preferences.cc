@@ -73,6 +73,8 @@
 
 #include "widget-from-builder.hh"
 
+#include "utils/xdg-base.hh"
+
 #include <glm/gtc/type_ptr.hpp>
 // FIXME only for debug
 #include "glm/gtx/string_cast.hpp"
@@ -112,7 +114,7 @@ void preferences_manager::register_preference(
    }
 }
 
-// Set a preference value
+// Set a preference value for key
 void preferences_manager::set_preference(const std::string& key, const preferences_value& value) {
    auto it = preferences_values.find(key);
    if (it != preferences_values.end()) {
@@ -129,7 +131,7 @@ void preferences_manager::set_preference(const std::string& key, const preferenc
    }
 }
 
-// Get a preference value
+// Get a preference value by key
 preferences_value preferences_manager::get_preference(const std::string& key) const {
    auto it = preferences_values.find(key);
    if (it != preferences_values.end()) {
@@ -160,7 +162,6 @@ preferences_value preferences_manager::get_preference_default(const std::string&
 }
 
 // List all registered preferences
-// do we need this function at this point?
 void preferences_manager::list_preferences() const {
    for (const auto& [key, callbacks] : preferences_registry) {
       std::cout << key << " = ";
@@ -188,19 +189,20 @@ void preferences_manager::list_preferences() const {
       std::cout << ")\n";
       } catch (...) {
       // Skip if the preference cannot be retrieved
+         std::cout<<"BL WARNING:: a preference with key " << key << " could not be restrieved"<<std::endl;
       }
    }
 
 }
 
-// reset all preferences:
+// reset all preferences to their default values
 void preferences_manager::reset_all_preferences_to_defaults() {
    for (const auto& [key, default_value] : preferences_defaults) {
       set_preference(key, default_value); // Reset each preference to its default
    }
 }
 
-/* save/load preferences */
+/* save preferences to file*/
 int preferences_manager::save_preferences_to_file(const std::string& filename) {
    int istat;
    std::ofstream file(filename);
@@ -248,6 +250,7 @@ int preferences_manager::save_preferences_to_file(const std::string& filename) {
 
       } catch (...) {
       // Skip if the preference cannot be retrieved
+         std::cout<<"BL WARNING:: a preference with key " << key << " could not be restrieved"<<std::endl;
       }
    }
 
@@ -257,19 +260,6 @@ int preferences_manager::save_preferences_to_file(const std::string& filename) {
 
    return istat;
 }
-
-// probbaly dont need this, we just read the python file...
-void preferences_manager::load_preferences_from_file(const std::string& filename) {
-   FILE* file = fopen(filename.c_str(), "r");
-   if (!file) {
-      throw std::runtime_error("Unable to open file for loading preferences: " + filename);
-      }
-
-   // Execute the Python script
-   PyRun_SimpleFile(file, filename.c_str());
-   fclose(file);
-}
-
 
 
 
@@ -288,49 +278,42 @@ void initialize_preferences() {
       set_use_primary_mouse_button_for_rotation(std::get<bool>(value));},
          []() -> preferences_value { graphics_info_t gg; return gg.using_trackpad;},
    g.using_trackpad);
-   std::cout<<"BL DEBUG:: done with 1" <<std::endl;
 
    // Virtual trackball
    coot_preferences.register_preference("virtual_trackball",[](const preferences_value& value) {
       vt_surface(std::get<int>(value));},
          []() -> preferences_value { return vt_surface_status();},
    g.vt_surface_status());
-   std::cout<<"BL DEBUG:: done with 2" <<std::endl;
 
    // Noughty refinement physics
    coot_preferences.register_preference("noughty_refinement_physics",[](const preferences_value& value) {
       set_refine_use_noughties_physics(std::get<int>(value));},
          []() -> preferences_value { return get_refine_use_noughties_physics_state();},
    int(g.noughties_physics));
-   std::cout<<"BL DEBUG:: done with 3" <<std::endl;
 
    // recentre coordinates
    coot_preferences.register_preference("recentre_coordinates",[](const preferences_value& value) {
       set_recentre_on_read_pdb(std::get<int>(value));},
          []() -> preferences_value { return recentre_on_read_pdb();},
    g.recentre_on_read_pdb);
-   std::cout<<"BL DEBUG:: done with 4" <<std::endl;
 
    // Recentre smooth scrolling
    coot_preferences.register_preference("smooth_scroll",[](const preferences_value& value) {
       set_smooth_scroll_flag(std::get<int>(value));},
          []() -> preferences_value { return get_smooth_scroll();},
    g.smooth_scroll);
-   std::cout<<"BL DEBUG:: done with 5" <<std::endl;
 
    // Recentre smooth scrolling steps
    coot_preferences.register_preference("smooth_scroll_steps",[](const preferences_value& value) {
       set_smooth_scroll_steps(std::get<int>(value));},
          []() -> preferences_value { graphics_info_t gg; return gg.smooth_scroll_n_steps;},
    g.smooth_scroll_n_steps);
-   std::cout<<"BL DEBUG:: done with 6" <<std::endl;
 
    // Recentre smooth scrolling limit
    coot_preferences.register_preference("smooth_scroll_limit",[](const preferences_value& value) {
       set_smooth_scroll_limit(std::get<double>(value));},
          []() -> preferences_value { graphics_info_t gg; return gg.smooth_scroll_limit;},
    g.smooth_scroll_limit);
-   std::cout<<"BL DEBUG:: done with 7" <<std::endl;
 
    // Bond colour map rotation
    coot_preferences.register_preference("bond_colour_map_rotation",[](const preferences_value& value) {
@@ -610,20 +593,7 @@ void show_hide_preferences_tabs(GtkToggleButton *toggletoolbutton, int preferenc
       preferences_tabs = graphics_info_t::preferences_other_tabs;
    }
 
-   // BL says:: shouldnt this be a static vector rather than making it again for each signal?!
-   // FIXME BL maybe at some point...
-   auto append_tabs = [] (std::vector<std::string> &all_tabs,
-                          const std::vector<std::string> &other_tabs) {
-      all_tabs.insert(all_tabs.end(), other_tabs.begin(), other_tabs.end());
-   };
-
-   std::vector<std::string> all_tabs;
-   append_tabs(all_tabs, graphics_info_t::preferences_general_tabs);
-   append_tabs(all_tabs, graphics_info_t::preferences_bond_tabs);
-   append_tabs(all_tabs, graphics_info_t::preferences_geometry_tabs);
-   append_tabs(all_tabs, graphics_info_t::preferences_colour_tabs);
-   append_tabs(all_tabs, graphics_info_t::preferences_map_tabs);
-   append_tabs(all_tabs, graphics_info_t::preferences_other_tabs);
+   std::vector<std::string> all_tabs = graphics_info_t::preferences_all_tabs;
 
    GtkWidget *notebook = widget_from_preferences_builder("preferences_notebook");
    int left_tab = 999;
@@ -694,13 +664,10 @@ void update_preference_gui() {
   std::vector<float> colour_vector;
   std::vector<float> default_colour;
   int preference_type;
-  int ivalue;
-  int ivalue2;
-  float fval1;
-  float fval2;
-  float fval3;
+  preferences_value value;
   // digital places
   unsigned short int v = 4;
+
   graphics_info_t g;
 
   bool debug = false;
@@ -712,10 +679,6 @@ void update_preference_gui() {
 
   // maybe there is a clever way to iterate of this!? Possibly - with a map and keys similar to list_preferences
   // not for now
-  preferences_value value;
-
-  value = coot_preferences.get_preference("bond_colour_map_rotation");
-  std::cout<<"BL DEBUG:: get pref bond map (top update)" <<std::get<double>(value) <<std::endl;
 
   // General preferences
   // case PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON:
@@ -725,7 +688,6 @@ void update_preference_gui() {
      w = widget_from_preferences_builder("preferences_view_rotation_left_mouse_checkbutton");;
   }
   gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-  std::cout<<"BL DEBUG:: set left button to (true is left)" <<std::get<bool>(value) <<std::endl;
 
   // case PREFERENCES_VT_SURFACE:
   w = widget_from_preferences_builder("preferences_hid_spherical_radiobutton");
@@ -855,8 +817,6 @@ void update_preference_gui() {
   double min_val = *std::min_element(colour_vector.begin(), colour_vector.end());
   double max_val = *std::max_element(colour_vector.begin(), colour_vector.end());
   int do_own_button = 0;
-  std::cout<<"BL DEBUG:: min " << min_val << " max " <<max_val<<std::endl;
-  std::cout<<"BL DEBUG:: close num " << coot::util::close_double_p(min_val, max_val)<<std::endl;
   if (coot::util::close_double_p(min_val, max_val)) {
      // all the same, likely to be a preset number (could use a colour enum?)
      if (coot::util::close_double_p(colour_vector[0], 0.)) {
@@ -904,7 +864,6 @@ void update_preference_gui() {
   glm::vec3 vec2 = glm::make_vec3(default_colour.data());
   bool equal = glm::all(glm::epsilonEqual(vec1, vec2, 1e-6f));
   if (equal) {
-     std::cout<<"BL DEBUG:: have equal vector/colour"<<std::endl;
      do_own_button = 0;
   }
 
@@ -916,11 +875,6 @@ void update_preference_gui() {
      w = widget_from_preferences_builder("preferences_font_colour_own_radiobutton");
      // set custom font colour of button
      colour_button = widget_from_preferences_builder("preferences_font_color_button");
-     if (colour_button) {
-       std::cout<<"BL DEBUG:: have button, so set to colour " <<colour_vector[0]<<std::endl;
-     } else {
-       std::cout<<"BL DEBUG:: NO button, oddly??? "<<std::endl;
-     }
      rgba.red   = colour_vector[0]; // Assign red component
      rgba.green = colour_vector[1]; // Assign green component
      rgba.blue  = colour_vector[2]; // Assign blue component
@@ -938,55 +892,13 @@ void update_preference_gui() {
   }
   gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
 
-     // case PREFERENCES_PINK_POINTER:
-     w = widget_from_preferences_builder("preferences_pink_pointer_entry");
-     value = coot_preferences.get_preference("rotation_centre_cube_size");
-     text = graphics_info_t::float_to_string(std::get<double>(value));
-     gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
+  // case PREFERENCES_PINK_POINTER:
+  w = widget_from_preferences_builder("preferences_pink_pointer_entry");
+  value = coot_preferences.get_preference("rotation_centre_cube_size");
+  text = graphics_info_t::float_to_string(std::get<double>(value));
+  gtk_editable_set_text(GTK_EDITABLE(w), text.c_str());
 
-
-  // 20240916-PE this has gone
-     // case PREFERENCES_BONDS_THICKNESS:
-     //    w = widget_from_preferences_builder("preferences_bond_width_combobox");
-     //    ivalue = g.preferences_internal[i].ivalue1;
-     //    ivalue -= 1;      // offset
-     //    gtk_combo_box_set_active(GTK_COMBO_BOX(w), ivalue);
-     //    break;
-
-  for (unsigned int i=0; i<g.preferences_internal.size(); i++) {
-       auto preference_type = g.preferences_internal[i].preference_type;
-     switch (preference_type) {
-
-
-
-
-
-     // case PREFERENCES_MARK_CIS_BAD:
-     //    w = widget_from_preferences_builder("preferences_geometry_cis_peptide_bad_yes_radiobutton");
-     //    if (g.preferences_internal[i].ivalue1) {
-     //       gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-     //    } else {
-     //       w = widget_from_preferences_builder("preferences_geometry_cis_peptide_bad_no_radiobutton");
-     //       gtk_check_button_set_active(GTK_CHECK_BUTTON(w), TRUE);
-     //    }
-     //    break;
-
-        // case PREFERENCES_ANTIALIAS:
-        //    w = widget_from_preferences_builder("preferences_antialias_on_radiobutton");
-        //    if (g.preferences_internal[i].ivalue1) {
-        //       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), TRUE);
-        //    } else {
-        //       w = widget_from_preferences_builder("preferences_antialias_off_radiobutton");
-        //       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), TRUE);
-        //    }
-        //    break;
-
-
-     }
-  }
 }
-
-#include "utils/xdg-base.hh"
 
 void save_preferences() {
 

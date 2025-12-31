@@ -478,7 +478,9 @@ void setup_preferences() {
 
    // 20230627-PE put this in setup-gui-components - it should only happen once.
    // 20240916-PE done!
-   {
+   // BL says:: disable for now. If we want these preferences they should go into the glade ui.
+   // we could potentially setup the preferences_gui in the gui setup!?
+   if (0) {
       // fill the bond combobox
       GtkComboBoxText *combobox = GTK_COMBO_BOX_TEXT(widget_from_preferences_builder("preferences_bond_width_combobox"));
       if (combobox) {

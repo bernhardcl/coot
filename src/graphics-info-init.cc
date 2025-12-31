@@ -311,16 +311,10 @@ graphics_info_t::init() {
 
       // -------------these are all frame ------------------------------
 
-      //preferences_internal = new std::vector<coot::preference_info_t>;
-
-      // preferences_general_tabs.push_back("preferences_file_selection");
-      // preferences_general_tabs.push_back("preferences_dock_accept_dialog");
       preferences_general_tabs.push_back("preferences_hid");
       preferences_general_tabs.push_back("preferences_noughties_physics");
       preferences_general_tabs.push_back("preferences_recentre_pdb");
       preferences_general_tabs.push_back("preferences_smooth_scroll");
-      // preferences_general_tabs.push_back("preferences_model_toolbar_style");
-      // preferences_general_tabs.push_back("preferences_main_toolbar_style");
 
       preferences_bond_tabs.push_back("preferences_bond_parameters");
       preferences_bond_tabs.push_back("preferences_bond_colours");
@@ -463,6 +457,24 @@ graphics_info_t::init() {
 								  "Go To Ligand",
 								  "go_to_ligand_toolbutton",
 								  1, 1));
+      // BL says:: all tabs should be a stitic vecotr, so now pack them all together.
+      // First reserve space to avoid resizing/allocation constantly
+      preferences_all_tabs.reserve(preferences_general_tabs.size() +
+                                   preferences_bond_tabs.size() +
+                                   preferences_geometry_tabs.size() +
+                                   preferences_colour_tabs.size() +
+                                   preferences_map_tabs.size() +
+                                   preferences_other_tabs.size());
+      auto append_tabs = [&preferences_all_tabs] (const std::vector<std::string> &other_tabs) {
+         preferences_all_tabs.insert(preferences_all_tabs.end(), other_tabs.begin(), other_tabs.end());
+      };
+
+      append_tabs(preferences_general_tabs);
+      append_tabs(preferences_bond_tabs);
+      append_tabs(preferences_geometry_tabs);
+      append_tabs(preferences_colour_tabs);
+      append_tabs(preferences_map_tabs);
+      append_tabs(preferences_other_tabs);
 
       do_expose_swap_buffers_flag = 1;
       vera_font_loaded = false;

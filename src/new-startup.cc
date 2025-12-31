@@ -896,13 +896,9 @@ new_startup_application_activate(GtkApplication *application,
       if (activate_data->cld.do_graphics)
          graphics_info.use_graphics_interface_flag = true;
 
-      // old way
-      // create the preference defaults
-      //make_preferences_internal();
-      // new way
-      // get default values and then setup the gui but dont show it
+      // new way for preferences
+      // get default values and then setup the gui but dont show it (after reading in the values - below)
       initialize_preferences();
-      setup_preferences_gui();
 
       guint id = gtk_application_window_get_id(GTK_APPLICATION_WINDOW(app_window));
       // std::cout << "debug:: new_startup_application_activate(): Window id: " << id << std::endl;
@@ -969,6 +965,9 @@ new_startup_application_activate(GtkApplication *application,
       setup_go_to_residue_keyboarding_mode_entry_signals();
 
       handle_start_scripts(); // what used to be in ~/.coot/*.py
+
+      // setup of the preferences (in GUI) after we read them in (in startup script)...
+      setup_preferences_gui();
 
       // now we are ready to show graphical objects made from reading files:
       handle_command_line_data(activate_data->cld);

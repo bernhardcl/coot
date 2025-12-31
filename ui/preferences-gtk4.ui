@@ -245,7 +245,6 @@
                                     <property name="label" translatable="yes">Right (Secondary)</property>
                                     <property name="group">preferences_view_rotation_left_mouse_checkbutton</property>
                                     <property name="active">1</property>
-                                    <!-- <signal name="toggled" handler="on_preferences_view_rotation_right_mouse_checkbutton_toggled" swapped="no"/> -->
                                   </object>
                                 </child>
 
@@ -281,7 +280,6 @@
                                         <property name="label" translatable="yes">Turntable Mode (Flat)</property>
                                         <property name="use-underline">1</property>
                                         <property name="group">preferences_hid_spherical_radiobutton</property>
-                                        <!-- <signal name="toggled" handler="on_preferences_hid_flat_radiobutton_toggled" swapped="no"/> -->
                                       </object>
                                     </child>
                                   </object>
@@ -339,7 +337,6 @@
                                 <property name="label" translatable="yes">Off</property>
                                 <property name="active">1</property>
                                 <property name="group">noughties_physics_on_checkbutton</property>
-                                <!-- <signal name="toggled" handler="on_noughties_physics_checkbutton_toggled" swapped="no"/> -->
                               </object>
                             </child>
                           </object>
@@ -394,7 +391,6 @@
                                         <property name="label" translatable="yes">No</property>
                                         <property name="use-underline">1</property>
                                         <property name="group">preferences_recentre_pdb_on_radiobutton</property>
-                                        <!-- <signal name="toggled" handler="on_preferences_recentre_pdb_off_radiobutton_toggled" swapped="no"/> -->
                                       </object>
                                     </child>
                                   </object>
@@ -457,7 +453,6 @@
                                         <property name="label" translatable="yes">No</property>
                                         <property name="use-underline">1</property>
                                         <property name="group">preferences_smooth_scroll_on_radiobutton</property>
-                                        <!-- <signal name="toggled" handler="on_preferences_smooth_scroll_off_radiobutton_toggled" swapped="no"/> -->
                                       </object>
                                     </child>
                                   </object>
@@ -492,7 +487,6 @@
                                         <property name="margin-end">4</property>
                                         <property name="margin-top">4</property>
                                         <property name="margin-bottom">4</property>
-                                        <!-- <signal name="activate" handler="on_preferences_smooth_scroll_steps_entry_activate" swapped="no"/> -->
                                         <signal name="changed" handler="on_preferences_smooth_scroll_steps_entry_changed" swapped="no"/>
                                       </object>
                                     </child>
@@ -529,7 +523,7 @@ distances more than:</property>
                                         <property name="margin-top">4</property>
                                         <property name="margin-bottom">4</property>
                                         <signal name="activate" handler="on_preferences_smooth_scroll_limit_entry_activate" swapped="no"/>
-                                        <!-- <signal name="changed" handler="on_preferences_smooth_scroll_limit_entry_changed" swapped="no"/> -->
+                                        <signal name="changed" handler="on_preferences_smooth_scroll_limit_entry_changed" swapped="no"/>
                                       </object>
                                     </child>
                                     <child>
@@ -594,13 +588,13 @@ distances more than:</property>
                                                 <property name="step_increment">1</property>
                                               </object>
                                             </property>
-                            					      <marks>
+                                            <marks>
                                               <mark position="bottom" value="0">0°</mark>
                                               <mark position="bottom" value="90">90°</mark>
                                               <mark position="bottom" value="180">180°</mark>
                                               <mark position="bottom" value="270">270°</mark>
                                               <mark position="bottom" value="360">360°</mark>
-                              					    </marks>
+                                            </marks>
                                             <signal name="value-changed" handler="on_preferences_bond_colours_hscale_value_changed" swapped="no"/>
                                           </object>
                                         </child>
@@ -684,8 +678,8 @@ distances more than:</property>
                                     <child>
                                       <object class="GtkEntry" id="preferences_map_radius_entry">
                                         <property name="focusable">1</property>
-                                        <!-- <signal name="activate" handler="on_preferences_map_radius_entry_activate" swapped="no"/> -->
                                         <signal name="changed" handler="on_preferences_map_radius_entry_changed" swapped="no"/>
+                                        <signal name="activate" handler="on_preferences_map_radius_entry_activate" swapped="no"/>
                                       </object>
                                     </child>
                                     <child>
@@ -722,7 +716,6 @@ distances more than:</property>
                                     <child>
                                       <object class="GtkEntry" id="preferences_map_increment_size_entry">
                                         <property name="focusable">1</property>
-                                        <!-- <signal name="activate" handler="on_preferences_map_increment_size_entry_activate" swapped="no"/> -->
                                         <signal name="changed" handler="on_preferences_map_increment_size_entry_changed" swapped="no"/>
                                       </object>
                                     </child>
@@ -751,7 +744,6 @@ distances more than:</property>
                                     <child>
                                       <object class="GtkEntry" id="preferences_map_diff_increment_entry">
                                         <property name="focusable">1</property>
-                                        <!-- <signal name="activate" handler="on_preferences_map_diff_increment_entry_activate" swapped="no"/> -->
                                         <signal name="changed" handler="on_preferences_map_diff_increment_entry_changed" swapped="no"/>
                                       </object>
                                     </child>
@@ -782,7 +774,7 @@ distances more than:</property>
                                         <property name="visible">1</property>
                                         <property name="focusable">1</property>
                                         <property name="tooltip-text" translatable="yes">Shannon Sampling multiplier. 1.5 is the standard value. Use larger numbers for smoother maps</property>
-                                        <!-- <signal name="activate" handler="on_preferences_map_sampling_entry_activate" swapped="no"/> -->
+                                        <signal name="activate" handler="on_preferences_map_sampling_entry_activate" swapped="no"/>
                                         <signal name="changed" handler="on_preferences_map_sampling_entry_changed" swapped="no"/>
                                       </object>
                                     </child>
@@ -861,7 +853,6 @@ distances more than:</property>
                                         <property name="tooltip-text" translatable="yes">positive - red; negative - green</property>
                                         <property name="use-underline">1</property>
                                         <property name="group">preferences_diff_map_colours_coot_radiobutton</property>
-                                        <!-- <signal name="toggled" handler="on_preferences_diff_map_colours_o_radiobutton_toggled" swapped="no"/> -->
                                       </object>
                                     </child>
                                   </object>
@@ -986,7 +977,6 @@ distances more than:</property>
                                         <property name="label" translatable="yes">No</property>
                                         <property name="use-underline">1</property>
                                         <property name="group">preferences_map_drag_on_radiobutton</property>
-                                        <!-- <signal name="toggled" handler="on_preferences_map_drag_off_radiobutton_toggled" swapped="no"/> -->
                                       </object>
                                     </child>
                                   </object>
@@ -1039,6 +1029,7 @@ distances more than:</property>
                                     <property name="width-request">5</property>
                                     <property name="can-focus">1</property>
                                     <signal name="activate" handler="on_preferences_default_b_factor_entry_activate" swapped="no"/>
+                                    <signal name="changed" handler="on_preferences_default_b_factor_entry_changed" swapped="no"/>
                                   </object>
                                 </child>
                               </object>
@@ -1078,7 +1069,6 @@ distances more than:</property>
                                         <property name="valign">center</property>
                                         <property name="label" translatable="yes">Black</property>
                                         <property name="use-underline">1</property>
-                                        <!-- <signal name="toggled" handler="on_preferences_bg_colour_black_radiobutton_toggled" swapped="no"/> -->
                                       </object>
                                     </child>
                                     <child>
@@ -1140,6 +1130,7 @@ distances more than:</property>
                                           </object>
                                         </child>
                                         <child>
+                                          <!-- We now use the GtkColorDialogButton since the GtkColorButton is deprecated -->
                                           <object class="GtkColorDialogButton" id="preferences_background_color_button">
                                             <property name="tooltip-text" translatable="yes">click here to change the background colour</property>
                                             <property name="visible">true</property>
@@ -1329,7 +1320,6 @@ distances more than:</property>
                                         <property name="use-underline">1</property>
                                         <property name="active">True</property>
                                         <property name="group">preferences_console_info_on_radiobutton</property>
-                                        <!-- <signal name="toggled" handler="on_preferences_console_info_off_radiobutton_toggled" swapped="no"/> -->
                                       </object>
                                     </child>
                                   </object>
