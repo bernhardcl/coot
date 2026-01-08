@@ -947,6 +947,7 @@ libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
 		$(SQLITE3_LIBS)       \
 		$(openal_LIBS)        \
 		$(SHARED_LDFLAGS)     \
+		$(COOT_WINDOWS_LDFLAGS)     \
 		-lpthread
 
 # make freetype a configure variable FREETYPE_LIBS

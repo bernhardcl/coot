@@ -1666,6 +1666,12 @@ cleanup_on_exit() {
       g.blur_framebuffer.tear_down();
    }
 
+   // finally deal with the sockets on windows
+#ifdef WINDOWS_MINGW
+   WSACleanup();
+#endif
+
+
 }
 
 void
