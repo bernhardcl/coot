@@ -845,11 +845,11 @@ int fetch_cod_entry(const std::string &cod_code) {
    std::string fn_tail = cod_code + std::string(".cif");
    std::filesystem::path fn = download_dir / fn_tail;
    if (std::filesystem::exists(fn)) {
-      imol = read_small_molecule_cif(fn.c_str());
+      imol = read_small_molecule_cif(fn.string().c_str());
    } else {
-      coot_get_url(url.c_str(), fn.c_str());
+      coot_get_url(url.c_str(), fn.string());
       if (coot::file_exists_and_non_tiny(fn.string())) {
-         imol = read_small_molecule_cif(fn.c_str());
+         imol = read_small_molecule_cif(fn.string().c_str());
       } else {
          std::cout << "DEBUG:: failed to download " << url << std::endl;
       }

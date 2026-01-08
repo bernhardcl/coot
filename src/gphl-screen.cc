@@ -1232,7 +1232,7 @@ void open_buster_output_files() {
    std::filesystem::path mtz("refine.mtz");
 
    if (std::filesystem::exists(pdb)) {
-      read_pdb(pdb);
+      read_pdb(pdb.string());
       set_show_symmetry_master(1);
    }
 
