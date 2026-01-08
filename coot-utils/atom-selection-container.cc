@@ -474,8 +474,10 @@ get_atom_selection(std::string pdb_name,
 
                 MMDBManager->PDBCleanup(mmdb::PDBCLEAN_ELEMENT);
 
-                if (verbose_mode)
-                   std::cout << "INFO:: file " << pdb_name.c_str() << " has been read.\n";
+                if (verbose_mode) {
+                   // std::cout << "INFO:: file " << pdb_name.c_str() << " has been read.\n";
+                   logger.log(log_t::INFO, "File", pdb_name, "has been read");
+                }
                 asc.read_success = 1; // TRUE
 
                 // atom_selection_container.read_error_message = NULL; // its a string
@@ -498,13 +500,16 @@ get_atom_selection(std::string pdb_name,
        if (MMDBManager) {
           char *str = MMDBManager->GetSpaceGroup();
           if (str) {
-             if (false) {
+             if (verbose_mode) {
                 std::string sgrp(str);
-                std::cout << "Spacegroup: " << sgrp << "\n";
+                // std::cout << "Spacegroup: " << sgrp << "\n";
+                logger.log(log_t::INFO, "File", pdb_name, "has spacegroup", sgrp);
              }
           } else {
-             // Too noisy, not valuable
-             // std::cout << "No Spacegroup found for this PDB file\n";
+             if (verbose_mode) {
+                // std::cout << "No Spacegroup found for this PDB file\n";
+                logger.log(log_t::INFO, "File", pdb_name, "no spacegroup found");
+             }
           }
        }
 
@@ -1059,6 +1064,16 @@ atom_selection_container_t read_standard_residues() {
    return standard_residues_asc;
 }
 
+void
+atom_selection_container_t::debug_write_pdb() {
+
+   if (mol) {
+      std::string fn = "debug-" + std::to_string(user_data) + ".pdb";
+      mol->WritePDBASCII(fn.c_str());
+   }
+
+}
+
 
 // return an estimate of the molecule diameter
 float
@@ -1103,4 +1118,5 @@ coot::get_molecule_diameter(const atom_selection_container_t &asc) {
    return f;
 
 }
+
 

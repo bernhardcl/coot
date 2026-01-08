@@ -210,7 +210,7 @@ graphics_info_t::save_state_file(const std::string &filename, short int il) {
    commands.push_back(state_command("coot", "set-smooth-scroll-steps", smooth_scroll_n_steps, il));
    commands.push_back(state_command("coot", "set-smooth-scroll-limit", smooth_scroll_limit, il));
    commands.push_back(state_command("coot", "set-font-size", atom_label_font_size, il));
-   commands.push_back(state_command("coot", "set-rotation-centre-size", rotation_centre_cube_size, il));
+   // commands.push_back(state_command("coot", "set-rotation-centre-size", user_defined_rotation_centre_crosshairs_size_scale_factor, il));
    commands.push_back(state_command("coot", "set-do-anti-aliasing", do_anti_aliasing_flag, il));
    commands.push_back(state_command("coot", "set-default-bond-thickness", default_bond_width, il));
 
@@ -364,7 +364,7 @@ graphics_info_t::save_state_file(const std::string &filename, short int il) {
                if (!molecules[i].show_symmetry) {
                   // default would be to show symmetry
                   active_strings.clear();
-                  display_strings.push_back("coot");
+                  active_strings.push_back("coot");
                   active_strings.push_back("set-show-symmetry-molecule");
                   active_strings.push_back(int_to_string(molecule_count));
                   active_strings.push_back(int_to_string(0));
@@ -705,7 +705,13 @@ graphics_info_t::save_state_file(const std::string &filename, short int il) {
       commands.push_back(state_command("coot", "post-go-to-atom-window", il));
 
    // some condition here?
-   commands.push_back(state_command("coot", "post-display-control-window", il));
+   if (use_graphics_interface_flag) {
+      GtkWidget *dcw = widget_from_builder("display_control_window_glade");
+      if (dcw) {
+         if (gtk_widget_get_visible(dcw))
+            commands.push_back(state_command("coot", "post-display-control-window", il));
+      }
+   }
 
    short int istat = 0;
    if (! disable_state_script_writing) {

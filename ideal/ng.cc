@@ -28,6 +28,8 @@
 
 #include "compat/coot-sysdep.h"
 
+#include "coot-utils/bonded-pairs.hh"
+#include "geometry/residue-and-atom-specs.hh"
 #include "simple-restraint.hh"
 #include "coot-utils/contacts-by-bricks.hh"
 #include "coot-utils/stack-and-pair.hh"
@@ -2165,7 +2167,16 @@ coot::restraints_container_t::make_other_types_of_link(const coot::protein_geome
                                                        const std::map<mmdb::Residue *, std::vector<mmdb::Residue *> > &residue_link_vector_map,
                                                        const std::set<std::pair<mmdb::Residue *, mmdb::Residue *> > &residue_pair_link_set) {
 
-   // ------------- Generic/non-polymer and carbohydrate Links -------------------
+   // ------------- Generic/non-polymer -------------------
+
+   // carbohydrate links are generated using LINKs in the header, not here, make_link_restraints_from_links()
+
+   auto is_member = [] (const std::vector<std::string> &names, const std::string &n) {
+      return std::find(names.begin(), names.end(), n) != names.end();
+   };
+
+
+   // 21/10/2025-PE I no longer want carbohydrate to be linked by distance (and this is a link-by-distance function)
 
    link_restraints_counts lrc("CHO-SS-and-other");
 
@@ -2179,6 +2190,7 @@ coot::restraints_container_t::make_other_types_of_link(const coot::protein_geome
    make_header_metal_links_ng(geom);
 
    new_linked_residue_list_t nlrs;
+   std::vector<std::string> cho_residue_types = {"MAN", "BMA", "NAG", "FUC", "GLC"};
 
    std::set<unsigned int> fixed_atom_flags_set;
    {
@@ -2199,7 +2211,7 @@ coot::restraints_container_t::make_other_types_of_link(const coot::protein_geome
       for (std::size_t i=0; i<vcontacts.size(); i++) {
          const std::set<unsigned int> &n_set = vcontacts[i];
          if (! n_set.empty()) {
-            mmdb::Atom *at_1 = atom[i];
+           mmdb::Atom *at_1 = atom[i];
             std::cout << "vcontact for " << i << " " << atom_spec_t(at_1) << ": ";
             std::set<unsigned int>::const_iterator it_inner;
             for (it_inner=n_set.begin(); it_inner!=n_set.end(); ++it_inner) {
@@ -2220,6 +2232,7 @@ coot::restraints_container_t::make_other_types_of_link(const coot::protein_geome
          std::set<unsigned int>::const_iterator it;
          for (it=n_set.begin(); it!=n_set.end(); ++it) {
             mmdb::Atom *at_2 = atom[*it];
+
             if (strcmp(at_2->element, " H") == 0) continue;
 
             mmdb::Residue *res_1 = at_1->residue;
@@ -2236,6 +2249,10 @@ coot::restraints_container_t::make_other_types_of_link(const coot::protein_geome
                // At some state test if this is still needed.
                continue;
             }
+
+            // now delete carbohydrate links - they will be done by header
+            if (is_member(cho_residue_types, res_name_1)) continue;
+            if (is_member(cho_residue_types, res_name_2)) continue;
 
             // Keitaro wanted this test deleted. OK. 20220917-PE
             // if (at_2->GetChain() == at_1->GetChain()) {
@@ -2300,7 +2317,7 @@ coot::restraints_container_t::make_other_types_of_link(const coot::protein_geome
                   std::pair<std::string, bool> lt = find_link_type_2022(res_1, res_2, geom);
 
                   if (false)
-                     std::cout << "debug:: lt.first size " << lt.first.size() << std::endl;
+                     std::cout << "debug:: found " << lt.first.size() << " link types" << std::endl;
 
                   if (! lt.first.empty()) {
                      // std::cout << "DEBUG:: make_other_types_of_link() \"" << lt.first << "\""
@@ -2371,8 +2388,9 @@ coot::restraints_container_t::make_link_restraints_ng(const coot::protein_geomet
    auto tp_2 = std::chrono::high_resolution_clock::now();
 
    // std::cout << "debug:: calling make_other_types_of_link() with links size " << links.size() << std::endl;
-
    link_restraints_counts others = make_other_types_of_link(geom, *residue_link_vector_map_p, *residue_pair_link_set_p);
+
+   bonded_pair_container_t header_based_links = make_link_restraints_from_links(geom);
 
    if (verbose_geometry_reporting != QUIET)
       others.report();

@@ -24,14 +24,18 @@
  *
  */
 
+#include <cstddef>
 #include <iostream>
 #include <string>
 #include <gtk/gtk.h>
 #include <epoxy/gl.h>
 
 #include <clipper/core/test_core.h>
- #include <clipper/contrib/test_contrib.h>
+#include <clipper/contrib/test_contrib.h>
 
+#include "glib-object.h"
+#include "glib.h"
+#include "glibconfig.h"
 #include "utils/xdg-base.hh"
 
 #include "graphics-info.h"
@@ -47,6 +51,7 @@
 #include "testing.hh" // for test_internal();
 
 #include "utils/logging.hh"
+#include "widget-from-builder.hh"
 extern logging logger;
 
 void print_opengl_info();
@@ -106,7 +111,7 @@ void
 new_startup_realize(GtkWidget *gl_area) {
 
    GdkDisplay *display = gdk_display_get_default();
-   GListModel* lm = gdk_display_get_monitors(display);
+   GListModel *lm = gdk_display_get_monitors(display);
 
    guint n_items = g_list_model_get_n_items(lm);
    if (n_items > 0) {
@@ -183,9 +188,11 @@ new_startup_realize(GtkWidget *gl_area) {
    g.gl_rama_plot.setup_buffers(double_rama_size); // rama relative size, put it into graphics_info_t
    // and allow it to be set in the API
    g.setup_draw_for_happy_face_residue_markers_init();
-   g.setup_draw_for_bad_nbc_atom_pair_markers();
+   g.setup_draw_for_bad_nbc_atom_pair_markers(); // angry diego
+   g.setup_draw_for_bad_nbc_atom_pair_dashed_line();
    g.setup_draw_for_chiral_volume_outlier_markers();
    g.setup_draw_for_anchored_atom_markers_init();
+   g.setup_draw_for_unhappy_atom_markers();
    g.setup_lines_mesh_for_proportional_editing();
    g.lines_mesh_for_hud_lines.set_name("lines mesh for fps graph");
    unsigned int frame_time_history_list_max_n_elements = 500;
@@ -216,9 +223,9 @@ new_startup_realize(GtkWidget *gl_area) {
    g.mesh_for_extra_distance_restraints.setup_extra_distance_restraint_cylinder(material); // init
 
    // scale the gizmo to the object being translated
-   // float scale_factor = 22.2;
-   // g.translation_gizmo.scale(scale_factor);
-   // g.setup_draw_for_translation_gizmo();
+   float scale_factor = 22.2;
+   g.translation_gizmo.scale(scale_factor);
+   g.setup_draw_for_translation_gizmo();
 
    g.setup_key_bindings();
 
@@ -757,7 +764,7 @@ new_startup_create_splash_screen_window() {
    GtkWidget *splash_screen_window = gtk_window_new();
    gtk_window_set_title(GTK_WINDOW(splash_screen_window), "Coot-Splash");
    gtk_window_set_decorated(GTK_WINDOW(splash_screen_window), FALSE);
-   GtkWidget *picture = create_local_picture("coot-1.1.18.png");
+   GtkWidget *picture = create_local_picture("coot-1.1.20.png");
 
    gtk_widget_set_hexpand(GTK_WIDGET(picture),TRUE);
    gtk_widget_set_vexpand(GTK_WIDGET(picture),TRUE);
@@ -1016,15 +1023,15 @@ new_startup_application_activate(GtkApplication *application,
 
          g_print("DEBUG:: Drop performed!\n");
          GType type = G_VALUE_TYPE(value);
-         std::cout << "DEBUG:: type is of type " << type << std::endl;
+         std::cout << "DEBUG:: value is of type " << type << std::endl;
 
          if (G_VALUE_HOLDS(value, G_TYPE_FILE)) {
-            std::cout << "!!!!!!!!!!!!! holds a file!" << std::endl;
+            std::cout << "!!!!!!!!!!!!! value holds a file!" << std::endl;
             GFile *file = (GFile *)g_value_get_object(value);
             if (file) {
-               std::cout << "got file " << file << std::endl;
+               std::cout << "DEBUG:: got file: " << file << std::endl;
                const gchar *filename = g_file_get_path(file);
-               std::cout << "got filename " << filename << std::endl;
+               std::cout << "DEBUG:: got filename: " << filename << std::endl;
                handle_drag_and_drop_string(filename);
                status = TRUE;
             } else {
@@ -1084,6 +1091,7 @@ new_startup_application_activate(GtkApplication *application,
          } else {
             std::cout << "not type G_TYPE_STRING! " << std::endl;
          }
+         std::cout << "DEBUG:: returning from on_drop_performed()." << std::endl;
          return status;
       };
       g_signal_connect(drop_target, "drop", G_CALLBACK(on_drop_performed), NULL);
@@ -1095,7 +1103,7 @@ new_startup_application_activate(GtkApplication *application,
       // if (menu_item)
       // gtk_label_set_text(GTK_LABEL(menu_item), "Screenshot Not Available");
 #endif
-      
+
       // ---------------------  -----------------------
 
       gtk_widget_grab_focus(gl_area); // at the start, fixes focus problem
@@ -1113,12 +1121,37 @@ new_startup_application_activate(GtkApplication *application,
       // now we are ready to show graphical objects made from reading files:
       handle_command_line_data(activate_data->cld);
 
+
+      // 20251019-PE is this the first time Coot-1 has been started?
+      {
+         bool show_first_startup_dialog = true;
+         xdg_t xdg;
+         std::filesystem::path state_home = xdg.get_state_home();
+         if (std::filesystem::exists(state_home)) {
+            std::filesystem::path state_py = state_home / "0-coot.state.py";
+            if (std::filesystem::exists(state_py)) {
+               show_first_startup_dialog = false;
+            }
+         }
+         if (show_first_startup_dialog) {
+            GtkWidget *dialog = widget_from_builder("first-startup-dialog");
+            GtkWidget *main_window_widget = graphics_info_t::get_main_window();
+            if (main_window_widget) {
+               GtkWindow *main_window = GTK_WINDOW(main_window_widget);
+               gtk_window_set_transient_for(GTK_WINDOW(dialog), main_window);
+            }
+            gtk_widget_set_visible(dialog, TRUE);
+         }
+      }
+
       // load_tutorial_model_and_data();
       delete activate_data;
 
       auto destroy_splash_screen_callback = +[] (gpointer data) {
-         GtkWindow* splash_screen = GTK_WINDOW(data);
-         gtk_window_destroy(splash_screen);
+         if (data) {
+            GtkWindow* splash_screen = GTK_WINDOW(data);
+            gtk_window_destroy(splash_screen);
+         }
          return G_SOURCE_REMOVE;
       };
       g_idle_add(destroy_splash_screen_callback, splash_screen);
@@ -1253,14 +1286,44 @@ int new_startup(int argc, char **argv) {
       std::to_string(GTK_MICRO_VERSION);
    logger.log(log_t::INFO, "Built with GTK", gtk_version_string);
 
-   GtkWidget *splash_screen = new_startup_create_splash_screen_window();
-   gtk_widget_set_visible(splash_screen, TRUE);
+   GtkWidget *splash_screen = nullptr;
+   if (cld.use_splash_screen) {
+      splash_screen = new_startup_create_splash_screen_window();
+      gtk_widget_set_visible(splash_screen, TRUE);
+   }
 
    g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", TRUE, NULL);
-
    // Here's how you access that:
    // gboolean dark_mode_flag = FALSE;
    // g_object_get(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", &dark_mode_flag, NULL);
+
+   // dark mode vs light-mode switch
+   // 20251215-PE was widget_from_preferences_builder("light-mode-dark-mode-switch");
+   // I think libadwaita is needed for mode switch
+   GtkWidget *mode_switch = nullptr;
+   if (mode_switch) {
+
+      auto mode_switch_callback = +[] (GtkSwitch *sw, gboolean state, gpointer user_data) {
+
+        GtkSettings *settings = gtk_settings_get_default();
+
+        // 'state' is TRUE if the user just clicked "On"
+        // 'state' is FALSE if the user just clicked "Off"
+        if (state) {
+            //TO Dark Mode
+            g_object_set(settings, "gtk-application-prefer-dark-theme", TRUE, NULL);
+        } else {
+            // TO Light Mode
+            g_object_set(settings, "gtk-application-prefer-dark-theme", FALSE, NULL);
+        }
+
+        // Return FALSE to allow the switch to complete the animation/toggle
+        return gboolean(FALSE);
+        };
+
+         gpointer *user_data = nullptr;
+         g_signal_connect(G_OBJECT(mode_switch), "state-set", G_CALLBACK(mode_switch_callback), user_data);
+   }
 
    GError *error = NULL;
 #if GLIB_MAJOR_VERSION == 2 && GLIB_MINOR_VERSION >= 74 || GLIB_MAJOR_VERSION > 2
@@ -1283,6 +1346,9 @@ int new_startup(int argc, char **argv) {
 
    // delete activate_data; Nope. This is used in new_startup_application_activate.
    // Delete it there if you want to delete it.
+
+   // read in inchikeys - is this the right place for this?
+   graphics_info_t::read_inchikeys();
 
    int status = g_application_run(G_APPLICATION(app), 1, argv);
    std::cout << "--- g_application_run() returns with status " << status << std::endl;

@@ -2217,6 +2217,8 @@ void network_get_accession_code_entity(const std::string &text, int mode) {
       std::string cif_file_name =                      down_id + std::string(".cif");
       std::string pdb_filepath = coot::util::append_dir_file(download_dir, pdb_file_name);
       std::string cif_filepath = coot::util::append_dir_file(download_dir, cif_file_name);
+      std::string pdb_filepath_with_tmp = pdb_filepath + "_tmp";
+      std::string cif_filepath_with_tmp = cif_filepath + "_tmp";
 
       std::string pdb_url = join(pdb_url_dir, pdb_file_name);
       std::string cif_url = join(pdb_url_dir, cif_file_name);
@@ -2233,23 +2235,32 @@ void network_get_accession_code_entity(const std::string &text, int mode) {
                auto_read_make_and_draw_maps(mtz_filepath.c_str());
             }
          }
+
       } else {
-         // blocking!
-         int status = coot_get_url(pdb_url, pdb_filepath);
-         // coot_get_url() returns the return value of curl_easy_perform()
-         // CURLE_OK is 0
-         if (coot::file_exists(pdb_filepath)) {
+
+         if (coot::file_exists_and_non_tiny(pdb_filepath, 500)) {
             read_pdb(pdb_filepath);
          } else {
-            if (status == 0) {
+            // blocking!
+            int status = coot_get_url(pdb_url, pdb_filepath_with_tmp);
+            // coot_get_url() returns the return value of curl_easy_perform()
+            // CURLE_OK is 0
+            if (coot::file_exists_and_non_tiny(pdb_filepath_with_tmp, 500)) {
+               rename(pdb_filepath_with_tmp.c_str(), pdb_filepath.c_str());
                read_pdb(pdb_filepath);
             } else {
-               if (coot::file_exists(cif_filepath)) {
-                  read_pdb(cif_filepath);
+               if (status == 0) {
+                  rename(pdb_filepath_with_tmp.c_str(), pdb_filepath.c_str());
+                  read_pdb(pdb_filepath);
                } else {
-                  status = coot_get_url(cif_url, cif_filepath);
-                  if (status == 0) {
+                  if (coot::file_exists(cif_filepath)) {
                      read_pdb(cif_filepath);
+                  } else {
+                     status = coot_get_url(cif_url, cif_filepath_with_tmp);
+                     if (status == 0) {
+                        rename(cif_filepath_with_tmp.c_str(), cif_filepath.c_str());
+                        read_pdb(cif_filepath);
+                     }
                   }
                }
             }
@@ -2264,9 +2275,9 @@ void network_get_accession_code_entity(const std::string &text, int mode) {
 /*                  get by accession code:                                  */
 /*  ----------------------------------------------------------------------- */
 
-/* Accession code, and dispatch guile command to download and display
-   the model.  Hmmm.  */
 void handle_get_accession_code(GtkWidget *frame, GtkWidget *entry) {
+
+   // called from on_accession_code_get_it_button_clicked()
 
    auto join = [] (const std::string &d, const std::string &f) {
       return d + std::string("/") + f;
@@ -2326,44 +2337,6 @@ void handle_get_accession_code(GtkWidget *frame, GtkWidget *entry) {
       }
    };
 
-   // 20240630-PE no longer used - can be deleted.
-   auto python_network_get = [] (const std::string &text, int n) {
-
-                                std::string python_command;
-                                if (n == COOT_ACCESSION_CODE_WINDOW_OCA) {
-                                      python_command = "import get_ebi ; get_ebi.get_ebi_pdb(";
-                                      python_command += single_quote(text);
-                                      python_command += ")";
-                                } else {
-
-                                   if (n == COOT_ACCESSION_CODE_WINDOW_EDS) {
-                                      // 20050725 EDS code:
-                                      python_command = "import get_ebi ; get_ebi.get_eds_pdb_and_mtz(";
-                                      python_command += single_quote(text);
-                                      python_command += ")";
-                                   } else {
-                                      if (n == COOT_ACCESSION_CODE_WINDOW_OCA_WITH_SF) {
-                                         // *n == 2 see callbacks.c on_get_pdb_and_sf_using_code1_activate
-                                         python_command = "import get_ebi ; get_ebi.get_ebi_pdb_and_sfs(";
-                                         python_command += single_quote(text);
-                                         python_command += ")";
-                                      } else {
-                                         if (n == COOT_ACCESSION_CODE_WINDOW_PDB_REDO) {
-                                            python_command = "import get_ebi ; get_ebi.get_pdb_redo(";
-                                            python_command += single_quote(text);
-                                            python_command += ")";
-                                         } else {
-                                            // this does not use a python script
-                                            if (n == COOT_UNIPROT_ID) {
-                                               fetch_alphafold_model_for_uniprot_id(text);
-                                            }
-                                         }
-                                      }
-                                   }
-                                }
-                                safe_python_command(python_command);
-                             };
-
    const gchar *text_c = gtk_editable_get_text(GTK_EDITABLE(entry));
 
    if (! text_c) {
@@ -2379,9 +2352,11 @@ void handle_get_accession_code(GtkWidget *frame, GtkWidget *entry) {
          fetch_emdb_map(text);
       } else {
          if (n == COOT_COD_CODE) {
+#ifdef USE_LIBCURL
             fetch_cod_entry(text);
+#endif
          } else {
-            network_get(text_c, n);
+            network_get(text, n);
          }
       }
    }

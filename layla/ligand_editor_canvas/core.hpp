@@ -24,6 +24,13 @@
 
 #include <rdkit/GraphMol/RWMol.h>
 #include <rdkit/GraphMol/SmilesParse/SmilesWrite.h>
+// To check if Inchi support is enabled
+#include <rdkit/RDGeneral/RDConfig.h>
+#ifdef RDK_BUILD_INCHI_SUPPORT
+#include <rdkit/GraphMol/inchi.h>
+#else
+#warning Your version of RDKit was built without InChI support. Molecule InChI key lookup will not be available.
+#endif
 
 #include <memory>
 #include <vector>
@@ -102,6 +109,9 @@ struct WidgetCoreData {
     /// Numbers of elements to be removed from the `state_stack`
     /// when its' maximum length gets exceeded
     const static unsigned int STATE_STACK_TRIM_BATCH_SIZE;
+    /// When the top-left coordinate of the canvas is in the negative numbers,
+    /// this determines the size of viewport offset margin, expressed in pixels
+    const static unsigned int VIEWPORT_OFFSET_PIXEL_MARGIN;
 
     protected:
 
@@ -127,11 +137,13 @@ struct WidgetCoreData {
 
     float scale;
 
+    std::pair<int, int> viewport_origin_offset;
+
     bool allow_invalid_molecules;
 
     DisplayMode display_mode;
 
-    void render(Renderer&);
+    void render(Renderer&) const;
 
     /// Does Edit->Undo
     void undo_edition();
@@ -177,15 +189,20 @@ struct WidgetCoreData {
     void emit_mutation_signals() const noexcept;
 
     coot::ligand_editor_canvas::SmilesMap build_smiles() const;
+    coot::ligand_editor_canvas::InchiKeyMap build_inchi_keys() const;
 
     unsigned int get_molecule_count_impl() const noexcept;
     /// Returns -1 if none
     int get_first_molecule_idx() const noexcept;
 
+    /// Used for widget/canvas measurement and updating viewport offset
+    graphene_rect_t get_on_screen_bounding_rect() const noexcept;
+
     /// Abstraction over gtk_widget_queue_draw
     void queue_redraw() const noexcept;
     /// Abstraction over gtk_widget_queue_resize
-    void queue_resize() const noexcept;
+    /// Handles updating viewport offset
+    void queue_resize() noexcept;
 };
 
 /// This is the private struct for GObject
@@ -250,7 +267,9 @@ struct CootLigandEditorCanvas : coot::ligand_editor_canvas::impl::CootLigandEdit
     coot::ligand_editor_canvas::DisplayMode get_display_mode() noexcept;
     void set_display_mode(coot::ligand_editor_canvas::DisplayMode value) noexcept;
     coot::ligand_editor_canvas::SmilesMap get_smiles() noexcept;
+    coot::ligand_editor_canvas::InchiKeyMap get_inchi_keys() noexcept;
     std::string get_smiles_for_molecule(unsigned int molecule_idx) noexcept;
+    std::string get_inchi_key_for_molecule(unsigned int molecule_idx) noexcept;
     std::string get_pickled_molecule(unsigned int molecule_idx) noexcept;
     std::string get_pickled_molecule_base64(unsigned int molecule_idx) noexcept;
     void clear_molecules() noexcept;
@@ -259,7 +278,10 @@ struct CootLigandEditorCanvas : coot::ligand_editor_canvas::impl::CootLigandEdit
     void connect(std::string signal_name, emscripten::val callback);
 
     // Implemented at 'ligand_editor_canvas.cpp'
+    // Manages viewport offset, thus not marked as `const`
     SizingInfo measure(MeasurementDirection orientation) const noexcept;
+    // Lhasa does not need this... does it?
+    // graphene_rect_t get_on_screen_bounding_rect() const noexcept;
     // Implemented at 'ligand_editor_canvas.cpp'
     void on_hover(double x, double y, bool alt_pressed, bool control_pressed);
     // Implemented at 'ligand_editor_canvas.cpp'

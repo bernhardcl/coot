@@ -2929,9 +2929,9 @@ coot::util::get_residue(const std::string &chain_id,
 
    if (mol) {
       mmdb::Model *model_p = mol->GetModel(1);
-      if (model_p) { 
+      if (model_p) {
          mmdb::Chain *chain_p;
-         int n_chains = model_p->GetNumberOfChains(); 
+         int n_chains = model_p->GetNumberOfChains();
          for (int i_chain=0; i_chain<n_chains; i_chain++) {
             chain_p = model_p->GetChain(i_chain);
             std::string mol_chain(chain_p->GetChainID());
@@ -3415,7 +3415,7 @@ coot::util::get_nth_residue(int nth, mmdb::Manager *mol) {
       }
    }
    return res;
-} 
+}
 
 
 // Return NULL on atom not found in this molecule
@@ -3427,10 +3427,10 @@ coot::util::get_atom(const atom_spec_t &spec, mmdb::Manager *mol) {
    mmdb::Residue *res = get_residue(residue_spec_t(spec), mol);
 
    if (res) {
-      mmdb::PPAtom residue_atoms = 0;
-      int n_residue_atoms;
+      mmdb::PPAtom residue_atoms = nullptr;
+      int n_residue_atoms = 0;
       res->GetAtomTable(residue_atoms, n_residue_atoms);
-      for (int iat=0; iat<n_residue_atoms; iat++) { 
+      for (int iat=0; iat<n_residue_atoms; iat++) {
          mmdb::Atom *test_at = residue_atoms[iat];
          std::string at_name = test_at->name;
          std::string at_alt_conf = test_at->altLoc;
@@ -3441,14 +3441,81 @@ coot::util::get_atom(const atom_spec_t &spec, mmdb::Manager *mol) {
                   break;
                }
             }
-         } 
+         }
       }
-   } 
+   }
    return at;
 }
 
+// Return NULL on atom not found in this molecule.
+// Here, if the first search files, then pad the atom name in various ways to try to find a match
+mmdb::Atom *
+coot::util::get_atom_using_fuzzy_search(const atom_spec_t &spec, mmdb::Manager *mol) {
+
+   mmdb::Atom *rat = nullptr;
+   if (mol) {
+      mmdb::Model *model_p = mol->GetModel(1);
+      if (model_p) {
+         int n_chains = model_p->GetNumberOfChains();
+         for (int i_chain=0; i_chain<n_chains; i_chain++) {
+            mmdb::Chain *chain_p = model_p->GetChain(i_chain);
+            std::string mol_chain(chain_p->GetChainID());
+            if (mol_chain == spec.chain_id) {
+               int nres = chain_p->GetNumberOfResidues();
+               for (int ires=0; ires<nres; ires++) {
+                  mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+                  if (residue_p->GetSeqNum() == spec.res_no) {
+                     std::string ins_code(residue_p->GetInsCode());
+                     if (ins_code == spec.ins_code) {
+                        mmdb::PPAtom residue_atoms = nullptr;
+                        int n_residue_atoms = 0;
+                        residue_p->GetAtomTable(residue_atoms, n_residue_atoms);
+                        // no pad
+                        for (int iat=0; iat<n_residue_atoms; iat++) {
+                           mmdb:: Atom *at = residue_atoms[iat];
+                           if (! at->isTer()) {
+                              std::string atom_name(at->name);
+                              if (atom_name == spec.atom_name) {
+                                 rat = at;
+                                 break;
+                              }
+                           }
+                        }
+                        std::vector<std::string> test_names = {
+                           std::string(" ")  + spec.atom_name,
+                           std::string(" ")  + spec.atom_name + std::string("  "),
+                           std::string("  ") + spec.atom_name,
+                           std::string(" ") + spec.atom_name + std::string(" "),
+                           std::string("  ") + spec.atom_name + std::string(" "),
+                           spec.atom_name + std::string(" "),
+                        };
+                        for (const auto &t : test_names) {
+                           for (int iat=0; iat<n_residue_atoms; iat++) {
+                              mmdb:: Atom *at = residue_atoms[iat];
+                              if (! at->isTer()) {
+                                 std::string atom_name(at->name);
+                                 if (atom_name == t) {
+                                    rat = at;
+                                    break;
+                                 }
+                              }
+                           }
+                           if (rat) break;
+                        }
+                     }
+                  }
+                  if (rat) break;
+               }
+            }
+         }
+      }
+   }
+   return rat;
+}
+
+
 // Return NULL on atom not found in this residue
-// 
+//
 mmdb::Atom*
 coot::util::get_atom(const atom_spec_t &spec, mmdb::Residue *res) {
 
@@ -3457,7 +3524,7 @@ coot::util::get_atom(const atom_spec_t &spec, mmdb::Residue *res) {
       mmdb::PPAtom residue_atoms = 0;
       int n_residue_atoms;
       res->GetAtomTable(residue_atoms, n_residue_atoms);
-      for (int iat=0; iat<n_residue_atoms; iat++) { 
+      for (int iat=0; iat<n_residue_atoms; iat++) {
          mmdb::Atom *test_at = residue_atoms[iat];
          std::string at_name = test_at->name;
          std::string at_alt_conf = test_at->altLoc;
@@ -3602,6 +3669,7 @@ coot::util::create_mmdbmanager_from_res_selection(mmdb::Manager *orig_mol,
                                                   const std::string &chain_id_1,
                                                   short int residue_from_alt_conf_split_flag) {
 
+
    int start_offset = 0;
    int end_offset = 0;
    
@@ -3717,7 +3785,24 @@ coot::util::create_mmdbmanager_from_residue_vector(const std::vector<mmdb::Resid
                                                    mmdb::Manager *old_mol,
                                                    const std::pair<bool,std::string> &use_alt_conf) {
 
-   if (false) {
+   auto copy_link_info = [] (mmdb::Link *old_link, mmdb::Link *new_link) {
+
+      strcpy(new_link->atName1,  old_link->atName1);
+      strcpy(new_link->aloc1,    old_link->aloc1);
+      strcpy(new_link->resName1, old_link->resName1);
+      strcpy(new_link->chainID1, old_link->chainID1);
+      strcpy(new_link->insCode1, old_link->insCode1);
+      new_link->seqNum1         = old_link->seqNum1;
+
+      strcpy(new_link->atName2,  old_link->atName2);
+      strcpy(new_link->aloc2,    old_link->aloc2);
+      strcpy(new_link->resName2, old_link->resName2);
+      strcpy(new_link->chainID2, old_link->chainID2);
+      strcpy(new_link->insCode2, old_link->insCode2);
+      new_link->seqNum2         = old_link->seqNum2;
+   };
+
+   if (false) { // debug input
 
       // Have I added new atoms to the molecule?
       //
@@ -3973,15 +4058,18 @@ coot::util::create_mmdbmanager_from_residue_vector(const std::vector<mmdb::Resid
          int n_links = mol_old_model_p->GetNumberOfLinks();
          if (n_links > 0) {
             for (int i_link=1; i_link<=n_links; i_link++) {
-               mmdb::Link *link = mol_old_model_p->GetLink(i_link);
-               std::pair<atom_spec_t, atom_spec_t> linked_atoms = link_atoms(link, mol_old_model_p);
+               mmdb::Link *old_link = mol_old_model_p->GetLink(i_link);
+               std::pair<atom_spec_t, atom_spec_t> linked_atoms = link_atoms(old_link, mol_old_model_p);
                // are those atoms in (new) mol?
                mmdb::Atom *at_1 = get_atom(linked_atoms.first,  mol);
                mmdb::Atom *at_2 = get_atom(linked_atoms.second, mol);
-               if (at_1 && at_2) {
+               // if (at_1 && at_2) {
+               if (true) { // copy them all over! We need links that are to residues
+                           // that are fixed.
                   // add this link to mol
                   mmdb::Link *link = new mmdb::Link; // sym ids default to 1555 1555
 
+#if 0
                   strcpy(link->atName1,  at_1->GetAtomName());
                   strcpy(link->aloc1,    at_1->altLoc);
                   strcpy(link->resName1, at_1->GetResName());
@@ -3995,6 +4083,9 @@ coot::util::create_mmdbmanager_from_residue_vector(const std::vector<mmdb::Resid
                   strcpy(link->chainID2, at_2->GetChainID());
                   strcpy(link->insCode2, at_2->GetInsCode());
                   link->seqNum2         = at_2->GetSeqNum();
+#endif
+                  // 2025-10-22-PE new copy function
+                  copy_link_info(old_link, link);
 
                   model_p->AddLink(link);
                }
@@ -4683,7 +4774,7 @@ coot::util::create_mmdbmanager_from_residue(mmdb::Residue *res) {
 
    mmdb::Manager *mol = NULL;
 
-   if (res) { 
+   if (res) {
       mol = new mmdb::Manager;
       mmdb::Residue *r = coot::util::deep_copy_this_residue(res);
       mmdb::Model *model_p = new mmdb::Model;

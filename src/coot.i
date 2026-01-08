@@ -50,6 +50,7 @@
 #include "c-interface-generic-objects.h"
 #include "generic-display-objects-c.h"
 #include "manipulation-modes.hh"
+#include "network-get.hh"
 #include "rotamer-search-modes.hh"
 #include "lbg-interface.hh"
 #include "sdf-interface.hh"
@@ -90,10 +91,19 @@ namespace std {
   init_coot_as_python_module();
 %}
 
-%feature("autodoc", "3"); // add doc string for Intellisense (hopefully)
+// %feature("autodoc", "1"); // add doc string for Intellisense (hopefully)
+%feature("autodoc", "1"); // add type hints hopefully
+
 // If the following line is enabled, then the comments extracted
 // using -doxygen on the command line are lost.
 // %feature("docstring");
+// 2025-12-14-PE because, I guess, %feature("docstring") needs to be
+// specified for each function!
+
+// 2025-12-15-PE modern method
+%include "coot_cc_interface_docs.i"
+%include "coot_c_interface_docs.i"
+%include "coot_rsr_functions_docs.i"
 
 #include "globjects.h"  //includes gtk/gtk.h
 #include "coot-utils/coot-coord-utils.hh"
@@ -125,6 +135,7 @@ namespace std {
 %include "c-interface-generic-objects.h"
 %include "cmtz-interface.hh"
 %include "manipulation-modes.hh"
+%include "network-get.hh"
 %include "rotamer-search-modes.hh"
 %include "lbg-interface.hh"
 %include "sdf-interface.hh"

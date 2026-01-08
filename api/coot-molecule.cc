@@ -34,6 +34,7 @@
 
 #include "utils/coot-utils.hh"
 #include "coot-utils/coot-coord-utils.hh"
+#include "coot-utils/coot-coord-extras.hh"
 #include "coords/mmdb.hh"
 #include "coot-molecule.hh"
 #include "ideal/pepflip.hh"
@@ -4072,7 +4073,10 @@ coot::molecule_t::add_named_glyco_tree(const std::string &glycosylation_name, co
                                        coot::protein_geometry *geom) {
 
    // the atom selection gets updated.
+   float mt = get_median_temperature_factor();
+   float new_atoms_b_factor = 1.55 * mt;
    coot::cho::add_named_glyco_tree(glycosylation_name, &atom_sel, imol_no,
+                                   new_atoms_b_factor,
                                    xmap, geom, chain_id, res_no);
 
 }
@@ -4229,8 +4233,34 @@ coot::molecule_t::change_rotamer_number(const coot::residue_spec_t &res_spec, co
 
    // save_info.new_modification("change_rotamer_number()");
    return rci;
-
 }
+
+
+int coot::molecule_t::set_residue_to_rotamer_number(coot::residue_spec_t res_spec,
+                                                    const std::string &alt_conf_in,
+                                                    int rotamer_number,
+                                                    const coot::protein_geometry &pg) {
+
+   int status = 0;
+   mmdb::Residue *res = get_residue(res_spec);
+   if (res) {
+      coot::richardson_rotamer d(res, alt_conf_in, atom_sel.mol, 0.01, 0);
+      std::string monomer_type = res->GetResName();
+      std::pair<short int, coot::dictionary_residue_restraints_t> p =
+         pg.get_monomer_restraints(monomer_type, imol_no);
+      if (p.first) {
+         const coot::dictionary_residue_restraints_t &rest = p.second;
+         mmdb::Residue *moving_res = d.GetResidue(rest, rotamer_number);
+         if (moving_res) {
+            make_backup("set_residue_to_rotamer_number");
+            status = set_residue_to_rotamer_move_atoms(res, moving_res);
+            delete moving_res; // or moving_res->chain?
+         }
+      }
+   }
+   return status;
+}
+
 
 
 int
@@ -4854,6 +4884,18 @@ coot::molecule_t::get_median_temperature_factor() const {
 
 }
 
+float
+coot::molecule_t::get_temperature_factor_of_atom(const std::string &atom_cid) const {
+
+   float b = -1.1f;
+   mmdb:: Atom *at = cid_to_atom(atom_cid);
+   if (at) {
+      b = at->tempFactor;
+   }
+   return b;
+
+}
+
 
 #include "utils/coot-fasta.hh"
 
@@ -5241,6 +5283,7 @@ coot::molecule_t::get_mutation_info() const {
 
 void
 coot::molecule_t::set_temperature_factors_using_cid(const std::string &cid, float temp_fact) {
+
    if (atom_sel.mol) {
       int selHnd = atom_sel.mol->NewSelection(); // d
       mmdb::Atom **SelAtoms = nullptr;
@@ -5257,3 +5300,95 @@ coot::molecule_t::set_temperature_factors_using_cid(const std::string &cid, floa
    }
 }
 
+#include "coot-utils/json.hpp"
+using json = nlohmann::json;
+
+//! get pucker info
+//!
+//! @return a json string or an empty string on failure
+std::string
+coot::molecule_t::get_pucker_analysis_info() const {
+
+   std::string s;
+
+   std::vector<std::pair<mmdb::Residue *, pucker_analysis_info_t> > puckers;
+   std::string alt_conf = "";
+   if (atom_sel.mol) {
+      int imod = 1;
+      mmdb::Model *model_p = atom_sel.mol->GetModel(imod);
+      if (model_p) {
+         int n_chains = model_p->GetNumberOfChains();
+         for (int ichain=0; ichain<n_chains; ichain++) {
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
+            int n_res = chain_p->GetNumberOfResidues();
+            if (n_res > 1) {
+               for (int ires=0; ires<(n_res-1); ires++) {
+                  mmdb::Residue *residue_p      = chain_p->GetResidue(ires);
+                  mmdb::Residue *residue_next_p = chain_p->GetResidue(ires+1);
+                  if (residue_p) {
+                     if (residue_p->GetNumberOfAtoms() > 14) {
+                        try {
+                           pucker_analysis_info_t pai(residue_p, alt_conf);
+                           double d = pai.phosphate_distance_to_base_plane(residue_next_p);
+                           // store d in the markup info
+                           pai.markup_info.phosphate_distance_to_base_plane = d;
+                           puckers.push_back(std::make_pair(residue_p, pai));
+                        }
+                        catch (const std::runtime_error &e) {
+                           // it's OK.
+                           // std::cout << "WARNING::" << e.what() << std::endl;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+   if (! puckers.empty()) {
+
+      json j = json::array();
+      for (unsigned int i=0; i<puckers.size(); i++) {
+         const auto &pi = puckers[i].second;
+         mmdb::Residue *residue_p  = puckers[i].first;
+         json j_plane_distortion = pi.plane_distortion;
+         json j_out_of_plane_distance = pi.out_of_plane_distance;
+         json j_markup_info_phosphorus_distance_to_base_plane = pi.markup_info.phosphate_distance_to_base_plane;
+         json j_puckered_atom = pi.puckered_atom();
+         json j_res_name = residue_p->GetResName();
+         json j_chain_id = residue_p->GetChainID();
+         json j_res_no = residue_p->GetSeqNum();
+         json j_markup_info_base_ring_centre;
+         json j_markup_info_base_ring_normal;
+         json j_markup_info_base_phosphorus_position;
+         json j_markup_info_base_projected_point;
+         j_markup_info_base_ring_centre["x"] = pi.markup_info.base_ring_centre.x();
+         j_markup_info_base_ring_centre["y"] = pi.markup_info.base_ring_centre.y();
+         j_markup_info_base_ring_centre["z"] = pi.markup_info.base_ring_centre.z();
+         j_markup_info_base_ring_normal["x"] = pi.markup_info.base_ring_normal.x();
+         j_markup_info_base_ring_normal["y"] = pi.markup_info.base_ring_normal.y();
+         j_markup_info_base_ring_normal["z"] = pi.markup_info.base_ring_normal.z();
+         j_markup_info_base_phosphorus_position["x"] = pi.markup_info.phosphorus_position.x();
+         j_markup_info_base_phosphorus_position["y"] = pi.markup_info.phosphorus_position.y();
+         j_markup_info_base_phosphorus_position["z"] = pi.markup_info.phosphorus_position.z();
+         j_markup_info_base_projected_point["x"] = pi.markup_info.projected_point.x();
+         j_markup_info_base_projected_point["y"] = pi.markup_info.projected_point.y();
+         j_markup_info_base_projected_point["z"] = pi.markup_info.projected_point.z();
+         json j_pucker;
+         j_pucker["plane_distortion"]      = j_plane_distortion;
+         j_pucker["out_of_plane_distance"] = j_out_of_plane_distance;
+         j_pucker["puckered_atom"]         = j_puckered_atom;
+         j_pucker["chain_id"]              = j_chain_id;
+         j_pucker["res_no"]                = j_res_no;
+         j_pucker["res_name"]              = j_res_name;
+         j_pucker["base_ring_centre"]             = j_markup_info_base_ring_centre;
+         j_pucker["base_ring_normal"]             = j_markup_info_base_ring_normal;
+         j_pucker["phosphorus_position"]          = j_markup_info_base_phosphorus_position;
+         j_pucker["projected_point"]             = j_markup_info_base_projected_point;
+         j_pucker["phosphate_distance_to_base_plane"] = j_markup_info_phosphorus_distance_to_base_plane;
+         j.push_back(j_pucker);
+      }
+      s = j.dump(4);
+   }
+   return s;
+}

@@ -53,6 +53,8 @@
 
 #include "read-molecule.hh" // now with std::string args
 
+#include "gphl-screen.hh"
+
 
 extern "C"
 void
@@ -60,7 +62,7 @@ handle_command_line_data_argc_argv(int argc, char **argv) {
 
    command_line_data cld = parse_command_line(argc, argv);
    handle_command_line_data(cld);
-} 
+}
 
 
 extern "C"
@@ -171,11 +173,12 @@ handle_command_line_data(command_line_data cld) {
    }
 
    // cif dictionaries
-   {
+
+   auto handle_cif_dictionaries = [] (const std::vector<std::string> &dictionaries, bool read_if_not_found) {
       graphics_info_t g;
-      for (unsigned int i=0; i< cld.dictionaries.size(); i++) {
+      for (unsigned int i=0; i< dictionaries.size(); i++) {
          std::vector<std::pair<int, std::string> > monomers_pre  = g.Geom_p()->get_monomer_names();
-         std::string file_name = cld.dictionaries[i];
+         std::string file_name = dictionaries[i];
          read_cif_dictionary(file_name);
          std::vector<std::pair<int, std::string> > monomers_post = g.Geom_p()->get_monomer_names();
 
@@ -188,12 +191,18 @@ handle_command_line_data(command_line_data cld) {
                   if (mj == mi) { found = true; break; }
                }
                if (! found) {
-                  get_monomer(mi);
+                  if (read_if_not_found)
+                     get_monomer(mi);
                }
             }
          }
       }
-   }
+   };
+
+   // cif dictionaries
+   handle_cif_dictionaries(cld.dictionaries, false);
+
+   handle_cif_dictionaries(cld.dictionaries_with_mol, true);
 
    for (unsigned int i=0; i<cld.comp_ids.size(); i++) {
       get_monomer(cld.comp_ids[i]);
@@ -216,6 +225,9 @@ handle_command_line_data(command_line_data cld) {
    if (cld.disable_state_script_writing)
       graphics_info_t::disable_state_script_writing = 1;
 
+   if (cld.open_buster_output_files)
+      open_buster_output_files();
+
    //
    if (cld.try_listener) {
       std::cout << "INFO:: setting port and host "
@@ -223,6 +235,7 @@ handle_command_line_data(command_line_data cld) {
       graphics_info_t::try_port_listener = 1;
       graphics_info_t::remote_control_port_number = cld.port;
       graphics_info_t::remote_control_hostname = cld.hostname;
+      make_socket_listener_maybe();
    }
 
    // more settings for small screen

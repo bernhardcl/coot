@@ -29,9 +29,9 @@
 #define GRAPHICS_INFO_H
 
 #include "compat/coot-sysdep.h"
+#include "geometry/residue-and-atom-specs.hh"
 #include "validation-graphs/validation-information.hh"
 #include "validation-graphs/validation-graphs.hh"
-#include "validation-graphs/validation-graph-widget.hh"
 // need gtk things
 #include <gtk/gtk.h>
 #include <epoxy/gl.h>
@@ -48,6 +48,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include <utils/ctpl.h>
+#include <coot-utils/inchikey-store.hh>
 
 #ifdef USE_MOLECULES_TO_TRIANGLES
 // #include <MoleculesToTriangles/CXXClasses/RendererGLSL.hpp>
@@ -1032,6 +1033,7 @@ public:
    //
    static int scroll_wheel_map;
    void update_scroll_wheel_map_on_molecule_close();
+   int intelligent_get_scroll_wheel_map() const;
 
    void contour_level_scroll_scrollable_map(int direction);
 
@@ -1178,7 +1180,7 @@ public:
    static bool auto_recontour_map_flag;
 
    //
-   static float rotation_centre_cube_size; // cross-hair
+   static float user_defined_rotation_centre_crosshairs_size_scale_factor;
    static glm::vec4 rotation_centre_cross_hairs_colour;
    void set_rotation_centre_cross_hairs_colour(const glm::vec4 &c);
 
@@ -2547,6 +2549,11 @@ public:
 						       short int lang_flag) const;
    void quick_save();
 
+   // and the generalization of that: - display the label overlay for 2 seconds
+   static void ephemeral_overlay_label_from_id(const std::string &overlay_label_id);
+
+   // and the generalization of that! Just pass the text of the ephemeral overlay label
+   static void ephemeral_overlay_label(const std::string &overlay_label_text);
 
    static std::string save_state_file_name;
 
@@ -2903,6 +2910,7 @@ public:
    static void draw_boids();
    static void draw_happy_face_residue_markers();
    static void draw_anchored_atom_markers();
+   static void draw_unhappy_atom_markers(unsigned int pass_type);
    static void draw_hydrogen_bonds_mesh(); // like boids
    void setup_draw_for_particles();
    void clear_measure_distances();
@@ -2938,6 +2946,12 @@ public:
    static Texture texture_for_anchored_atom_markers;
    static TextureMesh tmesh_for_anchored_atom_markers;
 
+   void setup_draw_for_unhappy_atom_markers();
+   static Texture texture_for_unhappy_atom_markers;
+   static TextureMesh tmesh_for_unhappy_atom_markers;
+   static void add_unhappy_atom_marker(int imol, const coot::atom_spec_t &atom_spec);
+   static void remove_all_unhappy_atom_markers();
+
    static std::vector<meshed_particle_container_t> meshed_particles_for_gone_diegos;
    static void setup_draw_for_particles_for_new_gone_diegos(const std::vector<glm::vec3> &positions);
    // static void setup_draw_for_particles_for_gone_diegos(); // unused atm
@@ -2953,6 +2967,11 @@ public:
    static TextureMesh tmesh_for_bad_nbc_atom_pair_markers;
    static std::vector<glm::vec3> bad_nbc_atom_pair_marker_positions;
    const unsigned int draw_count_max_for_bad_nbc_atom_pair_markers = 100; // needed?
+
+   static void setup_draw_for_bad_nbc_atom_pair_dashed_line();
+   static void update_bad_nbc_atom_pair_dashed_lines();
+   static Mesh bad_nbc_atom_pair_dashed_line; // instanced mesh
+   static void draw_bad_nbc_atom_pair_dashed_lines(unsigned int pass_type);
 
    void setup_draw_for_chiral_volume_outlier_markers();
    static void draw_chiral_volume_outlier_markers(unsigned int pass_type);
@@ -4407,23 +4426,34 @@ string   static std::string sessionid;
 
    // these are "setup" by the function that starts them
    static LinesMesh lines_mesh_for_identification_pulse;
-   static LinesMesh lines_mesh_for_delete_item_pulse;
+   static LinesMesh lines_mesh_for_generic_pulse; // loop through generic_pulse_centres
    static glm::vec3 identification_pulse_centre;
-   static void draw_identification_pulse();
+   static void draw_at_screen_centre_pulse(); // green sonar ping
+   // these are variations of the (typically) multi-centre identification pulse.
+   static void draw_generic_pulses();
    static void draw_invalid_residue_pulse();
    static void draw_delete_item_pulse();
-   static std::vector<glm::vec3> delete_item_pulse_centres;
+   static std::vector<glm::vec3> generic_pulse_centres;
    std::vector<glm::vec3> residue_to_positions(mmdb::Residue *residue_p) const;
    std::vector<glm::vec3> residue_to_side_chain_positions(mmdb::Residue *residue_p) const;
    void setup_delete_item_pulse(mmdb::Residue *residue_p);
    void setup_delete_residues_pulse(const std::vector<mmdb::Residue *> &residues);
    void setup_invalid_residue_pulse(mmdb::Residue *residue_p);
-   static gboolean invalid_residue_pulse_function(GtkWidget *widget,  // return the continue-status
-                                                  GdkFrameClock *frame_clock,
-                                                  gpointer data);
+   static void pulse_marked_positions(const std::vector<glm::vec3> &positions, // generalization of above
+                                      bool broken_lines_mode, unsigned int n_rings, float radius_overall,
+                                      unsigned int n_ticks, const glm::vec4 &col, float resize_factor = 1.005f);
+
+   static gboolean screen_centre_pulse_function(GtkWidget *widget,
+                                                GdkFrameClock *frame_clock,
+                                                gpointer data);
    static gboolean generic_pulse_function(GtkWidget *widget,
                                           GdkFrameClock *frame_clock,
                                           gpointer data);
+   // this should wrap generic_pulse_function
+   // return the continue-status
+   static gboolean invalid_residue_pulse_function(GtkWidget *widget,
+                                                  GdkFrameClock *frame_clock,
+                                                  gpointer data);
    static gboolean wait_for_hooray_refinement_tick_func(GtkWidget *widget,
                                                         GdkFrameClock *frame_clock,
                                                         gpointer data);
@@ -4741,6 +4771,12 @@ string   static std::string sessionid;
    static std::string map_partition_results_state_string; // "Done A Chain" etc.
 
    static unsigned int logging_line_index;
+
+   static coot::inchikey_store_t inchikey_store;
+   static void read_inchikeys();
+
+   // 20251219-PE Do I need this?
+   static std::string current_alt_conf; // nobody wants this "per molecule" right?
 
    // add a pumpkin as a graphics object and draw it.
    void pumpkin();

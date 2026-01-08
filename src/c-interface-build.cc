@@ -24,6 +24,8 @@
  * Fifth Floor, Boston, MA, 02110-1301, USA.
  */
 
+#include <cstddef>
+#include "geometry/residue-and-atom-specs.hh"
 #ifdef USE_PYTHON
 #include <Python.h>  // before system includes to stop "POSIX_C_SOURCE" redefined problems
 #include "python-3-interface.hh"
@@ -523,7 +525,100 @@ int decoloned_backup_file_names_state() {
 }
 
 
+/*! \brief Make a backup for a model molecule
+ *
+ * @param imol the model molecule index
+ * @description a description that goes along with this back point
+ */
+int make_backup_checkpoint(int imol, const char *description) {
 
+   int backup_index = -1;
+   if (is_valid_model_molecule(imol)) {
+      std::string ss(description);
+      backup_index = graphics_info_t::molecules[imol].make_backup_checkpoint(ss);
+   }
+   return backup_index;
+}
+
+/*! \brief Restore molecule from backup
+ * 
+ * restore model @p imol to checkpoint backup @p backup_index
+ *
+ * @param imol the model molecule index
+ * @param backup_index the backup index to restore to
+ */
+int restore_to_backup_checkpoint(int imol, int backup_index) {
+
+   backup_index = -1;
+   if (is_valid_model_molecule(imol)) {
+      backup_index = graphics_info_t::molecules[imol].restore_to_backup_checkpoint(backup_index);
+   }
+   return backup_index;
+}
+
+#ifdef USE_PYTHON
+/*! \brief Compare current model to backup
+ * 
+ * @param imol the model molecule index
+ * @param backup_index the backup index to restore to
+ * @return a Python dict, with 2 items, a "status" which is either "ok" 
+ *         or "fail" or "bad-index" and a list of residue specs for residues
+ *         that have at least one atom in a different place (which might be empty).
+ */
+PyObject *compare_current_model_to_backup(int imol, int backup_index) {
+
+   PyObject *d = PyDict_New();
+   if (is_valid_model_molecule(imol)) {
+      // How do I return "bad backup_index?" Use a pair.
+      std::pair<bool, std::vector<coot::residue_spec_t> > mvp = graphics_info_t::molecules[imol].compare_current_model_to_backup(backup_index);
+      if (mvp.first) {
+         std::vector<coot::residue_spec_t> mv = mvp.second;
+         PyObject *l = PyList_New(mv.size());
+         for (unsigned int i=0; i<mv.size(); i++) {
+             const auto &rs(mv[i]);
+             PyObject *s = residue_spec_to_py(rs);
+             PyList_SetItem(l, i, s);
+         }
+         PyDict_SetItemString(d, "moved-residues-list", l);
+         PyDict_SetItemString(d, "status", myPyString_FromString("ok"));
+      } else {
+         PyDict_SetItemString(d, "status", myPyString_FromString("bad-index"));
+      }
+   } else {
+      PyDict_SetItemString(d, "status", myPyString_FromString("fail"));
+   }
+   return d;
+}
+#endif
+
+#ifdef USE_PYTHON
+/*! \brief Get backup info
+ * 
+ * @param imol the model molecule index
+ * @param backup_index the backup index to restore to
+ * @return a Python list of the given description (str)
+ *         and a timestamp (str).
+ */
+PyObject *get_backup_info(int imol, int backup_index) {
+
+   PyObject *r = PyList_New(0);
+   if (is_valid_model_molecule(imol)) {
+      auto backup_info = graphics_info_t::molecules[imol].get_backup_info(backup_index);
+      r = PyList_New(2);
+      PyObject *d  = myPyString_FromString(backup_info.description.c_str());
+      PyObject *dt = myPyString_FromString(backup_info.get_timespec_string().c_str());
+      PyList_SetItem(r, 0, d);
+      PyList_SetItem(r, 1, dt);
+   }
+   return r;
+}
+#endif
+
+void print_backup_history_info(int imol) {
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t::molecules[imol].print_backup_history_info();
+   }
+}
 
 /*  ----------------------------------------------------------------------- */
 /*                  rotate/translate buttons                                */
@@ -972,6 +1067,84 @@ void set_numerical_gradients(int istate) {
 
 void set_debug_refinement(int state) {
    graphics_info_t::do_debug_refinement = state;
+}
+
+#ifdef USE_GUILE
+SCM get_residue_alt_confs_scm(int imol, const char *chain_id, int res_no, const char *ins_code) {
+
+   SCM r = SCM_EOL;
+   std::cout << "get_residue_alt_confs_scm(): Needs to be implemented" << std::endl;
+   return r;
+
+}
+#endif
+
+#ifdef USE_PYTHON
+/*! \brief Return either None (on failure) or a list of alt-conf strings (might be [""]) */
+PyObject *get_residue_alt_confs_py(int imol, const char *chain_id, int res_no, const char *ins_code) {
+
+   PyObject *r = Py_False;
+
+   if (is_valid_model_molecule(imol)) {
+      mmdb::Residue *residue_p = graphics_info_t::molecules[imol].get_residue(chain_id, res_no, ins_code);
+      if (residue_p) {
+         std::vector<std::string> ac = graphics_info_t::molecules[imol].get_residue_alt_confs(residue_p);
+         if (! ac.empty()) {
+            r = PyList_New(ac.size());
+            for (unsigned int i=0; i<ac.size(); i++) {
+               PyObject *s = myPyString_FromString(ac[i].c_str());
+               PyList_SetItem(r, i, s);
+            }
+         }
+      }
+   }
+
+   if (PyBool_Check(r))
+      Py_INCREF(r);
+
+   return r;
+}
+#endif
+
+
+/*! \brief swap atom alt-confs */
+int swap_residue_alt_confs(int imol, const char *chain_id, int res_no, const char *ins_code) {
+
+   int state = 0;
+
+   if (is_valid_model_molecule(imol)) {
+      state = graphics_info_t::molecules[imol].swap_residue_alt_confs(chain_id, res_no, ins_code);
+      graphics_info_t::graphics_draw();
+   }
+
+   std::string cmd = "swap-residue-alt-confs";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(imol);
+   args.push_back(coot::util::single_quote(chain_id));
+   args.push_back(res_no);
+   args.push_back(coot::util::single_quote(ins_code));
+   add_to_history_typed(cmd, args);
+   return state;
+}
+
+
+int swap_atom_alt_conf(int imol, const char *chain_id, int res_no, const char *ins_code, const char *atom_name, const char*alt_conf) {
+
+   int istat = 0;
+   if (is_valid_model_molecule(imol)) {
+      istat = graphics_info_t::molecules[imol].swap_atom_alt_conf(chain_id, res_no, ins_code, atom_name, alt_conf);
+   }
+   graphics_draw();
+   std::string cmd = "swap-atom-alt-conf";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(imol);
+   args.push_back(coot::util::single_quote(chain_id));
+   args.push_back(res_no);
+   args.push_back(coot::util::single_quote(ins_code));
+   args.push_back(coot::util::single_quote(atom_name));
+   args.push_back(coot::util::single_quote(alt_conf));
+   add_to_history_typed(cmd, args);
+   return istat;
 }
 
 
@@ -2404,6 +2577,43 @@ int n_chains(int imol) {
    add_to_history_typed(cmd, args);
    return nchains;
 }
+
+#ifdef USE_PYTHON
+/*! \brief get the chain ids of molecule number imol
+
+  @param imol is the molecule index
+  @return a list of the the chain ids or None on failure
+*/
+PyObject *get_chain_ids_py(int imol) {
+
+   PyObject *r = Py_False;
+   if (is_valid_model_molecule(imol)) {
+      mmdb::Manager *mol = graphics_info_t::molecules[imol].atom_sel.mol;
+      int imod = 1;
+      mmdb::Model *model_p = mol->GetModel(imod);
+      std::vector<std::string> chain_ids;
+      if (model_p) {
+         int n_chains = model_p->GetNumberOfChains();
+         for (int ichain=0; ichain<n_chains; ichain++) {
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
+            chain_ids.push_back(chain_p->GetChainID());
+         }
+      }
+      if (! chain_ids.empty()) {
+         r = PyList_New(chain_ids.size());
+         for (unsigned int i=0; i<chain_ids.size(); i++) {
+            PyObject *o = myPyString_FromString(chain_ids[i].c_str());
+            PyList_SetItem(r, i, o);
+         }
+      }
+   }
+   if (PyBool_Check(r)) {
+     Py_INCREF(r);
+   }
+   return r;
+}
+#endif
+
 
 
 /*! \brief return the number of models in molecule number imol
@@ -4785,6 +4995,7 @@ void c_accept_moving_atoms() {
    graphics_info_t g;
    while (g.continue_threaded_refinement_loop)
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
+   g.clear_hud_buttons();
    g.accept_moving_atoms();
    g.clear_moving_atoms_object();
 
@@ -4815,7 +5026,10 @@ PyObject *accept_moving_atoms_py() {
 
    coot::refinement_results_t rr = g.accept_moving_atoms(); // does a g.clear_up_moving_atoms();
    rr.show();
-   g.clear_moving_atoms_object();
+   if (g.use_graphics_interface_flag) {
+      g.clear_hud_buttons();
+      g.clear_moving_atoms_object();
+   }
    PyObject *o = g.refinement_results_to_py(rr);
    return o;
 }
@@ -4910,6 +5124,16 @@ int new_molecule_by_residue_type_selection(int imol_orig, const char *residue_ty
 
 int new_molecule_by_atom_selection(int imol_orig, const char* atom_selection_str) {
 
+   auto recentre_on_new_fragment = [] (int imol) {
+      graphics_info_t g;
+      coot::view_info_t this_view(g.view_quaternion, g.RotationCentre(), g.zoom, "");
+      float new_zoom = 100.0;
+      coot::Cartesian new_rotation_centre = g.molecules[imol].centre_of_molecule();
+      coot::view_info_t  new_view(g.view_quaternion, new_rotation_centre, new_zoom, "");
+      int nsteps = int(1000.0/g.views_play_speed);
+      coot::view_info_t::interpolate(this_view, new_view, nsteps);
+   };
+
    int imol = -1;
    if (is_valid_model_molecule(imol_orig)) {
       imol = graphics_info_t::create_molecule();
@@ -4936,6 +5160,7 @@ int new_molecule_by_atom_selection(int imol_orig, const char* atom_selection_str
 	    g.molecules[imol].install_model(imol, asc, g.Geom_p(), name, 1, shelx_flag);
 	    g.molecules[imol].set_have_unsaved_changes_from_outside();
 	    update_go_to_atom_window_on_new_mol();
+            recentre_on_new_fragment(imol);
 	 } else {
 	    std::cout << "in new_molecule_by_atom_selection "
 		      << "Something bad happened - No atoms selected"
@@ -6252,8 +6477,9 @@ void to_generic_object_attach_translation_gizmo(int object_number) {
                coot::Cartesian pc(p.x, p.y, p.z);
                g.translation_gizmo.set_scale_absolute(r.value());
                g.translation_gizmo.set_position(pc);
-               g.attach_buffers();
-               g.setup_draw_for_translation_gizmo();
+               // this has been done before now
+               // g.attach_buffers();
+               // g.setup_draw_for_translation_gizmo();
             }
          }
          // should we draw it?

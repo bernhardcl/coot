@@ -399,28 +399,19 @@ void
 graphics_info_t::set_directory_for_filechooser(GtkWidget *filechooser) const {
 
    if (directory_for_filechooser != "") {
-      // std::cout << "set directory_for_filechooser "
-      // << directory_for_filechooser << std::endl;
+      std::cout << "INFO:: set directory_for_filechooser " << directory_for_filechooser << std::endl;
 
-#if (GTK_MAJOR_VERSION >= 4)
       // 20220602-PE FIXME
-      std::cout << "in set_directory_for_filechooser() FIXME" << std::endl;
-#else
-      gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filechooser),
-                                          directory_for_filechooser.c_str());
-#endif
+      std::cout << "INFO:: in set_directory_for_filechooser() FIXME" << std::endl;
+      GFile *f = g_file_new_for_path(directory_for_filechooser.c_str());
+      GError *err = NULL;
+      gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filechooser), f, &err);
 
    } else {
-      // set to cwd!?
       std::string cwd = coot::util::current_working_dir();
-      // std::cout << "set directory_for_filechooser to cwd " << std::endl;
-#if (GTK_MAJOR_VERSION >= 4)
-      // 20220602-PE FIXME set current directory
-      std::cout << "in set_directory_for_filechooser() FIXME" << std::endl;
-#else
-      gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filechooser), cwd.c_str());
-#endif
-      // std::cout << "not setting directory_for_fileselection" << std::endl;
+      GFile *f = g_file_new_for_path(cwd.c_str());
+      GError *err = NULL;
+      gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filechooser), f, &err);
    }
 }
 
@@ -4175,14 +4166,17 @@ graphics_info_t::fill_difference_map_peaks_button_box() {
       label += float_to_string(centres[i_peak].second);
       label += " (";
       label += float_to_string(f);
-      label += " rmsd) at ";
-      label += "(";
+      label += " rmsd) ";
+#if 0
+      label += "at (";
       label += coot::util::float_to_string_using_dec_pl(centres[i_peak].first.x(), 2);
       label += ", ";
       label += coot::util::float_to_string_using_dec_pl(centres[i_peak].first.y(), 2);
       label += ", ";
       label += coot::util::float_to_string_using_dec_pl(centres[i_peak].first.z(), 2);
       label += ")";
+#endif
+      // 20251215-PE instead of that, find the nearest atom to centres[i_peak]
       return label;
    };
 

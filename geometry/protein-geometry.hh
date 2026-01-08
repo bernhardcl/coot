@@ -1017,6 +1017,12 @@ namespace coot {
       int atom_1_comp_id, atom_2_comp_id;
       double dist() const { return value_dist; }
       double esd()  const { return value_dist_esd; }
+      bool matches(const std::string &at_name_1, const std::string &at_name_2) const {
+         bool status = true;
+         if (at_name_1 != atom_id_1()) status = false;
+         if (at_name_2 != atom_id_2()) status = false;
+         return status;
+      }
    }; 
 
    class dict_link_angle_restraint_t : public basic_dict_restraint_t {
@@ -1763,21 +1769,12 @@ namespace coot {
          return dict_res_restraints[i]; }
       const dictionary_residue_link_restraints_t & link(int i) const {
          return dict_link_res_restraints[i]; }
-      dictionary_residue_link_restraints_t link(const std::string &id_in) const {
-         dictionary_residue_link_restraints_t r;
-         for (unsigned int id=0; id<dict_link_res_restraints.size(); id++) {
-            if (dict_link_res_restraints[id].link_id == id_in) {
-               r = dict_link_res_restraints[id];
-               break;
-            }
-         }
-         return r;
-      }
+
+      dictionary_residue_link_restraints_t link(const std::string &id_in) const;
 
       // return "" on comp_id not found, else return the file name.
       //
-      std::string get_cif_file_name(const std::string &comp_id,
-                                    int imol_enc) const;
+      std::string get_cif_file_name(const std::string &comp_id, int imol_enc) const;
 
       int link_size() const { return dict_link_res_restraints.size(); }
       void info() const;
@@ -2052,12 +2049,12 @@ namespace coot {
                           const std::string &group_1,
                           const std::string &comp_id_2,
                           const std::string &group_2) const;
-      
+
       // Try to find a link that is not a peptide link (because that
       // fails on a distance check).  This is the method to find
       // isopeptide links (which again need to be distance checked in
       // find_link_type_rigourous()).
-      // 
+      //
       // bool the need-order-switch-flag
       std::vector<chem_link>
       matching_chem_links_non_peptide(const std::string &comp_id_1,
@@ -2075,14 +2072,13 @@ namespace coot {
 
       // return "" on failure.
       // no order switch is considered.
-      // 
-      std::string find_glycosidic_linkage_type(mmdb::Residue *first, mmdb::Residue *second) const;
+      //
+      std::string find_glycosidic_linkage_type_by_distance(mmdb::Residue *first, mmdb::Residue *second) const;
       std::string find_glycosidic_linkage_type(mmdb::Residue *first, mmdb::Residue *second,
                                                mmdb::Manager *mol) const;
       bool are_linked_in_order(mmdb::Residue *first,
                                mmdb::Residue *second,
                                mmdb::Link *link) const;
-      
 
       std::pair<std::string, bool>
       find_glycosidic_linkage_type_with_order_switch(mmdb::Residue *first, mmdb::Residue *second) const;

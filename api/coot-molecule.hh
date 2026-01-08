@@ -100,6 +100,7 @@ namespace coot {
 
    enum { RESIDUE_NUMBER_UNSET = -1111}; // from molecule-class-info
 
+   //! a simple wrapper for a residue range
    class residue_range_t {
    public:
       residue_range_t() : res_no_start(-999), res_no_end(-999) {}
@@ -109,6 +110,7 @@ namespace coot {
       int res_no_end;
    };
 
+   //! a simple wrapper for annotated distances
    class atom_distance_t {
    public:
      atom_distance_t(const atom_spec_t &a1, const atom_spec_t &a2,
@@ -509,6 +511,8 @@ namespace coot {
 
       float get_median_temperature_factor() const;
 
+      float get_temperature_factor_of_atom(const std::string &atom_cid) const;
+
       // ------------------------ close
 
       int close_yourself();
@@ -619,6 +623,8 @@ namespace coot {
       std::vector<std::string> get_residue_names_with_no_dictionary(const protein_geometry &geom) const;
       // here res-name might be HOH or DUM
       int insert_waters_into_molecule(const minimol::molecule &water_mol, const std::string &res_name);
+
+      std::string get_molecule_selection_as_json(const std::string &cid) const;
 
       // ----------------------- model utils
 
@@ -961,7 +967,7 @@ namespace coot {
 					     float dist_max) const;
 
       //! not const because it can dynamically add dictionaries
-      std::vector<plain_atom_overlap_t> get_overlaps(protein_geometry *geom_p);
+      std::vector<plain_atom_overlap_t> get_atom_overlaps(protein_geometry *geom_p);
 
       //! get the atom overlap
       float get_atom_overlap_score(protein_geometry *geom_p) const;
@@ -980,6 +986,12 @@ namespace coot {
       instanced_mesh_t get_HOLE(const clipper::Coord_orth &start_pos,
                                 const clipper::Coord_orth &end_pos,
                                 const protein_geometry &geom) const;
+
+      //! get pucker info
+      //!
+      //! @param imol2 is the model molecule index
+      //! @return a json string or an empty string on failure
+      std::string get_pucker_analysis_info() const;
 
       //! Get SVG for 2d ligand environment view (FLEV)
       //!
@@ -1216,6 +1228,11 @@ namespace coot {
       rotamer_change_info_t change_rotamer_number(const coot::residue_spec_t &res_spec, const std::string &alt_conf,
                                            int rotamer_change_direction,
                                            const coot::protein_geometry &pg);
+
+      int set_residue_to_rotamer_number(coot::residue_spec_t res_spec,
+                                        const std::string &alt_conf_in,
+                                        int rotamer_number,
+                                        const coot::protein_geometry &pg);
 
       void associate_sequence_with_molecule(const std::string &chain_id, const std::string &sequence);
 

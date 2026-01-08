@@ -53,6 +53,9 @@
 #include "lbg-graph.hh"
 #include "utils/xdg-base.hh"
 
+#include "utils/logging.hh"
+extern logging logger;
+
 // std::string 
 // coot::basic_dict_restraint_t::atom_id_1_4c() const {
 //    return atom_id_mmdb_expand(atom_id_1_); 
@@ -548,7 +551,7 @@ int
 coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_number) {
 
    bool debug = false;
-   if (verbose_mode) debug = true;
+   // if (verbose_mode) debug = true;
 
    int success = 0;  // fail initially and is set to the number of
                      // atoms read from the mmcif dictionary file in
@@ -580,16 +583,19 @@ coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_num
 
    if (s) {
 
-      std::cout << "PATH p-A" << std::endl;
+      if (debug)
+         std::cout << "PATH p-A" << std::endl;
 
    } else {
 
-      std::cout << "PATH p-B" << std::endl;
+      if (debug)
+         std::cout << "PATH p-B" << std::endl;
 
       s = clibd;
 
       if (! s) {
-         std::cout << "PATH p-C" << std::endl;
+         if (debug)
+            std::cout << "PATH p-C" << std::endl;
          if (debug)
             std::cout << "DEBUG:: try_dynamic_add() using package_data_dir(): " << package_data_dir()
                       << std::endl;
@@ -738,6 +744,7 @@ coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_num
    if (!success) {
       // try the XDG Base Directory Protocol cache
       xdg_t xdg;
+      bool debug = false;
       std::filesystem::path ch = xdg.get_cache_home();
       if (std::filesystem::exists(ch)) {
          std::filesystem::path monomers_path = ch / "monomers";
@@ -756,16 +763,20 @@ coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_num
                } else {
                   // we will need to download it then
                   // and put it in the above directory)
-                  std::cout << "DEBUG:: try_dynamic_add(): " << cif_file_path.string() << " does not exist" << std::endl;
+                  if (debug)
+                     std::cout << "DEBUG:: try_dynamic_add(): " << cif_file_path.string() << " does not exist" << std::endl;
                }
             } else {
-               std::cout << "DEBUG:: try_dynamic_add(): " << sub_dir.string() << " does not exist" << std::endl;
+               if (debug)
+                  std::cout << "DEBUG:: try_dynamic_add(): " << sub_dir.string() << " does not exist" << std::endl;
             }
          } else {
-            std::cout << "DEBUG:: try_dynamic_add(): " << monomers_path.string() << " does not exist" << std::endl;
+            if (debug)
+               std::cout << "DEBUG:: try_dynamic_add(): " << monomers_path.string() << " does not exist" << std::endl;
          }
       } else {
-         std::cout << "DEBUG:: try_dynamic_add(): " << ch.string() << " does not exist" << std::endl;
+         if (debug)
+            std::cout << "DEBUG:: try_dynamic_add(): " << ch.string() << " does not exist" << std::endl;
       }
    }
 
@@ -2077,15 +2088,15 @@ coot::protein_geometry::remove_planar_peptide_restraint() {
 	    if (it->plane_id == plane_id) {
 	       ifound++;
 	       if (0)
-		  std::cout << "INFO:: before removal of plane3 TRANS has " 
+		  std::cout << "INFO:: before removal of plane3 TRANS has "
 			    << dict_link_res_restraints[i].link_plane_restraint.size()
 			    << " plane restraints\n";
-	       
+
 	       // let's remove it
  	       dict_link_res_restraints[i].link_plane_restraint.erase(it);
-	       
-	       if (0)
-		  std::cout << "INFO::  after removal of plane3 TRANS has " 
+
+	       if (false)
+		  std::cout << "INFO::  after removal of plane3 TRANS has "
 			    << dict_link_res_restraints[i].link_plane_restraint.size()
 			    << " plane restraints\n";
 	       break;
@@ -2107,7 +2118,7 @@ coot::protein_geometry::planar_peptide_restraint_state() const {
 
    for (unsigned int i=0; i<dict_link_res_restraints.size(); i++) {
       if (dict_link_res_restraints[i].link_id == link_id) { // e.g "TRANS"
-	 
+
 	 std::vector<coot::dict_link_plane_restraint_t>::const_iterator it;
 	 for (it = dict_link_res_restraints[i].link_plane_restraint.begin();
 	      it != dict_link_res_restraints[i].link_plane_restraint.end(); it++) {
@@ -2120,6 +2131,22 @@ coot::protein_geometry::planar_peptide_restraint_state() const {
    }
    return ifound;
 }
+
+coot::dictionary_residue_link_restraints_t coot::protein_geometry::link(const std::string &id_in) const {
+
+   // std::cout << "debug:: link() found " << dict_link_res_restraints.size() << " links" << std::endl;
+
+   dictionary_residue_link_restraints_t r;
+   for (unsigned int id=0; id<dict_link_res_restraints.size(); id++) {
+      std::cout << "................. comparing " << dict_link_res_restraints[id].link_id << " " << id_in << std::endl;
+      if (dict_link_res_restraints[id].link_id == id_in) {
+         r = dict_link_res_restraints[id];
+         break;
+      }
+   }
+   return r;
+}
+
 
 
 // restraints for omega for both CIS and TRANS links (and

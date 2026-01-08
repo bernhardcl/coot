@@ -60,7 +60,7 @@
   But, we need that function to set the filename in mol_info, which
   is a c++ class.
 
-p  So we need to have this function external for c++ linking.
+  So we need to have this function external for c++ linking.
 
 */
 
@@ -119,6 +119,7 @@ void try_load_python_extras_dir();
 /*!  \brief tell coot that you prefer to run python scripts if/when
   there is an option to do so. */
 void set_prefer_python();
+
 /*! \brief the python-prefered mode.
 
 This is available so that the scripting functions know whether on not
@@ -129,7 +130,7 @@ which is used elsewhere to stop python functions adding to the gui,
 when guile-gtk functions have alread done so.  We should clean up this
 (rather obscure) interface at some stage.
 
-return 1 for python is prefered, 0 for not. */
+@return 1 for python is prefered, 0 for not. */
 int prefer_python();
 
 /*! \} */
@@ -160,19 +161,22 @@ void set_show_paths_in_display_manager(int i);
 
    What is the internal flag?
 
-   @return 1 for "yes, display paths" , 0 for not
+   @return 1 for "yes, display paths", 0 for not
  */
 int show_paths_in_display_manager_state();
 
 /*! \brief add an extension to be treated as coordinate files
+   @param ext the extension to be added
 */
 void add_coordinates_glob_extension(const char *ext);
 
 /*! \brief add an extension to be treated as data (reflection) files
+   @param ext the extension to be added
 */
 void add_data_glob_extension(const char *ext);
 
 /*! \brief add an extension to be treated as geometry dictionary files
+   @param ext the extension to be added
 */
 void add_dictionary_glob_extension(const char *ext);
 
@@ -181,14 +185,17 @@ void add_dictionary_glob_extension(const char *ext);
 void add_map_glob_extension(const char *ext);
 
 /*! \brief remove an extension to be treated as coordinate files
+   @param ext the extension to be added
 */
 void remove_coordinates_glob_extension(const char *ext);
 
 /*! \brief remove an extension to be treated as data (reflection) files
+   @param ext the extension to be removed
 */
 void remove_data_glob_extension(const char *ext);
 
 /*! \brief remove an extension to be treated as geometry dictionary files
+   @param ext the extension to be removed
 */
 void remove_dictionary_glob_extension(const char *ext);
 
@@ -211,17 +218,14 @@ void unset_sticky_sort_by_date();
 set to 1 to pre-filter, [0 (off, non-pre-filtering) is the default */
 void set_filter_fileselection_filenames(int istate);
 
-
 /*! \brief, return the state of the above variable */
 int filter_fileselection_filenames_state();
 
 /*! \brief is the given file name suitable to be read as coordinates? */
 short int file_type_coords(const char *file_name);
 
-
 /*! \brief display the open coordinates dialog */
 void open_coords_dialog();
-
 
 /*! \brief this flag set chooser as default for windows, otherwise use
   selector 0 is selector 1 is chooser */
@@ -321,21 +325,35 @@ given molecule.
 */
 int n_models(int imol);
 
-/*! \brief  number of chains in molecule number imol
+/*! \brief get the number of chains in molecule number imol
 
-   @return the number of chains*/
+  @param imol is the molecule index
+  @return the number of chains
+*/
 int n_chains(int imol);
+
+#ifdef USE_PYTHON
+/*! \brief get the chain ids of molecule number imol
+
+  @param imol is the molecule index
+  @return a list of the the chain ids or False on failure
+*/
+PyObject *get_chain_ids_py(int imol);
+#endif
 
 /*! \brief is this a solvent chain? [Raw function]
 
    This is a raw interface function, you should generally not use
    this, but instead use (is-solvent-chain? imol chain-id)
 
+   This wraps the mmdb function isSolventChain().
+
+   @param imol is the molecule index
+   @param chain_id is the chain id (e.g. "A" or "B")
    @return -1 on error, 0 for no, 1 for is "a solvent chain".  We
    wouldn't want to be doing rotamer searches and the like on such a
    chain.
 
-   This wraps the mmdb function isSolventChain().
  */
 int is_solvent_chain_p(int imol, const char *chain_id);
 
@@ -1074,7 +1092,6 @@ void set_have_unsaved_changes(int imol);
  @return -1 on bad imol, 0 on no unsaved changes, 1 on has unsaved changes */
 int have_unsaved_changes_p(int imol);
 
-
 /*! \brief set the molecule to which undo operations are done to
   molecule number imol */
 void set_undo_molecule(int imol);
@@ -1107,6 +1124,53 @@ int  backup_compress_files_state();
 
 /*! \brief set if backup files will be compressed or not using gzip */
 void  set_backup_compress_files(int state);
+
+/*! \brief Make a backup for a model molecule
+ *
+ * @param imol the model molecule index
+ * @description a description that goes along with this back point
+ * @return the index of the backup, or -1 on failure
+ */
+int make_backup_checkpoint(int imol, const char *description);
+
+/*! \brief Restore molecule from backup
+ * 
+ * restore model @p imol to checkpoint backup @p backup_index
+ *
+ * @param imol the model molecule index
+ * @param backup_index the backup index to restore to
+ * @return the index of the backup, or -1 on failure
+ */
+int restore_to_backup_checkpoint(int imol, int backup_index);
+
+#ifdef USE_PYTHON
+/*! \brief Compare current model to backup
+ * 
+ * @param imol the model molecule index
+ * @param backup_index the backup index to restore to
+ * @return a Python dict, with 2 items, a "status" which is either "ok" 
+ *         or "error" or "bad-index". The other key is "moved-residues-list",
+ *         the value for which is a list of residue specs for residues
+ *         that have at least one atom in a different place (which might be empty).
+ */
+PyObject *compare_current_model_to_backup(int imol, int backup_index);
+#endif
+
+/*! \brief Print the history info
+ * 
+ */
+void print_backup_history_info(int imol);
+
+#ifdef USE_PYTHON
+/*! \brief Get backup info
+ * 
+ * @param imol the model molecule index
+ * @param backup_index the backup index to restore to
+ * @return a Python list of the given description (str)
+ *         and a timestamp (str).
+ */
+PyObject *get_backup_info(int imol, int backup_index);
+#endif
 
 /*! \} */
 
@@ -1573,7 +1637,7 @@ void set_display_intro_string(const char *str);
 /*! \brief return the extent of the box/radius of electron density contours */
 float get_map_radius();
 
-/*! \brief not everone likes coot's esoteric depth cueing system
+/*! \brief not everyone likes coot's esoteric depth cueing system
 
   Pass an argument istate=1 to turn it off
 
@@ -2470,8 +2534,11 @@ void set_rotation_centre_size_from_widget(const gchar *text); /* and redraw */
 /* MOVE-ME to c-interface-gtk-widgets.h */
 gchar *get_text_for_rotation_centre_cube_size();
 
-/*! \brief set rotoation centre marker size */
+/*! \brief set the rotation centre marker size */
 void set_rotation_centre_size(float f); /* and redraw (maybe) */
+
+/*! \brief set the rotation centre marker size */
+void set_user_defined_rotation_centre_crosshairs_size_scale_factor(float f);
 
 /*! \brief set rotation centre colour
 
@@ -2599,6 +2666,28 @@ int get_reset_b_factor_moved_atoms_state();
 void set_temperature_factors_for_atoms_in_residue_scm(int imol, SCM residue_spec_scm, float bf);
 #endif
 #endif
+
+#ifdef __cplusplus/* protection from use in callbacks.c, else compilation probs */
+#ifdef USE_GUILE
+SCM get_residue_alt_confs_scm(int imol, const char *chain_id, int res_no, const char *ins_code);
+#endif
+#endif
+
+#ifdef __cplusplus /* protection from use in callbacks.c, else compilation probs */
+#ifdef USE_PYTHON
+/*! \brief Return either False (on failure) or a list of alt-conf strings (might be [""]) */
+PyObject *get_residue_alt_confs_py(int imol, const char *chain_id, int res_no, const char *ins_code);
+#endif
+#endif
+
+
+
+/*! \brief swap atom alt-confs */
+int swap_atom_alt_conf(int imol, const char *chain_id, int res_no, const char *ins_code,
+                       const char *atom_name, const char*alt_conf);
+
+/*! \brief swap atom alt-confs */
+int swap_residue_alt_confs(int imol, const char *chain_id, int res_no, const char *ins_code);
 
 /*! \brief set a numberical attibute to the atom with the given specifier.
 
@@ -4007,9 +4096,10 @@ int  show_pointer_distances_state();
 /*! \{ */
 /*! \brief scale the view by f
 
+   Values outside the range 0.5 to 1.8 have no effect.
    external (scripting) interface (with redraw)
     @param f the smaller f, the bigger the zoom, typical value 1.3.
-    Values outside the range 0.5 to 1.8 are filtered out */
+    */
 void scale_zoom(float f);
 /* internal interface */
 void scale_zoom_internal(float f);
@@ -7283,9 +7373,134 @@ void start_ligand_builder_gui();
 SCM all_molecule_rotamer_score(int imol);
 SCM all_molecule_ramachandran_score(int imol); /* a stub currently */
 #endif /* USE_GUILE */
+
 #ifdef USE_PYTHON
+/**
+ * @brief Compute rotamer score for an entire molecule and return result as a Python object.
+ *
+ * This wrapper computes the rotamer score information for molecule number @p imol
+ * and returns a Python list containing the numeric score and the number of
+ * rotamer-bearing residues.
+ *
+ * Parameters
+ * ----------
+ * @param imol
+ *     Model (molecule) index to analyze.
+ *
+ * Return value
+ * ------------
+ * Returns a NEW reference to a Python object. Two possible outcomes:
+ *
+ * - Success: a Python list of length 2 (PyList), with elements:
+ *     0 : float — overall rotamer score (PyFloat)
+ *     1 : int   — number of rotamer residues considered (PyLong)
+ *
+ * - Failure / invalid model index: Py_False (Python False).
+ *   The implementation INCREFs Py_False before returning, so the caller receives
+ *   a new reference in the failure case as well.
+ *
+ * Reference counting
+ * -----------------
+ * The returned PyObject* is a new reference. The caller is responsible for
+ * DECREFing it when finished.
+ *
+ * Notes
+ * -----
+ * - Callers should detect the failure case by testing with PyBool_Check (Py_False).
+ * - Ensure the Python GIL is held when calling this function from non-Python threads.
+ */
 PyObject *all_molecule_rotamer_score_py(int imol);
+#endif /* USE_PYTHON */
+
+#ifdef USE_PYTHON
+/**
+ * @brief Compute overall and per-residue Ramachandran statistics for a molecule and
+ *        return the results as a Python object.
+ *
+ * This wrapper gathers the Ramachandran score information computed for molecule
+ * number @p imol and returns a Python list with six elements describing the
+ * overall scores and per-residue details.
+ *
+ * Parameters
+ * ----------
+ * @param imol
+ *     Model (molecule) index to analyze.
+ *
+ * Return value
+ * ------------
+ * @return a NEW reference to a Python object. Two possible outcomes:
+ *
+ * - Success: a Python list of length 6 (PyList), with elements:
+ *     0 : float   — overall Ramachandran score (PyFloat)
+ *     1 : int     — number of residues considered (PyLong)
+ *     2 : float   — Ramachandran score restricted to non-secondary-structure residues (PyFloat)
+ *     3 : int     — number of residues used for the non-secondary-structure score (PyLong)
+ *     4 : int     — number of zero-score residues (PyLong)
+ *     5 : list    — info_by_residue: a list with one entry per residue (length == number of residues).
+ *                     Each entry is either:
+ *                       - a list of four items:
+ *                           [ phi_psi_list, residue_spec_py, residue_score, res_names_list ]
+ *                             * phi_psi_list: list of two floats [phi, psi]
+ *                             * residue_spec_py: Python representation of the residue spec (see residue_spec_to_py)
+ *                             * residue_score: float (PyFloat)
+ *                             * res_names_list: list of three strings [prev_res_name, this_res_name, next_res_name]
+ *                       - the integer -1 as a placeholder if per-residue info could not be computed for that index.
+ *
+ * - Failure / invalid model index: Py_False (Python False). The implementation INCREFs Py_False before returning,
+ *   so the caller receives a new reference in this case as well.
+ *
+ * Reference counting
+ * -----------------
+ * The returned PyObject* is a new reference. The caller is responsible for DECREFing it when finished.
+ *
+ * Notes
+ * -----
+ * - Callers should check the return with PyBool_Check to detect the failure case (Py_False).
+ * - Some per-residue entries may be -1 (an integer) if residue data was unavailable.
+ * - The function must be called with appropriate GIL handling if invoked from non-Python threads.
+ */
+
 PyObject *all_molecule_ramachandran_score_py(int imol); /* a stub currently */
+#endif /* USE_PYTHON */
+
+#ifdef USE_PYTHON
+/**
+ * @brief Return the Ramachandran region annotation for a molecule as a Python list.
+ *
+ * This wrapper returns per-residue region information computed for molecule @p imol.
+ * It queries the internal Ramachandran scoring machinery and returns a Python list
+ * of (residue_spec, region_int) pairs for residues that lie in the computed region.
+ *
+ * Parameters
+ * ----------
+ * @param imol
+ *     Model (molecule) index to query.
+ *
+ * Return value
+ * ------------
+ * Returns a NEW reference to a Python object. There are two possible outcomes:
+ *
+ * - Success: a Python list (PyList) of length N > 0, where each element is a 2-tuple:
+ *     ( residue_spec_py, region_code )
+ *     * residue_spec_py: Python representation of the residue spec (as produced by residue_spec_to_py).
+ *     * region_code: integer (PyLong) — the integer label associated with that residue's Ramachandran region
+ *       (as provided by the underlying rama score/region computation).
+ *
+ * - Failure / no region entries / invalid model index: Py_False (Python False).
+ *   The implementation INCREFs Py_False before returning, so the caller receives a new reference
+ *   in this case as well.
+ *
+ * Reference counting
+ * -----------------
+ * The returned PyObject* is a new reference. The caller is responsible for DECREFing it when finished.
+ *
+ * Notes
+ * -----
+ * - Callers should detect the failure/empty case by testing with PyBool_Check (Py_False).
+ * - The exact meaning of the integer region_code is defined by the internal Ramachandran scoring code;
+ *   consult the implementation or documentation for interpretation of region codes.
+ * - Ensure the Python GIL is held when calling this function from non-Python threads.
+ */
 PyObject *all_molecule_ramachandran_region_py(int imol);
 #endif /* USE_PYTHON */
 #endif /* __cplusplus */
@@ -7294,7 +7509,9 @@ PyObject *all_molecule_ramachandran_region_py(int imol);
 
 This is not guaranteed to generate the correct biological entity, but will bring together
 molecules (chains/domains) that are dispersed throughout the unit cell.
-  */
+
+@param imol the molecule index.
+*/
 void globularize(int imol);
 
 #ifdef __cplusplus
@@ -7304,7 +7521,7 @@ void globularize(int imol);
     20100616 This doesn't get into the doxygen documentation for some
     reason I can't figure out.
 
-    \fn user_defined_click_scm(int n_clicks, SCM func);
+    \fn user_defined_click_py(int n_clicks, SCM func);
 
     \brief run a user defined function
 

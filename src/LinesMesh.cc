@@ -335,8 +335,6 @@ LinesMesh::make_vertices_for_pulse(const glm::vec4 &colour, float radius_overall
 
    // we have just simply constructed this object. Now add some vertices.
 
-   // we don't need to regenerate the indices if they have already been generated
-
 #if 0 // quick fix for glm compilation problems
    std::cout << "debug::  make_vertices_for_pulse() --- start --- "
              << glm::to_string(colour) << " r: "
@@ -357,7 +355,6 @@ LinesMesh::make_vertices_for_pulse(const glm::vec4 &colour, float radius_overall
          theta += theta_offset;
          glm::vec3 p(r * sinf(theta), r * cosf(theta), 0.0);
          s_generic_vertex v(p, normal, colour);
-         // std::cout << "vertex position " << glm::to_string(v.pos) << " " << glm::to_string(colour) << std::endl;
          vertices.push_back(v);
       }
       for (unsigned int i=0; i<n_line_segments; i++) {
@@ -391,11 +388,11 @@ LinesMesh::setup_green_pulse(bool broken_line_mode) {
 }
 
 void
-LinesMesh::setup_red_pulse(bool broken_line_mode) {
+LinesMesh::setup_red_pulse(float radius_overall, unsigned int n_rings, bool broken_line_mode, const glm::vec4 &col) {
 
-   glm::vec4 colour(0.8, 0.2, 0.2, 1.0);
-   unsigned int n_rings = 3;
-   make_vertices_for_pulse(colour, 6.0, n_rings, 0.0, broken_line_mode);
+   // unsigned int n_rings = 3;
+   // float radius_overall = 6.0;
+   make_vertices_for_pulse(col, radius_overall, n_rings, 0.0, broken_line_mode);
    setup();
 }
 

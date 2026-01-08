@@ -1,6 +1,8 @@
 
 // there are the only two that we need from c-interface.h
 #include "c-interface.h"
+#include "cc-interface.hh"
+#include "glib.h"
 
 // fromm cc-interface.hh
 void set_bond_smoothness_factor(unsigned int fac);
@@ -124,6 +126,8 @@ graphics_info_t::print_key_bindings() {
       std::make_pair("x", 0x078),
       std::make_pair("y", 0x079),
       std::make_pair("z", 0x07a),
+      std::make_pair("KP_plus",  0xffab),
+      std::make_pair("KP_minus", 0xffad),
       std::make_pair("KP_0", 0xffb0),
       std::make_pair("KP_1", 0xffb1),
       std::make_pair("KP_2", 0xffb2),
@@ -154,7 +158,7 @@ graphics_info_t::print_key_bindings() {
       std::make_pair("Right",   GDK_KEY_Right),
       std::make_pair("Up",      GDK_KEY_Up),
       std::make_pair("Down",    GDK_KEY_Down),
-};
+   };
 
    // std::map<keyboard_key_t, key_bindings_t> key_bindings_map;
 
@@ -170,7 +174,7 @@ graphics_info_t::print_key_bindings() {
       if (kb.first.ctrl_is_pressed) ctrl_string = "Ctrl";
       std::cout << "binding: "
                 << ctrl_string << " " << std::setw(5) << key_string
-                << "  ->  " << std::setw(16) << std::left << kb.second.description
+                << "  ->  " << std::setw(20) << std::left << kb.second.description
                 << " " << key_bindings_t::type_to_string(kb.second.type)
                 << std::endl;
    }
@@ -207,24 +211,26 @@ graphics_info_t::setup_key_bindings() {
              };
 
    auto l7 = []() {
-                int imol_scroll = graphics_info_t::scroll_wheel_map;
-                if (graphics_info_t::is_valid_map_molecule(imol_scroll))
+                graphics_info_t g;
+                int imol_scroll = g.intelligent_get_scroll_wheel_map();
+                if (graphics_info_t::is_valid_map_molecule(imol_scroll)) {
                    graphics_info_t::molecules[imol_scroll].pending_contour_level_change_count--;
+                }
                 if (graphics_info_t::glareas.size() > 0)
                    int contour_idle_token = g_idle_add(idle_contour_function, graphics_info_t::glareas[0]);
-                graphics_info_t g;
                 g.set_density_level_string(imol_scroll, graphics_info_t::molecules[imol_scroll].contour_level);
                 graphics_info_t::display_density_level_this_image = 1;
                 return gboolean(TRUE);
              };
 
    auto l8 = []() {
-                int imol_scroll = graphics_info_t::scroll_wheel_map;
-                if (graphics_info_t::is_valid_map_molecule(imol_scroll))
+                graphics_info_t g;
+                int imol_scroll = g.intelligent_get_scroll_wheel_map();
+                if (graphics_info_t::is_valid_map_molecule(imol_scroll)) {
                    graphics_info_t::molecules[imol_scroll].pending_contour_level_change_count++;
+                }
                 if (graphics_info_t::glareas.size() > 0)
                    int contour_idle_token = g_idle_add(idle_contour_function, graphics_info_t::glareas[0]);
-                graphics_info_t g;
                 g.set_density_level_string(imol_scroll, graphics_info_t::molecules[imol_scroll].contour_level);
                 graphics_info_t::display_density_level_this_image = 1;
                 return gboolean(TRUE);
@@ -235,9 +241,9 @@ graphics_info_t::setup_key_bindings() {
                 return gboolean(TRUE);
              };
 
-   auto l10 = []() { graphics_info_t::zoom *= 0.9; return gboolean(TRUE); };
+   auto l10 = []() { graphics_info_t::zoom *= 1.1; return gboolean(TRUE); };
 
-   auto l11 = []() { graphics_info_t::zoom *= 1.1; return gboolean(TRUE); };
+   auto l11 = []() { graphics_info_t::zoom *= 0.9; return gboolean(TRUE); };
 
    auto l12 = []() { graphics_info_t g; g.move_forwards(); return gboolean(TRUE); };
 
@@ -604,7 +610,6 @@ graphics_info_t::setup_key_bindings() {
 
    auto l45 = [] () {
 
-      std::cout << "------------------- Here l45 start " << moving_atoms_asc << std::endl;
       graphics_info_t g;
       bool done = false;
       // I need to be consistent about checking for moving_atoms_asc or moving_atoms_asc->mol
@@ -628,6 +633,17 @@ graphics_info_t::setup_key_bindings() {
       return gboolean(TRUE);
    };
 
+   auto l46 = [] {
+      show_keyboard_mutate_frame();
+      return gboolean(TRUE);
+   };
+
+   auto l47 = [] {
+      undo_symmetry_view();
+      return gboolean(TRUE);
+   };
+
+
    // Note to self, Space and Shift Space are key *Release* functions
 
    std::vector<std::pair<keyboard_key_t, key_bindings_t> > kb_vec;
@@ -639,13 +655,16 @@ graphics_info_t::setup_key_bindings() {
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_g,      key_bindings_t(l5, "go to blob")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_h,      key_bindings_t(l36, "Triple Refine with Auto-accept")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_i,      key_bindings_t(l6, "spin")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_j,      key_bindings_t(l44, "Auto-fit Rotamer"))); // where it used to be
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_plus,   key_bindings_t(l8, "increase contour level")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_equal,  key_bindings_t(l8, "increase contour level")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_minus,  key_bindings_t(l7, "decrease contour level")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_KP_Add,      key_bindings_t(l8, "increase contour level")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_KP_Subtract, key_bindings_t(l7, "decrease contour level")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_p,      key_bindings_t(l9, "update go-to atom by position")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_q,      key_bindings_t(l45, "Pep-flip")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_n,      key_bindings_t(l10, "Zoom in")));
-   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_m,      key_bindings_t(l11, "Zoom out")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_n,      key_bindings_t(l10, "Zoom out")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_m,      key_bindings_t(l11, "Zoom in")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_w,      key_bindings_t(l12, "Move forward")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_s,      key_bindings_t(l13, "Move backward")));
    // kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_o,      key_bindings_t(l14, "NCS Skip forward")));
@@ -662,8 +681,10 @@ graphics_info_t::setup_key_bindings() {
 
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_A,      key_bindings_t(l38, "Toggle Display of Last Model")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_E,      key_bindings_t(l40c, "Chain Refine")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_M,      key_bindings_t(l46, "Keyboard Mutate")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_R,      key_bindings_t(l40, "Sphere Refine")));
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_Q,      key_bindings_t(l37, "Display Next Map")));
+   kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_V,      key_bindings_t(l47, "Undo Symmetry View")));
 
    kb_vec.push_back(std::pair<keyboard_key_t, key_bindings_t>(GDK_KEY_space,  key_bindings_t(l18_space, "Accept Moving Atoms")));
 
@@ -724,28 +745,28 @@ graphics_info_t::setup_key_bindings() {
    kb_vec.push_back(p_res_info);
 
    auto ldr = [] () {
-                 graphics_info_t g;
-                 std::pair<bool, std::pair<int, coot::atom_spec_t> > aa_spec_pair = active_atom_spec();
-                 if (aa_spec_pair.first) {
-                    int imol = aa_spec_pair.second.first;
-                    mmdb::Atom *at = molecules[imol].get_atom(aa_spec_pair.second.second);
-                    mmdb::Residue *residue_p = at->GetResidue();
-                    if (residue_p) {
-                       // for this to work I need to move setup_delete_item_pulse() into
-                       // graphics_info_t. Not today.
-                       g.setup_delete_item_pulse(residue_p);
-                       coot::residue_spec_t residue_spec(residue_p);
-                       g.molecules[imol].delete_residue(residue_spec);
-                    }
-                 }
-                 return gboolean(TRUE);
-              };
+
+      graphics_info_t g;
+      std::pair<bool, std::pair<int, coot::atom_spec_t> > aa_spec_pair = active_atom_spec();
+      if (aa_spec_pair.first) {
+         int imol = aa_spec_pair.second.first;
+         mmdb::Atom *at = molecules[imol].get_atom(aa_spec_pair.second.second);
+         mmdb::Residue *residue_p = at->GetResidue();
+         if (residue_p) {
+            // for this to work I need to move setup_delete_item_pulse() into
+            // graphics_info_t. Not today.
+            g.setup_delete_item_pulse(residue_p);
+            coot::residue_spec_t residue_spec(residue_p);
+            g.molecules[imol].delete_residue(residue_spec);
+         }
+      }
+      return gboolean(TRUE);
+   };
    key_bindings_t delete_residue_key_binding(ldr, "Delete Residue");
    std::pair<keyboard_key_t, key_bindings_t> pdel(keyboard_key_t(GDK_KEY_d, true), delete_residue_key_binding);
    kb_vec.push_back(pdel);
 
    auto law = [] () {
-      std::cout << "-------------------- add water" << std::endl;
       graphics_info_t g;
       g.place_typed_atom_at_pointer("Water");
       return gboolean(TRUE);
@@ -753,6 +774,15 @@ graphics_info_t::setup_key_bindings() {
    key_bindings_t add_water_key_binding(law, "Add Water");
    std::pair<keyboard_key_t, key_bindings_t> paw(keyboard_key_t(GDK_KEY_w, true), add_water_key_binding);
    kb_vec.push_back(paw);
+
+   // 2025-10-03-PE Thanks for the reminder AAAAdragon.
+   auto l_go_to_lig = [] {
+      go_to_ligand();
+      return gboolean(TRUE);
+   };
+   key_bindings_t go_to_ligand_binding(l_go_to_lig, "Go To Ligand");
+   std::pair<keyboard_key_t, key_bindings_t> pgl(keyboard_key_t(GDK_KEY_l, true), go_to_ligand_binding);
+   kb_vec.push_back(pgl);
 
    // Direction is either +1 or -1 (in or out)
    //
@@ -834,12 +864,31 @@ graphics_info_t::setup_key_bindings() {
    };
 
    auto lc_toggle_alt_conf_view = [] () {
+
       graphics_info_t g;
       std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
-      const std::string &current_alt_conf = pp.second.second.alt_conf;
       if (pp.first) {
          int imol = pp.second.first;
-         g.molecules[imol].alt_conf_view_next_alt_conf(current_alt_conf);
+         std::vector<std::string> alt_confs = molecules[imol].alt_confs_in_molecule();
+         if (! alt_confs.empty()) {
+            std::vector<std::string>::iterator it =
+               std::find(alt_confs.begin(), alt_confs.end(), current_alt_conf); // not const
+            std::string new_alt_conf;
+            if (it == alt_confs.end()) {
+               new_alt_conf = alt_confs[0];
+            } else {
+               std::size_t index = std::distance(alt_confs.begin(), it);
+               std::size_t next_index = index + 1;
+               if (next_index == alt_confs.size()) {
+                  next_index = 0;
+               }
+               new_alt_conf = alt_confs[next_index];
+            }
+            std::string cid = "//*/*/*:" + new_alt_conf;
+            molecules[imol].set_new_non_drawn_bonds(cid);
+            current_alt_conf = new_alt_conf; // for next time
+            graphics_draw();
+         }
       }
       return gboolean(TRUE);
    };

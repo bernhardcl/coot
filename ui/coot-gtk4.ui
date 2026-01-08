@@ -38,18 +38,15 @@
         </item>
         <item>
           <attribute name="label">Fetch PDB using Accession Code...</attribute>
-          <attribute name="action">app.show_accession_code_fetch_frame</attribute>
-          <attribute name="target">oca</attribute>
+          <attribute name="action">app.show_accession_code_fetch_frame_oca</attribute>
         </item>
         <item>
           <attribute name="label">Fetch PDB &amp; Map using EDS...</attribute>
-          <attribute name="action">app.show_accession_code_fetch_frame</attribute>
-          <attribute name="target">eds</attribute>
+          <attribute name="action">app.show_accession_code_fetch_frame_eds</attribute>
         </item>
         <item>
           <attribute name="label">Fetch PDB and Map Using PDB-REDO...</attribute>
-          <attribute name="action">app.show_accession_code_fetch_frame</attribute>
-          <attribute name="target">pdb-redo</attribute>
+          <attribute name="action">app.show_accession_code_fetch_frame_pdb_redo</attribute>
         </item>
         <item>
          <attribute name="label">Fetch Corresponding AlphaFold Model &amp; Superpose</attribute>
@@ -57,8 +54,7 @@
         </item>
          <item>
          <attribute name="label">Fetch AlphaFold Model using Uniprot ID...</attribute>
-          <attribute name="action">app.show_accession_code_fetch_frame</attribute>
-          <attribute name="target">uniprot-id</attribute>
+          <attribute name="action">app.show_accession_code_fetch_frame_uniprot_id</attribute>
         </item>
         <item>
           <attribute name="label">Fetch PDBe Ligand Description</attribute>
@@ -66,8 +62,7 @@
         </item>
         <item>
           <attribute name="label">Fetch COD Entry...</attribute>
-          <attribute name="action">app.show_accession_code_fetch_frame</attribute>
-          <attribute name="target">cod</attribute>
+          <attribute name="action">app.show_accession_code_fetch_frame_cod</attribute>
         </item>
         <item>
           <attribute name="label">Fetch Map from EMDB...</attribute>
@@ -456,7 +451,7 @@
         <submenu>
           <attribute name="label">NCS Model Tools...</attribute>
           <item>
-            <attribute name="label">Copy NCS Residue Range</attribute>
+            <attribute name="label">Copy NCS Residue Range...</attribute>
             <attribute name="action">app.copy_ncs_residue_range_action</attribute>
           </item>
           <item>
@@ -467,15 +462,21 @@
           <!--   <attribute name="label">Copy NCS Ghosts by Residue Range...</attribute> -->
           <!--   <attribute name="action">app.copy_ncs_ghosts_by_residue_range_action</attribute> -->
           <!-- </item> -->
-          <item>
-            <attribute name="label">NCS Jumping...</attribute>
-            <attribute name="action">app.ncs_jumping_action</attribute>
-          </item>
-          <item>
-            <attribute name="label">NCS Ligands...</attribute>
-            <attribute name="action">app.ncs_ligands_action</attribute>
-          </item>
+          <!-- I don't know what this is supposed to do now -->
+          <!-- <item> -->
+          <!--   <attribute name="label">NCS Jumping...</attribute> -->
+          <!--   <attribute name="action">app.ncs_jumping_action</attribute> -->
+          <!-- </item> -->
+          <!-- not implemented yet (seems esoteric these days) -->
+          <!-- <item> -->
+          <!--   <attribute name="label">NCS Ligands...</attribute> -->
+          <!--   <attribute name="action">app.ncs_ligands_action</attribute> -->
+          <!-- </item> -->
         </submenu>
+        <item>
+          <attribute name="label">N-linked Glycan...</attribute>
+          <attribute name="action">app.glyco_wta_action</attribute>
+        </item>
         <item>
           <attribute name="label">Phosphorylate This Residue</attribute>
           <attribute name="action">app.phosphorylate_this_residue_action</attribute>
@@ -486,13 +487,11 @@
         </item>
         <item>
           <attribute name="label">Rebuild Fragment using DBLoop (Small)</attribute>
-          <attribute name="action">app.rebuild_fragment_using_dbloop_action</attribute>
-          <attribute name="target">small</attribute>
+          <attribute name="action">app.rebuild_fragment_using_dbloop_action_small</attribute>
         </item>
         <item>
           <attribute name="label">Rebuild Fragment using DBLoop (Bigger)</attribute>
-          <attribute name="action">app.rebuild_fragment_using_dbloop_action</attribute>
-          <attribute name="target">bigger</attribute>
+          <attribute name="action">app.rebuild_fragment_using_dbloop_action_bigger</attribute>
         </item>
         <item>
           <attribute name="label">Replace Residue...</attribute>
@@ -532,7 +531,11 @@
       <attribute name="label">Draw</attribute>
       <submenu>
         <attribute name="label">View</attribute>
-        <section>
+          <section>
+            <item>
+              <attribute name="label">Alt-Conf Switcher</attribute>
+              <attribute name="action">app.alt_conf_switcher_action</attribute>
+            </item>
 
           <!-- <item> -->
           <!--   <attribute name="label">Background Colour...</attribute> -->
@@ -567,7 +570,6 @@
             </item>
           </submenu>
          
-
           <item>
             <attribute name="label">Display Only Active</attribute>
             <attribute name="action">app.display_only_active_action</attribute>
@@ -636,7 +638,7 @@
             <attribute name="action">app.bond_colours_action</attribute>
           </item>
           <item>
-            <attribute name="label">Bond Parameters...</attribute>
+            <attribute name="label">Bond and Atom Parameters...</attribute>
             <attribute name="action">app.bond_parameters_action</attribute>
           </item>
 
@@ -644,18 +646,15 @@
             <attribute name="label">Bond Smoothness</attribute>
             <item>
               <attribute name="label">Default</attribute>
-              <attribute name="action">app.bond_smoothness_action</attribute>
-              <attribute name="target">1</attribute>
+              <attribute name="action">app.bond_smoothness_action_1</attribute>
             </item>
             <item>
               <attribute name="label">Smooth</attribute>
-              <attribute name="action">app.bond_smoothness_action</attribute>
-              <attribute name="target">2</attribute>
+              <attribute name="action">app.bond_smoothness_action_2</attribute>
             </item>
             <item>
               <attribute name="label">Fine</attribute>
-              <attribute name="action">app.bond_smoothness_action</attribute>
-              <attribute name="target">3</attribute>
+              <attribute name="action">app.bond_smoothness_action_3</attribute>
             </item>
           </submenu>
 
@@ -1099,58 +1098,51 @@
     <section>
       <item>
         <attribute name="label" translatable="yes">Atom</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">atom</attribute>
+        <attribute name="action">app.delete_item_atom</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Water</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">water</attribute>
+        <attribute name="action">app.delete_item_water</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Side-chain</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">side-chain</attribute>
+        <attribute name="action">app.delete_item_side_chain</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Side-chains in Residue Range</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">side-chain-residue-range</attribute>
+        <attribute name="action">app.delete_item_side_chain_residue_range</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Side-chains in Chain</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">side-chains-in-chain</attribute>
+        <attribute name="action">app.delete_item_side_chains_in_chain</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Hydrogen Atoms in Residue</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">hydrogen-atoms-in-residue</attribute> <!-- this target was changed -->
+        <attribute name="action">app.delete_item_hydrogen_atoms_in_residue</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Residue</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">residue</attribute>
+        <attribute name="action">app.delete_item_residue</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Residue Atoms with Alt-conf</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">residue-atoms-with-alt-conf</attribute>
+        <attribute name="action">app.delete_item_residue_atoms_with_alt_conf</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Residue Range</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">residue-range</attribute>
+        <attribute name="action">app.delete_item_residue_range</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Chain</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">chain</attribute>
+        <attribute name="action">app.delete_item_chain</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Hydrogen Atoms in Molecule</attribute>
-        <attribute name="action">app.delete_item</attribute>
-        <attribute name="target">hydrogen-atoms-in-molecule</attribute>
+        <attribute name="action">app.delete_item_hydrogen_atoms_in_molecule</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Pick Delete Atom(s)</attribute>
+        <attribute name="action">app.delete_item_pick_delete</attribute>
       </item>
    </section>
   </menu>
@@ -1159,28 +1151,23 @@
     <section>
       <item>
         <attribute name="label" translatable="no">Adenine (A)</attribute>
-        <attribute name="action">app.mutate_base_to_type</attribute>
-        <attribute name="target">A</attribute>
+        <attribute name="action">app.mutate_base_to_type_A</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">Guanine (G)</attribute>
-        <attribute name="action">app.mutate_base_to_type</attribute>
-        <attribute name="target">G</attribute>
+        <attribute name="action">app.mutate_base_to_type_G</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">Cytosine (C)</attribute>
-        <attribute name="action">app.mutate_base_to_type</attribute>
-        <attribute name="target">C</attribute>
+        <attribute name="action">app.mutate_base_to_type_C</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">Thymine (T)</attribute>
-        <attribute name="action">app.mutate_base_to_type</attribute>
-        <attribute name="target">T</attribute>
+        <attribute name="action">app.mutate_base_to_type_T</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">Uracil (U)</attribute>
-        <attribute name="action">app.mutate_base_to_type</attribute>
-        <attribute name="target">U</attribute>
+        <attribute name="action">app.mutate_base_to_type_U</attribute>
       </item>
     </section>
   </menu>
@@ -1351,108 +1338,87 @@
     <section>
       <item>
         <attribute name="label" translatable="no">ALA (A)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">ALA</attribute>
+        <attribute name="action">app.mutate_to_type_ALA</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">ARG (R)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">ARG</attribute>
+        <attribute name="action">app.mutate_to_type_ARG</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">ASN (N)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">ASN</attribute>
+        <attribute name="action">app.mutate_to_type_ASN</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">ASP (D)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">ASP</attribute>
+        <attribute name="action">app.mutate_to_type_ASP</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">CYS (C)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">CYS</attribute>
+        <attribute name="action">app.mutate_to_type_CYS</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">GLN (Q)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">GLN</attribute>
+        <attribute name="action">app.mutate_to_type_GLN</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">GLU (E)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">GLU</attribute>
+        <attribute name="action">app.mutate_to_type_GLU</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">GLY (G)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">GLY</attribute>
+        <attribute name="action">app.mutate_to_type_GLY</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">HIS (H)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">HIS</attribute>
+        <attribute name="action">app.mutate_to_type_HIS</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">ILE (I)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">ILE</attribute>
+        <attribute name="action">app.mutate_to_type_ILE</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">LEU (L)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">LEU</attribute>
+        <attribute name="action">app.mutate_to_type_LEU</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">LYS (K)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">LYS</attribute>
+        <attribute name="action">app.mutate_to_type_LYS</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">MET (M)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">MET</attribute>
+        <attribute name="action">app.mutate_to_type_MET</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">MSE</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">MSE</attribute>
+        <attribute name="action">app.mutate_to_type_MSE</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">PHE (F)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">PHE</attribute>
+        <attribute name="action">app.mutate_to_type_PHE</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">PRO (P)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">PRO</attribute>
+        <attribute name="action">app.mutate_to_type_PRO</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">SER (S)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">SER</attribute>
+        <attribute name="action">app.mutate_to_type_SER</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">THR (T)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">THR</attribute>
+        <attribute name="action">app.mutate_to_type_THR</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">TRP (W)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">TRP</attribute>
+        <attribute name="action">app.mutate_to_type_TRP</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">TYR (Y)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">TYR</attribute>
+        <attribute name="action">app.mutate_to_type_TYR</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">VAL (V)</attribute>
-        <attribute name="action">app.mutate_to_type</attribute>
-        <attribute name="target">VAL</attribute>
+        <attribute name="action">app.mutate_to_type_VAL</attribute>
       </item>
     </section>
   </menu>
@@ -1502,7 +1468,7 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
     <property name="license-type">lgpl-3-0</property>
     <property name="logo-icon-name">coot</property>
     <property name="program-name">Coot</property>
-    <property name="version">1.1.18</property>
+    <property name="version">1.1.20</property>
     <property name="website">https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot</property>
     <property name="website-label">The Coot Website</property>
     <signal name="close-request" handler="on_about_dialog_close_request"/>
@@ -3170,6 +3136,7 @@ Calculate a skeleton now?
                     <property name="margin-end">8</property>
                     <property name="margin-top">4</property>
                     <property name="margin-bottom">4</property>
+                    <property name="active">0</property>
                     <items>
                       <item translatable="yes">Check</item>
                       <item translatable="yes">Delete</item>
@@ -4803,6 +4770,7 @@ that you wish to delete.               </property>
         </child>
         <child type="action">
           <object class="GtkBox" id="hbox71">
+            <property name="halign">end</property>
             <child>
               <object class="GtkButton" id="edit_chi_angles_cancel_button">
                 <property name="label" translatable="yes">  Cancel  </property>
@@ -6772,6 +6740,15 @@ Do you want to continue?
               </child>
 
               <child>
+                <object class="GtkButton" id="alt-conf-switcher-button">
+                  <property name="label" translatable="yes">Clear AltConf Switcher</property>
+                  <property name="can-focus">0</property>
+                  <property name="visible">False</property>
+                  <signal name="clicked" handler="on_alt_conf_switcher_button_clicked" swapped="no"/>
+                </object>
+              </child>
+
+              <child>
                 <object class="GtkBox" id="subprocess_running_box">
                   <property name="visible">False</property>
                   <property name="orientation">vertical</property>
@@ -7380,16 +7357,16 @@ Do you want to continue?
                 <property name="margin-end">5</property>
                 <property name="margin-start">5</property>
                 <property name="margin-top">5</property>
-		<child>
-		  <object class="GtkBox" id="copy_molecule_vbox">
-		    <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkBox" id="copy_molecule_vbox">
+                    <property name="orientation">vertical</property>
                     <child>
                       <object class="GtkLabel">
-			<property name="label">Molecule to Copy:</property>
-			<property name="margin-end">6</property>
-			<property name="margin-start">6</property>
+                        <property name="label">Molecule to Copy:</property>
+                        <property name="margin-end">6</property>
+                        <property name="margin-start">6</property>
                       </object>
-		    </child>
+                    </child>
 
                     <child>
                       <object class="GtkComboBoxText" id="copy_molecule_comboboxtext">
@@ -7399,7 +7376,7 @@ Do you want to continue?
                         <property name="margin-bottom">4</property>
                       </object>
                     </child>
-		    <child>
+                    <child>
                       <object class="GtkBox">
                         <property name="orientation">horizontal</property>
                         <property name="halign">end</property>
@@ -7428,11 +7405,73 @@ Do you want to continue?
                         </child>
                       </object>
                     </child>
-		  </object>
-		</child>
-	      </object>
-	    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
 
+            <child type="overlay">
+              <object class="GtkFrame" id="glyco-wta-frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox" id="glyco-wta-vbox">
+                    <property name="orientation">vertical</property>
+
+                    <child>
+                      <object class="GtkComboBoxText" id="glyco_wta_glycosylation_name_comboboxtext">
+                        <property name="margin-start">4</property>
+                        <property name="margin-end">4</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                        <property name="active">1</property>
+                        <items>
+                               <item>NAG-NAG-BMA</item>
+                               <item>High Mannose</item>
+                               <item>Hybrid</item>
+                               <item>Mammalian Biantennary</item>
+                               <item>Plant Biantennary</item>
+                        </items>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="halign">end</property>
+                        <child>
+                          <object class="GtkButton" id="glyco_wta_cancel_button">
+                            <signal name="clicked" handler="on_glyco_wta_cancel_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Cancel</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="glyco_wta_fit_button">
+                            <signal name="clicked" handler="on_glyco_wta_fit_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Build</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                            <style>
+                              <class name="suggested-action"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
             <child type="overlay">
               <object class="GtkFrame" id="copy_fragment_frame">
                 <property name="halign">center</property>
@@ -7580,6 +7619,234 @@ Do you want to continue?
 	    </child>
 
             <child type="overlay">
+              <object class="GtkFrame" id="copy_ncs_chain_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="spacing">6</property>
+                    <property name="orientation">vertical</property>
+                    <property name="margin-start">6</property>
+                    <property name="margin-end">6</property>
+                    <property name="margin-bottom">6</property>
+                    <property name="margin-top">6</property>
+
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Copy NCS Chain in Molecule</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkComboBoxText" id="copy_ncs_chain_molecule_combobox">
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes"> Copy ChainID </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="copy_ncs_chain_entry">
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes"> to others</property>
+                            <property name="justify">center</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="halign">end</property>
+                        <child>
+                          <object class="GtkButton" id="copy_ncs_chain_cancel_button">
+                            <signal name="clicked" handler="on_copy_ncs_chain_cancel_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Cancel</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="copy_ncs_chain_copy_button">
+                            <signal name="clicked" handler="on_copy_ncs_chain_copy_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Copy</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                            <style>
+                              <class name="suggested-action"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="copy_ncs_residue_range_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="spacing">6</property>
+                    <property name="orientation">vertical</property>
+                    <property name="margin-start">6</property>
+                    <property name="margin-end">6</property>
+                    <property name="margin-bottom">6</property>
+                    <property name="margin-top">6</property>
+
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Copy NCS Residues in Molecule</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkComboBoxText" id="copy_ncs_residue_range_molecule_combobox">
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes"> Copy ChainID </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="copy_ncs_residue_range_chain_entry">
+                            <property name="max-width-chars">4</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes"> ResNo Start</property>
+                            <property name="justify">center</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="copy_ncs_residue_range_start_residue_number_entry">
+                            <property name="max-width-chars">4</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes"> ResNo End</property>
+                            <property name="justify">center</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="copy_ncs_residue_range_end_residue_number_entry">
+                            <property name="max-width-chars">4</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="halign">end</property>
+                        <child>
+                          <object class="GtkButton" id="copy_ncs_residue_range_cancel_button">
+                            <signal name="clicked" handler="on_copy_ncs_residue_range_cancel_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Cancel</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="copy_ncs_residue_range_copy_button">
+                            <signal name="clicked" handler="on_copy_ncs_residue_range_copy_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Copy</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                            <style>
+                              <class name="suggested-action"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="keyboard_mutate_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">2</property>
+
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Mutate to Type: (single-letter-code)</property>
+                        <property name="justify">center</property>
+                        <property name="margin-start">4</property>
+                        <property name="margin-end">4</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkEntry" id="keyboard_mutate_entry">
+                        <property name="can-focus">1</property>
+                        <property name="primary-icon-tooltip-text" translatable="yes">Type here the single letter code of the residue type - or press &quot;Esc&quot; to dismiss this dialog</property>
+                        <signal name="activate" handler="on_keyboard_mutate_entry_activate" swapped="no"/>
+                        <signal name="changed" handler="on_keyboard_mutate_entry_changed" swapped="no"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
               <object class="GtkFrame" id="acedrg_running_frame">
                 <property name="halign">center</property>
                 <property name="valign">start</property>
@@ -7594,7 +7861,7 @@ Do you want to continue?
                     <property name="margin-end">6</property>
                     <property name="margin-start">6</property>
                   </object>
-		</child>
+                </child>
               </object>
             </child>
 
@@ -10031,11 +10298,38 @@ Do you want to continue?
             </child>
 
             <child type="overlay">
+              <object class="GtkLabel" id="general_use_overlay_label">
+                <property name="visible">False</property>
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="label" translatable="yes">---</property>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkLabel" id="select_a_chi_angle_label">
+                <property name="visible">False</property>
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="label" translatable="yes"> Select A Χ Angle</property>
+              </object>
+            </child>
+
+            <child type="overlay">
               <object class="GtkLabel" id="session_saved_label">
                 <property name="visible">False</property>
                 <property name="halign">center</property>
                 <property name="valign">start</property>
                 <property name="label" translatable="yes"> Session Saved </property>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkLabel" id="occupancy_b_factors_updated_label">
+                <property name="visible">False</property>
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="label" translatable="yes">Occupancy/B-factor of Residue Updated</property>
               </object>
             </child>
 
@@ -10604,10 +10898,19 @@ Do you want to continue?
 	<child>
 	  <object class="GtkButton" id="add_other_solvent_molecules_new_residue_type_button">
 	    <property name="label">Add a New Residue Type...</property>
-            <property name="visible">False</property>
+            <property name="visible">True</property>
 	    <signal name="clicked" handler="on_add_other_solvent_molecules_new_residue_type_button_clicked" swapped="no"/>
 	  </object>
 	</child>
+        <child>
+              <object class="GtkEntry" id="add_other_solvent_molecules_new_residue_type_entry">
+                <property name="can-focus">1</property>
+                <property name="max-width-chars">20</property>
+                <property name="text"></property>
+                <property name="visible">False</property>
+                <signal name="activate" handler="on_add_other_solvent_molecules_new_residue_type_entry_activate"/>
+              </object>
+         </child>
 
         <child>
           <object class="GtkSeparator">
@@ -10978,23 +11281,7 @@ l              <object class="GtkComboBox" id="ramachandran_plot_molecule_choose
     <child type="titlebar">
     </child>
   </object>
-  <object class="GtkDialog" id="keyboard_mutate_dialog">
-    <property name="deletable">0</property>
-    <child>
-      <object class="GtkBox">
-        <property name="orientation">vertical</property>
-        <property name="spacing">2</property>
-        <child>
-          <object class="GtkEntry" id="keyboard_mutate_entry">
-            <property name="can-focus">1</property>
-            <property name="primary-icon-tooltip-text" translatable="yes">Type here the single letter code of the residue type - or press &quot;Esc&quot; to dismiss this dialog</property>
-          </object>
-        </child>
-      </object>
-    </child>
-    <child type="titlebar">
-    </child>
-  </object>
+
   <object class="GtkDialog" id="least_squares_dialog">
     <property name="title" translatable="yes">Least Squares Fit</property>
     <property name="hide-on-close">true</property>
@@ -11288,7 +11575,6 @@ l              <object class="GtkComboBox" id="ramachandran_plot_molecule_choose
   <object class="GtkDialog" id="ligand_big_blob_dialog">
     <property name="height-request">250</property>
     <property name="title" translatable="yes">Coot: Unmodelled blobs of density</property>
-    <signal name="destroy" handler="on_ligand_big_blob_dialog_destroy" swapped="no"/>
     <child>
       <object class="GtkBox" id="dialog-vbox36">
         <property name="orientation">vertical</property>
@@ -11333,7 +11619,7 @@ density (too big to be waters):
           </object>
         </child>
 
-        <child type="action">
+        <child>
           <object class="GtkButton" id="ligand_big_blob_dismiss_button">
             <property name="label" translatable="yes">  Dismiss  </property>
             <property name="can-focus">1</property>
@@ -11348,8 +11634,6 @@ density (too big to be waters):
 
       </object>
     </child>
-    <child type="titlebar">
-    </child>
   </object>
 
   <object class="GtkDialog" id="ligand_no_blobs_dialog">
@@ -11357,17 +11641,7 @@ density (too big to be waters):
     <child>
       <object class="GtkBox" id="dialog-vbox62">
         <property name="orientation">vertical</property>
-         <child type="action">
-              <object class="GtkBox" id="hbox106">
-                <child>
-                  <object class="GtkButton" id="ligand_no_blobs_OK_button">
-                    <property name="label" translatable="yes">   OK!   </property>
-                    <property name="use-underline">1</property>
-                    <signal name="clicked" handler="on_ligand_no_blobs_OK_button_clicked" swapped="no"/>
-                  </object>
-                </child>
-              </object>
-        </child>
+
         <child>
           <object class="GtkFrame" id="frame117">
             <child>
@@ -11375,7 +11649,7 @@ density (too big to be waters):
                 <property name="label" translatable="yes">
 
 
-     Coot found no unexplained blobs
+      Coot found no unexplained blobs      
 
 
                 </property>
@@ -11384,9 +11658,25 @@ density (too big to be waters):
             </child>
           </object>
         </child>
+
+        <child>
+          <object class="GtkBox" id="hbox106">
+            <property name="margin-top">6</property>
+            <property name="margin-bottom">6</property>
+            <property name="margin-start">6</property>
+            <property name="margin-end">6</property>
+            <property name="halign">end</property>
+            <child>
+              <object class="GtkButton" id="ligand_no_blobs_OK_button">
+                    <property name="label" translatable="yes">   OK!   </property>
+                    <property name="use-underline">1</property>
+                    <signal name="clicked" handler="on_ligand_no_blobs_OK_button_clicked" swapped="no"/>
+              </object>
+            </child>
+          </object>
+        </child>
+
       </object>
-    </child>
-    <child type="titlebar">
     </child>
   </object>
 
@@ -11544,25 +11834,25 @@ density (too big to be waters):
     <child>
       <object class="GtkBox" id="mask-map-by-atom-selection-dialog-vbox">
         <property name="orientation">vertical</property>
-        <property name="margin-top">6</property>
-        <property name="margin-bottom">6</property>
-        <property name="margin-start">6</property>
-        <property name="margin-end">6</property>
+        <property name="margin-top">4</property>
+        <property name="margin-bottom">4</property>
+        <property name="margin-start">4</property>
+        <property name="margin-end">4</property>
 
         <child>
           <object class="GtkFrame">
-            <property name="margin-top">6</property>
-            <property name="margin-bottom">6</property>
+            <property name="margin-top">4</property>
+            <property name="margin-bottom">4</property>
             <child>
               <object class="GtkBox">
                 <property name="orientation">vertical</property>
                 <child>
                   <object class="GtkLabel">
                     <property name="label" translatable="yes">Select Map:</property>
-                    <property name="margin-top">6</property>
+                    <property name="margin-top">4</property>
                     <property name="margin-bottom">2</property>
-                    <property name="margin-start">6</property>
-                    <property name="margin-end">6</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
                   </object>
                 </child>
 
@@ -11570,15 +11860,15 @@ density (too big to be waters):
                   <object class="GtkComboBoxText" id="mask_map_by_atom_selection_map_combobox">
                     <property name="margin-top">6</property>
                     <property name="margin-bottom">6</property>
-                    <property name="margin-start">10</property>
-                    <property name="margin-end">10</property>
+                    <property name="margin-start">6</property>
+                    <property name="margin-end">6</property>
                   </object>
                 </child>
               </object>
             </child>
           </object>
         </child>
-        
+
         <child>
           <object class="GtkFrame">
             <property name="margin-top">6</property>
@@ -11600,8 +11890,8 @@ density (too big to be waters):
                   <object class="GtkComboBoxText" id="mask_map_by_atom_selection_model_combobox">
                     <property name="margin-top">6</property>
                     <property name="margin-bottom">6</property>
-                    <property name="margin-start">10</property>
-                    <property name="margin-end">10</property>
+                    <property name="margin-start">6</property>
+                    <property name="margin-end">6</property>
                   </object>
                 </child>
               </object>
@@ -11613,8 +11903,8 @@ density (too big to be waters):
           <object class="GtkBox" id="mask_map_by_atom_selection_atom_selection_hbox">>
           <property name="margin-top">6</property>
           <property name="margin-bottom">6</property>
-          <property name="margin-start">10</property>
-          <property name="margin-end">10</property>
+          <property name="margin-start">6</property>
+          <property name="margin-end">6</property>
           <child>
             <object class="GtkLabel">
               <property name="label" translatable="yes">Atom Selection: </property>
@@ -11658,7 +11948,7 @@ density (too big to be waters):
             <property name="label" translatable="yes">Invert Masking?</property>
           </object>
         </child>
-        
+
         <child>
           <object class="GtkSeparator">
             <property name="margin-top">4</property>
@@ -11695,7 +11985,7 @@ density (too big to be waters):
             </child>
           </object>
         </child>
-        
+
       </object>
     </child>
   </object>>
@@ -14964,6 +15254,10 @@ Sorry.
               <object class="GtkBox" id="hbox50">
                 <property name="homogeneous">1</property>
                 <property name="spacing">4</property>
+                <property name="margin-start">4</property>
+                <property name="margin-end">4</property>
+                <property name="margin-top">4</property>
+                <property name="margin-bottom">4</property>
                 <child>
                   <object class="GtkButton" id="rotamer_selection_cancel_button">
                     <property name="label">Cancel</property>
@@ -17625,6 +17919,7 @@ Move a copy?</property>
         </child>
         <child>
           <object class="GtkBox">
+            <property name="halign">end</property>
             <child>
               <object class="GtkButton" id="curlew_dialog_close_button">
                 <property name="accessible-role">menu-item-radio</property>
@@ -17800,6 +18095,73 @@ Move a copy?</property>
       </object>
     </child>
   </object>
+
+  <object class="GtkDialog" id="first-startup-dialog">
+    <property name="title" translatable="yes">Coot: Configure Mouse</property>
+    <property name="default-width">500</property>
+    <child>
+      <object class="GtkBox" id="first_startup_dialog_vbox_internal">
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">First-time start-up:</property>
+            <property name="justify">center</property>
+            <property name="use-markup">1</property>
+            <property name="margin-top">12</property>
+            <property name="margin-bottom">12</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Which mouse button should be used for view rotation?</property>
+            <property name="justify">left</property>
+            <property name="margin-top">6</property>
+            <property name="margin-bottom">18</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkSeparator">
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">6</property>
+            <property name="halign">end</property>
+            <property name="margin-end">6</property>
+            <property name="margin-start">4</property>
+            <property name="margin-top">6</property>
+            <property name="margin-bottom">6</property>
+            <child>
+              <object class="GtkButton" id="first_startup_cancel_button">
+                <property name="label" translatable="yes">Cancel</property>
+                <signal name="clicked" handler="on_first_startup_cancel_button_clicked" />
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="first_startup_use_left_button">
+                <property name="label" translatable="yes">Left</property>
+                <signal name="clicked" handler="on_first_startup_use_left_button_clicked" />
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="first_startup_use_right_button">
+                <property name="label" translatable="yes">Right</property>
+                <signal name="clicked" handler="on_first_startup_use_right_button_clicked" />
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+
 
   <object class="GtkDialog" id="hole_dialog">
     <property name="title" translatable="yes">Coot: HOLE</property>
@@ -18044,6 +18406,12 @@ Move a copy?</property>
             </child>
             <child>
               <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Ctrl&gt;l</property>
+                <property name="title" translatable="yes">Go To Ligand</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
                 <property name="accelerator">o</property>
                 <property name="title" translatable="yes">NCS Other Chain</property>
               </object>
@@ -18090,7 +18458,7 @@ Move a copy?</property>
         <child>
           <object class="GtkShortcutsGroup">
             <property name="title">Map Functions</property>
-            
+
             <child>
               <object class="GtkShortcutsShortcut">
                 <property name="accelerator">plus</property>
@@ -18145,13 +18513,32 @@ Move a copy?</property>
                 <property name="title" translatable="yes">Reject Moving Atoms</property>
               </object>
             </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Shift&gt;R</property>
+                <property name="title" translatable="yes">Sphere Refine</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Shift&gt;E</property>
+                <property name="title" translatable="yes">Chain Refine</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">H</property>
+                <property name="title" translatable="yes">Triple-Refine Auto-Accept</property>
+              </object>
+            </child>
 
           </object>
         </child>
+
         <child>
           <object class="GtkShortcutsGroup">
             <property name="title">Building Functions</property>
-            
+
             <child>
               <object class="GtkShortcutsShortcut">
                 <property name="accelerator">y</property>
@@ -18178,14 +18565,8 @@ Move a copy?</property>
             </child>
             <child>
               <object class="GtkShortcutsShortcut">
-                <property name="accelerator">&lt;Shift&gt;R</property>
-                <property name="title" translatable="yes">Sphere Refine</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkShortcutsShortcut">
-                <property name="accelerator">&lt;Shift&gt;E</property>
-                <property name="title" translatable="yes">Chain Refine</property>
+                <property name="accelerator">q</property>
+                <property name="title" translatable="yes">Flip Peptide</property>
               </object>
             </child>
             <child>
@@ -18196,6 +18577,7 @@ Move a copy?</property>
             </child>
           </object>
         </child>
+
         <child>
           <object class="GtkShortcutsGroup">
             <property name="title">Function Keys</property>

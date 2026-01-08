@@ -31,6 +31,8 @@
 #include <sys/stat.h>
 
 #include "molecules-container.hh"
+#include "geometry/protein-geometry.hh"
+#include "geometry/residue-and-atom-specs.hh"
 #include "ideal/pepflip.hh"
 #include "coot-utils/coot-coord-utils.hh"
 #include "coot-utils/coot-map-utils.hh"
@@ -42,6 +44,7 @@
 #include "coords/mmdb.hh"
 #include "coords/mmdb-extras.hh"
 
+#include "mmdb2/mmdb_atom.h"
 #include "utils/logging.hh"
 extern logging logger;
 
@@ -113,10 +116,22 @@ molecules_container_t::init() {
    ligand_water_variance_limit = 0.1;
    ligand_water_sigma_cut_off = 1.75; // max moorhen points for tutorial 1.
 
+   max_number_of_simple_mesh_vertices = 200000;
+
    // debug();
    //
    // size_t sss = sizeof(molecules_container_t);
    // std::cout << "::::::::::::::::: sizeof molecules_container_t " << sss << std::endl;
+}
+
+unsigned int
+molecules_container_t::get_max_number_of_simple_mesh_vertices() const {
+   return max_number_of_simple_mesh_vertices;
+}
+
+void
+molecules_container_t::set_max_number_of_simple_mesh_vertices(unsigned int n) {
+   max_number_of_simple_mesh_vertices = n;
 }
 
 //! don't use this in emscript
@@ -2169,6 +2184,11 @@ molecules_container_t::get_map_contours_mesh(int imol, double position_x, double
    }
    auto tp_1 = std::chrono::high_resolution_clock::now();
    contouring_time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_1 - tp_0).count();
+   if (mesh.vertices.size() > max_number_of_simple_mesh_vertices) {
+      mesh.clear();
+      mesh.status = 0;
+      mesh.set_name("too-many-vertices-in-mesh");
+   }
    return mesh;
 }
 
@@ -2335,6 +2355,23 @@ molecules_container_t::change_to_first_rotamer(int imol, const std::string &resi
 }
 
 
+//! Change to the nth rotamer
+//!
+//! @param imol is the model molecule index
+//! @param residue_cid is the atom selection CID e.g "//A/15" (all the atoms in residue 15 of chain A)
+//! @param alt_conf is the alternate conformation, e.g. "A" or "B"
+//!
+//! @return the state of the change.
+int molecules_container_t::set_residue_to_rotamer_number(int imol, const std::string &residue_cid,
+                                                         const std::string &alt_conf, int rotamer_number) {
+
+   int state = 0;
+   if (is_valid_model_molecule(imol)) {
+      coot::residue_spec_t res_spec = residue_cid_to_residue_spec(imol, residue_cid);
+      state = molecules[imol].set_residue_to_rotamer_number(res_spec, alt_conf, rotamer_number, geom);
+   }
+   return state;
+}
 
 
 std::pair<int, unsigned int>
@@ -4779,7 +4816,8 @@ molecules_container_t::sharpen_blur_map(int imol_map, float b_factor, bool in_pl
             name += " Blur ";
          name += std::to_string(b_factor);
          imol_new = molecules.size();
-         coot::molecule_t cm(name, imol_new);
+         bool is_em = molecules[imol_map].is_EM_map();
+         coot::molecule_t cm(name, imol_new, is_em);
          cm.xmap = xmap_new;
          molecules.push_back(cm);
       }
@@ -6068,11 +6106,11 @@ molecules_container_t::get_overlap_dots_for_ligand(int imol, const std::string &
 
 //! not const because it can dynamically add dictionaries
 std::vector<coot::plain_atom_overlap_t>
-molecules_container_t::get_overlaps(int imol) {
+molecules_container_t::get_atom_overlaps(int imol) {
 
    std::vector<coot::plain_atom_overlap_t> v;
    if (is_valid_model_molecule(imol)) {
-      v = molecules[imol].get_overlaps(&geom);
+      v = molecules[imol].get_atom_overlaps(&geom);
    } else {
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
@@ -6173,6 +6211,26 @@ molecules_container_t::get_median_temperature_factor(int imol) const {
    }
    return b_factor;
 }
+
+//! Get the atom temperature factor
+//!
+//! @param imol is the model molecule index
+//! @param atom_cid is the selection cid for the atom
+//!
+//! @return a negative number on failure, otherwise the temperature factor
+float
+molecules_container_t::get_temperature_factor_of_atom(int imol, const std::string &atom_cid) const {
+
+   float b_factor = -1.1;
+   if (is_valid_model_molecule(imol)) {
+      b_factor = molecules[imol].get_temperature_factor_of_atom(atom_cid);
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return b_factor;
+}
+
+
 
 // return the atom name match on superposing the atoms of the given dictionaries
 std::map<std::string, std::string>
@@ -6517,6 +6575,32 @@ molecules_container_t::residue_is_nucleic_acid(int imol, const std::string &cid)
    return status;
 }
 
+
+//! Get the residue type
+//!
+//! @param imol is the model molecule index
+//! @param cid is the selection CID e.g "//A/16" (residue 16 of chain A)
+//! @return a string. Return an empty string on failure
+std::string
+molecules_container_t::get_residue_type(int imol, const std::string &cid) const {
+
+   std::string r;
+   if (is_valid_model_molecule(imol)) {
+      mmdb::Residue *res_p = get_residue_using_cid(imol, cid);
+      if (res_p) {
+         std::string chain_id = res_p->GetChainID();
+         std::string ins_code = res_p->GetInsCode();
+         int res_no = res_p->GetSeqNum();
+         coot::residue_spec_t rs(chain_id, res_no, ins_code);
+         r = molecules[imol].get_residue_name(rs);
+      }
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return r;
+}
+
+
 //! get atom distances
 //! other stuff here
 std::vector<coot::atom_distance_t>
@@ -6570,3 +6654,36 @@ molecules_container_t::get_radius_of_gyration(int imol) const {
    return d;
 
 }
+
+//! Get atom selection as json
+//!
+//! @param imol is the model molecule index
+//! @param cid is the atom selection CID e.g "//A/15/OH" (atom OH in residue 15 of chain A)
+std::string molecules_container_t::get_molecule_selection_as_json(int imol, const std::string &cid) const {
+
+   std::string s;
+   if (is_valid_model_molecule(imol)) {
+      s = molecules[imol].get_molecule_selection_as_json(cid);
+   } else {
+      logger.log(log_t::WARNING, logging::function_name_t(__FUNCTION__),
+		 "not a valid model molecule", imol);
+   }
+   return s;
+}
+
+//! get pucker info
+//!
+//! @param imol2 is the model molecule index
+//! @return a json string or an empty string on failure
+std::string
+molecules_container_t::get_pucker_analysis_info(int imol) const {
+
+   std::string pai;
+   if (is_valid_model_molecule(imol)) {
+      pai = molecules[imol].get_pucker_analysis_info();
+   } else {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+   }
+   return pai;
+}
+

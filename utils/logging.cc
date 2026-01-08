@@ -215,6 +215,25 @@ logging::log(log_t type_in, const function_name_t &fn, const std::string &s1, co
 }
 
 void
+logging::log(log_t type_in, const function_name_t &fn,
+             const std::string &s1, const std::string &s2, const std::string &s3) {
+
+   log_item l(type_in, fn);
+   timeval current_time;
+   int success = gettimeofday(&current_time, NULL);
+   if (success == 0) // was successful
+      l.t = current_time.tv_sec;
+   l.add_to_message(s1);
+   l.add_to_message(" ");
+   l.add_to_message(s2);
+   l.add_to_message(" ");
+   l.add_to_message(s3);
+   history.push_back(l);
+   output_to_terminal_maybe();
+   notify();
+}
+
+void
 logging::log(log_t type_in, const function_name_t &fn, const std::string &s1, int i) {
 
    log_item l(type_in, fn);
@@ -229,6 +248,24 @@ logging::log(log_t type_in, const function_name_t &fn, const std::string &s1, in
    output_to_terminal_maybe();
    notify();
 }
+
+void
+logging::log(log_t type_in, const function_name_t &fn, const std::string &s1, int i, int j) {
+
+   log_item l(type_in, fn);
+   timeval current_time;
+   int success = gettimeofday(&current_time, NULL);
+   if (success == 0) // was successful
+      l.t = current_time.tv_sec;
+   l.add_to_message(s1);
+   l.add_to_message(" ");
+   l.add_to_message(std::to_string(i));
+   l.add_to_message(std::to_string(j));
+   history.push_back(l);
+   output_to_terminal_maybe();
+   notify();
+}
+
 
 void
 logging::log(log_t type_in, const function_name_t &fn, const std::string &s1, int i, const std::string &s2) {
@@ -541,6 +578,44 @@ logging::log(log_t type_in, ltw l1, ltw l2, ltw l3, ltw l4, ltw l5, ltw l6) {
 }
 
 void
+logging::log(log_t type_in,
+             logging::ltw const &l1, logging::ltw const &l2,
+             logging::ltw const &l3, logging::ltw const &l4,
+             logging::ltw const &l5, logging::ltw const &l6,
+             logging::ltw const &l7, logging::ltw const &l8,
+             logging::ltw const &l9, logging::ltw const &l10) {
+
+   log_item l;
+   l.type = type_in;
+   timeval current_time;
+   int success = gettimeofday(&current_time, NULL);
+   if (success == 0) // was successful
+      l.t = current_time.tv_sec;
+   l.message += l1.to_string();
+   l.message += " ";
+   l.message += l2.to_string();
+   l.message += " ";
+   l.message += l3.to_string();
+   l.message += " ";
+   l.message += l4.to_string();
+   l.message += " ";
+   l.message += l5.to_string();
+   l.message += " ";
+   l.message += l6.to_string();
+   l.message += " ";
+   l.message += l7.to_string();
+   l.message += " ";
+   l.message += l8.to_string();
+   l.message += " ";
+   l.message += l9.to_string();
+   l.message += " ";
+   l.message += l10.to_string();
+   history.push_back(l);
+   output_to_terminal_maybe();
+   notify();
+}
+
+void
 logging::log(log_t type_in, const std::string &s1, const double &d1, const std::string &s2, const double &d2) {
 
    log_item l;
@@ -632,6 +707,7 @@ logging::log_item::type_as_string() const {
    if (type == log_t::DEBUG)       tt = "DEBUG::  ";
    if (type == log_t::ERROR)       tt = "ERROR::  ";
    if (type == log_t::WARNING)     tt = "WARNING::";
+   if (type == log_t::GL_ERROR)    tt = "GL_ERROR::";
    if (type == log_t::UNSPECIFIED) tt = "UNSPECIFIED::";
    return tt;
 }

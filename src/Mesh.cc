@@ -775,8 +775,12 @@ Mesh::setup_buffers() {
 
    // 20250524-PE this is often not an error with EM maps, say.
 #if 0
-   if (vertices.empty())  std::cout << "WARNING:: Mesh::setup_buffers() zero vertices -  probably an error" << std::endl;
-   if (triangles.empty()) std::cout << "WARNING:: Mesh::setup_buffers() zero triangles - probably an error" << std::endl;
+   if (vertices.empty())
+      std::cout << "WARNING:: Mesh::setup_buffers() zero vertices -  probably an error"
+                << std::endl;
+   if (triangles.empty())
+      std::cout << "WARNING:: Mesh::setup_buffers() zero triangles - probably an error"
+                << std::endl;
 #endif
 
    if (vertices.empty()) {
@@ -792,15 +796,19 @@ Mesh::setup_buffers() {
 #endif
    }
 
+   if (false) {
+      std::cout << "DEBUG:: in setup_buffers() " << name << " with first_time: " << first_time << std::endl;
+      std::cout << "DEBUG:: in setup_buffers() n_vertices: "  << vertices.size()  << std::endl;
+      std::cout << "DEBUG:: in setup_buffers() n_triangles: " << triangles.size() << std::endl;
+   }
+
    if (vertices.empty()) return;
    if (triangles.empty() && lines_vertex_indices.empty()) return;
 
    GLenum err = glGetError();
    if (err) {
-      // std::cout << "GL ERROR:: Mesh::setup_buffers() \"" << name << "\" --- start --- "
-      // << stringify_error_code(err) << std::endl;
-      logger.log(log_t::GL_ERROR, logging::function_name_t("Mesh::setup_buffers()"),
-		 stringify_error_code(err));
+      logger.log(log_t::GL_ERROR, logging::function_name_t("Mesh::setup_buffers"),
+                 name, stringify_error_code(err));
       err = glGetError();
       if (err != 0)
          std::cout << "GL ERROR:: Mesh::setup_buffers() \"" << name << "\" --- start --- stack-clear "
@@ -945,6 +953,11 @@ Mesh::setup_buffers() {
 
    first_time = false;
 
+   if (false) {
+      std::cout << "********** ending setup_buffers() " << name << " first_time: " << first_time << std::endl;
+      std::cout << "********** ending setup_buffers() " << name << " vao: " << vao << std::endl;
+   }
+
 }
 
 std::optional<glm::vec3>
@@ -1072,11 +1085,13 @@ Mesh::setup_rtsc_instancing(Shader *shader_p,
    n_instances_allocated = n_instances;
 
    if (false)
-      std::cout << "::::::::::::: debug:: setup_rtsc_instancing() calls setup_matrix_and_colour_instancing_buffers_standard()"
+      std::cout << "::::::::::::: debug:: setup_rtsc_instancing() calls "
+                << "setup_matrix_and_colour_instancing_buffers_standard()"
                 << std::endl;
    setup_matrix_and_colour_instancing_buffers_standard(mats, colours);
-   GLenum err = glGetError(); if (err) std::cout << "   error setup_instanced_cylinders() -- end -- "
-                                                 << err << std::endl;
+   GLenum err = glGetError();
+   if (err) std::cout << "   error setup_instanced_cylinders() -- end -- "
+                      << err << std::endl;
 
    if (false) {
       std::cout << "setup_rtsc_instancing(): " << vertices.size() << " vertices" << std::endl;
@@ -1225,7 +1240,7 @@ Mesh::setup_matrix_and_colour_instancing_buffers(const std::vector<glm::mat4> &m
    n_instances_allocated = n_instances;
 
    if (vao == VAO_NOT_SET)
-      std::cout << "ERROR:: inn setup_matrix_and_colour_instancing_buffers() You didn't correctly setup this Mesh "
+      std::cout << "GL ERROR:: in setup_matrix_and_colour_instancing_buffers() You didn't correctly setup this Mesh "
                 << name << " " << std::endl;
 
    glBindVertexArray(vao);
@@ -1328,7 +1343,7 @@ Mesh::setup_matrix_and_colour_instancing_buffers_standard(const std::vector<glm:
                       << err << std::endl;
 
    if (vao == VAO_NOT_SET)
-      std::cout << "ERROR:: in setup_matrix_and_colour_instancing_buffers_standard() You didn't correctly setup this Mesh "
+      std::cout << "GL ERROR:: in setup_matrix_and_colour_instancing_buffers_standard() You didn't correctly setup this Mesh "
                 << name << " " << std::endl;
 
    glBindVertexArray(vao);
@@ -1632,8 +1647,9 @@ Mesh::draw_instanced(int pass_type,
                      float pulsing_phase_distribution,
                      float z_rotation_angle) {
 
+   // debug_mode = true;
    if (debug_mode)
-      std::cout << "Mesh::draw_instanced() Mesh " << name << " -- start -- with shader " << shader_p->name
+      std::cout << "DEBUG:: Mesh::draw_instanced() Mesh " << name << " -- start -- with shader " << shader_p->name
                 << "pass_type: " << pass_type << " and do_pulse " << do_pulse
 		<< " and draw_this_mesh " << draw_this_mesh << std::endl;
 
@@ -1645,19 +1661,19 @@ Mesh::draw_instanced(int pass_type,
    if (n_triangles == 0) return;
 
    GLenum err = glGetError();
-   if (err) std::cout << "error Mesh::draw_instanced() " << name << " " << shader_p->name
+   if (err) std::cout << "GL ERROR:: Mesh::draw_instanced() " << name << " " << shader_p->name
                       << " -- start -- " << err << std::endl;
    shader_p->Use();
    const std::string &shader_name = shader_p->name;
 
    glUniformMatrix4fv(shader_p->mvp_uniform_location, 1, GL_FALSE, &mvp[0][0]);
    err = glGetError();
-   if (err) std::cout << "error:: " << shader_p->name << " draw_instanced() post mvp uniform "
+   if (err) std::cout << "GL ERROR:: " << shader_p->name << " draw_instanced() post mvp uniform "
                       << err << std::endl;
 
    glUniformMatrix4fv(shader_p->view_rotation_uniform_location, 1, GL_FALSE, &view_rotation_matrix[0][0]);
    err = glGetError();
-   if (err) std::cout << "error:: Mesh::draw_instanced() " << name << " " << shader_p->name
+   if (err) std::cout << "GL ERROR:: Mesh::draw_instanced() " << name << " " << shader_p->name
                       << " draw_instanced() post view rotation uniform " << err << std::endl;
 
    std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();

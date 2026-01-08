@@ -2,6 +2,7 @@
 #ifndef MOLECULES_CONTAINER_HH
 #define MOLECULES_CONTAINER_HH
 
+#include <memory>
 #ifdef SWIG
 #include "Python.h"
 #endif
@@ -368,6 +369,9 @@ class molecules_container_t {
    float ligand_water_variance_limit;
    float ligand_water_sigma_cut_off;
 #endif
+
+   unsigned int max_number_of_simple_mesh_vertices;
+
    // --------------------- init --------------------------
 #ifdef SKIP_FOR_PYTHON_DOXYGEN
 #else
@@ -654,7 +658,10 @@ public:
    //! @param residue_name the residue name
    //! @param imol_enc the molecule for the ligand (typically is imol_enc_any)
    //! @return an RDKit RDMol.
-   RDKit::RWMol get_rdkit_mol(const std::string &residue_name, int imol_enc);
+   // RDKit::RWMol get_rdkit_mol(const std::string &residue_name, int imol_enc);
+
+   // std::shared_ptr<RDKit::RWMol> get_rdkit_mol_shared(const std::string &residue_name, int imol_enc);
+
    //! get the 64base-encoded pickled string that represents the given residue/ligand name
    //!
    //! @param residue_name the residue name
@@ -877,6 +884,12 @@ public:
    //! @param cid is the atom selection CID e.g "//A/15/OH" (atom OH in residue 15 of chain A)
    //! @param occ_new is the new occupancy
    void set_occupancy(int imol, const std::string &cid, float occ_new);
+
+   //! Get atom selection as json
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the atom selection CID e.g "//A/15/OH" (atom OH in residue 15 of chain A)
+   std::string get_molecule_selection_as_json(int imol, const std::string &cid) const;
 
    //! Write a PNG for the given compound_id.
    //!
@@ -1287,6 +1300,13 @@ public:
    //! @return the residue name, return a blank string on residue not found.
    std::string get_residue_name(int imol, const std::string &chain_id, int res_no, const std::string &ins_code) const;
 
+   //! Get the residue type
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the selection CID e.g "//A/16" (residue 16 of chain A)
+   //! @return a string. Return an empty string on failure
+   std::string get_residue_type(int imol, const std::string &cid) const;
+
    //! Get the SMILES string for the give residue type
    //!
    //! @param residue 3 letter-code/name of the compound-id
@@ -1677,10 +1697,17 @@ public:
    //! @return a vector/list of the map molecule indices.
    std::vector<int> make_masked_maps_split_by_chain(int imol, int imol_map);
 
+   //! dedust map
+   //!
+   //! @param imol_map the map molecule index
+   //!
+   //! @return the map molecule index of the dedusted map or -1 on failure
+   int dedust_map(int imol);
+
    //! Set the map colour
    //!
    //! The next time a map mesh is requested, it will have this colour.
-   //! This does not affect the colour of the difference maps.
+   //! This does not apply to/affect the colour of the difference maps.
    //!
    //! RGB colour codes,
    //! e.g. green is r:0, g: 255, b:0
@@ -1844,6 +1871,15 @@ public:
    //!
    //! @return the change information.
    coot::molecule_t::rotamer_change_info_t change_to_first_rotamer(int imol, const std::string &residue_cid, const std::string &alt_conf);
+
+   //! Change to the nth rotamer
+   //!
+   //! @param imol is the model molecule index
+   //! @param residue_cid is the atom selection CID e.g "//A/15" (all the atoms in residue 15 of chain A)
+   //! @param alt_conf is the alternate conformation, e.g. "A" or "B"
+   //!
+   //! @return the state of the change.
+   int set_residue_to_rotamer_number(int imol, const std::string &residue_cid, const std::string &alt_conf, int rotamer_number);
 
    //! Delete item
    //!
@@ -2858,9 +2894,11 @@ public:
 
    //! Get Atom Overlaps
    // not const because it can dynamically add dictionaries
+   //! This function used to be called get_overlaps()
+   //!
    //! @param imol is the model molecule index
    //! @return a vector of atom overlap objects
-   std::vector<coot::plain_atom_overlap_t> get_overlaps(int imol);
+   std::vector<coot::plain_atom_overlap_t> get_atom_overlaps(int imol);
 
    //! Get the atom overlap score
    //!
@@ -2884,6 +2922,12 @@ public:
    //! @return a vector/list of `positioned_atom_spec_t`
    std::vector <positioned_atom_spec_t>
    get_atom_differences(int imol1, int imol2);
+
+   //! get pucker info
+   //!
+   //! @param imol is the model molecule index
+   //! @return a json string or an empty string on failure
+   std::string get_pucker_analysis_info(int imol) const;
 
 
    // -------------------------------- Coordinates and map validation ----------------------
@@ -2958,6 +3002,14 @@ public:
    //! @return a negative number on failure
    float get_median_temperature_factor(int imol) const;
 
+   //! Get the atom temperature factor
+   //!
+   //! @param imol is the model molecule index
+   //! @param atom_cid is the selection cid for the atom
+   //!
+   //! @return a negative number on failure, otherwise the temperature factor
+   float get_temperature_factor_of_atom(int imol, const std::string &atom_cid) const;
+
    //! Get interesting places
    //!
    //! This function does not work yet
@@ -3024,10 +3076,28 @@ public:
                                    float start_pos_x, float start_pos_y, float start_pos_z,
                                    float end_pos_x, float end_pos_y, float end_pos_z) const;
 
-   // Calculate the MMRRCC for the residues in the chain
-   // Multi Masked Residue Range Corellation Coefficient
+   //! Calculate the MMRRCC for the residues in the chain
+   //!
+   //! Multi Masked Residue Range Corellation Coefficient
+   //!
+   //! @param imol is the model molecule index
+   //! @param chain_id is the model chain_id
+   //! @param n_residue_per_residue_range is the number of residues in the residue range. 11
+   //!        is a reasonable number for a smooth plot
+   //! @param imol_map is the map molecule index
 #ifdef SWIG
 #else
+   std::pair<std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t>,
+             std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t> >
+   get_mmrrcc(int imol, const std::string &chain_id, unsigned int n_residue_per_residue_range, int imol_map) const;
+
+   //! This is a wrapper for get_mmrrcc(), using 11 for the `n_residue_per_residue_range`.
+   //!
+   //! Multi Masked Residue Range Corellation Coefficient
+   //!
+   //! @param imol is the model molecule index
+   //! @param chain_id is the model chain_id
+   //! @param imol_map is the map molecule index
    std::pair<std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t>,
              std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t> >
    mmrrcc(int imol, const std::string &chain_id, int imol_map) const;
@@ -3041,6 +3111,7 @@ public:
              std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t> >
    mmrrcc_internal(const atom_selection_container_t &asc,
                    const std::string &chain_id,
+                   unsigned int n_residue_per_residue_range,
                    const clipper::Xmap<float> &xmap) const;
 #endif
 
@@ -3078,6 +3149,22 @@ public:
    //!
    //! @return a `validation_information_t` object
    coot::validation_information_t get_q_score_for_cid(int imol_model, const std::string &cid, int imol_map) const;
+
+   //! get mean and variance of map at non-waters
+   //!
+   //! @param imol_model is the model molecule index
+   //! @param imol_map is the map molecule index
+   //!
+   //! @return the mean and variance or a negative number on failure
+   std::pair<float,float> get_mean_and_variance_of_density_for_non_water_atoms(int imol_coords, int imol_map) const;
+
+   //! Get spherical variance - typically for water atoms
+   //!
+   //! @param imol_model is the model molecule index
+   //! @param imol_map is the map molecule index
+   //!
+   //! @return the variance or a negative number on failure
+   float get_spherical_variance(int imol_map, int imol_model, const std::string &atom_cid, float mean_density_other_atoms) const;
 
    // -------------------------------- Rail Points ------------------------------------------
    //! \name Rail Points!
@@ -3434,6 +3521,9 @@ public:
    //!
    //! @return a unit-vector end-cap octohemisphere mesh
    coot::simple_mesh_t get_octahemisphere(unsigned int n_divisions) const;
+
+   unsigned int get_max_number_of_simple_mesh_vertices() const;
+   void set_max_number_of_simple_mesh_vertices(unsigned int n);
 
    //! Predicted alignment error (AlphaFold)
    //! @return a string of a png

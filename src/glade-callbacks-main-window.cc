@@ -22,8 +22,6 @@
  */
 
 
-#include "Python.h"
-
 #include <iostream>
 #include <gtk/gtk.h>
 
@@ -36,24 +34,18 @@
 
 // put preferences functions into their own file, not here.
 #include "coot-preferences.h"
-#include "c-interface-preferences.h"
 #include "rotate-translate-modes.hh"
-#include "restraints-editor-c.h"
-#include "generic-display-objects-c.h"
-#include "c-interface-refmac.h"
-#include "gtk-widget-conversion-utils.h"
-#include "curlew.h"
 #include "read-phs.h"
 #include "gtk-manual.h"
 #include "c-interface-refine.h"
 #include "widget-from-builder.hh"
-#include "read-molecule.hh" // 20230621-PE now with std::string args
 
 // this from callbacks.h (which I don't want to include here)
 typedef const char entry_char_type;
 
 #include <vector>
 #include "utils/coot-utils.hh"
+#include "ideal/add-linked-cho.hh"
 #include "graphics-info.h"
 
 #include "cc-interface.hh" // for read_ccp4_map()
@@ -636,6 +628,7 @@ on_get_monomer_ok_button_clicked(GtkButton       *button,
    }
    GtkWidget *frame = widget_from_builder("get_monomer_frame");
    gtk_widget_set_visible(frame, FALSE);
+   graphics_info_t::graphics_grab_focus();
 }
 
 
@@ -781,6 +774,19 @@ on_graphics_grab_focus_button_clicked (GtkButton       *button,
    graphics_info_t g;
    g.graphics_grab_focus();
 
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_alt_conf_switcher_button_clicked(GtkButton       *button,
+                                    gpointer         user_data) {
+
+   graphics_info_t g;
+   std::pair<int, mmdb::Atom *> aa = g.get_active_atom();
+   int imol = aa.first;
+   if (is_valid_model_molecule(imol)) {
+      clear_non_drawn_bonds(imol);
+   }
 }
 
 #include "cc-interface-graphics.hh"
@@ -1052,7 +1058,7 @@ on_acedrg_link_ok_button_clicked(GtkButton       *button,
       ss += atom_name_first;
       ss += " ";
       if (!cif_file_name_1.empty())
-         ss += std::string("FILE-1 ") + cif_file_name_1;
+         ss += std::string("FILE-1 ") + cif_file_name_1 + " ";
 
       ss += "RES-NAME-2 ";
       ss += residue_name_second;
@@ -1108,7 +1114,7 @@ on_acedrg_link_ok_button_clicked(GtkButton       *button,
                   ss += std::string("CHANGE BOND ") + std::string(change_bond_order_first_atom_1) + std::string(" ") +
                      std::string(change_bond_order_first_atom_2) + std::string(" ") + std::string(cbo_first) + " 1 ";
 
-      ss += "RES-NAME-2 ";
+      ss += " RES-NAME-2 ";
       ss += residue_name_second;
       ss += " ";
       ss += "ATOM-NAME-2 ";
@@ -1538,6 +1544,65 @@ on_copy_fragment_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
    gtk_widget_set_visible(frame, FALSE);
 }
 
+extern "C" G_MODULE_EXPORT
+void
+on_copy_ncs_chain_copy_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                      G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame = widget_from_builder("copy_ncs_chain_frame");
+   GtkWidget *combobox = widget_from_builder("copy_ncs_chain_molecule_combobox");
+   int imol = my_combobox_get_imol(GTK_COMBO_BOX(combobox));
+   GtkWidget *entry = widget_from_builder("copy_ncs_chain_entry");
+   std::string text = gtk_editable_get_text(GTK_EDITABLE(GTK_ENTRY(entry)));
+   copy_from_ncs_master_to_others(imol, text.c_str());
+   gtk_widget_set_visible(frame, FALSE);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_copy_ncs_chain_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                        G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame = widget_from_builder("copy_ncs_chain_frame");
+   gtk_widget_set_visible(frame, FALSE);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_copy_ncs_residue_range_copy_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                                G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame = widget_from_builder("copy_ncs_residue_range_frame");
+   GtkWidget *combobox = widget_from_builder("copy_ncs_residue_range_molecule_combobox");
+   int imol = my_combobox_get_imol(GTK_COMBO_BOX(combobox));
+   GtkWidget *entry_chain_id    = widget_from_builder("copy_ncs_residue_range_chain_entry");
+   GtkWidget *entry_resno_start = widget_from_builder("copy_ncs_residue_range_start_residue_number_entry");
+   GtkWidget *entry_resno_end   = widget_from_builder("copy_ncs_residue_range_end_residue_number_entry");
+   std::string chain_id_text    = gtk_editable_get_text(GTK_EDITABLE(GTK_ENTRY(entry_chain_id)));
+   std::string resno_start_text = gtk_editable_get_text(GTK_EDITABLE(GTK_ENTRY(entry_resno_start)));
+   std::string resno_end_text   = gtk_editable_get_text(GTK_EDITABLE(GTK_ENTRY(entry_resno_end)));
+   try {
+      int resno_start = coot::util::string_to_int(resno_start_text);
+      int resno_end   = coot::util::string_to_int(resno_end_text);
+      copy_residue_range_from_ncs_master_to_others(imol, chain_id_text.c_str(), resno_start, resno_end);
+   }
+   catch (const std::runtime_error &e) {
+      std::cout << "WARNING::" << e.what() << std::endl;
+      logger.log(log_t::WARNING, logging::function_name_t("on_copy_ncs_residue_range_copy_button_clicked"),
+                 "bad resno range", resno_start_text, resno_end_text);
+   }
+   gtk_widget_set_visible(frame, FALSE);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_copy_ncs_residue_range_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                                G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame = widget_from_builder("copy_ncs_residue_range_frame");
+   gtk_widget_set_visible(frame, FALSE);
+}
+
 
 
 extern "C" G_MODULE_EXPORT
@@ -1677,6 +1742,53 @@ on_make_an_average_map_ok_button_clicked(G_GNUC_UNUSED GtkButton       *button,
    GtkWidget *frame = widget_from_builder("make_an_average_map_frame");
    if (frame)
       gtk_widget_set_visible(frame, FALSE);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_glyco_wta_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                   G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *w = widget_from_builder("glyco-wta-frame");
+   if (w)
+      gtk_widget_set_visible(w, FALSE);
+
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_glyco_wta_fit_button_clicked(G_GNUC_UNUSED GtkButton       *button,
+                                G_GNUC_UNUSED gpointer         user_data) {
+
+   GtkWidget *frame    = widget_from_builder("glyco-wta-frame");
+   GtkWidget *combobox = widget_from_builder("glyco_wta_glycosylation_name_comboboxtext");
+   graphics_info_t g;
+   std::string t = g.get_active_label_in_comboboxtext(GTK_COMBO_BOX_TEXT(combobox));
+   std::pair<int, mmdb::Atom *> aa = g.get_active_atom();
+   int imol = aa.first;
+   if (is_valid_model_molecule(imol)) {
+      int imol_map = g.Imol_Refinement_Map();
+      if (is_valid_map_molecule(imol_map)) {
+         std::string tt;
+         if (t == "NAG-NAG-BMA")            tt = "NAG-NAG-BMA";
+         if (t == "High Mannose")           tt = "high-mannose";
+         if (t == "Hybrid")                 tt = "hybrid";
+         if (t == "Mammalian Bianntennary") tt = "mammalian-biantennary";
+         if (t == "Plant Bianntennary")     tt = "plant-biantennary";
+         clipper::Xmap<float> xmap = g.molecules[imol_map].xmap;
+         coot::residue_spec_t res_spec(coot::atom_spec_t(aa.second));
+         // coot::cho::add_named_glyco_tree(tt, &g.molecules[imol].atom_sel, imol, xmap, g.Geom_p(), as.chain_id, as.res_no);
+         g.molecules[imol].add_named_glyco_tree(tt, g.Geom_p(), res_spec, xmap); // needs bonds update
+         g.graphics_draw();
+      } else {
+         std::cout << "not a valid map " << imol_map << std::endl;
+      }
+   } else {
+      std::cout << "not a valid model " << imol << std::endl;
+   }
+   if (frame)
+      gtk_widget_set_visible(frame, FALSE);
+
 }
 
 extern "C" G_MODULE_EXPORT
@@ -1906,7 +2018,7 @@ void fill_logging_text_view() {
       GtkTextTag *gl_error_color_tag = gtk_text_tag_table_lookup(tag_table, "gl-error-type-color");
       if (gl_error_color_tag == NULL) {
          GtkTextTag *gl_error_color_tag = gtk_text_tag_new("gl-error-type-color");
-         std::string gl_error_type_colour = "#ee2222";
+         std::string gl_error_type_colour = "#cc8822";
          g_object_set(gl_error_color_tag, "foreground", gl_error_type_colour.c_str(), NULL);
          gtk_text_tag_table_add(gtk_text_buffer_get_tag_table(buffer), gl_error_color_tag);
       }

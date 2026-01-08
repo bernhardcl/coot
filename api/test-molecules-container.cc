@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <string>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -590,6 +591,60 @@ int test_undo_and_redo_2(molecules_container_t &mc) {
    mc.close_molecule(imol_map);
    mc.close_molecule(imol);
    return status;
+}
+
+// Test for set_residue_to_rotamer_number()
+//
+int test_set_residue_to_rotamer_number(molecules_container_t &mc) {
+
+    starting_test(__FUNCTION__);
+    int status = 0;
+
+    // Load test structure model
+    int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+    if (!mc.is_valid_model_molecule(imol)) {
+        std::cout << "Failed to load model molecule" << std::endl;
+        return status;
+    }
+
+    // Pick a known residue (e.g. chain A, residue 270)
+    int rotamer_number = 2; // Try setting to rotamer #2
+
+    // Get a key atom to track the change (e.g. CG for ASP)
+    std::string chain_id = "A";
+    int res_no = 269;
+    std::string residue_cid = "//A/269";
+    std::string alt_conf;
+    coot::atom_spec_t atom_spec(chain_id, res_no, "", " CG ", alt_conf);
+    mmdb::Atom* at_start = mc.get_atom(imol, atom_spec);
+    if (!at_start) {
+        std::cout << "Failed to find atom CG in starting residue" << std::endl;
+        mc.close_molecule(imol);
+        return status;
+    }
+    coot::Cartesian pos_start = coot::Cartesian(at_start->x, at_start->y, at_start->z);
+
+    int result = mc.set_residue_to_rotamer_number(imol, residue_cid, alt_conf, rotamer_number);
+
+    // Find the atom after the function call
+    mmdb::Atom* at_end = mc.get_atom(imol, atom_spec);
+    if (!at_end) {
+        std::cout << "Failed to find atom CG after rotamer set" << std::endl;
+        mc.close_molecule(imol);
+        return status;
+    }
+    coot::Cartesian pos_end = coot::Cartesian(at_end->x, at_end->y, at_end->z);
+
+    double dist_moved = std::sqrt(coot::Cartesian::lengthsq(pos_start, pos_end));
+    std::cout << "CG atom moved " << dist_moved << " Å by set_residue_to_rotamer_number()" << std::endl;
+
+    // Success: function returned 1 and atom moved
+    if (result == 1 && dist_moved > 0.3) {
+        status = 1;
+    }
+
+    mc.close_molecule(imol);
+    return status;
 }
 
 
@@ -3332,6 +3387,7 @@ int test_mmrrcc(molecules_container_t &mc) {
    int status = 0;
    int imol     = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
    int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+   unsigned int n_residue_per_residue_range = 11;
 
    if (mc.is_valid_model_molecule(imol)) {
       std::string chain_id = "A";
@@ -5717,6 +5773,7 @@ int test_n_map_sections(molecules_container_t &mc) {
    return status;
 }
 
+#if 0
 int test_rdkit_mol(molecules_container_t &mc) {
 
    starting_test(__FUNCTION__);
@@ -5731,6 +5788,7 @@ int test_rdkit_mol(molecules_container_t &mc) {
 #endif
    return status;
 }
+#endif
 
 
 
@@ -6580,6 +6638,102 @@ int test_radius_of_gyration(molecules_container_t &mc) {
    return status;
 }
 
+int test_temperature_factor_of_atom(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+
+   int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   float b1 = mc.get_temperature_factor_of_atom(imol, "//A/8/CB");
+   float b2 = mc.get_temperature_factor_of_atom(imol, "//x/8/CB");
+
+   std::cout << "debug b1 " << b1 << " b2 " << b2 << std::endl;
+
+   if (b2 < 0.0)
+      if (b1 < 40.0)
+         if (b1 > 39.0)
+            status = 1;
+
+   return status;
+}
+
+int test_water_spherical_variance(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   int imol     = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   int imol_map = mc.read_mtz(reference_data("moorhen-tutorial-map-number-1.mtz"), "FWT", "PHWT", "W", false, false);
+   if (mc.is_valid_model_molecule(imol)) {
+      unsigned int n_waters = mc.add_waters(imol, imol_map);
+      std::cout << "DEBUG:: test_water_spherical_variance(): n_waters: " << n_waters << std::endl;
+      mc.write_coordinates(imol, "with-waters.pdb");
+      bool all_pass = true;
+      for (unsigned int rn=1; rn<=50; rn++) {
+         std::string atom_cid = "//B/" + std::to_string(rn) + "/O";
+         std::pair<float,float> mv = mc.get_mean_and_variance_of_density_for_non_water_atoms(imol, imol_map);
+         if (mv.first > 0) { // this test that the function worked as expected/hoped
+            float sv = mc.get_spherical_variance(imol_map, imol, atom_cid, mv.first);
+            // std::cout << "spherical variance: " << atom_cid << " " << sv << std::endl;
+            if (sv <= 0.0) all_pass = false;
+         }
+      }
+      if (all_pass) status = 1;
+   }
+   return status;
+}
+
+
+int test_dedust(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   int imol_map = mc.read_ccp4_map(reference_data("emd_16890.map"), false);
+   int imol_new = mc.dedust_map(imol_map);
+   mc.write_map(imol_new, "dedust-16890.map");
+   return status;
+}
+
+int test_atom_overlaps(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   int imol = mc.read_pdb(reference_data("moorhen-tutorial-structure-number-1.pdb"));
+   std::vector<coot::plain_atom_overlap_t> aov = mc.get_atom_overlaps(imol);
+   for (unsigned int i=0; i<aov.size(); i++) {
+      if (i > 10) continue;
+      const auto &ao = aov[i];
+      std::cout << "Overlapping atom " << ao.atom_spec_1 << " " << ao.atom_spec_2
+                << " with overlap volume " << ao.overlap_volume << std::endl;
+      if (ao.overlap_volume > 2.0) status = 1;
+   }
+
+   return status;
+}
+
+#include "coot-utils/json.hpp"
+using json = nlohmann::json;
+
+int test_pucker_info(molecules_container_t &mc) {
+
+   starting_test(__FUNCTION__);
+   int status = 0;
+   int imol = mc.read_pdb(reference_data("2pwt.cif"));
+   std::string pucker_info_json = mc.get_pucker_analysis_info(imol);
+   // parsign an empty json string causes a crash
+   if (pucker_info_json.size() > 10) {
+      json j = json::parse(pucker_info_json);
+      unsigned int count = 0;
+      for (json::iterator it=j.begin(); it!=j.end(); ++it) {
+         count += 1;
+         if (count > 5) continue;
+         json &item = *it;
+         std::string s = item.dump(4);
+         std::cout << s << std::endl;
+      }
+      if (count > 10) status = 1;
+   }
+   return status;
+}
 
 int test_template(molecules_container_t &mc) {
 
@@ -6867,7 +7021,7 @@ int main(int argc, char **argv) {
          status += run_test(test_n_map_sections, "N map sections ", mc);
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS
          status += run_test(test_pdbe_dictionary_depiction, "pdbe dictionary depiction", mc);
-         status += run_test(test_rdkit_mol, "RDKit mol", mc);
+         // status += run_test(test_rdkit_mol, "RDKit mol", mc);
 #endif
 
 #ifdef USE_GEMMI
@@ -6914,6 +7068,12 @@ int main(int argc, char **argv) {
          // status += run_test(test_map_vertices_histogram, "map vertices histogram", mc);
          // status += run_test(test_non_XYZ_EM_map_status, "non-XYZ map status", mc);
          status += run_test(test_radius_of_gyration, "radius of gyration", mc);
+         status += run_test(test_temperature_factor_of_atom, "temperature factor of atom", mc);
+         status += run_test(test_water_spherical_variance, "water spherical variance", mc);
+         // status += run_test(test_dedust, "dedust", mc);
+         status += run_test(test_atom_overlaps, "atom overlaps", mc);
+         status += run_test(test_pucker_info, "pucker info", mc);
+         status += run_test(test_set_residue_to_rotamer_number, "set residue", mc);
          if (status == n_tests) all_tests_status = 0;
 
          print_results_summary();

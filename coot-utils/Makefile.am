@@ -47,7 +47,7 @@ pkginclude_HEADERS = peak-search.hh coot-trim.hh \
         diff-diff-map-peaks.hh tiny_gltf.h json.hpp \
 	stb_image.h stb_image_write.h glyco-tree.hh positron.hh mini-texture.hh texture-as-floats.hh pae.hh q-score.hh \
 	acedrg-types-for-residue.hh gl-matrix.h ortep.hh coot-align.hh grid-balls.hh dict-link-info.hh \
-        dirichlet-process.hh cfc.hh cremer-pople.hh born.hh
+        dirichlet-process.hh cfc.hh cremer-pople.hh born.hh inchikey-store.hh cylinder-utils.hh gmm.hh
 
 
 pkgincludedir = $(includedir)/coot/coot-utils
@@ -69,6 +69,9 @@ AM_CPPFLAGS = \
 AM_CXXFLAGS = $(COOT_WINDOWS_CFLAGS) \
 	-DPKGDATADIR='"$(pkgdatadir)"'
 
+if USE_BACKWARD
+   BACKWARD_FLAGS=-DUSE_BACKWARD
+endif
 
 # for pure coordinates (mmdb) things
 # - note to self: don't some of these include usage of clipper::Coord_orth - which
@@ -85,7 +88,7 @@ libcoot_coord_utils_la_SOURCES = coot-coord-utils.cc \
 	cylinder.cc cylinder-with-rotation-translation.cc oct.cc prideout-octasphere.cc simple-mesh.cc \
 	shapes.cc cmtz-interface.cc pugixml.cpp parse-pisa.cc gltf-export.cc pae.cc \
 	gl-matrix.cc gl-matrix-eigensystem.cc coot-align.cc grid-balls.cc dict-link-info.cc \
-	cremer-pople.cc
+	cremer-pople.cc inchikey-store.cc cylinder-utils.cc
 
 #    $(top_builddir)/mini-mol/libcoot-mini-mol.la
 #    $(top_builddir)/utils/libcoot-utils.la
@@ -176,8 +179,8 @@ check_PROGRAMS = test-h-bonds testshelxreader test-hole test-elastic \
 		 test-cod-atom-types dictionary-atom-types cod-db-access \
 		 test-5-residue-fragments test-diff-diff-map-peaks \
 		 make-cablam-like-stats test-cod-atom-types-from-sm-cif test-parse-pisa \
-		 test-coot-utils test-pae test-q-score servalcat-tracker test-zd test-grid-balls \
-		 test-dirichlet-process test-born
+		 test-coot-utils test-pae servalcat-tracker test-zd test-grid-balls \
+		 test-dirichlet-process test-born test-gmm
 
 # wrong build order - delete from make check for now.
 # test-emma test-convolute test-coot-utils test-segmap
@@ -222,7 +225,7 @@ test_coot_probe_LDADD =          \
 
 servalcat_tracker_SOURCES = servalcat-tracker.cc
 
-# servalcat_tracker_LDADD = 
+# servalcat_tracker_LDADD =
 
 test_parse_pisa_SOURCES = test-parse-pisa.cc
 test_parse_pisa_LDADD = \
@@ -236,6 +239,9 @@ test_born_SOURCES = test-born.cc
 test_born_LDADD = \
 	./libcoot-map-utils.la \
 	$(CLIPPER_LIBS)
+
+test_gmm_SOURCES = test-gmm.cc
+test_gmm_LDADD =
 
 test_dirichlet_process_SOURCES = test-dirichlet-process.cc
 test_dirichlet_process_LDADD = $(top_builddir)/utils/libcoot-utils.la
@@ -361,18 +367,24 @@ test_5_residue_fragments_LDADD = \
 	$(CLIPPER_LIBS) \
 	$(RDKIT_LIBS)
 
-test_q_score_SOURCES = test-q-score.cc
-
-test_q_score_LDADD = libcoot-map-utils.la \
-                     libcoot-coord-utils.la \
-                     $(top_builddir)/geometry/libcoot-geometry.la \
-                     $(top_builddir)/analysis/libcoot-analysis.la \
-                     $(top_builddir)/utils/libcoot-utils.la \
-                     $(CLIPPER_LIBS)
+# This cannot be here - it depends on libcoot-analysis which hasn't been built yet.
+# test_q_score_SOURCES = test-q-score.cc
+# 
+# test_q_score_LDADD = libcoot-map-utils.la \
+#                      libcoot-coord-utils.la \
+#                      $(top_builddir)/geometry/libcoot-geometry.la \
+#                      $(top_builddir)/analysis/libcoot-analysis.la \
+#                      $(top_builddir)/utils/libcoot-utils.la \
+#                      $(CLIPPER_LIBS)
 
 test_diff_diff_map_peaks_SOURCES = test-diff-diff-map-peaks.cc
 
 test_diff_diff_map_peaks_LDADD = libcoot-map-utils.la libcoot-coord-utils.la $(CLIPPER_LIBS) $(EMBEDDED_PYTHON_LIBS)
+
+# This cannot be here - it depends on libcoot-analysis which hasn't been built yet.
+# test_map_tubes_SOURCES = test-map-tubes.cc
+# 
+# test_map_tubes_LDADD = libcoot-map-utils.la $(top_builddir)/analysis/libcoot-analysis.la $(CLIPPER_LIBS)
 
 dictionary_atom_types_SOURCES = dictionary-atom-types.cc
 

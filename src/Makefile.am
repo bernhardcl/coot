@@ -98,11 +98,25 @@ EXTRA_DIST = \
 	coot.i post-glade add-c-extern.sh blank.cc fix-gettext.sh \
 	mol-hierarchy.cc \
 	junk.cc coot-gtk2.defs coot-dox.cfg post-gtk2-glade.sh \
-	post-process-coot-wrap-guile.sh \
+	post-process-coot-wrap-guile.sh  \
 	post-process-coot-wrap-python.sh \
-	fixup-interface.h.sh \
-	coot_wrap_guile_pre.cc
+	fixup-interface.h.sh      \
+	coot_wrap_guile_pre.cc    \
+	coot_rsr_functions_docs.i \
+	coot_c_interface_docs.i   \
+	coot_cc_interface_docs.i
 
+regen-interface-docs-for-swig:
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output   coot_c_interface_docs.i $(top_srcdir)/src/doxygen/xml/c-interface_8h.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output  coot_cc_interface_docs.i $(top_srcdir)/src/doxygen/xml/cc-interface_8hh.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output coot_rsr_functions_docs.i $(top_srcdir)/src/doxygen/xml/rsr-functions_8hh.xml
+
+# or
+# coot_c_interface_docs.i:
+#	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output  coot_c_interface_docs.i $(top_srcdir)/src/doxygen/xml/c-interface_8h.xml
+# coot_cc_interface_docs.i:
+#	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output  coot_cc_interface_docs.i $(top_srcdir)/src/doxygen/xml/c-interface_8hh.xml
+# and add coot_c_interface_docs.i and coot_cc_interface_docs.ii to the coot_wrap_python_pre.cc dependencies
 
 # subpkgdatadir = $(pkgdatadir)
 # subpkgdata_DATA = dynarama.glade geometry_graphs_builder.glade
@@ -228,7 +242,7 @@ AM_CXXFLAGS = \
 	-DXDATADIR='"$(datadir)"'    \
 	-DCOOT_SYS_BUILD_TYPE='"$(COOT_SYS_BUILD_TYPE)"' \
 	-DCOOT_BUILD_INFO_STRING='"$(COOT_BUILD_INFO_STRING)"' \
-        $(OpenAL_CFLAGS)        \
+    $(openal_CFLAGS)        \
 	$(RSVG_CFLAGS)		\
 	$(USE_LIBCURL)          \
 	$(WITH_GUILE_CFLAGS)	\
@@ -272,7 +286,6 @@ AM_CPPFLAGS = \
 	$(GLOB_CFLAGS)                  \
 	$(WITH_SOUND)                   \
 	$(VORBISFILE_CFLAGS)            \
-	$(ALSA_CFLAGS)                  \
 	$(SOUND_FLAGS)                  \
 	$(SQLITE3_CFLAGS)               \
 	$(GEMMI_CXXFLAGS)               \
@@ -303,7 +316,7 @@ _coot_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined  \
 	   $(top_builddir)/pli/libcoot-pli.la                \
 	   $(top_builddir)/lidia-core/libcoot-lidia-core.la  \
 	   $(top_builddir)/utils/libcoot-utils.la            \
-	   $(OpenAL_LIBS) $(PYTHON_LIBS) $(CLIPPER_LIBS)
+	   $(PYTHON_LIBS) $(CLIPPER_LIBS)
 
 
 if OS_WIN32
@@ -609,6 +622,8 @@ libcootsumo_la_SOURCES = \
 	globularize.cc           \
 	glarea_tick_function.hh  \
 	globularize.hh           \
+	gphl-screen.cc           \
+	gphl-screen.hh           \
 	graphics-info.cc	 \
 	graphics-info-defines.cc \
 	graphics-info-defines-gtk4.cc \
@@ -708,6 +723,7 @@ libcootsumo_la_SOURCES = \
 	molecule-class-info.cc		 \
 	molecule-class-info-alignment.cc \
 	molecule-class-info-analysis.cc \
+	molecule-class-info-backup.cc   \
 	molecule-class-info-bonds.cc    \
 	molecule-class-info-build.cc	\
 	molecule-class-info-maps.cc	\
@@ -734,9 +750,11 @@ libcootsumo_la_SOURCES = \
 	molecular-mesh-generator.hh \
 	mtz-column-auto-read.hh  \
 	named-rotamer-score.hh   \
+	network-get.hh           \
 	new-molecule-by-symmetry-matrix.hh \
 	nsv.hh                   \
 	obj_loader.h obj_loader.cc \
+	pandda-inspect.cc        \
 	pae-interface.cc         \
 	pisa-interface.hh	 \
 	pisa-internal.hh         \
@@ -908,7 +926,6 @@ endif
 libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
                 $(COOT_EXTRA_LIBS)      \
 		$(VORBISFILE_LIBS)      \
-		$(ALSA_LIBS)            \
 		$(GTK_LIBS)             \
 		$(CLIPPER_LIBS) 	\
 		$(LIBSSM_LIBS)		\
@@ -928,6 +945,7 @@ libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
 		$(L_BOOST_PYTHON)     \
 		-lfreetype            \
 		$(SQLITE3_LIBS)       \
+		$(openal_LIBS)        \
 		$(SHARED_LDFLAGS)     \
 		-lpthread
 

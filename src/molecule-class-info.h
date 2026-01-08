@@ -1,31 +1,6 @@
 /*
  * src/molecule-class-info.h
  *
- * Copyright 2007 by University of York
- * Author: Paul Emsley
- *
- * This file is part of Coot
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 3 of the License, or (at
- * your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copies of the GNU General Public License and
- * the GNU Lesser General Public License along with this program; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin Street,
- * Fifth Floor, Boston, MA, 02110-1301, USA.
- * See http://www.gnu.org/licenses/
- *
- */
-// -*-c++-*- ; emacs directive
-/* src/molecule-class-info.h
- *
  * Copyright 2002, 2003, 2004, 2005, 2006, 2007 The University of York
  * Copyright 2007 by Paul Emsley
  * Copyright 2008, 2009, 2010, 2011, 2012 by the University of Oxford
@@ -51,6 +26,8 @@
 #ifndef MOLECULE_CLASS_INFO_T
 #define MOLECULE_CLASS_INFO_T
 
+#include "geometry/residue-and-atom-specs.hh"
+#include <ctime>
 #ifndef HAVE_STRING
 #define HAVE_STRING
 #include <string>
@@ -217,15 +194,32 @@ namespace coot {
 
    // a helper class - provide filenames and status for dialog widget
    //
-   class backup_file_info {
+   class backup_file_info_t {
    public:
-      short int status;
+      bool valid_status;
       int imol;
       std::string name;
+      std::string description;
       std::string backup_file_name;
-      backup_file_info() {
-	 status = 0; // initially no backup reported
+      timespec ctime;
+      std::string get_timespec_string() const {
+         char buffer[80];
+         struct tm* timeinfo = localtime(&ctime.tv_sec);
+         strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+         std::ostringstream oss;
+         oss << buffer << "." << std::setfill('0') << std::setw(3) << (ctime.tv_nsec / 1000000);
+         return oss.str();
+      }
+      backup_file_info_t() {
+	 valid_status = false; // initially no backup reported
          imol = -1;
+      }
+      backup_file_info_t(const std::string &file_name,
+                         const std::string &descr) {
+         valid_status = false;
+         imol = -1;
+         backup_file_name = file_name;
+         description = descr;
       }
    };
 
@@ -358,7 +352,7 @@ class molecule_class_info_t {
    // saving temporary files (undo)
    //
    std::string get_save_molecule_filename(const std::string &dir);
-   int make_backup(); // changes history details
+   int make_backup(const std::string &descr); // changes history details
    int make_maybe_backup_dir(const std::string &filename) const;
    bool backup_this_molecule;
 
@@ -368,11 +362,55 @@ class molecule_class_info_t {
    //
    int history_index;
    int max_history_index;
-   void save_history_file_name(const std::string &file);
-   std::vector<std::string> history_filename_vec;
+   void save_history_file_name(const std::string &file, const std::string &description);
+   std::vector<coot::backup_file_info_t> history_filename_vec;
    std::string save_time_string;
-   void restore_from_backup(int history_offset, const std::string &cwd);
+   // return success status.
+   bool restore_from_backup(int history_offset, const std::string &cwd);
 
+   public: // FIXME later
+
+   /*! \brief Make a backup for a model molecule
+    *
+    * @param imol the model molecule index
+    * @description a description that goes along with this back point
+    */
+   int make_backup_checkpoint(const std::string &description);
+
+   /*! \brief Restore molecule from backup
+    * 
+    * restore model @p imol to checkpoint backup @p backup_index
+    *
+    * @param imol the model molecule index
+    * @param backup_index the backup index to restore to
+    */
+   int restore_to_backup_checkpoint(int backup_index);
+
+   /*! \brief Compare current model to backup
+    * 
+    * @param imol the model molecule index
+    * @param backup_index the backup index to restore to
+    * @return a list of residue specs for residues that have
+    *         at least one atom in a different place.
+    *   the first says is the backup_index was valid.
+    */
+   std::pair<bool, std::vector<coot::residue_spec_t> > compare_current_model_to_backup(int backup_index);
+
+   /*! \brief Get backup info
+    * 
+    * @param imol the model molecule index
+    * @param backup_index the backup index to restore to
+    * @return a Python list of the given description (str)
+    *         and a timestamp (str).
+    */
+   coot::backup_file_info_t get_backup_info(int backup_index);
+
+   void print_backup_history_info() const;
+
+   private:
+
+   // map tools
+   //
    void set_initial_contour_level(); // tinker with the class data.
 				     // Must be called after sigma_
 				     // and is_diff_map has been set
@@ -469,7 +507,7 @@ class molecule_class_info_t {
 			     const float &reso_low,
 			     const float &reso_high) const;
    // Retard the phases for use with anomalous data.
-   void fix_anomalous_phases(clipper::HKL_data< clipper::datatypes::F_phi<float> > *fphidata) const;
+   void shift_90_anomalous_phases(clipper::HKL_data< clipper::datatypes::F_phi<float> > *fphidata) const;
 
 
    // merge molecules helper function
@@ -508,6 +546,7 @@ class molecule_class_info_t {
    bool last_ghost_matching_target_chain_id_p(int i_match,
 					      const std::vector<drawn_ghost_molecule_display_t> &ncs_ghosts) const;
    void delete_ghost_selections();
+   // void debug_ghosts() const; public
 
    std::vector<coot::ghost_molecule_display_t> strict_ncs_info;
    std::vector<coot::coot_mat44> strict_ncs_matrices;
@@ -885,6 +924,7 @@ public:        //                      public
 
    void set_map_is_displayed(int state); // 20250216-PE moved out of header, to handle
                                          // expired map contours
+   bool get_map_is_displayed() const { return draw_it_for_map; }
 
    void set_map_is_displayed_as_standard_lines(short int state) {
       draw_it_for_map_standard_lines = state;
@@ -1257,6 +1297,7 @@ public:        //                      public
       display_stick_mode_atoms_flag = f;
    }
 
+   void debug_ghosts() const;
 
    std::vector<int> labelled_atom_index_list;
    // a functor to remove them
@@ -2113,7 +2154,7 @@ public:        //                      public
    //
    short int execute_restore_from_recent_backup(std::string backup_file_name,
 						std::string cwd);
-   coot::backup_file_info recent_backup_file_info() const;
+   coot::backup_file_info_t recent_backup_file_info() const;
 
    // For model view (go to atom)
    //
@@ -2474,10 +2515,12 @@ public:        //                      public
 
    // sequence [a -other function]
    void assign_fasta_sequence(const std::string &chain_id, const std::string &seq); // add to input_sequence vector
+
+   // this is not assigning the sequence! This is adding a PIR file for a particular chain id!
+   void assign_pir_sequence(const std::string &chain_id, const std::string &seq);
+
    void assign_sequence(const clipper::Xmap<float> &xmap, const std::string &chain_id);
    std::vector<std::pair<std::string, std::string> > sequence_info() const { return input_sequence; };
-
-   void assign_pir_sequence(const std::string &chain_id, const std::string &seq);
 
    // this does an alignment! How confusing
    void assign_sequence_from_file(const std::string &filename);
@@ -2831,6 +2874,13 @@ public:        //                      public
 
    // Replace the atoms in this molecule by those in the given atom selection.
    int replace_fragment(atom_selection_container_t asc);
+
+   int swap_atom_alt_conf(std::string chain_id, int res_no, std::string ins_code, std::string atom_name,
+                          std::string alt_conf);
+
+   std::vector<std::string> alt_confs_in_molecule() const;
+
+   int swap_residue_alt_confs(const std::string &chain_id, int res_no, const std::string &ins_code);
 
    int set_atom_attribute(std::string chain_id, int resno, std::string ins_code,
 			  std::string atom_name, std::string alt_conf,
@@ -3629,6 +3679,12 @@ void draw_map_molecule(bool draw_transparent_maps,
 					 coot::protein_geometry *geom_p,
 					 const std::string &file_name);
 
+   // carbohydrate building - WTA for the moment
+   void add_named_glyco_tree(const std::string &glycosylation_type,
+                             coot::protein_geometry *geom_p,
+                             const coot::residue_spec_t &res_spec,
+                             const clipper::Xmap<float> &xmap);
+
    // hacky function to retrive the atom based on the position
    // (silly thing to do)
    mmdb::Atom *get_atom_at_pos(const coot::Cartesian &pt) const;
@@ -3862,6 +3918,8 @@ void draw_map_molecule(bool draw_transparent_maps,
    // draw_bad_nbc_atom_pair_markers is global (only one). Maybe this is a mistake
    bool draw_chiral_volume_outlier_markers_flag;
    std::vector<glm::vec3> chiral_volume_outlier_marker_positions;
+
+   std::vector<glm::vec3> unhappy_atom_marker_positions;
 
 };
 

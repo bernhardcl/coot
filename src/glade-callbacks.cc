@@ -1740,6 +1740,19 @@ on_residue_info_apply_button_clicked(GtkButton       *button,
    apply_residue_info_changes();
    // GtkWidget *widget = widget_from_builder("residue_info_dialog");
    // gtk_widget_set_visible(widget, FALSE);
+   add_status_bar_text("Occupancies and B-factors have been updated");
+   GtkWidget *label = widget_from_builder("occupancy_b_factors_updated_label");
+   if (label) {
+      gtk_widget_set_visible(label, TRUE);
+
+      auto label_callback = +[] (gpointer user_data) {
+         GtkWidget *w = GTK_WIDGET(user_data);
+         gtk_widget_set_visible(w, FALSE);
+         return 0;
+      };
+      g_timeout_add(1000, G_SOURCE_FUNC(label_callback), label);
+
+   }
 }
 
 
@@ -1798,6 +1811,22 @@ on_residue_info_master_atom_b_factor_entry_activate(GtkWidget *entry, gpointer u
 
 }
 
+extern "C" G_MODULE_EXPORT
+void
+on_keyboard_mutate_entry_changed(GtkEntry     *entry,
+                                 gpointer      user_data) {
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_keyboard_mutate_entry_activate(GtkWidget *entry, gpointer user_data) {
+
+   std::string s(gtk_editable_get_text(GTK_EDITABLE(entry)));
+   mutate_active_residue_to_single_letter_code(s);
+   GtkWidget *frame = widget_from_builder("keyboard_mutate_frame");
+   gtk_widget_set_visible(frame, FALSE);
+   graphics_info_t::graphics_grab_focus();
+}
 
 extern "C" G_MODULE_EXPORT
 void
@@ -2032,8 +2061,7 @@ on_environment_distance_dialog_ok_button_clicked
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *widget;
-   widget = widget_from_builder("environment_distance_dialog");
+   GtkWidget *widget = widget_from_builder("environment_distance_dialog");
    execute_environment_settings(GTK_WIDGET(button));
    gtk_widget_set_visible(widget, FALSE);
 
@@ -2265,9 +2293,9 @@ on_run_refmac_phase_combine_checkbutton_toggled (GtkToggleButton *togglebutton,
 
 extern "C" G_MODULE_EXPORT
 void
-on_baton_undo_button_clicked           (GtkButton       *button,
-                                        gpointer         user_data)
-{
+on_baton_undo_button_clicked(GtkButton       *button,
+                             gpointer         user_data) {
+
    baton_build_delete_last_residue();
 }
 
@@ -2276,11 +2304,15 @@ on_baton_undo_button_clicked           (GtkButton       *button,
 extern "C" G_MODULE_EXPORT
 void
 on_undo_molecule_chooser_ok_button_clicked (GtkButton       *button,
-					    gpointer         user_data)
-{
-   GtkWidget *widget = widget_from_builder("undo_molecule_chooser_dialog");
-   gtk_widget_set_visible(widget, FALSE);
+					    gpointer         user_data) {
 
+   GtkWidget *widget   = widget_from_builder("undo_molecule_chooser_dialog");
+   GtkWidget *combobox = widget_from_builder("undo_molecule_chooser_comboboxtext");
+   int imol = my_combobox_get_imol(GTK_COMBO_BOX(combobox));
+   graphics_info_t g;
+   if (g.is_valid_model_molecule(imol))
+      set_undo_molecule(imol);
+   gtk_widget_set_visible(widget, FALSE);
 }
 
 
@@ -2705,14 +2737,11 @@ on_pointer_atom_type_other_button_clicked
 
 extern "C" G_MODULE_EXPORT
 void
-on_ligand_big_blob_dismiss_button_clicked
-                                        (GtkButton       *button,
-                                        gpointer         user_data)
-{
+on_ligand_big_blob_dismiss_button_clicked(GtkButton       *button,
+                                          gpointer         user_data) {
 
   GtkWidget *window = widget_from_builder( "ligand_big_blob_dialog");
   gtk_widget_set_visible(window, FALSE);
-
 }
 
 
@@ -4598,16 +4627,6 @@ on_other_model_tools_dialog_destroy    (GtkWidget       *object,
    unset_other_modelling_tools_dialog();
 }
 
-
-
-extern "C" G_MODULE_EXPORT
-void
-on_ligand_big_blob_dialog_destroy(GtkWidget       *object,
-                                  gpointer         user_data) {
-  free_blob_dialog_memory(GTK_WIDGET(object));
-}
-
-
 extern "C" G_MODULE_EXPORT
 void
 on_model_refine_dialog_do_180_degree_sidechain_flip_togglebutton_toggled
@@ -6038,7 +6057,7 @@ on_multi_residue_torsion_start_button_clicked
 extern "C" G_MODULE_EXPORT
 void
 on_keyboard_go_to_residue_entry_changed(GtkEditable     *editable,
-                                                            gpointer         user_data) {
+                                        gpointer         user_data) {
 
 }
 
@@ -6717,7 +6736,12 @@ on_validation_graph_model_combobox_changed(GtkComboBox* self, gpointer user_data
       gtk_tree_model_get(gtk_combo_box_get_model(self),&iter,1,&new_active_model,-1);
       graphics_info_t::update_active_validation_graph_model(new_active_model);
    } else {
-      g_warning("on_validation_graph_model_combobox_changed(): Could not get active iter in validation graph model ComboBox");
+      // this is noisy - and it seems possible that the active iter has not yet been set.
+      if (false) {
+         std::string mess = "on_validation_graph_model_combobox_changed(): ";
+         mess += "Could not get active iter in validation graph model ComboBox";
+         g_warning(mess.c_str());
+      }
    }
 }
 
@@ -6959,12 +6983,53 @@ on_download_monomers_ok_button_clicked(GtkButton       *button,
 
 extern "C" G_MODULE_EXPORT
 void
-on_add_other_solvent_molecules_new_residue_type_button_clicked(GtkButton       *button,
-							       gpointer         user_data) {
+on_add_other_solvent_molecules_new_residue_type_button_clicked(GtkButton  *button,
+                                                               gpointer    user_data) {
 
-   std::cout << "Add other solvent new residue type here " << std::endl;
+   GtkWidget *entry = widget_from_builder("add_other_solvent_molecules_new_residue_type_entry");
+   int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(entry), "imol"));
+   std::cout << "DEBUG:: transfering imol " << imol << std::endl;
+   g_object_set_data(G_OBJECT(entry), "imol", GINT_TO_POINTER(imol));
+   gtk_widget_set_visible(entry, TRUE);
 }
 
+#include "get-monomer.hh"
+
+extern "C" G_MODULE_EXPORT
+void on_add_other_solvent_molecules_new_residue_type_entry_activate(GtkEntry *entry,
+                                                                    gpointer  user_data) {
+
+   // this callback is similar to the callback for the build-in residue type
+   // buttons in the dialog
+   const char *s = gtk_editable_get_text(GTK_EDITABLE(entry));
+   graphics_info_t g;
+   std::string type(s);
+   int imol_ligand = get_monomer(type);
+   fit_to_map_by_random_jiggle(imol_ligand, "A", 1, "", 100, 2.0);
+   if (g.is_valid_model_molecule(imol_ligand)) {
+      coot::residue_spec_t rspec("A", 1, "");
+      mmdb::Residue *residue_p = g.molecules[imol_ligand].get_residue(rspec);
+      if (residue_p) {
+         mmdb::Manager *mol = g.molecules[imol_ligand].atom_sel.mol;
+         std::vector<mmdb::Residue *> v;
+         std::string alt_conf;
+         v.push_back(residue_p);
+         short int save_state = g.refinement_immediate_replacement_flag;
+         g.refinement_immediate_replacement_flag = 1;
+         coot::refinement_results_t rr = g.refine_residues_vec(imol_ligand, v, alt_conf, mol);
+         g.refinement_immediate_replacement_flag = save_state;
+         c_accept_moving_atoms();
+         delete_hydrogen_atoms(imol_ligand);
+         int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(entry), "imol"));
+         if (g.is_valid_model_molecule(imol)) {
+            std::vector<atom_selection_container_t> add_molecules_at_sels;
+            add_molecules_at_sels.push_back(g.molecules[imol_ligand].atom_sel);
+            g.molecules[imol].merge_molecules(add_molecules_at_sels);
+            close_molecule(imol_ligand);
+         }
+      }
+   }
+}
 
 extern "C" G_MODULE_EXPORT
 void
@@ -6975,6 +7040,40 @@ on_add_other_solvent_molecules_close_button_clicked(GtkButton       *button,
    if (dialog) {
       gtk_widget_set_visible(dialog, FALSE);
    }
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_first_startup_cancel_button_clicked(GtkButton       *button,
+                                       gpointer         user_data) {
+
+   GtkWidget *dialog = widget_from_builder("first-startup-dialog");
+   gtk_widget_set_visible(dialog, FALSE);
+
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_first_startup_use_left_button_clicked(GtkButton       *button,
+                                       gpointer         user_data) {
+
+   GtkWidget *dialog = widget_from_builder("first-startup-dialog");
+   gtk_widget_set_visible(dialog, FALSE);
+
+   preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 1);
+   set_use_primary_mouse_button_for_view_rotation(1);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_first_startup_use_right_button_clicked(GtkButton       *button,
+                                      gpointer         user_data) {
+
+   GtkWidget *dialog = widget_from_builder("first-startup-dialog");
+   gtk_widget_set_visible(dialog, FALSE);
+
+   preferences_internal_change_value_int(PREFERENCES_VIEW_ROTATION_MOUSE_BUTTON, 0);
+   set_use_primary_mouse_button_for_view_rotation(0);
 }
 
 extern "C" G_MODULE_EXPORT

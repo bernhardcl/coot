@@ -215,7 +215,7 @@ short int graphics_info_t::smooth_scroll_on = 0;
 int    graphics_info_t::smooth_scroll_current_step = 0;
 coot::Cartesian graphics_info_t::smooth_scroll_delta;
 int    graphics_info_t::mouse_just_cliked     = 0;
-float  graphics_info_t::rotation_centre_cube_size = 0.1; // Angstroems
+float  graphics_info_t::user_defined_rotation_centre_crosshairs_size_scale_factor = 0.05;
 glm::vec4 graphics_info_t::rotation_centre_cross_hairs_colour = glm::vec4(0.8, 0.8, 0.8, 1.0);
 short int graphics_info_t::quanta_like_zoom_flag = 0;
 int    graphics_info_t::go_to_ligand_animate_view_n_steps = 50;
@@ -1652,8 +1652,8 @@ LinesMesh graphics_info_t::lines_mesh_for_boids_box;
 Mesh graphics_info_t::mesh_for_hydrogen_bonds = Mesh("mesh for hydrogen bonds");
 
 LinesMesh graphics_info_t::lines_mesh_for_identification_pulse;
-LinesMesh graphics_info_t::lines_mesh_for_delete_item_pulse;
-std::vector<glm::vec3> graphics_info_t::delete_item_pulse_centres;
+LinesMesh graphics_info_t::lines_mesh_for_generic_pulse;
+std::vector<glm::vec3> graphics_info_t::generic_pulse_centres;
 
 LinesMesh graphics_info_t::lines_mesh_for_hud_lines;
 LinesMesh graphics_info_t::lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring;
@@ -1675,6 +1675,11 @@ std::vector<glm::vec3> graphics_info_t::happy_face_residue_marker_starting_posit
 TextureMesh graphics_info_t::tmesh_for_bad_nbc_atom_pair_markers = TextureMesh("tmesh-for-angry-diego");
 Texture graphics_info_t::texture_for_bad_nbc_atom_pair_markers;
 std::vector<glm::vec3> graphics_info_t::bad_nbc_atom_pair_marker_positions;
+
+Mesh graphics_info_t::bad_nbc_atom_pair_dashed_line = Mesh("bad nbc atom_pair dashed line instanced mesh");
+
+TextureMesh graphics_info_t::tmesh_for_unhappy_atom_markers = TextureMesh("tmesh-unhappy-atom-outliers");
+Texture graphics_info_t::texture_for_unhappy_atom_markers;
 
 TextureMesh graphics_info_t::tmesh_for_chiral_volume_outlier_markers = TextureMesh("tmesh-chiral-volume-outliers");
 Texture graphics_info_t::texture_for_chiral_volume_outlier_markers;
@@ -1861,5 +1866,9 @@ std::vector<coot::positron_metadata_t> graphics_info_t::positron_metadata;
 bool graphics_info_t::tomo_picker_flag = false;
 graphics_info_t::tomo_view_info_t graphics_info_t::tomo_view_info;
 
+coot::inchikey_store_t graphics_info_t::inchikey_store;
+
 std::pair<bool, std::string> graphics_info_t::servalcat_fofc    = std::pair<bool, std::string> (false, "");
 std::pair<bool, std::string> graphics_info_t::servalcat_refine  = std::pair<bool, std::string> (false, "");
+
+std::string graphics_info_t::current_alt_conf = "";

@@ -413,9 +413,9 @@ std::string atom_info_as_text_for_statusbar(int atom_index, int imol) {
            ai += at->GetInsCode();
            ai += " ";
            ai += at->GetResName();
-           ai += " occ: ";
+           ai += " occupancy: ";
            ai += graphics_info_t::float_to_string(at->occupancy);
-           ai += " bf: ";
+           ai += " b-factor: ";
            ai += graphics_info_t::float_to_string(at->tempFactor);
            ai += " ele: ";
            ai += at->element;
@@ -786,6 +786,17 @@ SCM residues_near_residues_scm(int imol, SCM residues_in_scm, float radius) {
 // Return residue specs for residues that have atoms that are
 // closer than radius Angstroems to any atom in the residues
 // specified by residues_in.
+//
+//! \brief get the residues near a specified list of residues
+//!
+//! @param imol is the molecule index
+//! @param residues_in is a list of residue specs each of which is
+//!        [chain_id, res_no, insertion_code]
+//! @param radius is the cut-off distance atoms of the surrounding residues
+//!        if they are to be included in the residue selection.
+//! @return a list of residue specs for residues that have atoms that are
+//! closer than radius Angstroems to any atom in the residue
+//! specified by the input residue spec list.
 //
 #ifdef USE_PYTHON
 PyObject *residues_near_residues_py(int imol, PyObject *residues_in, float radius) {

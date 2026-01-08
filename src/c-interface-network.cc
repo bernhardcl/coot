@@ -249,12 +249,12 @@ int coot_get_url_and_activate_curl_hook(const std::string &url,
 	 success = curl_easy_perform(c);
 
          if (coot::file_exists(file_name)) {
-            std::cout << "::::::::::::::: file_exists " << file_name << std::endl;
+            std::cout << "DEBUG:: file_exists " << file_name << std::endl;
             std::filesystem::path fp(file_name);
             std::uintmax_t size = std::filesystem::file_size(fp);
-            std::cout << "::::::::::::::: file_size " << size << std::endl;
+            std::cout << "DEBUG:: file_size " << size << std::endl;
             if (is_html(file_name)) {
-               std::cout << "::::::::::::::: file is html " << file_name << std::endl;
+               std::cout << "DEBUG:: file is html " << file_name << std::endl;
                success = CURLcode(23); // CURL write error (say)
                int rm_status = remove(file_name.c_str()); // Ciao Bella
                if (rm_status == 0)
@@ -641,8 +641,8 @@ fetch_alphafold_model_for_uniprot_id(const std::string &uniprot_id) {
    int imol = -1; // return this
    // https://alphafold.ebi.ac.uk/files/AF-Q7N8I7-F1-model_v4.pdb
    // https://alphafold.ebi.ac.uk/files/AF-Q7N8I7-F1-predicted_aligned_error_v4.json
-   std::string fn_tail_pdb = std::string("AF-") + uniprot_id + std::string("-F1-model_v3.pdb");
-   std::string fn_tail_pae = std::string("AF-") + uniprot_id + std::string("-F1-predicted_aligned_error_v4.json");
+   std::string fn_tail_pdb = std::string("AF-") + uniprot_id + std::string("-F1-model_v6.pdb");
+   std::string fn_tail_pae = std::string("AF-") + uniprot_id + std::string("-F1-predicted_aligned_error_v6.json");
 
    xdg_t xdg;
    std::string download_dir = join(xdg.get_cache_home().string(), "coot-download");
@@ -833,15 +833,22 @@ int fetch_cod_entry(const std::string &cod_code) {
    int imol = -1;
    std::string url = "https://www.crystallography.net/cod/" + cod_code + ".cif";
    std::cout << "url: " << url << std::endl;
-   std::string download_dir = "coot-download";
-   download_dir = coot::get_directory(download_dir.c_str());
+
+   xdg_t xdg;
+   std::filesystem::path ch = xdg.get_cache_home();
+   if (! std::filesystem::exists(ch))
+      std::filesystem::create_directories(ch);
+   std::filesystem::path download_dir = ch / "coot-download";
+   if (! std::filesystem::exists(download_dir))
+      std::filesystem::create_directories(download_dir);
+
    std::string fn_tail = cod_code + std::string(".cif");
-   std::string fn = coot::util::append_dir_file(download_dir, fn_tail);
-   if (coot::file_exists_and_non_tiny(fn)) {
+   std::filesystem::path fn = download_dir / fn_tail;
+   if (std::filesystem::exists(fn)) {
       imol = read_small_molecule_cif(fn.c_str());
    } else {
       coot_get_url(url.c_str(), fn.c_str());
-      if (coot::file_exists_and_non_tiny(fn)) {
+      if (coot::file_exists_and_non_tiny(fn.string())) {
          imol = read_small_molecule_cif(fn.c_str());
       } else {
          std::cout << "DEBUG:: failed to download " << url << std::endl;
