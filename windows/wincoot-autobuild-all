@@ -52,7 +52,17 @@ if [ -z "$make_installer_only" ] ; then
 fi
 
 # BL note:: this needs to become more flexible!!!
-build_enhanced_ligand=${4:-1}
+debug_mode_installer=${4:-0}
+if [ -e /z/make_installer_debug ] ; then
+  debug_mode_installer=0
+fi
+if [ -z "$debug_mode_installer" ] ; then
+  debug_mode_installer=1
+fi
+
+# BL note:: this needs to become more flexible!!!
+# this is default now and doesnt need a flag maybe
+build_enhanced_ligand=${5:-1}
 if [ -e /z/make_no_EL ] ; then
   build_enhanced_ligand=0
 fi
@@ -114,7 +124,7 @@ function copy_logs {
 build_it=${HOME}/Projects/coot-gtk4/build-it-win
 
 # location of makensis.exe
-makensis="/c/Program Files (x86)/NSIS/makensis.exe"
+makensis="/c/Programs/NSIS/makensis.exe"
 
 # location of installerscript
 wincoot_installer_script=${HOME}/Projects/coot-gtk4/windows/WinCoot_install_masta.nsi
@@ -331,6 +341,12 @@ if [ "$build_coot_prerelease" != "1" ] ; then
    BINARY_DIR=/c/msys64/home/bernhard/public_html/software/binaries/stable
    PUBLIC_BINARY_DIR=$PUBLIC_STABLE_DEST_DIR
 fi
+
+if [ "$debug_mode_installer" == "1" ] ; then
+   makensis_flag=$makensis_flag" //DDEBUG"
+   echo nsis flag is $makensis_flag
+fi
+
 
 # wincoot installer exe filename
 wincoot_exe=WinCoot-${wincoot_version}.exe

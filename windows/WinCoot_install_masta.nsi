@@ -37,8 +37,9 @@
 !define PRODUCT_NAME "WinCoot"
 !define PRODUCT_VERSION "${WinCootVersion}"
 !define PRODUCT_PUBLISHER "Bernhard Lohkamp & Paul Emsley"
-!define PRODUCT_WEB_SITE "http://bernhardcl.github.io/coot"
-!define PRODUCT_WEB_SITE_2 "http://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/"
+!define PRODUCT_WEB_SITE "https://bernhardcl.github.io/coot/"
+!define PRODUCT_WEB_SITE_2 "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/"
+!define PRODUCT_WEB_SITE_3 "https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot/web/tutorial/tutorial.html"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\uninst.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
@@ -219,20 +220,46 @@ Section "!WinCoot" SEC01
 ; check if wincoot.bat exists, if so make a backup copy
 ; (this is a tmp file, doesnt seem to be deleted, maybe virus thing? not sure what's happening)
 ; install new wincoot.bat
-; deal with rest in FinishPagePreFunction
+; deal with rest (comparison) in FinishPagePreFunction
   Var /GLOBAL have_bat
   StrCpy $have_bat "False"
 
-  IfFileExists "$INSTDIR\wincoot.bat" 0 +3
+  IfFileExists "$INSTDIR\wincoot.bat" 0 writeBat
     StrCpy $have_bat "True"
     ; copy existing file to backup and deal with it in more detail later (FinishPagePreFunction)
-    ; remove any existing backup if exists...
-    Delete $INSTDIR\wincoot.bat.backup
-    Rename $INSTDIR\wincoot.bat $INSTDIR\wincoot.bat.backup
+    ; remove any existing backup if exists first... (if not exists there is no error!)
+    ClearErrors
+    ; if we already have a backup file we copy this for safekeeping
+    IfFileExists "$INSTDIR\wincoot.bat.backup" 0 no_backup_exists
+      ; Get the file's modification time
+      ${GetTime} "$INSTDIR\wincoot.bat.backup" "M" $0 $1 $2 $3 $4 $5 $6
 
+      ; Create timestamp string (YYYYMMDD_HHMMSS format)
+      StrCpy $R0 "$0$1$2_$4$5$6"
+
+      ; Rename the file
+      Rename "$INSTDIR\wincoot.bat.backup" "$INSTDIR\wincoot.bat.backup_$R0"
+
+    no_backup_exists:
+    Rename $INSTDIR\wincoot.bat $INSTDIR\wincoot.bat.backup
+    IfErrors 0 writeBat
+      ; inform on error and clear the error (to avoid issues later)
+      DetailPrint "Warning in installation. Could not make a backup copy of existing wincoot.bat. Continuing!"
+      IfSilent +2 0
+        MessageBox MB_OK 'Warning in Installation. Continuing! $\n$\r$\n$\rCould not make a backup copy of existing wincoot.bat.'
+      ClearErrors
+
+  writeBat:
   SetOverwrite on
   File /oname=$INSTDIR\wincoot.bat "${src_dir}\windows\wincoot.bat"
 
+  ; make all file installation conditional with DEBUG flag (to be passed on command line:
+  ; makensis /DDEBUG scrit.nsi)
+  !ifdef DEBUG
+    ; skip all files
+    !echo "Skipping file section - DEBUG mode"
+  !else
+  ; main line; normal code
   SetOverwrite ifnewer
 ; bin DIR
   SetOutPath "$INSTDIR\bin"
@@ -325,18 +352,27 @@ Section "!WinCoot" SEC01
   File "${top_dir}-guile\share\guile\site\*"
 !endif
 ; WITH_GUILE
+
 ; docs
 ; Mmmh are these updated? Not really. FIXME!
-  SetOutPath "$INSTDIR\doc"
-  File "C:\msys64\home\bernhard\autobuild\extras\coot-user-manual.pdf"
-  File "C:\msys64\home\bernhard\autobuild\extras\crib-sheet.pdf"
-  File "C:\msys64\home\bernhard\autobuild\extras\tutorial.pdf"
-  File "C:\msys64\home\bernhard\autobuild\extras\tutorial-2.pdf"
+; 15/01/26 removed the docs and rather add links to the online tutorials from Paul
+  ;SetOutPath "$INSTDIR\doc"
+  ;File "C:\msys64\home\bernhard\autobuild\extras\coot-user-manual.pdf"
+  ;File "C:\msys64\home\bernhard\autobuild\extras\crib-sheet.pdf"
+  ;File "C:\msys64\home\bernhard\autobuild\extras\tutorial.pdf"
+  ;File "C:\msys64\home\bernhard\autobuild\extras\tutorial-2.pdf"
+
   ;;secondary structure(s)
   ;SetOutPath "$INSTDIR\share\coot\ss-reference-structures"
   ;File "C:\msys64\home\bernhard\autobuild\extras\ss-reference-structures\*"
+
   ; set outpath to $INSTDIR so that shortcuts are started in $INSTDIR
   SetOutPath "$INSTDIR"
+
+  !endif ; from DEBUG
+
+  ; these are some generic errors. Not sure where, what error happens. Better errors
+  ; handling required
   IfErrors 0 +6
 ;    ${ErrorHandler} 1 "Error in installation. Could not write files." 1
      DetailPrint "Error in installation. Could not write files."
@@ -447,28 +483,31 @@ Section -AddIcons
   ClearErrors
 
   SetShellVarContext all
-  ; let's see what happens when we try for all
+  ; let's see what happens when we try making icons for all
   Call MakeIcons
-  ClearErrors
 
-  ; if error delete what may be there (but there shouldnt be anything?)
+  ; if error try to make icons for current user only
+  ; if not possible at all, give a warning
   IfErrors 0 exit
-  SetShellVarContext current
-  Call MakeIcons
+    ClearErrors
+    SetShellVarContext current
+    Call MakeIcons
+    IfErrors 0 exit
+      ; ${ErrorHandler} 3 "WARNING:: Error in installation. Could not install icons." 0
+      DetailPrint "WARNING:: Error in installation. Could not install icons. Continuing."
+      SetErrorLevel 3
+      IfSilent +2 0
+          MessageBox MB_OK 'WARNING:: Error in Installation. Continuing!$\n$\r$\n$\rCould not install icons.'
+      ClearErrors ; mmh clear after setting a level!? FIXME
 
- exit:
-   SetShellVarContext current
-  ; in case we want to install silently (no user intervention)
-  ; we have to call the finish page function, otherwise runwincoot.bat
-  ; won't be edited.
-  IfSilent 0 +2
-    Call FinishPagePreFunction
-  IfErrors 0 +5
-    ; ${ErrorHandler} 3 "Error in installation. Could not install icons." 0
-    DetailPrint "Error in installation. Could not install icons. Continuing."
-    SetErrorLevel 3
-    IfSilent +2 0
-        MessageBox MB_OK 'Error in Installation. Continuing!$\n$\r$\n$\rCould not install icons.'
+  exit:
+    ClearErrors
+    ; icons installed ok, continue
+    DetailPrint "Icons installed correctly."
+    ; we have to call the finish page function, there is no info on existing wincoot.bat
+    ; but only in silent mode. It will be called automatically in GUI mode
+    IfSilent 0 +2
+      Call FinishPagePreFunction
 SectionEnd
 
 Section -Post
@@ -478,8 +517,7 @@ Section -Post
 ;  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\uninst.exe"
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
-  ClearErrors
-  WriteUninstaller "$INSTDIR\uninst.exe"
+
 ;  NO MESSING WITH THE REGISTRY!!!!
 ;  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\uninst.exe"
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
@@ -488,12 +526,14 @@ Section -Post
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
 ;  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
+
   IfErrors 0 +5
     ; ${ErrorHandler} 4 "Error in installation. Could not write uninstaller." 0
     DetailPrint "Error in installation. Could not write uninstaller."
     SetErrorLevel 4
     IfSilent +2 0
         MessageBox MB_OK 'Error in Installation. Continuing!$\n$\r$\n$\rCould not write uninstaller.'
+
 SectionEnd
 
 
@@ -515,6 +555,7 @@ Section Uninstall
   ClearErrors
   Delete "$INSTDIR\${PRODUCT_NAME}.url"
   Delete "$INSTDIR\uninst.exe"
+  Delete "$INSTDIR\install.log"
   RMDir /r "$INSTDIR\share"
   ; keep the next 2 in case it was there from previous installations
   Delete "$INSTDIR\bin\Lib\*"
@@ -672,21 +713,8 @@ FunctionEnd
 Function .onInit
   ClearErrors
 
-  ; logging
-  ; if old log exists save simply (could be by date)
-  ; StrCpy $TEMP .
-  ; Dont use INSTDIR as it doesnt exist from the beginning use $TEMP instead.
-  ; Maybe use a different place at some point.
-  IfFileExists $TEMP\install.log 0 +4
-    IfFileExists $TEMP\install.log.1 0 +2
-      Delete $TEMP\install.log.1
-    Rename $TEMP\install.log $TEMP\install.log.1
-  ; Seems install.log always goes to $INSTDIR, since this doesnt
-  ; exists yet we try to set it in another way
-  Push $INSTDIR
-  StrCpy $INSTDIR $TEMP
-  LogSet on
-  Pop $INSTDIR
+  ; start the logging
+  Call SetupLogging
 
     ; Get Command line parameters
         var /GLOBAL INSTDIR_TMP
@@ -702,14 +730,14 @@ Function .onInit
 	ClearErrors
 	${GetOptions} $cmdLineParams '/?' $R0
 	IfErrors +3 0
-        Call ShowOptions
-	Abort
+    Call ShowOptions
+	  Quit
 
 	ClearErrors
 	${GetOptions} $cmdLineParams '/help' $R0
 	IfErrors +3 0
-        Call ShowOptions
-	Abort
+    Call ShowOptions
+	  Quit
 
 	Pop $R0
 
@@ -720,12 +748,16 @@ Function .onInit
 	Var /GLOBAL update
 	Var /GLOBAL delete_installer
 	Var /GLOBAL start_coot
+  Var /GLOBAL probe_install
+  Var /GLOBAL monomer_install
 
-	StrCpy $update             	  0
-	StrCpy $delete_installer      	  0
+	StrCpy $update              0
+	StrCpy $delete_installer    0
 	StrCpy $start_coot      	  0
+  StrCpy $probe_install       0
+  StrCpy $monomer_install     0
 
-    ; Parse Parameters
+  ; Parse Parameters
 
 	Push $R0
 	Call parseParameters
@@ -738,7 +770,22 @@ Function .onInit
            StrCpy $INSTDIR $INSTDIR_TMP
           ${EndIf}
         ${EndIf}
+
+; deal with monmer and probe command line
+${If} $probe_install = 1
+  !insertmacro SelectSection ${SEC04}
+${Else}
+  !insertmacro UnselectSection ${SEC04}
+${EndIf}
+
+${If} $monomer_install = 1
+  !insertmacro SelectSection ${SEC03}
+${Else}
+  !insertmacro UnselectSection ${SEC03}
+${EndIf}
+
 ; insert params END
+
 ; no more examples dir (have data dir now)
 ; so default start dir is $INSTDIR
   ${If} $STARTDIR == ""
@@ -785,6 +832,7 @@ Function .onGUIEnd
     Exec $INSTDIR\wincoot.bat
   ${EndIf}
   IfErrors 0 +6
+    ; this is a guess!? There could have been other things gone wrong - FIXME!?
     ; ${ErrorHandler} 7 "Error in installation. Could not write/edit wincoot.bat." 1
     DetailPrint "Error in installation. Could not write/edit wincoot.bat."
     SetErrorLevel 7
@@ -833,12 +881,12 @@ Function parseParameters
     ${GetOptions} $cmdLineParams '/instdir=' $R0
     IfErrors continue0 0
     ${If} $R0 == ""
-    MessageBox MB_ICONSTOP "No install directory given.$\n$\n\
-               Please use command line option /instdir=instdir$\n$\n\
-               Abort installation!"
-    Abort
+      MessageBox MB_ICONSTOP "No install directory given.$\n$\n\
+                 Please use command line option /instdir=instdir$\n$\n\
+                 Abort installation!"
+      Abort
     ${Else}
-    StrCpy $INSTDIR $R0
+      StrCpy $INSTDIR $R0
     ${EndIf}
     continue0:
 
@@ -847,6 +895,7 @@ Function parseParameters
     IfErrors continue1 0
     StrCpy $update 1
     continue1:
+    ClearErrors
 
     ; /autoupdate
     ${GetOptions} $cmdLineParams '/autoupdate' $R0
@@ -855,6 +904,7 @@ Function parseParameters
     StrCpy $delete_installer 1
     StrCpy $start_coot 1
     continue2:
+    ClearErrors
 
     ; /startdir=
     ; What about spaces in dir name?? USE quotes!?
@@ -869,16 +919,35 @@ Function parseParameters
     StrCpy $STARTDIR $R0
     ${EndIf}
     continue3:
+    ClearErrors
 
     ; /run
     ${GetOptions} $cmdLineParams '/run' $R0
     IfErrors +2 0
-    StrCpy $start_coot 1
+      StrCpy $start_coot 1
+    ClearErrors
 
     ; /del_inst
     ${GetOptions} $cmdLineParams '/del_inst' $R0
     IfErrors +2 0
-    StrCpy $delete_installer 1
+      StrCpy $delete_installer 1
+    ClearErrors
+
+    ; /probe
+    ; activate the optional installation of probe and reduce
+    ${GetOptions} $cmdLineParams '/probe' $R0
+    IfErrors +2 0
+      StrCpy $probe_install 1
+      ; MessageBox MB_OK "BL DEBUG:: have probe install"
+    ClearErrors
+
+    ; / mono
+    ; activate the optional download and installation of the monomer Library
+    ${GetOptions} $cmdLineParams '/mono' $R0
+    IfErrors +2 0
+      StrCpy $monomer_install 1
+      ; MessageBox MB_OK "DEBUG:: have mono install"
+    ClearErrors
 
 FunctionEnd
 
@@ -887,22 +956,48 @@ Function NoInstDirGiven
     MessageBox MB_ICONSTOP "No installation directory given.$\n$\n\
                Please use command line option /instdir=instdir$\n$\n\
                Abort installation!"
+    DetailPrint "Installation failed. No installation directory given! Aborting."
     Abort
 FunctionEnd
 
 Function ShowOptions
-	MessageBox MB_ICONQUESTION "WinCoot Installer Command Line Help$\n$\n\
-        Options:$\n\
-          /D=instdir         - defines installation directory to instdir$\n\
-          /instdir=instdir   - as above (preferred!!! needs to be first)$\n\
-          /startdir=statdir  - defines dir where Coot will start (after install/update)$\n\
-          /update            - update WinCoot (no questions asked, requires /D)$\n\
-          /autoupdate        - as /update but removes installer and starts WinCoot$\n\
-          /del_inst          - removes the installer after installation$\n\
-          /run               - run WinCoot after installation$\n\
-          /S                 - silent installation (and uninstall)$\n\
-          /help | /?         - this information"
+  ; Show help without admin
+  System::Call 'kernel32::AttachConsole(i -1)i.r1'
+  ${If} $1 != 0
+    FileOpen $0 "CONOUT$" w
+    FileWrite $0 "$\r$\n"
+    FileWrite $0 "Usage: WinCoot-x.y.z.exe [options]$\r$\n"
+    FileWrite $0 "Options:$\r$\n"
+    FileWrite $0 "  /S             Silent installation$\r$\n"
+    FileWrite $0 "  /D=path        Defines installation directory to path$\r$\n"
+    FileWrite $0 "  /instdir=path  As above (preferred!!! Needs to be the first option)$\r$\n"
+    FileWrite $0 "  /startdir=path Defines directory where Coot will start (after install/update)$\n"
+    FileWrite $0 "  /del_inst      Removes the installer after installation$\n"
+    FileWrite $0 "  /run           Run WinCoot after installation$\n"
+    FileWrite $0 "  /S             Silent installation (and uninstall)$\n"
+    FileWrite $0 "  /probe         Install probe and reduce$\n"
+    FileWrite $0 "  /mono          Download and install the monomer library$\n"
+    FileWrite $0 "  /help | /?$    This information"
+    FileWrite $0 "$\r$\n"
+    FileClose $0
+    System::Call 'kernel32::FreeConsole()'  ; Detach from console
+  ${Else}
+  	MessageBox MB_ICONQUESTION "WinCoot Installer Command Line Help$\n$\n\
+          Usage: WinCoot-x.y.z.exe [options]$\n\
+          Options:$\n\
+            /D=path$\t$\t Defines installation directory to path$\n\
+            /instdir=instdir$\t As above (preferred!!! needs to be first)$\n\
+            /startdir=path$\t Defines directory where Coot will start (after install/update)$\n\
+            /del_inst$\t$\t Removes the installer after installation$\n\
+            /run$\t$\t Run WinCoot after installation$\n\
+            /S$\t$\t Silent installation (and uninstall)$\n\
+            /probe$\t$\t Install probe and reduce$\n\
+            /mono$\t$\t Download and install the monomer library$\n\
+            /help | /?$\t$\t This information"
+ ${EndIf}
 FunctionEnd
+;          /update            - update WinCoot (no questions asked, requires /D)$\n\
+;          /autoupdate        - as /update but removes installer and starts WinCoot$\n\
 
 ; Dont show pages when updating!
 Function CheckForUpdate
@@ -973,6 +1068,14 @@ Function FinishPagePreFunction
 
   SetOutPath "$STARTDIR"
   Call CheckForUpdate
+
+  IfErrors 0 +5
+    ; ${ErrorHandler} 3 "Error in installation. Could not deal with FinishPagePreFunction." 0
+    DetailPrint "Error in installation. Could not deal with FinishPagePreFunction. Continuing."
+    SetErrorLevel 33
+    IfSilent +2 0
+        MessageBox MB_OK 'Error in Installation. Continuing!$\n$\r$\n$\rCould not deal with FinishPagePreFunction.'
+
 FunctionEnd
 
 Function TxtCompResult
@@ -983,6 +1086,7 @@ Function TxtCompResult
 FunctionEnd
 
 Function MakeIcons
+; make icons and entries in the startup menu and on the desktop
 # run only if not update
 ${If} $update = 0
   SetOutPath "$INSTDIR"
@@ -998,20 +1102,22 @@ ${If} $update = 0
   Sleep 10
   CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\Layla.lnk" "$SYSDIR\cmd.exe" '/c "$INSTDIR\bin\layla.bat"' "$INSTDIR\bin\layla.ico"
   Sleep 10
+  ; FIXME:: recommendation is NOT to include Website links and uninstaller under program folder BUT not Sure
+  ; if my uninstaller will actually appear under the normal Windows uninstallers...
+
   SetOutPath "$INSTDIR"
   WriteIniStr "$INSTDIR\WinCoot.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
   WriteIniStr "$INSTDIR\Coot.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE_2}"
-  CreateShortCut "$SMPROGRAMS\WinCoot\WinCoot Website.lnk" "$INSTDIR\${PRODUCT_NAME}.url"
+  WriteIniStr "$INSTDIR\CootTutorial.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE_3}"
+
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\WinCoot Website.lnk" "$INSTDIR\${PRODUCT_NAME}.url"
   Sleep 10
-  CreateShortCut "$SMPROGRAMS\WinCoot\Coot Website.lnk" "$INSTDIR\Coot.url"
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\Coot Website.lnk" "$INSTDIR\Coot.url"
   Sleep 10
-  CreateShortCut "$SMPROGRAMS\WinCoot\Uninstall.lnk" "$INSTDIR\uninst.exe"
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\Coot 1.1 Tutorial.lnk" "$INSTDIR\CootTutorial.url"
   Sleep 10
-  CreateShortCut "$SMPROGRAMS\WinCoot\Coot Manual.lnk" "$INSTDIR\doc\coot-user-manual.pdf"
-  Sleep 10
-  CreateShortCut "$SMPROGRAMS\WinCoot\Coot Keys and Buttons.lnk" "$INSTDIR\doc\crib-sheet.pdf"
-  Sleep 10
-  CreateShortCut "$SMPROGRAMS\WinCoot\Coot Tutorial.lnk" "$INSTDIR\doc\tutorial.pdf"
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\Uninstall.lnk" "$INSTDIR\uninst.exe"
+
   !insertmacro MUI_STARTMENU_WRITE_END
   SetOutPath "$INSTDIR"
  ${Endif}
@@ -1029,7 +1135,7 @@ Function ErrorHandler
 
 ; the message box could be rather a question to abort!?
   IfSilent +2 0
-  MessageBox MB_OK 'Error in Installation. Aborting!$\n$\r$\n$\r$1'
+    MessageBox MB_OK 'Error in Installation. Aborting!$\n$\r$\n$\r$1'
 
   DetailPrint $1
   SetErrorLevel $2
@@ -1049,4 +1155,31 @@ FunctionEnd
 ; function to show progress on taskbar icon
 Function createTaskIconProgress
   w7tbp::Start
+FunctionEnd
+
+; function to start logging (in $TEMP)
+Function SetupLogging
+
+  ; Dont use INSTDIR as it doesnt exist from the beginning use $TEMP instead.
+  ; Maybe use a different place at some point.
+
+  ; if old log exists save with timestamp
+  IfFileExists $TEMP\install.log 0 +4
+    ; get timestamp of old log file
+    ${GetTime} "$TEMP\install.log" "M" $0 $1 $2 $3 $4 $5 $6
+    ; Create timestamp string (YYYYMMDD_HHMMSS format)
+    StrCpy $R0 "$0$1$2_$4$5$6"
+    ; Rename the file
+    Rename "$TEMP\install.log" "$TEMP\install_$R0.log"
+
+  ; Seems install.log always goes to $INSTDIR, since this doesnt
+  ; exists yet we try to set it in another way
+
+  Push $INSTDIR
+  StrCpy $INSTDIR $TEMP
+  LogSet on
+  Pop $INSTDIR
+
+  ; MessageBox MB_OK "BL DEBUG:: writing log in $TEMP"
+
 FunctionEnd
