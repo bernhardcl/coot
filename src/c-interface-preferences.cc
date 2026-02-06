@@ -81,6 +81,14 @@
 
 /* insert some new stuff with the new method */
 
+// New preference handling:
+// 1.) make the preference builder
+// 2.) all preferences (keys, default value, setter and getter function) are
+// registered. This is done upon startup after all (static) variables are intialised
+// to get the default values
+// 3.) preferences file (coot_preferences.py)is read in from xdg_config (if exists)
+// 4.) GUI is updated based on actual (preference) values from 3.
+
 // Define preference value types
 using preferences_value = std::variant<int, double, std::string, bool, std::vector<float>>;
 
