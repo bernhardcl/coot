@@ -10,7 +10,7 @@
       <link rel="icon" type="image/png" href="coot-favicon.png">
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-        <script src="coot_script.js"></script>
+        <script src="coot_script_extras.js"></script>
 
   </head>
   <body>
@@ -22,38 +22,101 @@
       document.getElementById('noscript-info').innerHTML="";
     </script>
 
-    <h2> A list of all releases for download...</h2>
+<div style="margin-bottom: 15px;">
+  <label>
+     Version:
+     <select id="version-filter" style="margin-left: 5px;">
+        <option value="all" selected>All versions</option>
+        <option value="1.x">1.x (latest)</option>
+        <option value="0.9">0.9.x (legacy)</option>
+     </select>
+  </label>
+   <label>
+      <input type="checkbox" id="include-releases" checked> Include releases
+   </label>
+   <label style="margin-left: 15px;">
+     <input type="checkbox" id="include-prereleases" checked> Include pre-releases
+   </label>
+</div>
 
-    <select id="myselect" onchange="change_myselect(this.value)">
-      <option selected hidden>Choose an option:</option>
-      <option value="all">All releases</option>
-      <option value="false">Stable releases only</option>
-      <option value="true">Pre-releases only</option>
-    </select>
-
-    <table class="table table-bordered table-striped table-downloads">
-      <thead>
-<tr>
-<th>Release name</th>
-<th>Download</th>
-<th>md5sum</th>
-<th>File size</th>
-<!--<th>Download count</th> !-->
-<th>Release date</th>
-</tr>
-</thead>
-<tbody>
-</tbody>
+<table class="table-downloads">
+   <thead>
+      <tr>
+         <th>Version</th>
+         <th>Download</th>
+         <th>MD5</th>
+         <th>Size</th>
+         <th>Date</th>
+         <th class="downloads-header" style="display:none;">Downloads</th>
+      </tr>
+   </thead>
+   <tbody></tbody>
 </table>
 
+<script>
+function initDownloads(showDownloadOption) {
+   // showDownloadOption: true to show the checkbox, false to hide it
+   var showDownloads = false;
 
-    <script>
-  // first print all, then have the selection
-    $(document).ready(function() {
-       repo = "bernhardcl/coot";
-       GetReleases(repo, "all");
-  });
-    </script>
+   if (showDownloadOption) {
+      // Add download checkbox for developer page
+      $("div[style*='margin-bottom']").append(
+         '<label style="margin-left: 15px;">' +
+         '<input type="checkbox" id="show-downloads" checked> Show download counts' +
+         '</label>'
+      );
+      showDownloads = true;
+
+      // Add event listener for download checkbox
+      $("#show-downloads").on("change", function() {
+         refreshTable(showDownloadOption);
+      });
+   }
+
+   // Auto-refresh on checkbox change
+   $("#version-filter, #include-prereleases, #include-releases").on("change", function() {
+      refreshTable(showDownloadOption);
+   });
+
+   // Initial load
+   refreshTable(showDownloadOption);
+}
+
+function refreshTable(showDownloadOption) {
+   var versionFilter = $("#version-filter").val();
+
+   var includePrereleases = $("#include-prereleases").is(":checked");
+   var includeReleases = $("#include-releases").is(":checked");
+   var showDownloads = showDownloadOption && $("#show-downloads").is(":checked");
+
+   var preReleaseFilter;
+   if (includePrereleases && includeReleases) {
+      preReleaseFilter = "all";
+   } else if (includePrereleases) {
+      preReleaseFilter = "prereleases";
+   } else if (includeReleases) {
+      preReleaseFilter = "releases";
+   } else {
+      $(".table-downloads tbody").empty();
+      return;
+   }
+
+   if (showDownloads) {
+      $(".downloads-header").show();
+   } else {
+      $(".downloads-header").hide();
+   }
+
+   $(".table-downloads tbody").empty();
+   GetReleases("bernhardcl/coot", preReleaseFilter, versionFilter, showDownloads);
+}
+$(document).ready(function() {
+  // Check URL parameter to determine if this is developer page
+  // Table refreshment in the downloads section...
+  var isDev = window.location.search.includes('dev=true');
+  initDownloads(isDev);
+});
+</script>
 
     <br>
     <hr style="width: 100%; height: 2px;">
@@ -66,7 +129,8 @@ var ppcname = "Bernhard.Lohkamp";
 var ppchost = "ki.se";
 document.write("<a href=" + "mail" + "to:" + ppcname + "&#64;" + ppchost + ">" + ppclink + "</a>")
 //-->
-</script><noscript>
+</script>
+<noscript>
 email: Bernhard.Lohkamp (at) ki.se
 </noscript></address>
     </div>

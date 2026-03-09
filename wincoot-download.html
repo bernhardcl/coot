@@ -5,7 +5,7 @@
     <meta http-equiv="content-type" content="text/html; charset=windows-1252">
     <title>WinCoot download</title>
     <meta content="Bernhard Lohkamp" name="author">
-    <meta content="Coot, WinCoot for Windows systems, molecular
+    <meta content="Coot, WinCoot, Coot for Windows systems, molecular
       graphics, download" name="description">
       <link rel="icon" type="image/png" href="coot-favicon.png">
 
@@ -16,15 +16,29 @@
   <body>
     <h1>WinCoot install and download page</h1>
     <div id="noscript-button">
-      <form action=https://github.com/bernhardcl/coot/releases/download/Release-0.9.8.1/WinCoot-0.9.8.1.exe>
+      <form action=https://github.com/bernhardcl/coot/releases/download/Release-1.1.20/WinCoot-1.1.20.1.exe>
         <input type='submit'
-               value='Download WinCoot-0.9.8.1'
+               value='Download WinCoot-1.1.20.1'
                style='font-style:veranda; font-size:16px; font-weight:bold;color:yellow;background-color:blue;white-space:normal;width:150px;height:60px;border-style:ridged;text-align:center;'>
+      </form>
+      <!-- NOTE this has a typo, should be Release not Realease... -->
+      <form action=https://github.com/bernhardcl/coot/releases/download/Realease-0.9.8.96/WinCoot-0.9.8.96.exe>
+        <input type='submit'
+               value='Download WinCoot-0.9.8.96'
+               style='font-style:veranda; font-size:8px; font-weight:bold;color:white;background-color:lightblue;white-space:normal;width:75px;height:40px;border-style:ridged;text-align:center;'>
       </form>
       Note: you dont have JavaScript enabled, so the direct download links may be out of date. Either enable JavaScript or have a look at the <a href="https://github.com/bernhardcl/coot/releases/latest">release page</a> for the latest downloads.
     </div>
     <script>
-      document.getElementById('noscript-button').innerHTML="<form class='coot-download-action' action=bla> <input class='coot-download-info' type='submit' value='Download WinCoot-0.9.8.1' style='font-style:veranda; font-size:16px; font-weight:bold;color:yellow;background-color:blue;white-space:normal;width:225px;height:60px;border-style:ridged;text-align:center;'> </form>"
+      document.getElementById('noscript-button').innerHTML=
+        "<div style='display:flex; gap:50px; align-items:flex-end;'>" +
+          "<form class='coot-download-action' action=bla>" +
+            "<input class='coot-download-info' type='submit' value='Download WinCoot-1.1.20.1' style='font-style:veranda; font-size:16px; font-weight:bold;color:yellow;background-color:blue;white-space:normal;width:225px;height:60px;border-style:ridged;text-align:center'>" +
+          "</form>" +
+          "<form class='09-coot-download-action' action=bla>" +
+            "<input class='09-coot-download-info' type='submit' value='Download WinCoot-0.9.8.96' style='font-style:veranda; font-size:8px; font-weight:bold;color:LightGoldenrodYellow;background-color:skyblue;white-space:normal;width:112px;height:30px;border-style:ridged;text-align:center'>" +
+          "</form>" +
+        "<\div>";
     </script>
 
     <h2>How to download and install WinCoot?</h2>
@@ -36,7 +50,7 @@
     done:<br>
     <ul>
       <li>Download the installer for
-        <a class="coot-download-href" href="https://github.com/bernhardcl/coot/releases/download/Release-0.9.8.1/WinCoot-0.9.8.1.exe"><span class="version-info">WinCoot-0.9.8.1.exe</span></a> (or
+        <a class="coot-download-href" href="https://github.com/bernhardcl/coot/releases/download/Realease-0.9.8.96/WinCoot-0.9.8.96.exe"><span class="version-info">WinCoot-0.9.8.96.exe</span></a> (or
         look <a id="release-page" href="https://github.com/bernhardcl/coot/releases">here</a>
         <script>
           document.getElementById('release-page').href="wincoot-releases.html";
@@ -78,8 +92,8 @@ This
       href="https://github.com/bernhardcl/coot">here</a>.
     However, I cannot garantee that you'll be able to build it on your
     own
-    MinGW system. An autobuild script help you to do so (<a
-      href="https://github.com/bernhardcl/coot/raw/master/build-it-win">build-it-win</a>).
+    MinGW64/Msys2 system. An autobuild script help you to do so (<a
+      href="https://github.com/bernhardcl/coot/raw/gtk4/build-it-win">build-it-win</a>).
 Feel
     free to email me if
     you have problems and are desperate to do so.<br>
