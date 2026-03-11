@@ -19,9 +19,6 @@
 !insertmacro GetParameters
 !insertmacro GetOptions
 
-; for removal of installer
-!include "StrStr.nsh"
-
 ; to detect windows version
 !include "WinVer.nsh"
 
@@ -47,6 +44,15 @@
 
 SetCompressor lzma
 
+; multiuser functionality; allows both user and admin level installation
+!define MULTIUSER_EXECUTIONLEVEL Highest
+!define MULTIUSER_MUI
+!define MULTIUSER_INSTALLMODE_COMMANDLINE
+!include MultiUser.nsh
+
+; for removal of installer
+;!include "StrStr.nsh"
+
 ; MUI 1.67 compatible ------
 !include "MUI2.nsh"
 
@@ -69,6 +75,7 @@ Var STARTDIR
 !define MUI_HEADERIMAGE_BITMAP "C:\msys64\home\bernhard\installer\coot_pic_header.bmp"
 !define MUI_PAGE_CUSTOMFUNCTION_PRE InitPreFunction
 !insertmacro MUI_PAGE_WELCOME
+!insertmacro MULTIUSER_PAGE_INSTALLMODE
 ; Components page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE CheckForUpdate
 !insertmacro MUI_PAGE_COMPONENTS
@@ -478,27 +485,21 @@ SectionEnd
 ; WITH_GUILE
 
 Section -AddIcons
-  ;; First install for all users, if anything fails, install
+  ;; Multiuser detects which SetShellVarContext is needed and sets is accordingly. So
+  ;; we can call MakeIcons direcly (actually the function could probably be here now!?)
   ;; for current user only.
   ClearErrors
 
-  SetShellVarContext all
   ; let's see what happens when we try making icons for all
   Call MakeIcons
 
-  ; if error try to make icons for current user only
-  ; if not possible at all, give a warning
   IfErrors 0 exit
-    ClearErrors
-    SetShellVarContext current
-    Call MakeIcons
-    IfErrors 0 exit
-      ; ${ErrorHandler} 3 "WARNING:: Error in installation. Could not install icons." 0
-      DetailPrint "WARNING:: Error in installation. Could not install icons. Continuing."
-      SetErrorLevel 3
-      IfSilent +2 0
-          MessageBox MB_OK 'WARNING:: Error in Installation. Continuing!$\n$\r$\n$\rCould not install icons.'
-      ClearErrors ; mmh clear after setting a level!? FIXME
+    ; ${ErrorHandler} 3 "WARNING:: Error in installation. Could not install icons." 0
+    DetailPrint "WARNING:: Error in installation. Could not install icons. Continuing."
+    SetErrorLevel 3
+    IfSilent +2 0
+        MessageBox MB_OK 'WARNING:: Error in Installation. Continuing!$\n$\r$\n$\rCould not install icons.'
+    ClearErrors ; mmh clear after setting a level!? FIXME
 
   exit:
     ClearErrors
@@ -711,6 +712,8 @@ Function .onSelChange
 FunctionEnd
 
 Function .onInit
+  !insertmacro MULTIUSER_INIT
+
   ClearErrors
 
   ; start the logging
@@ -818,7 +821,7 @@ Function .onGUIEnd
 
   ; delete the installer
   ${If} $delete_installer = 1
-   !insertmacro StrStr $0 "$EXEDIR" "pending-install"
+   ${StrStr} $0 "$EXEDIR" "pending-install"
    ${If} $0 == ""
     Exec 'cmd /c del "$EXEDIR\${PRODUCT_NAME}-${PRODUCT_VERSION}.exe"'
    ${Else}
@@ -848,6 +851,7 @@ Function un.onUninstSuccess
 FunctionEnd
 
 Function un.onInit
+  !insertmacro MULTIUSER_UNINIT
   MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" /SD IDYES IDYES +2
   Abort
 FunctionEnd
@@ -977,6 +981,8 @@ Function ShowOptions
     FileWrite $0 "  /S             Silent installation (and uninstall)$\n"
     FileWrite $0 "  /probe         Install probe and reduce$\n"
     FileWrite $0 "  /mono          Download and install the monomer library$\n"
+    FileWrite $0 "  /AllUsers      Install for all users (for admin only; default)$\n"
+    FileWrite $0 "  /CurrentUser   Install for current user only (default for user)$\n"
     FileWrite $0 "  /help | /?$    This information"
     FileWrite $0 "$\r$\n"
     FileClose $0
@@ -993,6 +999,8 @@ Function ShowOptions
             /S$\t$\t Silent installation (and uninstall)$\n\
             /probe$\t$\t Install probe and reduce$\n\
             /mono$\t$\t Download and install the monomer library$\n\
+            /AllUsers$\t$\t Install for all users (for admin only; default)$\n\
+            /CurrentUser$\t Install for current user only (default for user)$\n\
             /help | /?$\t$\t This information"
  ${EndIf}
 FunctionEnd
