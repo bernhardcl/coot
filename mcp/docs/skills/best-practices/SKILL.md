@@ -8,6 +8,212 @@ description: "Best Practices for using Coot MCP"
 
 This skill provides best practices for interacting with Coot's Python API through the MCP server. Following these guidelines ensures optimal performance, correct usage, and reliable results.
 
+## Python Execution in Coot MCP
+
+**CRITICAL: Understanding run_python() vs run_python_multiline()**
+
+Coot MCP provides two tools for executing Python code with different capabilities and limitations:
+
+### run_python() - Simple Expressions Only
+
+Use for single expressions that return a value. **Cannot handle imports or semicolons.**
+
+```python
+# ✓ CORRECT - single expression, no imports
+coot.run_python("1 + 1")                           # Returns: 2
+coot.run_python("coot.molecule_name(0)")           # Returns: molecule name
+coot.run_python("coot.is_valid_model_molecule(0)") # Returns: 1 or 0
+
+# ✗ WRONG - these will all fail with syntax errors
+coot.run_python("import os")                       # FAILS - import not allowed
+coot.run_python("import os; os.getcwd()")          # FAILS - semicolon not allowed  
+coot.run_python("x = 5; x * 2")                    # FAILS - semicolon not allowed
+coot.run_python("import coot_utils; coot_utils.chain_ids(0)")  # FAILS
+```
+
+**Rule:** Use `run_python()` ONLY for:
+- Single expressions with no semicolons
+- No import statements
+- Direct function calls that return a value
+
+### run_python_multiline() - Everything Else
+
+Use for any code requiring imports, multiple statements, or function definitions:
+
+```python
+# ✓ CORRECT - use multiline for imports
+coot.run_python_multiline("""
+import os
+result = os.getcwd()
+print(result)
+""")
+
+# ✓ CORRECT - use multiline for multiple statements
+coot.run_python_multiline("""
+x = 5
+y = x * 2
+print(y)
+""")
+
+# ✓ CORRECT - use multiline for complex logic
+coot.run_python_multiline("""
+import coot_utils
+chains = coot_utils.chain_ids(0)
+for chain in chains:
+    print(f"Chain: {chain}")
+""")
+
+# ✓ CORRECT - use multiline for function definitions
+coot.run_python_multiline("""
+def validate_residue(imol, chain, resno):
+    info = coot.residue_info_py(imol, chain, resno, "")
+    return len(info)
+
+result = validate_residue(0, "A", 42)
+print(f"Atoms: {result}")
+""")
+```
+
+**Rule:** Use `run_python_multiline()` for:
+- Any import statements
+- Multiple statements (even without imports)
+- Function definitions
+- Loops and control flow
+- Anything with complexity
+
+### Key Differences Table
+
+| Feature | run_python() | run_python_multiline() |
+|---------|--------------|------------------------|
+| Import statements | ❌ Fails | ✓ Works |
+| Semicolons | ❌ Fails | ✓ Works |
+| Multiple lines | ❌ Fails | ✓ Works |
+| Function defs | ❌ Fails | ✓ Works |
+| Simple expressions | ✓ Works | ✓ Works |
+| Return value | Returns value | Returns None (use print) |
+
+### Common Mistake Pattern
+
+```python
+# ❌ WRONG - will fail with "invalid syntax"
+result = coot.run_python("import coot_utils; coot_utils.chain_ids(0)")
+
+# ✓ CORRECT - use multiline
+coot.run_python_multiline("""
+import coot_utils
+chains = coot_utils.chain_ids(0)
+print(chains)
+""")
+```
+
+### When in Doubt
+
+**Use `run_python_multiline()`** - it handles everything `run_python()` can do, plus more. The only downside is that it returns None rather than a value, so use `print()` to see output.
+
+## File Writing from Coot Python
+
+**CRITICAL: When writing files from Coot's Python, ALWAYS write to the current directory without specifying a path.**
+
+### The Problem
+
+Coot's Python interpreter runs in a specific working directory (`/Users/pemsley/Projects/coot/git/coot-main/build/src`), which is different from both:
+- The bash working directory (`/home/claude`)
+- Mounted shared directories (`/mnt/user-data/...`)
+
+Attempting to write to an explicit path that doesn't exist in Coot's context will cause `FileNotFoundError`.
+
+### ✅ CORRECT: Write to Current Directory
+
+```python
+# ✓ CORRECT - no path, just filename
+with open('output.txt', 'w') as f:
+    f.write(content)
+
+# ✓ CORRECT - works for any file type
+with open('validation.xml', 'w') as f:
+    f.write(xml_content)
+
+# ✓ CORRECT - reading also uses just filename
+with open('data.txt', 'r') as f:
+    content = f.read()
+```
+
+### ❌ INCORRECT: Don't Specify Paths
+
+```python
+# ✗ WRONG - will fail with FileNotFoundError
+with open('/home/claude/output.txt', 'w') as f:
+    f.write(content)
+
+# ✗ WRONG - this path doesn't exist in Coot's context
+with open('/mnt/user-data/outputs/file.txt', 'w') as f:
+    f.write(content)
+
+# ✗ WRONG - even full paths will fail
+import os
+output_file = os.path.join('/home/claude', 'output.txt')
+with open(output_file, 'w') as f:
+    f.write(content)
+```
+
+### Pattern for Working with Files
+
+```python
+# 1. Download/fetch content (if needed)
+url = "https://example.com/data.xml"
+content = coot.coot_get_url_as_string_py(url)
+
+# 2. Write to current directory (no path!)
+with open('data.xml', 'w') as f:
+    f.write(content)
+
+# 3. Process the file
+import xml.etree.ElementTree as ET
+tree = ET.parse('data.xml')  # Read from current directory
+root = tree.getroot()
+
+# 4. Write results (again, no path!)
+with open('results.txt', 'w') as f:
+    f.write(analysis_results)
+```
+
+### Why This Works
+
+Coot's Python interpreter automatically uses its working directory. By omitting paths:
+- Files are created in a location that exists
+- No permission issues
+- No cross-filesystem problems
+- Simple and reliable
+
+### Getting Files to the User
+
+After creating files in Coot's working directory, use bash tools to copy them to `/mnt/user-data/outputs` where the user can access them, or share results via print output.
+
+## Startup Procedure
+
+**CRITICAL: On every "Coot Mode" start, before doing anything else:**
+
+1. Read the `/mnt/skills/user/coot-essential-api/SKILL.md` file
+2. Extract all function names mentioned in that file
+3. Call `get_function_descriptions()` with the complete list of function names
+4. This loads the essential API documentation into context, providing immediate access to the ~25 core functions needed for typical validation and model-building workflows
+
+This startup procedure eliminates the need to search for basic functions during the session and ensures you have the foundational API ready to use.
+
+Example:
+```python
+# After reading coot-essential-api/SKILL.md, call:
+Coot:get_function_descriptions([
+    "set_refinement_immediate_replacement",
+    "is_valid_model_molecule",
+    "is_valid_map_molecule",
+    # ... all other functions from the essential API
+])
+```
+
+Only after completing this startup should you proceed with the user's task.
+
+
 ## Critical Rule: Prefer C++ Functions Over Python Wrappers
 
 **ALWAYS use `coot.*_py()` functions directly instead of `coot_utils.*` equivalents when they are simple passthroughs.**
@@ -32,7 +238,7 @@ This skill provides best practices for interacting with Coot's Python API throug
 **Example of the problem:**
 ```python
 # This will fail with NameError if coot_utils not imported
-coot_utils.chain_ids(0)  
+coot_utils.chain_ids(0)
 
 # Solution:
 import coot_utils
@@ -122,6 +328,75 @@ n_chains = coot.n_chains(0)
 import coot_utils
 chains = coot_utils.chain_ids(0)  # Convenience wrapper
 ```
+## MMDB Atom Selection Syntax
+
+When using functions like `new_molecule_by_atom_selection()` or `superpose_with_atom_selection()`, use MMDB atom selection strings to specify which atoms to include.
+
+### Format
+```
+//chn/seq(res).ic/atm[elm]:aloc
+```
+
+### Components
+
+- **`//`** - Model specifier (typically `//` for single-model structures, or `/1/` for model 1)
+- **`chn`** - Chain ID (e.g., `A`, `B`, `X`)
+  - Multiple chains can be specified with commas: `A,B,C`
+- **`seq`** - Residue number or range:
+  - Single: `50`
+  - Range: `10-20`
+- **`res`** - Residue name in parentheses (e.g., `(HIS)`, `(ALA)`, `(GLY)`)
+- **`ic`** - Insertion code
+- **`atm`** - Atom name (e.g., `CA`, `N`, `O`)
+- **`elm`** - Element in square brackets (e.g., `[C]`, `[N]`)
+- **`aloc`** - Alternate location indicator
+
+All components are optional - you only need to specify what you want to filter.
+
+### Examples
+```python
+# Select entire chain
+"//A"                          # All atoms in chain A
+"//A,B,C"                      # All atoms in chains A, B, and C
+
+# Select residue range
+"//A/12-130"                   # Residues 12-130 in chain A
+"//A/12-130/CA"                # CA atoms from residues 12-130 in chain A
+
+# Select specific residue type
+"//B/10-20(GLY)"               # GLY residues 10-20 in chain B
+"//A/*(HIS)"                   # All HIS residues in chain A
+
+# Select specific atom
+"//A/50/CA"                    # CA atom of residue 50 in chain A
+"//A/50(HIS)/CA"               # CA atom of HIS 50 in chain A
+
+# Select multiple chains in one selection
+"//X,Y,1,2"                    # All atoms in chains X, Y, 1, and 2
+```
+
+### Usage Examples
+```python
+import coot
+
+# Create a new molecule with chains A and B
+imol_ab = coot.new_molecule_by_atom_selection(0, "//A,B")
+
+# Create a new molecule with CA atoms from residues 10-50 in chain A
+imol_ca = coot.new_molecule_by_atom_selection(0, "//A/10-50/CA")
+
+# Create molecule with transcription factor (chains X, Y) and DNA (chains 1, 2)
+imol_complex = coot.new_molecule_by_atom_selection(0, "//X,Y,1,2")
+
+# Superpose using atom selection
+coot.superpose_with_atom_selection(
+    imol1=0,
+    imol2=1,
+    mmdb_atom_sel_str_1="//A/10-100",
+    mmdb_atom_sel_str_2="//A/10-100",
+    move_imol2_copy_flag=0
+)
+```
 
 ## Code Execution Patterns
 
@@ -151,6 +426,73 @@ mols  # Final expression is returned
 # ✅ ALSO CORRECT: List comprehension (single expression)
 [i for i in range(3)]
 ```
+
+## MMDB Atom Selection Syntax
+
+When using functions like `new_molecule_by_atom_selection()` or `superpose_with_atom_selection()`, use MMDB atom selection strings to specify which atoms to include.
+
+### Format
+```
+//chn/seq(res).ic/atm[elm]:aloc
+```
+
+### Components
+
+- **`//`** - Model specifier (typically `//` for single-model structures, or `/1/` for model 1)
+- **`chn`** - Chain ID (e.g., `A`, `B`, `X`)
+- **`seq`** - Residue number or range:
+  - Single: `50`
+  - Range: `10-20`
+- **`res`** - Residue name in parentheses (e.g., `(HIS)`, `(ALA)`, `(GLY)`)
+- **`ic`** - Insertion code
+- **`atm`** - Atom name (e.g., `CA`, `N`, `O`)
+- **`elm`** - Element in square brackets (e.g., `[C]`, `[N]`)
+- **`aloc`** - Alternate location indicator
+
+All components are optional - you only need to specify what you want to filter.
+
+### Examples
+```python
+# Select entire chain
+"//A"                          # All atoms in chain A
+
+# Select residue range
+"//A/12-130"                   # Residues 12-130 in chain A
+"//A/12-130/CA"                # CA atoms from residues 12-130 in chain A
+
+# Select specific residue type
+"//B/10-20(GLY)"               # GLY residues 10-20 in chain B
+"//A/(HIS)"                    # All HIS residues in chain A
+
+# Select specific atom
+"//A/50/CA"                    # CA atom of residue 50 in chain A
+"//A/50(HIS)/CA"               # CA atom of HIS 50 in chain A
+
+# Multiple chains (create separate selections and merge)
+imol_a = coot.new_molecule_by_atom_selection(imol, "//A")
+imol_b = coot.new_molecule_by_atom_selection(imol, "//B")
+```
+
+### Usage Example
+```python
+import coot
+
+# Create a new molecule with only chain A
+imol_chain_a = coot.new_molecule_by_atom_selection(0, "//A")
+
+# Create a new molecule with CA atoms from residues 10-50
+imol_ca = coot.new_molecule_by_atom_selection(0, "//A/10-50/CA")
+
+# Superpose using atom selection
+coot.superpose_with_atom_selection(
+    imol1=0,
+    imol2=1,
+    mmdb_atom_sel_str_1="//A/10-100/CA",
+    mmdb_atom_sel_str_2="//A/10-100/CA",
+    move_imol2_copy_flag=0
+)
+```
+
 
 ## Common Tasks Reference
 
@@ -197,7 +539,7 @@ for chain in chains:
 atom = coot.closest_atom_simple_py()
 if atom:
     imol, chain, resno, ins, atom_name, alt, coords = atom[0], atom[1], atom[2], atom[3], atom[4], atom[5], atom[6]
-    
+
 # ✅ Get active residue (with potential CA substitution)
 import coot_utils
 active = coot_utils.active_residue()
@@ -227,6 +569,19 @@ stats = coot.map_to_model_correlation_stats_per_residue_range_py(
     0, "A", 1, 100, 1  # imol, chain, start, end, imol_map
 )
 ```
+
+## Zoom and View Settings
+
+When adjusting the view in Coot, remember that **higher zoom values mean the molecule appears larger on screen** (i.e., zoomed in), while **lower values show more of the scene** (zoomed out). Typical ranges:
+
+- **150-300**: Whole-molecule overview (appropriate for ribbons, surfaces, overall architecture)
+- **50-100**: Domain or region level
+- **20-50**: Residue-level detail (inspecting side chains, density fit, rotamers)
+
+Small proteins like RNase A (~124 residues) may appear compact even at zoom 200, while larger complexes will fill the screen at lower zoom values. When presenting a ribbon diagram or other overview representation, consider turning off the bond representation (`coot.set_mol_displayed(imol, 0)`) and hiding electron density maps (`coot.set_map_displayed(imol_map, 0)`) to reduce visual clutter while keeping the ribbon mesh visible.
+
+Use `coot.zoom_factor()` to query the current zoom level and `coot.set_zoom(value)` to set it. For interactive exploration, users can also adjust zoom with the scroll wheel.
+
 
 ## Performance Considerations
 
@@ -306,20 +661,97 @@ coot.tutorial_model_and_data()
 coot.load_tutorial_model_and_data()
 ```
 
-### 4. Expecting return from print()
-```python
-# ❌ Returns None
-result = []
-for i in range(5):
-    result.append(i)
-print(result)  # Returns None
 
-# ✅ Return the value
+### 4. Getting output from multi-line code
+```python
+# ✅ Use print() to see output - it appears in stdout
 result = []
 for i in range(5):
     result.append(i)
-result  # Returns the list
+print(result)  # Output: [0, 1, 2, 3, 4]
+
+# ❌ A bare expression at the end of multi-line code does NOT return a value
+result = []
+for i in range(5):
+    result.append(i)
+result  # Returns None - this doesn't work!
+
+## API Discovery Tools
+
+### Using search_coot_functions
+
+The `search_coot_functions` tool is your primary method for finding Coot functions. It supports powerful search patterns:
+
+**Space-separated words = Logical AND**
+```python
+# Find functions containing ALL these words
+search_coot_functions("map model correlation")
+# Returns functions like: map_to_model_correlation_stats_per_residue_range_py
+
+search_coot_functions("residue range chain")
+# Returns functions dealing with residue ranges in chains
+
+search_coot_functions("min max residue")
+# Returns functions with all three words (not just any one)
 ```
+
+**Single words = Simple search**
+```python
+search_coot_functions("correlation")  # All functions with "correlation"
+search_coot_functions("validation")   # All functions with "validation"
+search_coot_functions("rotamer")      # All functions with "rotamer"
+```
+
+**Common search patterns:**
+- `"map correlation"` - density fit functions
+- `"residue validation"` - geometry checking
+- `"chain residue"` - chain/residue operations
+- `"ligand environment"` - ligand analysis
+- `"ramachandran"` - backbone validation
+- `"density fit"` - map fitting functions
+
+### ✅ CORRECT Search Strategy
+
+```python
+# Looking for functions to get residues in a chain
+search_coot_functions("chain residue")  # Logical AND
+
+# Looking for min/max residue number functions
+search_coot_functions("min max residue")  # All three words required
+
+# Looking for correlation analysis
+search_coot_functions("correlation residue")  # Both words required
+```
+
+### ❌ INCORRECT Search Strategy
+
+```python
+# DON'T use grep with pipe (|) when you mean AND
+# This searches for min OR max OR residue (logical OR)
+# Use search_coot_functions with spaces instead
+```
+
+### When to use each discovery tool
+
+1. **search_coot_functions(pattern)** - First choice
+   - Use space-separated words for AND logic
+   - Returns max 40 results with documentation
+   - Best for targeted searches
+
+2. **list_coot_categories()** - For browsing
+   - Returns: ['load', 'read', 'display', 'refinement', 'validation', 'ligand', 'util']
+   - Use when you want to explore a general area
+
+3. **get_functions_in_category(category)** - For comprehensive lists
+   - Returns all functions in a category (50-200 functions)
+   - Use after identifying the right category
+
+### Search Tips
+
+- Start with **2-3 specific words** that describe what you need
+- If too many results, add more words to narrow down
+- If no results, try synonyms or broader terms
+- Common terms: validation, correlation, residue, chain, map, model, ligand, fit, geometry
 
 ## Summary
 
@@ -328,5 +760,6 @@ result  # Returns the list
 3. **Remember `coot` is auto-imported**, `coot_utils` is not
 4. **Use single-line expressions** when possible for cleaner returns
 5. **Check function names** - `load_tutorial_model_and_data()` not `tutorial_model_and_data()`
+6. **Use `search_coot_functions` with space-separated words** for AND logic when searching the API
 
 Following these practices ensures optimal performance and correct API usage when working with Coot through the MCP server.

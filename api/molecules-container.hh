@@ -696,6 +696,24 @@ public:
    //! @return the new molecule index on success and -1 on failure
    int read_small_molecule_cif(const std::string &file_name);
 
+   //! Read an Amber NetCDF trajectory file
+   //!
+   //! Reads trajectory frames and creates a multi-model molecule. Requires NetCDF support
+   //! to be compiled in (--with-netcdf at configure time).
+   //!
+   //! @param imol_coords is the model molecule index providing the topology (atom names, residues)
+   //! @param trajectory_file_name is the path to the Amber NetCDF trajectory file (.nc)
+   //! @param start_frame is the first frame to read (0-indexed), -1 for first frame
+   //! @param end_frame is the last frame to read (0-indexed), -1 for last frame
+   //! @param stride read every nth frame (1 = all frames)
+   //!
+   //! @return the new molecule index on success and -1 on failure
+   int read_amber_trajectory(int imol_coords,
+                             const std::string &trajectory_file_name,
+                             int start_frame,
+                             int end_frame,
+                             int stride);
+
    //! Print the secondary structure information
    //!
    //! @param imol is the model molecule index
@@ -889,6 +907,15 @@ public:
    //!
    //! @param imol is the model molecule index
    //! @param cid is the atom selection CID e.g "//A/15/OH" (atom OH in residue 15 of chain A)
+   //! @return a json string that contains a molecule hierarchy.
+   //!         The atom data include
+   //!   "x"
+   //!   "y"
+   //!   "z"
+   //!   "tempFactor"
+   //!   "occupancy"
+   //!   "name"
+   //!   "element"
    std::string get_molecule_selection_as_json(int imol, const std::string &cid) const;
 
    //! Write a PNG for the given compound_id.
@@ -957,6 +984,7 @@ public:
                                                    float bond_width, float atom_radius_to_bond_width_ratio,
                                                    bool show_atoms_as_aniso_flag,
                                                    bool show_aniso_atoms_as_ortep_flag,
+                                                   bool show_aniso_atoms_as_empty,
                                                    bool draw_hydrogen_atoms_flag,
                                                    int smoothness_factor);
 
@@ -971,6 +999,7 @@ public:
                                                                  float bond_width, float atom_radius_to_bond_width_ratio,
                                                                  bool show_atoms_as_aniso_flag,
                                                                  bool show_aniso_atoms_as_ortep_flag,
+                                                                 bool show_aniso_atoms_as_empty_flag,
                                                                  bool draw_hydrogen_atoms_flag,
                                                                  int smoothness_factor);
 
@@ -1144,10 +1173,28 @@ public:
    //! @param secondary_structure_usage_flag 0 (USE_HEADER), 1 (DONT_USE) or 2 (CALC_SECONDARY_STRUCTURE).
    //!
    //! @return a `simple_mesh_t`
-   coot::simple_mesh_t get_molecular_representation_mesh(int imol, const std::string &cid, const std::string &colour_scheme,
-                                                         const std::string &style, int secondary_structure_usage_flag);
+   coot::simple_mesh_t get_molecular_representation_mesh(int imol, const std::string &cid,
+                                                         const std::string &colour_scheme,
+                                                         const std::string &style,
+                                                         int secondary_structure_usage_flag);
+
+   //! \brief set the residue properties
+   //!
+   //! a list of propperty maps such as `{"chain-id": "A", "res-no": 34, "ins-code": "", "worm-radius": 1.2}`
+   //!
+   //! @param imol is the model molecule index
+   //! @param json_string is the properties in JSON format
+   //! @return true
+   bool set_residue_properties(int imol, const std::string &json_string);
+
+   // \brief clear the reisidue properties
+   //!
+   //! @param imol is the model molecule index
+   void clear_residue_properties(int imol);
 
    //! Get a Gaussian surface representation
+   //!
+   //! Waters are not included in the surface calculation
    //!
    //! @param imol is the model molecule index
    //! @param sigma default 4.4
@@ -1159,6 +1206,61 @@ public:
    //! @return a `simple_mesh_t` composed of a number of Gaussian surfaces (one for each chain)
    coot::simple_mesh_t get_gaussian_surface(int imol, float sigma, float contour_level,
                                             float box_radius, float grid_scale, float b_factor) const;
+
+   //! Get a Gaussian surface representation
+   //!
+   //! Waters are not included in the surface calculation
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the atom selection CID
+   //! @param sigma default 4.4
+   //! @param contour_level default 4.0
+   //! @param box_radius default 5.0
+   //! @param grid_scale default 0.7
+   //! @param b_factor default 100.0 (use 0.0 for no FFT-B-factor smoothing)
+   //!
+   //! @return a `simple_mesh_t` composed of a number of Gaussian surfaces (one for each chain)
+   coot::simple_mesh_t get_gaussian_surface_for_atom_selection(int imol, const std::string &cid,
+                                                               float sigma, float contour_level,
+                                                               float box_radius, float grid_scale,
+                                                               float b_factor) const;
+
+   // Make a map from a gaussian surface
+   //!
+   //! Waters are not included in the surface calculation
+   //! The map `imol_map_ref` is used to provide the cell
+   //! and gridding.
+   //!
+   //! @param imol_map_ref is the model molecule index
+   //! @param imol_model is the model molecule index
+   //! @param cid is the atom selection CID
+   //! @param sigma default 4.4
+   //! @param contour_level default 4.0
+   //! @param box_radius default 5.0
+   //! @param grid_scale default 0.7
+   //! @param b_factor default 100.0 (use 0.0 for no FFT-B-factor smoothing)
+   //!
+   //! @return a new molecule index for the map or -1 on failur
+   int gaussian_surface_to_map_molecule(int imol_map_ref, int imol_model,
+                                        const std::string &cid,
+                                        float sigma, float box_radius, float fft_b_factor);
+
+   // Make a map from a gaussian surface
+   //!
+   //! Waters are not included in the surface calculation
+   //!
+   //! @param imol is the model molecule index
+   //! @param cid is the atom selection CID
+   //! @param sigma default 4.4
+   //! @param contour_level default 4.0
+   //! @param box_radius default 5.0
+   //! @param grid_scale default 0.7
+   //! @param b_factor default 100.0 (use 0.0 for no FFT-B-factor smoothing)
+   //!
+   //! @return a new molecule index for the map or -1 on failur
+   int gaussian_surface_to_map_molecule_v2(int imol, const std::string &cid,
+                                          float sigma, float box_radius,
+                                          float grid_scale, float fft_b_factor);
 
    //! Get chemical features for the specified residue
    //!
@@ -1255,6 +1357,9 @@ public:
    float get_molecule_diameter(int imol) const;
 
    //! Get number of hydrogen atoms
+   //!
+   //! Count only the number of hydrogen atoms in the model number 1, not the sum
+   //! from all models.
    //!
    //! @param imol is the model molecule index
    //!
@@ -1496,7 +1601,7 @@ public:
    //! @return the map sampling rate, the default is 1.8
    float get_map_sampling_rate() { return map_sampling_rate; }
 
-   //! Set the map sampling rate
+   //! \brief Set the map sampling rate
    //!
    //! Higher numbers mean smoother maps, but they take
    //! longer to generate, longer to transfer, longer to parse and longer to draw
@@ -1504,7 +1609,7 @@ public:
    //! @param msr is the map sampling rate to set, the default is 1.8
    void set_map_sampling_rate(float msr) { map_sampling_rate = msr; }
 
-   //! Read the given mtz file
+   //! \brief Read the given mtz file
    //!
    //! @param file_name is the name of the MTZ file
    //! @param f F column, "FWT"
@@ -1918,7 +2023,8 @@ public:
    //! @param res_no is the residue number, e.g. 12
    //! @param ins_code is the insertion code, e.g. "A"
    //!
-   //! @return 1 on successful deletion, return 0 on failure to delete.
+   //! @return 1 as first on successful deletion, return 0 on failure to delete.
+   //!         The second is the resulting atom count.
    std::pair<int, unsigned int> delete_residue(int imol, const std::string &chain_id, int res_no, const std::string &ins_code);
 
    //! Delete residue using cid
@@ -2818,7 +2924,7 @@ public:
    //! @param include_non_bonded_contacts is the flag to include non bonded contacts
    //!
    //! @return a vector/list of interesting geometry - one for each chain involved
-   std::vector<coot::geometry_distortion_info_container_t>
+   std::vector<coot::geometry_distortion_info_pod_container_t>
    get_ligand_validation_vs_dictionary(int imol, const std::string &ligand_cid, bool include_non_bonded_contacts);
 
    //! General fragment distortion analysis
@@ -2828,7 +2934,7 @@ public:
    //! @param include_non_bonded_contacts is the flag to include non bonded contacts
    //!
    //! @return a vector/list of interesting geometry - one for each chain involved
-   std::vector<coot::geometry_distortion_info_container_t>
+   std::vector<coot::geometry_distortion_info_pod_container_t>
    get_validation_vs_dictionary_for_selection(int imol, const std::string &selection_cid, bool include_non_bonded_contacts);
 
    //! Get ligand distortion
@@ -3682,6 +3788,31 @@ public:
    std::vector<float> get_vertices_for_blender(int imol);
    //! Function for Blender interface
    std::vector<int>   get_triangles_for_blender(int imol);
+
+   // -------------------------------- Pyrogen ---------------------------------------
+
+   //! make a dictionary and create a molecule
+   //!
+   //! @param ccd_file_name the input SMILES string
+   //! @param compound_id is the compound_id that should be assigned to the new dictionary
+   //!        and molecule
+   //! @return the new molecule index or -1 on failure
+   int pyrogen_from_SMILES(const std::string &smiles_string, const std::string &compound_id);
+
+   //! make a dictionary and create a molecule
+   //!
+   //! @param ccd_file_name the input cif file file-name
+   //! @return the new molecule index or -1 on failure
+   int pyrogen_from_ccd_file(const std::string &ccd_file_name);
+
+   //! this is the interface to use from the molecule sketcher (say) where the
+   //! calling function has an RDKit Mol
+   //!
+   //! @param rdkit_mol_pickled_string the rdkit mol as a picked string
+   //! @param compound_id is the compound_id that should be assigned to the new dictionary
+   //!        and molecule
+   //! @return the new molecule index or -1 on failure
+   int pyrogen_from_rdkit_mol_pickle_base64(const std::string &rdkit_mol_pickled_string, const std::string &compound_id);
 
    // -------------------------------- Other ---------------------------------------
 

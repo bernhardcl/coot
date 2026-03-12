@@ -52,6 +52,8 @@
 
 #include "utils/logging.hh"
 #include "widget-from-builder.hh"
+std::string git_commit(); // use a header?
+
 extern logging logger;
 
 void print_opengl_info();
@@ -105,6 +107,8 @@ void init_framebuffers(GtkWidget *glarea) {
 
 #include "text-rendering-utils.hh"
 #include "stringify-error-code.hh"
+// from c-inteerface.cc
+extern "C" void run_command_line_scripts();
 
 
 void
@@ -223,8 +227,8 @@ new_startup_realize(GtkWidget *gl_area) {
    g.mesh_for_extra_distance_restraints.setup_extra_distance_restraint_cylinder(material); // init
 
    // scale the gizmo to the object being translated
-   float scale_factor = 22.2;
-   g.translation_gizmo.scale(scale_factor);
+   // float scale_factor = 22.2;
+   // g.translation_gizmo.scale(scale_factor);
    g.setup_draw_for_translation_gizmo();
 
    g.setup_key_bindings();
@@ -233,6 +237,12 @@ new_startup_realize(GtkWidget *gl_area) {
    if (err)
       std::cout << "ERROR:: new_startup_realize() --end-- err is " << stringify_error_code(err)
                 << std::endl;
+
+   auto run_command_line_scripts_callback = +[] (gpointer user_data) {
+      run_command_line_scripts();
+      return G_SOURCE_REMOVE;
+   };
+   g_idle_add(run_command_line_scripts_callback, nullptr);
 
    // Hmm! - causes weird graphics problems
    // setup_python(0, NULL); // needs to called after GTK has started - because it depends on gtk.
@@ -453,7 +463,6 @@ on_glarea_key_controller_key_released(GtkEventControllerKey *controller,
 
    graphics_info_t g;
    g.on_glarea_key_controller_key_released(controller, keyval, keycode, modifiers);
-
 }
 
 
@@ -932,6 +941,22 @@ new_startup_application_activate(GtkApplication *application,
       }
       graphics_info_t::set_preferences_gtkbuilder(preferences_builder);
 
+      // set the version in the about dialog
+      GtkWidget *about_dialog = GTK_WIDGET(gtk_builder_get_object(builder, "about_dialog"));
+      std::string version_str = std::string(VERSION);
+      if (version_str.find("-pre") != std::string::npos) {
+         version_str += "\n";
+         version_str += git_commit();
+         std::string s = COOT_BUILD_INFO_STRING;
+         if (! s.empty()) {
+            version_str += "\n";
+            version_str += s;
+         }
+      }
+      // override the value in the coot-gtk4.ui file.
+      gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(about_dialog), version_str.c_str());
+
+
       python_init();
 
       // 20231114-PE we can't handle the command line data until the graphics have started.
@@ -1116,7 +1141,9 @@ new_startup_application_activate(GtkApplication *application,
       setup_gui_components();
       setup_go_to_residue_keyboarding_mode_entry_signals();
 
-      handle_start_scripts(); // what used to be in ~/.coot/*.py
+      handle_start_scripts(); // what used to be in ~/.coot/*.py.
+                              // 20260124-PE Not to self: these are not
+                              // command-line scripts.
 
       // now we are ready to show graphical objects made from reading files:
       handle_command_line_data(activate_data->cld);
@@ -1155,12 +1182,6 @@ new_startup_application_activate(GtkApplication *application,
          return G_SOURCE_REMOVE;
       };
       g_idle_add(destroy_splash_screen_callback, splash_screen);
-
-      auto run_command_line_scripts_callback = +[] (gpointer user_data) {
-         run_command_line_scripts();
-         return G_SOURCE_REMOVE;
-      };
-      g_idle_add(run_command_line_scripts_callback, nullptr);
 
       return G_SOURCE_REMOVE;
    }, activate_data);
@@ -1220,13 +1241,16 @@ int do_no_graphics_mode(command_line_data& cld, int argc, char** argv) {
 int
 do_self_tests() {
 
-   std::cout << "INFO:: Running internal self tests" << std::endl;
+   // std::cout << "INFO:: Running internal self tests" << std::endl;
+   logger.log(log_t::INFO, "Running internal self tests");
 
    // return true on success
    clipper::Test_core test_core;       bool result_core    = test_core();
    clipper::Test_contrib test_contrib; bool result_contrib = test_contrib();
-   std::cout<<" INFO:: Test Clipper core   : "<<(result_core   ?"OK":"FAIL")<<std::endl;
-   std::cout<<" INFO:: Test Clipper contrib: "<<(result_contrib?"OK":"FAIL")<<std::endl;
+   // std::cout<<" INFO:: Test Clipper core   : "<<(result_core   ?"OK":"FAIL")<<std::endl;
+   logger.log(log_t::INFO, std::string("Test Clipper core   : ") + (result_core ? "OK" : "FAIL"));
+   // std::cout<<" INFO:: Test Clipper contrib: "<<(result_contrib?"OK":"FAIL")<<std::endl;
+   logger.log(log_t::INFO, std::string("Test Clipper contrib: ") + (result_contrib ? "OK" : "FAIL"));
 
    // 20240309-PE I need tests
    //   1: internal tests (that can use tutorial-modern and rnasa)
@@ -1348,6 +1372,7 @@ int new_startup(int argc, char **argv) {
    // Delete it there if you want to delete it.
 
    // read in inchikeys - is this the right place for this?
+   // 2026-02-06-PE No. It should be in graphics_info_t::init(), as is ptm_database init.
    graphics_info_t::read_inchikeys();
 
    int status = g_application_run(G_APPLICATION(app), 1, argv);

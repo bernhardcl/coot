@@ -30,7 +30,10 @@
 #include <exception>
 #include <stdexcept>
 #include <utility>
+#include "coords/phenix-geo.hh"
 #include "glib.h"
+#include "gtk/gtk.h"
+#include "gtk/gtkshortcut.h"
 #ifdef USE_PYTHON
 #ifndef PYTHONH
 #define PYTHONH
@@ -47,6 +50,9 @@
 #include <fstream>
 #include <algorithm>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+
 #if !defined(_MSC_VER)
 #include <glob.h> // for globbing.  Needed here?
 #endif
@@ -56,6 +62,11 @@
 #include "c-interface-scm.hh"
 #include "guile-fixups.h"
 #endif // USE_GUILE
+
+#ifdef USE_GUILE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvolatile"
+#endif
 
 #ifdef USE_PYTHON
 #include "c-interface-python.hh"
@@ -102,6 +113,7 @@
 
 #include "utils/coot-utils.hh"
 #include "coot-utils/coot-map-utils.hh"
+#include "coot-utils/read-amber-trajectory.hh"
 #include "coot-database.hh"
 #include "coot-fileselections.h"
 
@@ -133,9 +145,13 @@
 #include "read-molecule.hh" // now with std::string args
 
 #include "widget-from-builder.hh"
+#include "gtk-manual.hh"
 #include "glarea_tick_function.hh"
 
 #include "validation-graphs/sequence-view-widget.hh"
+
+#include "json.hpp"
+using json = nlohmann::json;
 
 #include "utils/logging.hh"
 extern logging logger;
@@ -958,6 +974,54 @@ int read_coordinates(const std::string &filename) {
    return handle_read_draw_molecule(filename);
 }
 
+int read_coordinates_as_string(const std::string &file_contents, const std::string &molecule_name) {
+
+#if !defined _MSC_VER
+   pid_t pid = getpid();
+#else
+   DWORD pid = GetCurrentProcessId();
+#endif
+   std::string pid_str = std::to_string(pid);
+   std::string fn("tmp-");
+   fn += pid_str;
+   fn += ".pdb";
+   std::ofstream f(fn);
+   f << file_contents;
+   f.close();
+   int imol = read_coordinates(fn);
+   if (is_valid_model_molecule(imol))
+      set_molecule_name(imol, molecule_name.c_str());
+   return imol;
+}
+
+
+int read_amber_trajectory(int imol_coords,
+                          const std::string &trajectory_file_name,
+                          int start_frame,
+                          int end_frame,
+                          int stride) {
+
+   int imol = -1;
+   graphics_info_t g;
+
+   if (!is_valid_model_molecule(imol_coords)) {
+      std::cout << "WARNING:: read_amber_trajectory: invalid topology molecule " << imol_coords << std::endl;
+      return -1;
+   }
+
+   mmdb::Manager *topology_mol = g.molecules[imol_coords].atom_sel.mol;
+   mmdb::Manager *traj_mol = coot::read_amber_trajectory(topology_mol, trajectory_file_name,
+                                                         start_frame, end_frame, stride);
+   if (traj_mol) {
+      imol = g.create_molecule();
+      atom_selection_container_t asc = make_asc(traj_mol);
+      std::string name = trajectory_file_name + "_trajectory";
+      g.molecules[imol].install_model(imol, asc, g.Geom_p(), name, 1);
+   }
+
+   return imol;
+}
+
 
 //! set (or unset) GEMMI as the molecule parser. Currently by passing an int.
 void set_use_gemmi_as_model_molecule_parser(int state) {
@@ -1158,7 +1222,8 @@ void zalman_stereo_mode() {
 	    short int try_hardware_stereo_flag = 5;
 	    GtkWidget *glarea = gl_extras(vbox, try_hardware_stereo_flag);
 	    if (glarea) {
-	       std::cout << "INFO:: switch to zalman_stereo_mode succeeded\n";
+	       // std::cout << "INFO:: switch to zalman_stereo_mode succeeded\n";
+	       logger.log(log_t::INFO, "switch to zalman_stereo_mode succeeded");
 	       if (graphics_info_t::idle_function_spin_rock_token) {
 		  toggle_idle_spin_function(); // turn it off;
 	       }
@@ -1191,9 +1256,14 @@ void mono_mode() {
 	 int previous_mode = graphics_info_t::display_mode;
          // GtkWidget *gl_widget = lookup_widget(graphics_info_t::get_main_window(), "window1");
          GtkWidget *gl_widget = graphics_info_t::glareas[0];
-         int x_size = gtk_widget_get_allocated_width(gl_widget);
-         int y_size = gtk_widget_get_allocated_height(gl_widget);
+         // int x_size = gtk_widget_get_allocated_width(gl_widget);
+         // int y_size = gtk_widget_get_allocated_height(gl_widget);
+         GtkAllocation allocation;
+         gtk_widget_get_allocation(graphics_info_t::glareas[0], &allocation);
+         int x_size = allocation.width;
+         int y_size = allocation.height;
 	 graphics_info_t::display_mode = coot::MONO_MODE;
+         graphics_info_t::graphics_draw();
          GtkWidget *gl_area = graphics_info_t::glareas[0];
 	 // GtkWidget *vbox = lookup_widget(gl_area, "main_window_vbox");
 	 GtkWidget *vbox = widget_from_builder("main_window_vbox");
@@ -1204,7 +1274,8 @@ void mono_mode() {
 	    short int try_hardware_stereo_flag = 0;
 	    GtkWidget *glarea = gl_extras(vbox, try_hardware_stereo_flag);
 	    if (glarea) {
-	       std::cout << "INFO:: switch to mono_mode succeeded\n";
+	       // std::cout << "INFO:: switch to mono_mode succeeded\n";
+	       logger.log(log_t::INFO, "switch to mono_mode succeeded");
 	       if (graphics_info_t::idle_function_spin_rock_token) {
 		  toggle_idle_spin_function(); // turn it off;
 	       }
@@ -1364,8 +1435,11 @@ void set_stereo_style(int mode) {
 }
 
 void set_hardware_stereo_angle_factor(float f) {
-   graphics_info_t::hardware_stereo_angle_factor = f;
-   std::string cmd = "set-hardware-stereo-angle-factor";
+}
+
+void set_stereo_angle(float f) {
+   graphics_info_t::stereo_angle = f;
+   std::string cmd = "set-stereo-angle";
    std::vector<coot::command_arg_t> args;
    args.push_back(f);
    add_to_history_typed(cmd, args);
@@ -1374,7 +1448,7 @@ void set_hardware_stereo_angle_factor(float f) {
 
 float hardware_stereo_angle_factor_state() {
    add_to_history_simple("hardware-stereo-angle-factor-state");
-   return graphics_info_t::hardware_stereo_angle_factor;
+   return 0;
 }
 
 void set_model_display_radius(int state, float radius) {
@@ -1732,6 +1806,19 @@ void info_dialog_with_markup(const char *txt) {
 }
 
 
+/*! \brief created an ephemeral label in the graphics window
+ *
+ * the text stays on screen for about 2 sesconds.
+ *
+ * @param txt the text
+*/
+void ephemeral_overlay_label(const char *txt) {
+
+   graphics_info_t::ephemeral_overlay_label(std::string(txt));
+}
+
+
+
 void
 set_main_window_title(const char *s) {
 
@@ -1752,6 +1839,19 @@ set_main_window_title(const char *s) {
       }
    }
 }
+
+
+/*! \brief set the state of the validation graphs box
+ *
+ * By "docked" I mean, in the main window. The alternative
+ * is a floating dialog.
+ *
+ * @param state 0 is not docked, 1 is docked
+ */
+void set_validation_graphs_is_docked(short int state) {
+   graphics_info_t::validation_graphs_is_docked = state;
+}
+
 
 
 
@@ -2469,6 +2569,7 @@ get_map_colour(int imol) {
          colour.red   *= 65535;
          colour.green *= 65535;
          colour.blue  *= 65535;
+         colour.alpha *= 65535;
       }
    }
    std::string cmd = "get-map-colour";
@@ -3254,6 +3355,16 @@ void set_show_aniso_atoms_as_ortep(int imol, int state) {
    }
    graphics_draw();
 }
+
+/*! \brief set show aniso atoms as ortep */
+void set_show_aniso_atoms_as_empty(int imol, int state) {
+
+   if (is_valid_model_molecule(imol)) {
+      graphics_info_t::molecules[imol].set_show_aniso_atoms_as_empty(state);
+   }
+   graphics_draw();
+}
+
 
 char *get_text_for_aniso_limit_radius_entry() {
    char *text;
@@ -4265,6 +4376,82 @@ void set_view_quaternion(float i, float j, float k, float l) {
 
 
 
+/*! \brief Set the view
+ *
+ * the view is a JSON string of a dict of the orientation quaternion, the zoom and the rotation centre.
+ *
+ * @param view_as_json the view parameter as a JSON string
+ * */
+void set_view_from_json(const std::string &view_as_json) {
+
+   try {
+      json j = json::parse(view_as_json);
+      json j_rc   = j["rotation-centre"];
+      json j_quat = j["quaternion"];
+      json j_zoom = j["zoom"];
+      if (j_rc.is_array()) {
+         if (j_quat.is_array()) {
+            if (j_zoom.is_number_float()) {
+               float zoom = j_zoom;
+               unsigned int rc_size = j_rc.size();
+               if (rc_size == 3) {
+                  float rc_0 = j_rc[0];
+                  float rc_1 = j_rc[1];
+                  float rc_2 = j_rc[2];
+                  coot::Cartesian rc(rc_0, rc_1, rc_2);
+                  unsigned int quat_size = j_quat.size();
+                  if (quat_size == 4) {
+                     float quat_0 = j_quat[0];
+                     float quat_1 = j_quat[1];
+                     float quat_2 = j_quat[2];
+                     float quat_3 = j_quat[3];
+                     glm::quat q(quat_0, quat_1, quat_2, quat_3);
+                     graphics_info_t::set_view(q, rc, zoom);
+                  }
+               }
+            }
+         }
+      }
+   }
+   catch(const nlohmann::detail::type_error &e) {
+      std::cout << "ERROR:: " << e.what() << std::endl;
+   }
+   catch(const nlohmann::detail::parse_error &e) {
+      std::cout << "ERROR:: " << e.what() << std::endl;
+   }
+
+}
+
+/*! \brief get the view
+ *
+ * the view is a JSON string of a dict of the orientation quaternion, the zoom and the rotation centre.
+ *
+ * */
+std::string get_view_as_json() {
+
+   json j_rc = json::array();
+   auto rc = graphics_info_t::get_rotation_centre();
+   j_rc.push_back(rc.x);
+   j_rc.push_back(rc.y);
+   j_rc.push_back(rc.z);
+   json j_quat = json::array();
+   glm::quat quat = graphics_info_t::view_quaternion;
+   j_quat.push_back(quat[3]); // 2026-03-10-PE, weird, eh?
+   j_quat.push_back(quat[0]);
+   j_quat.push_back(quat[1]);
+   j_quat.push_back(quat[2]);
+   json j_zoom = graphics_info_t::zoom;
+
+   json j;
+   j["zoom"] = j_zoom;
+   j["rotation-centre"] = j_rc;
+   j["quaternion"] = j_quat;
+
+   std::string js = j.dump(2);
+
+   return js;
+}
+
 /* Return 1 if we moved to a molecule centre, else go to origin and
    return 0. */
 /* centre on last-read (and displayed) molecule with zoom 100. */
@@ -4462,7 +4649,8 @@ void screendump_image(const char *filename) {
    graphics_draw();
 
    int istatus = graphics_info_t::screendump_image(filename);
-   std::cout << "INFO:: screendump_image status " << istatus << std::endl;
+   // std::cout << "INFO:: screendump_image status " << istatus << std::endl;
+   logger.log(log_t::INFO, "screendump_image status", istatus);
    if (istatus == 1) {
       std::string s = "Screendump image ";
       s += filename;
@@ -5240,24 +5428,24 @@ int set_go_to_atom_chain_residue_atom_name_strings(const char *t1, const char *t
 
 
 int
-goto_next_atom_maybe_new(GtkWidget *goto_atom_window) {
+goto_next_atom_maybe_new() {
 
 //    int it2 = atoi(t2);
 //    return goto_near_atom_maybe(t1, it2, t3, res_entry, +1);
 
    graphics_info_t g;
-   return g.intelligent_next_atom_centring(goto_atom_window);
+   return g.intelligent_next_atom_centring();
 
 }
 
 int
-goto_previous_atom_maybe_new(GtkWidget *goto_atom_window) {
+goto_previous_atom_maybe_new() {
 
 //    int it2 = atoi(t2);
 //    return goto_near_atom_maybe(t1, it2, t3, res_entry, +1);
 
    graphics_info_t g;
-   return g.intelligent_previous_atom_centring(goto_atom_window);
+   return g.intelligent_previous_atom_centring();
 }
 
 
@@ -5635,7 +5823,7 @@ set_b_factor_bonds_scale_factor(int imol, float f) {
    return r;
 }
 
-void graphics_to_phenix_geo_representation(int imol, int mode, const coot::phenix_geo_bonds &g) {
+void graphics_to_phenix_geo_representation(int imol, int mode, const coot::phenix_geo::phenix_geometry &g) {
 
    if (is_valid_model_molecule(imol)) {
       graphics_info_t::molecules[imol].update_bonds_using_phenix_geo(g);
@@ -5647,9 +5835,29 @@ void graphics_to_phenix_geo_representation(int imol, int mode, const coot::pheni
 void graphics_to_phenix_geo_representation(int imol, int mode,
 					   const std::string &geo_file_name) {
 
-   coot::phenix_geo_bonds pgb(geo_file_name);
-   graphics_to_phenix_geo_representation(imol, mode, pgb);
+   coot::phenix_geo::phenix_geometry pg;
+   pg.parse(geo_file_name);
+   graphics_to_phenix_geo_representation(imol, mode, pg);
 
+}
+
+void phenix_geo_validation_buttons(int imol,
+                                   const coot::phenix_geo::phenix_geometry &pg,
+                                   double residual_cutoff);
+
+//! \brief validate using phenix geo bonds
+//!
+//! Typically this would be called shortly after
+//!
+//! @param imol
+void validate_using_phenix_geo_bonds(int imol, const std::string &geo_file_name) {
+
+   if (is_valid_model_molecule(imol)) {
+      coot::phenix_geo::phenix_geometry pg;
+      pg.parse(geo_file_name);
+      float residual_criterion = 4.4;
+      phenix_geo_validation_buttons(imol, pg, residual_criterion);
+   }
 }
 
 /*  Not today
@@ -5970,22 +6178,19 @@ set_display_control_button_state(int imol, const std::string &button_type, int s
 
          GtkWidget *item_widget = gtk_widget_get_first_child(display_control_vbox);
          while (item_widget) {
-            GtkWidget *child_0 = gtk_widget_get_first_child(item_widget);
-            GtkWidget *child_1 = gtk_widget_get_next_sibling(child_0);
-            GtkWidget *child_2 = gtk_widget_get_next_sibling(child_1);
-            GtkWidget *child_3 = gtk_widget_get_next_sibling(child_2);
-            GtkWidget *display_check_button = child_2;
-            GtkWidget *active_check_button  = child_3;
-            // std::cout << "child_2 " << child_2 << " child_3 " << child_3 << std::endl;
             int imol_widget = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item_widget), "imol"));
             if (imol_widget == imol) {
-               if (button_type == "Displayed") {
-                  // actually I need only set the state if the state is not the current
-                  // state of the check button.
-                  gtk_check_button_set_active(GTK_CHECK_BUTTON(display_check_button), state);
-               }
-               if (button_type == "Active") {
-                  gtk_check_button_set_active(GTK_CHECK_BUTTON(active_check_button), state);
+               // item_widget is a mol_vbox, the hbox with controls is its first child
+               GtkWidget *hbox = gtk_widget_get_first_child(item_widget);
+               if (hbox) {
+                  GtkWidget *display_check_button = GTK_WIDGET(g_object_get_data(G_OBJECT(hbox), "display_check_button"));
+                  GtkWidget *active_check_button  = GTK_WIDGET(g_object_get_data(G_OBJECT(hbox), "active_check_button"));
+                  if (button_type == "Displayed" && display_check_button) {
+                     gtk_check_button_set_active(GTK_CHECK_BUTTON(display_check_button), state);
+                  }
+                  if (button_type == "Active" && active_check_button) {
+                     gtk_check_button_set_active(GTK_CHECK_BUTTON(active_check_button), state);
+                  }
                }
             }
             item_widget = gtk_widget_get_next_sibling(item_widget);
@@ -6135,7 +6340,8 @@ void display_only_active() {
 
    std::pair<bool, std::pair<int, coot::atom_spec_t> > aa = active_atom_spec();
 
-   std::cout << "INFO:: display_only_active()" << aa.first << " " << aa.second.first << " " << aa.second.second << std::endl;
+   // std::cout << "INFO:: display_only_active()" << aa.first << " " << aa.second.first << " " << aa.second.second << std::endl;
+   logger.log(log_t::INFO, "display_only_active()", aa.first, aa.second.first, aa.second.second.format());
 
    if (aa.first) {
       int imol_active = aa.second.first;
@@ -6214,7 +6420,8 @@ show_spacegroup(int imol) {
 
    if (is_valid_model_molecule(imol) || is_valid_map_molecule(imol)) {
       std::string spg = graphics_info_t::molecules[imol].show_spacegroup();
-      std::cout << "INFO:: spacegroup: " << spg << std::endl;
+      // std::cout << "INFO:: spacegroup: " << spg << std::endl;
+      logger.log(log_t::INFO, "spacegroup:", spg);
       unsigned int l = spg.length();
       char *s = new char[l+1];
       strncpy(s, spg.c_str(), l+1);
@@ -6679,7 +6886,8 @@ int pyrun_simple_string(const char *python_command) {
  * @param code Python code to execute
  * @return PyObject* result (new reference), or NULL on error
  */
-std::pair<PyObject*, std::string> execute_python_code_with_result_internal(const std::string &code) {
+std::pair<PyObject*, std::string>
+execute_python_code_with_result_internal_old(const std::string &code) {
 
    std::string error_message;
    PyObject* result = NULL;
@@ -6748,10 +6956,236 @@ std::pair<PyObject*, std::string> execute_python_code_with_result_internal(const
     return std::make_pair(Py_None, error_message);
 }
 
+#include "python-results-container.hh"
+
+execute_python_results_container_t execute_python_code_with_result_internal(const std::string &code) {
+
+   // Try as simple (one-line) expression
+
+   execute_python_results_container_t rc;
+   // Get __main__ namespace
+   PyObject* main_module = PyImport_AddModule("__main__");
+   if (!main_module) {
+      std::cerr << "ERROR: Failed to get __main__ module" << std::endl;
+      rc.error_message = "Failed to get __main__ module";
+      return rc;
+   }
+   PyObject* global_dict = PyModule_GetDict(main_module);
+   if (!global_dict) {
+      // std::cerr << "ERROR: Failed to get __main__ dictionary" << std::endl;
+      // return std::make_pair(result, error_message);
+      std::cerr << "ERROR: Failed to get __main__ dictionary" << std::endl;
+      rc.error_message = "Failed to get __main__ dictionary";
+      return rc;
+   }
+   // capture stdout - start
+   // Save original stdout and redirect to StringIO
+   PyRun_SimpleString("import sys, io");
+   PyRun_SimpleString("__original_stdout__ = sys.stdout");
+   PyRun_SimpleString("__stdout_capture__ = io.StringIO()");
+   PyRun_SimpleString("sys.stdout = __stdout_capture__");
+   // capture stdout - end
+
+   PyObject *exec_result = PyRun_String(code.c_str(), Py_eval_input, global_dict, global_dict);
+   rc.result = exec_result;
+   if (exec_result) {
+      // get captured output
+      PyObject* stdout_obj = PyDict_GetItemString(global_dict, "__stdout_capture__");
+      if (stdout_obj) {
+         PyObject* captured = PyObject_CallMethod(stdout_obj, "getvalue", NULL);
+         if (captured) {
+            const char* output_str = PyUnicode_AsUTF8(captured);
+            if (output_str && strlen(output_str) > 0) {
+               std::cout << output_str;  // Print to terminal
+               rc.stdout = output_str;
+            }
+            Py_DECREF(captured);
+         }
+      }
+      // Restore stdout
+      PyRun_SimpleString("sys.stdout = __original_stdout__");
+
+   } else {
+      std::cerr << "ERROR: execute_python_code_with_result_internal(): Python execution failed" << std::endl;
+      // Import traceback module and format the exception
+      PyObject *ptype, *pvalue, *ptraceback;
+      PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+
+      std::cerr << "DEBUG: ptype=" << (ptype ? "NOT NULL" : "NULL") << std::endl;
+      std::cerr << "DEBUG: pvalue=" << (pvalue ? "NOT NULL" : "NULL") << std::endl;
+      std::cerr << "DEBUG: ptraceback=" << (ptraceback ? "NOT NULL" : "NULL") << std::endl;
+
+      // Always use fallback path - simpler and more robust
+      if (pvalue) {
+         std::cerr << "DEBUG: Converting pvalue to string" << std::endl;
+         PyObject* str_obj = PyObject_Str(pvalue);
+         if (str_obj) {
+            const char* str = PyUnicode_AsUTF8(str_obj);
+            if (str) {
+               rc.error_message = std::string(str);
+               std::cerr << "DEBUG: rc.error_message set to: " << rc.error_message << std::endl;
+            } else {
+               rc.error_message = "Python error occurred but could not retrieve error message";
+               std::cerr << "DEBUG: PyUnicode_AsUTF8 failed" << std::endl;
+            }
+            Py_DECREF(str_obj);
+         } else {
+            rc.error_message = "Python error occurred but PyObject_Str failed";
+            std::cerr << "DEBUG: PyObject_Str failed" << std::endl;
+         }
+      } else {
+         rc.error_message = "Python error occurred but no exception value available";
+         std::cerr << "DEBUG: No pvalue" << std::endl;
+      }
+
+      // ALWAYS clean up the error objects
+      Py_XDECREF(ptype);
+      Py_XDECREF(pvalue);
+      Py_XDECREF(ptraceback);
+
+      // Restore stdout even on error path
+      PyRun_SimpleString("sys.stdout = __original_stdout__");
+      PyErr_Clear();
+   }
+   return rc;
+}
+
+execute_python_results_container_t execute_python_multiline_code_with_result_internal(const std::string &code) {
+
+   execute_python_results_container_t rc;
+
+   // Get __main__ namespace
+   PyObject* main_module = PyImport_AddModule("__main__");
+   if (!main_module) {
+      std::cerr << "ERROR: Failed to get __main__ module" << std::endl;
+      rc.error_message = "Failed to get __main__ module";
+      return rc;
+   }
+   PyObject* global_dict = PyModule_GetDict(main_module);
+   if (!global_dict) {
+      // std::cerr << "ERROR: Failed to get __main__ dictionary" << std::endl;
+      // return std::make_pair(result, error_message);
+      std::cerr << "ERROR: Failed to get __main__ dictionary" << std::endl;
+      rc.error_message = "Failed to get __main__ dictionary";
+      return rc;
+   }
+
+   // capture stdout - start
+   // Save original stdout and redirect to StringIO
+   PyRun_SimpleString("import sys, io");
+   PyRun_SimpleString("__original_stdout__ = sys.stdout");
+   PyRun_SimpleString("__stdout_capture__ = io.StringIO()");
+   PyRun_SimpleString("sys.stdout = __stdout_capture__");
+   // capture stdout - end
+
+   PyObject *exec_result = PyRun_String(code.c_str(), Py_file_input, global_dict, global_dict);
+   std::cout << "DEBUG:: ------------ exec_result " << exec_result << std::endl;
+   if (exec_result) {
+      rc.result = exec_result;
+      // get captured output
+      PyObject* stdout_obj = PyDict_GetItemString(global_dict, "__stdout_capture__");
+      if (stdout_obj) {
+         PyObject* captured = PyObject_CallMethod(stdout_obj, "getvalue", NULL);
+         if (captured) {
+            const char* output_str = PyUnicode_AsUTF8(captured);
+            if (output_str && strlen(output_str) > 0) {
+               std::cout << output_str;  // Print to terminal
+               rc.stdout = output_str;
+            }
+            Py_DECREF(captured);
+         }
+      }
+      // Restore stdout
+      PyRun_SimpleString("sys.stdout = __original_stdout__");
+
+   } else {
+
+      std::cerr << "ERROR: execute_python_multiline_code_with_result_internal(): Python execution failed" << std::endl;
+
+      // Import traceback module and format the exception
+      PyObject *ptype, *pvalue, *ptraceback;
+      // PyErr_Fetch() consumes the error.
+      PyErr_Fetch(&ptype, &pvalue, &ptraceback); // 2026-01-11-PE use PyErr_GetRaisedException() in future
+      PyObject* traceback_module = PyImport_ImportModule("traceback");
+      if (traceback_module && ptraceback) {
+         PyObject* format_exception = PyObject_GetAttrString(traceback_module, "format_exception");
+         if (format_exception) {
+             PyObject* formatted = PyObject_CallFunctionObjArgs(format_exception, ptype, pvalue, ptraceback, NULL);
+             if (formatted && PyList_Check(formatted)) {
+                 // Join all traceback lines into single string
+                 std::string full_traceback;
+                 Py_ssize_t size = PyList_Size(formatted);
+                 for (Py_ssize_t i = 0; i < size; i++) {
+                     PyObject* line = PyList_GetItem(formatted, i);
+                     const char* line_str = PyUnicode_AsUTF8(line);
+                     if (line_str) {
+                         full_traceback += line_str;
+                     }
+                 }
+                 rc.error_message = full_traceback;
+             }
+             Py_XDECREF(formatted);
+             Py_DECREF(format_exception);
+         }
+         Py_DECREF(traceback_module);
+
+      } else {
+         // Fallback to simple error message if traceback unavailable
+         if (pvalue) {
+            PyObject* str_obj = PyObject_Str(pvalue);
+            if (str_obj) {
+               const char* str = PyUnicode_AsUTF8(str_obj);
+               if (str) {
+                   rc.error_message = str;
+               }
+               Py_DECREF(str_obj);
+            }
+         }
+
+         Py_XDECREF(ptype);
+         Py_XDECREF(pvalue);
+         Py_XDECREF(ptraceback);
+      }
+      return rc;
+   }
+
+   // **GET CAPTURED OUTPUT (for multi-line case too)**
+   PyObject* stdout_obj = PyDict_GetItemString(global_dict, "__stdout_capture__");
+   if (stdout_obj) {
+      PyObject* captured = PyObject_CallMethod(stdout_obj, "getvalue", NULL);
+      if (captured) {
+         const char* output_str = PyUnicode_AsUTF8(captured);
+         if (output_str && strlen(output_str) > 0) {
+            std::cout << output_str;  // Print to terminal
+            // You could also save to a file here if needed
+            rc.stdout = output_str;
+         }
+         Py_DECREF(captured);
+      }
+   }
+   // Restore stdout
+   PyRun_SimpleString("sys.stdout = __original_stdout__");
+
+   // Look for a special variable '__result__' that the code may have set
+   PyObject* stored_result = PyDict_GetItemString(global_dict, "__result__");
+   if (stored_result) {
+        Py_INCREF(stored_result);
+        // return std::make_pair(stored_result, error_message);
+        rc.result = stored_result;
+        return rc;
+   }
+
+   // return std::make_pair(Py_None, error_message);
+   rc.result = Py_None;
+   return rc;
+}
+
+
 PyObject* execute_python_code_with_result(const std::string &code) {
 
-   std::pair<PyObject *, std::string> r = execute_python_code_with_result_internal(code);
-   return r.first;
+   // std::pair<PyObject *, std::string> r = execute_python_code_with_result_internal(code);
+   execute_python_results_container_t r = execute_python_code_with_result_internal(code);
+   return r.result;
 }
 
 
@@ -7245,8 +7679,9 @@ run_command_line_scripts() {
                 << std::endl;
 
    if (graphics_info_t::command_line_scripts.size()) {
-      std::cout << "INFO:: There are " << graphics_info_t::command_line_scripts.size()
-		<< " command line scripts to run\n";
+      // std::cout << "INFO:: There are " << graphics_info_t::command_line_scripts.size()
+      //          << " command line scripts to run\n";
+      logger.log(log_t::INFO, "There are", graphics_info_t::command_line_scripts.size(), "command line scripts to run");
       for (unsigned int i=0; i<graphics_info_t::command_line_scripts.size(); i++)
 	 std::cout << "    " << graphics_info_t::command_line_scripts[i].c_str()
 		   << std::endl;
@@ -7957,13 +8392,15 @@ int read_cif_data(const char *filename, int imol_coordinates) {
       // link itself.
       //
       if (status != 0 || !S_ISREG (s.st_mode)) {
-	 std::cout << "INFO:: Error reading " << filename << std::endl;
+	 // std::cout << "INFO:: Error reading " << filename << std::endl;
+	 logger.log(log_t::INFO, "Error reading " + std::string(filename));
 	 if (S_ISDIR(s.st_mode)) {
 	    std::cout << filename << " is a directory." << std::endl;
 	 }
 	 return -1; // which is status in an error
       } else {
-	 std::cout << "INFO:: Reading cif file: " << filename << std::endl;
+	 // std::cout << "INFO:: Reading cif file: " << filename << std::endl;
+	 logger.log(log_t::INFO, "Reading cif file: " + std::string(filename));
 	 graphics_info_t g;
 	 int imol = g.create_molecule();
 	 int istat =
@@ -8013,7 +8450,8 @@ int read_cif_data_2fofc_map(const char *filename, int imol_coordinates) {
 
       if (is_valid_model_molecule(imol_coordinates)) {
 
-	 std::cout << "INFO:: Reading cif file: " << filename << std::endl;
+	 // std::cout << "INFO:: Reading cif file: " << filename << std::endl;
+	 logger.log(log_t::INFO, "Reading cif file: " + std::string(filename));
 
 	 graphics_info_t g;
 
@@ -8787,745 +9225,13 @@ void handle_online_coot_search_request(const char *entry_text) {
 /* section Remote Control */
 
 #include <sys/types.h>
-#ifdef WINDOWS_MINGW
-#include <winsock2.h>
-#else
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
 #include <fcntl.h>
 
-// BL says:: requires some porting so disable for now
-#ifdef WINDOWS_MINGW
-static SOCKET server_fd = INVALID_SOCKET;
-static SOCKET client_fd = INVALID_SOCKET;
-
-// BL says:: requires some porting so disable for now
-void init_coot_socket_listener() {
-
-   int port = graphics_info_t::remote_control_port_number;
-
-   // before we can do anything we need to initialise Winsock
-   WSADATA wsaData;
-   int wsa_status = WSAStartup(MAKEWORD(2, 2), &wsaData);
-   if (wsa_status != 0) {
-      std::cerr << "BL ERROR:: WSAStartup failed: " << wsa_status << "\n";
-      return;
-   }
-
-   server_fd = socket(AF_INET, SOCK_STREAM, 0);
-   if (server_fd == INVALID_SOCKET) {
-      std::cerr << "Error: Unable to create socket\n";
-      return;
-   }
-
-   sockaddr_in addr;
-   std::memset(&addr, 0, sizeof(addr));
-   addr.sin_family = AF_INET;
-   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // localhost only
-   addr.sin_port = htons(port);
-
-   BOOL optval = TRUE;
-   setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(optval));
-
-   if (bind(server_fd, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
-      std::cerr << "Error: Unable to bind socket\n";
-      closesocket(server_fd);
-      server_fd = INVALID_SOCKET;
-      return;
-   }
-   if (listen(server_fd, 1) == SOCKET_ERROR) {
-      std::cerr << "Error: Unable to listen\n";
-      close(server_fd);
-      server_fd = INVALID_SOCKET;
-      return;
-   }
-
-   // Make server socket non-blocking
-   u_long mode = 1;
-   ioctlsocket(server_fd, FIONBIO, &mode);
-
-   // log this
-   std::cout << "INFO:: Socket listener initialized on port " << port << std::endl;
-}
-#else
-static int server_fd = -1;
-static int client_fd = -1;
-
-void init_coot_socket_listener() {
-
-   int port = graphics_info_t::remote_control_port_number;
-   server_fd = socket(AF_INET, SOCK_STREAM, 0);
-   if (server_fd < 0) {
-      std::cerr << "Error: Unable to create socket\n";
-      return;
-   }
-
-   sockaddr_in addr;
-   std::memset(&addr, 0, sizeof(addr));
-   addr.sin_family = AF_INET;
-   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // localhost only
-   addr.sin_port = htons(port);
-
-   int optval = 1;
-   setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-
-   if (bind(server_fd, (sockaddr*)&addr, sizeof(addr)) < 0) {
-      std::cerr << "Error: Unable to bind socket\n";
-      close(server_fd);
-      server_fd = -1;
-      return;
-   }
-   if (listen(server_fd, 1) < 0) {
-      std::cerr << "Error: Unable to listen\n";
-      close(server_fd);
-      server_fd = -1;
-      return;
-   }
-
-   // Make server socket non-blocking
-   int flags = fcntl(server_fd, F_GETFL, 0);
-   fcntl(server_fd, F_SETFL, flags | O_NONBLOCK);
-
-   // log this
-   std::cout << "INFO:: Socket listener initialized on port " << port << std::endl;
-}
-#endif // WINDOWS_MINGW
-
-// called by c_inner_main() if we have guile
-void make_socket_listener_maybe() {
-
-   if (graphics_info_t::try_port_listener) {
-      if (graphics_info_t::coot_socket_listener_idle_function_token == -1) {
-         // if (graphics_info_t::listener_socket_have_good_socket_state) {
-         // 2025-12-07-PE I am not sure that that is useful in this new
-         // listener.
-         if (true) {
-            init_coot_socket_listener();
-            graphics_info_t::coot_socket_listener_idle_function_token =
-              g_timeout_add(1000, coot_socket_listener_idle_func, nullptr);
-         }
-      }
-   }
-}
-
-void set_coot_listener_socket_state_internal(int sock_state) {
-   graphics_info_t::listener_socket_have_good_socket_state = sock_state;
-}
-
-void set_remote_control_port(int port_number) {
-  graphics_info_t::remote_control_port_number = port_number;
-}
-
-int get_remote_control_port_number() {
-  return graphics_info_t::remote_control_port_number;
-}
-
-#include <coot-utils/json.hpp>
-using json = nlohmann::json;
-
-struct param_doc {
-   std::string name;
-   long kind;
-   std::string annotation;
-};
-
-struct func_doc {
-   std::string function_name;
-   std::string documentation;
-   std::vector<param_doc> params;
-};
-
-gint coot_socket_listener_idle_func(gpointer data) {
-
-   auto get_param_docs = [] (PyObject *attr) {
-
-      // std::cout << "get_param_docs(): --- start --- " << attr << std::endl;
-      std::vector<param_doc> param_doc_vec; // return this
-
-      if (attr && PyCallable_Check(attr)) {
-         PyObject *inspect_module_name = myPyString_FromString("inspect");
-         PyObject *inspect = PyImport_Import(inspect_module_name);
-         PyObject* signature = PyObject_CallMethod(inspect, "signature", "O", attr);
-
-         if (!signature) {
-            std::cout << "get_param_docs(): null sig" << std::endl;
-            PyErr_Print();
-         } else {
-
-            PyObject* params = PyObject_GetAttrString(signature, "parameters");
-            PyObject *key, *value;
-            Py_ssize_t pos = 0;
-
-            // std::cout << "DEBUG:: params type: " << params->ob_type->tp_name << std::endl;
-            PyObject* empty = PyObject_GetAttrString(inspect, "_empty");
-
-            if (params) {
-                // Get keys from the mappingproxy
-                PyObject* keys = PyMapping_Keys(params);
-                if (keys) {
-
-                    // PyObject *dp = display_python(keys);
-                    // if (dp)
-                    //    std::cout << "DEBUG:: keys: " << PyBytes_AS_STRING(PyUnicode_AsUTF8(dp)) << std::endl;
-                    // else
-                    //    std::cout << "DEBUG:: null dp" << std::endl;
-
-                    Py_ssize_t size = PyList_Size(keys);
-
-                    for (Py_ssize_t i = 0; i < size; i++) {
-                        PyObject* key = PyList_GetItem(keys, i);
-                        const char* param_name = PyUnicode_AsUTF8(key);
-
-                        // PyObject* value = PyObject_GetItem(params, key);
-                        PyObject* value = PyMapping_GetItemString(params, param_name);  // ← Use this instead
-
-                        /* 
-                        // std::cout << "DEBUG: processing parameter: " << param_name << std::endl;
-                        {
-                           if (value) {
-                              // Get the type name to see what we actually have
-                              const char* type_name = value->ob_type->tp_name;
-                              // type_name is "Parameter"
-                              // std::cout << "DEBUG:: key " << i << " name: " << param_name << " type: " << type_name << std::endl;
-
-                              // Try to get the 'kind' attribute to verify it's a Parameter object
-                              PyObject *kindObj = PyObject_GetAttrString(value, "kind");
-                              if (kindObj) {
-                                  long kind = PyLong_AsLong(kindObj);
-                                  std::cout << "DEBUG::   -> has kind attribute: " << kind << std::endl;
-                                  Py_DECREF(kindObj);
-                              } else {
-                                  std::cout << "DEBUG::   -> NO kind attribute (not a Parameter object!)" << std::endl;
-                                  PyErr_Clear();
-                              }
-                           }
-                        }
-                        */
-
-                        // Now you can access the Parameter object
-                        PyObject *kindObj    = PyObject_GetAttrString(value, "kind");
-                        PyObject *defaultObj = PyObject_GetAttrString(value, "default");
-                        PyObject *annotObj   = PyObject_GetAttrString(value, "annotation");
-
-                        long kind = PyLong_AsLong(kindObj);
-                        bool has_annot = (annotObj != empty);
-                        std::string annotation;
-                        if (has_annot) {
-                           PyObject* s = PyObject_Str(annotObj);
-                           annotation = PyUnicode_AsUTF8(s);
-                           Py_DECREF(s);
-                        }
-
-                        param_doc dp;
-                        dp.name = param_name;
-                        dp.kind = PyLong_AsLong(kindObj);
-                        dp.annotation = annotation;
-
-                        param_doc_vec.push_back(dp);
-
-                        Py_DECREF(value);
-                    }
-                    Py_DECREF(keys);
-                }
-            }
-
-            /* -------------- put this in another function ---------- 
-            PyObject* retAnn = PyObject_GetAttrString(sig, "return_annotation");
-            bool has_ret_annot = (retAnn != empty);
-
-            std::string return_type;
-            if (has_ret_annot) {
-                PyObject* s = PyObject_Str(retAnn);
-                return_type = PyUnicode_AsUTF8(s);
-                Py_DECREF(s);
-            }
-            Py_DECREF(retAnn);
-            */
-
-         }
-      }
-      // std::cout << "DEBUG:: ----------- returning " << param_doc_vec.size() << " param docs" << std::endl;
-      return param_doc_vec;
-   };
-
-   auto handle_list_tools = [get_param_docs] (int block_index) {
-
-      // the first is the module name, e.g. coot, coot_utils and the
-      // second is the list of functions in that module
-      // return functions
-      std::vector<std::pair<std::string, std::vector<func_doc> > > functions;
-      int n_blocks = 400;
-
-      PyObject* inspect = PyImport_ImportModule("inspect");
-
-      unsigned int count = 0;
-      std::vector<std::string> module_names = {"coot", "coot_utils"};
-      for (const std::string &module_name : module_names) {
-         std::vector<func_doc> func_doc_vec; // functions that are in this module
-         PyObject* pModule = PyImport_ImportModule(module_name.c_str());
-
-         if (!pModule) {
-            PyErr_Print();
-            std::cerr << "Failed to import module " << module_name << "\n";
-            continue;
-         }
-
-         // Get list of attributes (like dir(coot))
-         PyObject* pDir = PyObject_Dir(pModule);
-         if (!pDir) {
-             PyErr_Print();
-             Py_DECREF(pModule);
-             continue;
-         }
-
-         // Iterate over list
-         Py_ssize_t size = PyList_Size(pDir);
-         for (Py_ssize_t i=0; i<size; ++i) {
-
-            PyObject* pName = PyList_GetItem(pDir, i); // borrowed ref
-            const char* name = PyUnicode_AsUTF8(pName);
-
-            PyObject* attr = PyObject_GetAttrString(pModule, name);
-            if (PyCallable_Check(attr)) {
-               func_doc fd;
-               fd.function_name = name;
-               PyObject* docObj = PyObject_GetAttrString(attr, "__doc__");
-               if (docObj) {
-                  if (docObj == Py_None) {
-                     if (false)
-                        std::cout << "debug:: name " << name << " docobj: pynone" << std::endl;
-                  } else {
-                     std::string doc = PyBytes_AS_STRING(PyUnicode_AsUTF8String(docObj));
-                     if (false)
-                        std::cout << "debug:: name " << name << " docobj: " << doc << std::endl;
-                     if (! doc.empty())
-                        fd.documentation = doc;
-                  }
-               }
-               std::vector<param_doc> param_docs = get_param_docs(attr);
-               // std::cout << "DEBUG:: :::::::::: got param docs size " << param_docs.size() << std::endl;
-               if (! param_docs.empty())
-                  fd.params = param_docs;
-
-               if (false)
-                  std::cout << "DEBUG:: in handle_list_tools() n_blocks is " << n_blocks
-                            << " count/n_blocks is " << count/n_blocks << " block_index is "
-                            << block_index << std::endl;
-
-               if (count/n_blocks == block_index || block_index == -1)
-                  func_doc_vec.push_back(fd);
-               Py_XDECREF(attr);
-               count++;
-            }
-         }
-
-         if (! func_doc_vec.empty())
-            functions.push_back(std::make_pair(module_name, func_doc_vec));
-
-         Py_DECREF(pDir);
-         Py_DECREF(pModule);
-      }
-      return functions;
-   };
-
-   auto handle_list_tools_with_search_pattern = [handle_list_tools] (const std::string &pattern) {
-
-      std::cout << "DEBUG:: in handle_list_tools_with_search_pattern(): " << pattern << std::endl;
-
-      std::vector<std::pair<std::string, std::vector<func_doc> > > functions = handle_list_tools(-1);
-      std::vector<std::pair<std::string, std::vector<func_doc> > > filtered_functions;
-      // std::cout << "DEBUG:: in handle_list_tools_with_search_pattern(): there are " << functions.size() << " modules " << std::endl;
-      for (const auto &module_pair : functions) {
-         const auto &module = module_pair.first;
-         const auto &funcs = module_pair.second;
-         std::vector<func_doc> matchers;
-         for (const auto &func : funcs) {
-            // std::cout << "DEBUG:: in handle_list_tools_with_search_pattern(): there are " << funcs.size() << " functions in module " << module << std::endl;
-            // std::cout << "DEBUG:: looking for " << pattern << " in " << func.function_name << std::endl;
-            if (func.function_name.find(pattern) != std::string::npos) {
-               matchers.push_back(func);
-            } else {
-               // std::cout << "DEBUG:: looking for " << pattern << " in " << func.documentation << std::endl;
-               if (func.documentation.find(pattern) != std::string::npos)
-                  matchers.push_back(func);
-            }
-         }
-         if (! matchers.empty())
-            filtered_functions.push_back(std::make_pair(module, matchers));
-      }
-      return filtered_functions;
-   };
-
-   auto make_response_from_functions = [] (const std::vector<std::pair<std::string, std::vector<func_doc> > > &functions, int id, int n_max, bool add_python_exec) {
-
-      json j_functions;
-      json j_item;
-      if (add_python_exec) {
-         j_item["name"] = "python.exec";
-         j_item["description"] = "Execute Python Code";
-         j_item["params"] = json::array({"code"});
-         j_functions.push_back(j_item);
-      }
-
-      unsigned int n = 0;
-      for (const auto &module_pair : functions) {
-         const auto &module = module_pair.first;
-         const auto &funcs = module_pair.second;
-         for (const auto &func : funcs) {
-            if (n >= n_max)
-               if (n_max != -1)
-                  continue; // tmp limit
-            json j_item;
-            j_item["name"] = module + "." + func.function_name;
-            // std::cout << "debug:: j_item[name] is " << module + "." + func.function_name << std::endl;
-            if (!func.documentation.empty()) {
-               j_item["description"] = func.documentation;
-               // std::cout << "DEBUG:: documentation for " << func.function_name << ":\n" << func.documentation << std::endl;
-            }
-            json j_params = json::array();
-            if (! func.params.empty()) {
-               for (unsigned int i=0; i<func.params.size(); i++) {
-                  json jp;
-                  const auto &param = func.params[i];
-                  json j_param_name = param.name;
-                  jp["name"] = j_param_name;
-                  jp["kind"] = param.kind;
-                  if (! param.annotation.empty()) {
-                     jp["annotation"] = param.annotation;
-                  }
-                  j_params.push_back(jp);
-               }
-            }
-            j_item["params"] = j_params;
-            j_functions.push_back(j_item);
-            n++;
-         }
-      }
-      return j_functions;
-   };
-
-   // run return result wrapped in json.
-   //
-   auto handle_string_as_json = [handle_list_tools, handle_list_tools_with_search_pattern, make_response_from_functions] (const std::string &buf_str) {
-
-      // std::cout << "handle this string: " << buf_str << ":" << std::endl;
-
-      std::string response_str; // can return blank if we don't get a method that we  know
-
-      int id = -1; // unset/unfound
-      if (! buf_str.empty()) {
-         json req = json::parse(buf_str);
-         json::const_iterator j_id = req.find("id");
-         if (j_id != req.end()) {
-            id = j_id.value();
-         } else {
-            std::cout << "handle_string_as_json(): id not found - sad" << std::endl;
-         }
-         try {
-
-            if (req["method"] == "python.exec") {
-               std::string code = req["params"]["code"];
-               // PyObject *rrr = safe_python_command_with_return(code);
-               std::pair<PyObject *, std::string> rrr = execute_python_code_with_result_internal(code);
-               std::string error_message = rrr.second;
-               if (rrr.first)
-                  if (PyBool_Check(rrr.first) || rrr.first == Py_None)
-                     Py_INCREF(rrr.first);
-               const char *mess = "%s";
-               PyObject *dest = myPyString_FromString(mess);
-               PyObject *o = PyUnicode_Format(dest, rrr.first);
-               if (o) {
-                  std::string s = PyBytes_AS_STRING(PyUnicode_AsUTF8String(o));
-                  json j_response;
-                  j_response["jsonrpc"] = "2.0";
-                  j_response["id"] = std::to_string(id);
-                  j_response["result"] = s;
-                  if (! error_message.empty()) {
-                     json j_error;
-                     j_error["code"] = -32001;
-                     j_error["message"] = error_message;
-                     j_response["error"] = j_error;
-                  }
-                  response_str = j_response.dump();
-               } 
-               if (true) {
-                  if (! error_message.empty()) {
-                     json j_response;
-                     j_response["jsonrpc"] = "2.0";
-                     j_response["id"] = std::to_string(id);
-                     json j_error;
-                     j_error["code"] = -32001;
-                     j_error["message"] = error_message;
-                     j_response["error"] = j_error;
-                     response_str = j_response.dump();
-                     std::cout << "DEBUG:: here A is the full dump:::::::::::::::\n" << response_str << std::endl;
-                  }
-               }
-            }
-
-            if (req["method"] == "mcp.list_tools") {
-               int block_index = -1; // means all tools
-               std::vector<std::pair<std::string, std::vector<func_doc> > > functions = handle_list_tools(block_index);
-               bool add_python_exec = true;
-               int n_max = 405;
-               json response_funcs = make_response_from_functions(functions, id, n_max, add_python_exec);
-               json j_response;
-               j_response["jsonrpc"] = "2.0";
-               j_response["id"] = std::to_string(id);
-               j_response["result"] = response_funcs;
-               response_str = j_response.dump();
-            }
-
-            if (req["method"] == "mcp.list_tools_block") {
-               int block_index = 0;
-               json::const_iterator it_params = req.find("params");
-               if (it_params != req.end()) {
-                  const json &j_params = *it_params;
-                  // std::cout << "DEBUG:: ::::::::::::::: here in list tools block with j_params " << j_params << std::endl;
-                  json::const_iterator it_block_index = j_params.find("block_index");
-                  if (it_block_index != j_params.end()) {
-                     block_index = it_block_index->get<int>();
-                     std::cout << "DEBUG:: block_index: " << block_index << std::endl;
-                  } else {
-                     std::cout << "DEBUG:: block_index not found" << std::endl;
-                  }
-               }
-               int n_max = 405;
-               bool add_python_exec = true;
-               std::vector<std::pair<std::string, std::vector<func_doc> > > functions = handle_list_tools(block_index);
-               json response_funcs = make_response_from_functions(functions, id, n_max, add_python_exec);
-               json j_response;
-               j_response["jsonrpc"] = "2.0";
-               j_response["id"] = std::to_string(id);
-               j_response["result"] = response_funcs;
-               response_str = j_response.dump();
-            }
-
-            if (req["method"] == "mcp.search") {
-               json::const_iterator it_params = req.find("params");
-               if (it_params != req.end()) {
-                  const json &j_params = *it_params;
-                  json::const_iterator it_pattern = j_params.find("pattern");
-                  if (it_pattern != j_params.end()) {
-                     std::string pattern = it_pattern->get<std::string>();
-                     std::vector<std::pair<std::string, std::vector<func_doc> > > functions = handle_list_tools_with_search_pattern(pattern);
-                     int n_max = 405;
-                     bool add_python_exec = true;
-                     json response_funcs = make_response_from_functions(functions, id, n_max, add_python_exec);
-                     json j_response;
-                     j_response["jsonrpc"] = "2.0";
-                     j_response["id"] = std::to_string(id);
-                     j_response["result"] = response_funcs;
-                     response_str = j_response.dump();
-                  } else {
-                     std::cout << "DEBUG:: :::::: failed to find pattern in j_params" << std::endl;
-                  }
-               }
-            }
-
-         }
-         catch (const std::exception &e) {
-            std::cout << "WARNING:: coot_socket_listener_idle_func(): catch handle_string_as_json fail "
-                      << buf_str << std::endl;
-         }
-      }
-      return response_str;
-
-   };
-
-#ifdef WINDOWS_MINGW
-   auto write_all = [] (SOCKET fd, const std::string &s) {
-
-      const char* p = static_cast<const char*>(s.c_str());
-      size_t length = s.length();
-      int errno;
-      while (length > 0) {
-         int n = send(fd, p, static_cast<int>(length), 0);
-         if (n == SOCKET_ERROR) {
-            errno = WSAGetLastError();
-            std::cout << "BL DEBUG:: send() error: " << errno << std::endl;
-            switch(errno) {
-               case (WSAEINTR):
-                  std::cout << "DEBUG:: WSAEINTR" << std::endl;
-                  // try again
-                  break;
-               case (WSAEWOULDBLOCK):
-                  std::cout << "DEBUG:: WSAEWOULDBLOCK" << std::endl;
-                  // output buffer was filled - send() needs to be called again to finish sending s
-                  std::this_thread::sleep_for(std::chrono::microseconds(200));
-                  break;
-               default:
-                  std::cout << "DEBUG:: neither WSAEINTR not WSAEWOULDBLOCK, error is"
-                            << errno << std::endl;
-                  return false;  // real error
-            }
-         }
-         if (n == 0) {
-            return false;  // connection closed
-         }
-         if (n > 0) {
-            p += n;
-            length -= n;
-         }
-      }
-      return true;
-   };
-#else
-   auto write_all = [] (int fd, const std::string &s) {
-
-      const char* p = static_cast<const char*>(s.c_str());
-      size_t length = s.length();
-      while (length > 0) {
-         ssize_t n = write(fd, p, length);
-         if (n < 0) {
-            std::cout << "DEBUG:: write() error: " << errno << " (" << strerror(errno) << ")" << std::endl;
-            switch(errno) {
-               case (EINTR):
-                  std::cout << "DEBUG:: EINTR" << std::endl;
-                  // try again
-                  break;
-               case (EAGAIN):
-                  std::cout << "DEBUG:: EAGAIN" << std::endl;
-                  // output buffer was filled - write() needs to be called again to finish sending s
-                  std::this_thread::sleep_for(std::chrono::microseconds(200));
-                  break;
-               default:
-                  std::cout << "DEBUG:: neither EINTR not EAGAIN "
-                            << EINTR << " " << EAGAIN << " errno " << errno << std::endl;
-                  return false;  // real error
-            }
-         }
-         if (n == 0) {
-            return false;  // connection closed
-         }
-         if (n > 0) {
-            p += n;
-            length -= n;
-         }
-      }
-      return true;
-   };
-#endif // WINDOWS MINGW (maybe combine with below?)
-
-   std::cout << "listening..." << std::endl;
-
-#ifdef WINDOWS_MINGW
-   // If no active client connection, accept one non-blockingly
-   if (client_fd == INVALID_SOCKET && server_fd != INVALID_SOCKET) {
-      client_fd = accept(server_fd, nullptr, nullptr);
-      if (client_fd != INVALID_SOCKET) {
-         // Set client socket non-blocking too
-         u_long mode = 1;
-         ioctlsocket(client_fd, FIONBIO, &mode);
-         std::cout << "Accepted new client socket connection.\n";
-      }
-   }
-   // If we have a client, read any incoming data non-blockingly
-   if (client_fd != INVALID_SOCKET) {
-      char buffer[4096];
-      int n_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-      std::cout << "debug:: n_read: " << n_read << std::endl;
-      if (n_read > 4) {
-         int n_sent = int(buffer[3]) + 256 * int(buffer[2]) + 256 * 256 * int(buffer[1]) + 256 * 256 * 256 * int(buffer[0]);
-         std::cout << "debug:: n_sent: " << n_sent << std::endl;
-         buffer[n_read] = '\0';
-         std::cout << "Received: " << buffer+4 << std::endl;
-         std::string buf_as_string(buffer+4, n_read);
-         std::string r = handle_string_as_json(buf_as_string);
-
-         const std::string &response_str = r;
-         int32_t len = response_str.size();
-
-         std::cout << "debug:: response_str len " << len << std::endl;
-
-         char header[4];
-         header[0] = (len >> 24) & 0xFF;
-         header[1] = (len >> 16) & 0xFF;
-         header[2] = (len >> 8)  & 0xFF;
-         header[3] = (len)       & 0xFF;
-
-         std::string framed;
-         framed.reserve(4 + response_str.size());
-         framed.append(header, 4);        // 4-byte header
-         framed.append(response_str);     // JSON body
-         bool write_statue = write_all(client_fd, framed);
-         // std::cout << "DEBUG:: write_status: " << write_statue << std::endl;
-
-      } else if (n_read == 0) {
-         // Client disconnected
-         std::cout << "Client disconnected.\n";
-         closesocket(client_fd);
-         client_fd = INVALID_SOCKET;
-      } else if (n_read == SOCKET_ERROR) {
-         std::cerr << "Socket read error\n";
-         closesocket(client_fd);
-         client_fd = INVALID_SOCKET;
-      }
-      // else: nothing to read right now
-   }
-#else
-   // If no active client connection, accept one non-blockingly
-   if (client_fd < 0 && server_fd >= 0) {
-      client_fd = accept(server_fd, nullptr, nullptr);
-      if (client_fd >= 0) {
-         // Set client socket non-blocking too
-         int flags = fcntl(client_fd, F_GETFL, 0);
-         fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
-         std::cout << "Accepted new client socket connection.\n";
-      }
-   }
-   // If we have a client, read any incoming data non-blockingly
-   if (client_fd >= 0) {
-      char buffer[4096];
-      ssize_t n_read = read(client_fd, buffer, sizeof(buffer) - 1);
-      std::cout << "debug:: n_read: " << n_read << std::endl;
-      if (n_read > 4) {
-         int n_sent = int(buffer[3]) + 256 * int(buffer[2]) + 256 * 256 * int(buffer[1]) + 256 * 26 * 256 * int(buffer[0]);
-         std::cout << "debug:: n_sent: " << n_sent << std::endl;
-         buffer[n_read] = '\0';
-         std::cout << "Received: " << buffer+4 << std::endl;
-         std::string buf_as_string(buffer+4, n_read);
-         std::string r = handle_string_as_json(buf_as_string);
-
-         const std::string &response_str = r;
-         int32_t len = response_str.size();
-
-         std::cout << "debug:: response_str len " << len << std::endl;
-
-         char header[4];
-         header[0] = (len >> 24) & 0xFF;
-         header[1] = (len >> 16) & 0xFF;
-         header[2] = (len >> 8)  & 0xFF;
-         header[3] = (len)       & 0xFF;
-
-         std::string framed;
-         framed.reserve(4 + response_str.size());
-         framed.append(header, 4);        // 4-byte header
-         framed.append(response_str);     // JSON body
-         bool write_statue = write_all(client_fd, framed);
-         // std::cout << "DEBUG:: write_status: " << write_statue << std::endl;
-
-      } else if (n_read == 0) {
-         // Client disconnected
-         std::cout << "Client disconnected.\n";
-         close(client_fd);
-         client_fd = -1;
-      } else if (n_read < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
-         std::cerr << "Socket read error\n";
-         close(client_fd);
-         client_fd = -1;
-      }
-      // else: nothing to read right now
-   }
-#endif //MINGW
-   // Always return 1 (TRUE) to keep idle handler running
-   return 1;
-
-}
 
 /* tooltips */
 void
@@ -9586,6 +9292,7 @@ void make_generic_surface(int imol, const char *selection_str, int mode) {
       obj.mesh.set_material_specularity(0.7, 128);
       obj.mesh.setup_buffers();
 
+      update_display_control_mesh_toggles(imol);
       graphics_draw();
    }
 }

@@ -217,15 +217,14 @@ GdkRGBA colour_by_distortion(float dist) {
 }
 #endif
 
-#ifndef EMSCRIPTEN
 GdkRGBA colour_by_rama_plot_distortion(float plot_value, int rama_type) {
 
    if (true)
       std::cout << "in colour_by_rama_plot_distortion plot_value "
-   << plot_value << " rama_type " << rama_type
-   << " c.f. coot::RAMA_TYPE_LOGRAMA " << coot::RAMA_TYPE_LOGRAMA
-   << " coot::RAMA_TYPE_ZO " << coot::RAMA_TYPE_ZO
-   << std::endl;
+                << plot_value << " rama_type " << rama_type
+                << " c.f. coot::RAMA_TYPE_LOGRAMA " << coot::RAMA_TYPE_LOGRAMA
+                << " coot::RAMA_TYPE_ZO " << coot::RAMA_TYPE_ZO
+                << std::endl;
 
    // ZO type data need to scaled to match
    // 20*zo_type_data-80 = log_rama_type_data
@@ -284,7 +283,6 @@ GdkRGBA colour_by_rama_plot_distortion(float plot_value, int rama_type) {
    }
    return col;
 }
-#endif
 
 
 // static
@@ -513,10 +511,8 @@ graphics_info_t::add_cif_dictionary(std::string cif_dictionary_filename,
       if (use_graphics_interface_flag) {
          if (show_no_bonds_dialog_maybe_flag) {
             // GtkWidget *widget = create_no_cif_dictionary_bonds_dialog();
-#ifndef EMSCRIPTEN
             GtkWidget *widget = widget_from_builder("no_cif_dictionary_bonds_dialog");
             gtk_widget_set_visible(widget, TRUE);
-#endif
          }
       }
 
@@ -765,13 +761,11 @@ graphics_info_t::reorienting_next_residue(bool dir) {
       }
    }
    if (! done_it) {
-#ifndef EMSCRIPTEN
       // Oops! Next residue was not found, back to normal/standard/old mode
       if (dir)
-         intelligent_next_atom_centring(go_to_atom_window);
+         intelligent_next_atom_centring();
       else
-         intelligent_previous_atom_centring(go_to_atom_window);
-#endif
+         intelligent_previous_atom_centring();
    }
    // graphics_draw();
 }
@@ -916,9 +910,13 @@ void
 graphics_info_t::setRotationCentre(const coot::clip_hybrid_atom &hybrid_atom) {
 
    if (false)
-      std::cout << "INFO:: setRotationCentre by symmetry hybrid atom "
-                << hybrid_atom.atom << " at "
-                << hybrid_atom.pos << std::endl;
+      // std::cout << "INFO:: setRotationCentre by symmetry hybrid atom "
+      //           << hybrid_atom.atom << " at "
+      //           << hybrid_atom.pos << std::endl;
+      logger.log(log_t::INFO, "setRotationCentre by symmetry hybrid atom at " +
+                 std::to_string(hybrid_atom.pos.x()) + " " +
+                 std::to_string(hybrid_atom.pos.y()) + " " +
+                 std::to_string(hybrid_atom.pos.z()));
 
    rotation_centre_x = hybrid_atom.pos.x();
    rotation_centre_y = hybrid_atom.pos.y();
@@ -1470,8 +1468,9 @@ graphics_info_t::skeletonize_map(int imol, short int prune_it) {
 
          clipper::Map_stats stats(g.molecules[imol].xmap);
 
-         std::cout << "INFO:: Mean and sigma of map: " << stats.mean() << " and "
-                   << stats.std_dev() << std::endl;
+         // std::cout << "INFO:: Mean and sigma of map: " << stats.mean() << " and "
+         //           << stats.std_dev() << std::endl;
+         logger.log(log_t::INFO, "Mean and sigma of map:", stats.mean(), "and", stats.std_dev());
 
          float map_cutoff = stats.mean() + 1.5*stats.std_dev();
          g.skeleton_level = map_cutoff;
@@ -1482,7 +1481,8 @@ graphics_info_t::skeletonize_map(int imol, short int prune_it) {
                                              g.molecules[imol].xmap.cell(),
                                              g.molecules[imol].xmap.grid_sampling());
 
-         std::cout << "INFO:: making skeleton cowtan..." << std::endl;
+         // std::cout << "INFO:: making skeleton cowtan..." << std::endl;
+         logger.log(log_t::INFO, "making skeleton cowtan...");
          GraphicalSkel cowtan(g.molecules[imol].xmap,
                               g.molecules[imol].xskel_cowtan); //fill xskel_cowtan
 
@@ -1508,7 +1508,8 @@ graphics_info_t::skeletonize_map(int imol, short int prune_it) {
             int nsegments = bc.count_and_mark_segments(g.molecules[imol].xskel_cowtan,
                                                        g.molecules[imol].xmap, map_cutoff);
 
-            std::cout << "INFO:: There were " << nsegments << " different segments" << std::endl;
+            // std::cout << "INFO:: There were " << nsegments << " different segments" << std::endl;
+            logger.log(log_t::INFO, "There were", nsegments, "different segments");
 
             bc.transfer_segment_map(&g.molecules[imol].xskel_cowtan);
             g.molecules[imol].set_colour_skeleton_by_segment(); // use random colours
@@ -1794,9 +1795,12 @@ graphics_info_t::run_post_read_model_hook(int imol) {
       PyObject *result_py = PyEval_CallObject(pFunc, arg_list);
       std::cout << "DEBUG:: post_read_model_hook() got result " << result_py << std::endl;
    } else {
-      std::cout << "INFO:: in run_post_read_model_hook() pFunc " << pFunc << " is not callable" << std::endl;
-      std::cout << "INFO:: in run_post_read_model_hook() pDict " << pDict << " " << std::endl;
-      std::cout << "INFO:: in run_post_read_model_hook() pModule " << pModule << " " << std::endl;
+      // std::cout << "INFO:: in run_post_read_model_hook() pFunc " << pFunc << " is not callable" << std::endl;
+      logger.log(log_t::INFO, "in run_post_read_model_hook() pFunc", pFunc, "is not callable");
+      // std::cout << "INFO:: in run_post_read_model_hook() pDict " << pDict << " " << std::endl;
+      logger.log(log_t::INFO, "in run_post_read_model_hook() pDict", pDict);
+      // std::cout << "INFO:: in run_post_read_model_hook() pModule " << pModule << " " << std::endl;
+      logger.log(log_t::INFO, "in run_post_read_model_hook() pModule", pModule);
    }
 #endif
 
@@ -3344,7 +3348,8 @@ graphics_info_t::add_measure_distance(const coot::Cartesian &p1,
    
    graphics_draw();
 
-   std::cout << "INFO:: distance: " << dist << " Angstroems" << std::endl;
+   // std::cout << "INFO:: distance: " << dist << " Angstroems" << std::endl;
+   logger.log(log_t::INFO, "distance:", dist, "Angstroems");
    std::string s = "Distance: ";
    s += float_to_string(dist);
    s += " A";
@@ -3416,7 +3421,8 @@ graphics_info_t::add_measure_angle() const {
    clipper::Coord_orth adjusted_mid_point(mid_point + 0.2 * centre_atom_to_mid_point_uv);
    add_measure_angle_label(coord_orth_to_glm(adjusted_mid_point), theta);
 
-   std::cout << "INFO:: angle: " << theta << " radians " << theta*57.29578 << " degrees " << std::endl;
+   // std::cout << "INFO:: angle: " << theta << " radians " << theta*57.29578 << " degrees " << std::endl;
+   logger.log(log_t::INFO, "angle:", theta, "radians", theta*57.29578, "degrees");
 
    display_density_level_this_image = 1;
    display_density_level_screen_string = "  Angle:  ";
@@ -4010,7 +4016,8 @@ graphics_info_t::baton_build_atoms_molecule() const {
    }
 
 
-   std::cout << "INFO:: Creating a molecule for Baton Atoms" << std::endl;
+   // std::cout << "INFO:: Creating a molecule for Baton Atoms" << std::endl;
+   logger.log(log_t::INFO, "Creating a molecule for Baton Atoms");
    // not found, let's create one:
    mmdb::Manager *MMDBManager = new mmdb::Manager();
 
@@ -4038,9 +4045,11 @@ graphics_info_t::baton_build_atoms_molecule() const {
 
       std::string spacegroup = molecules[imol_for_skel].xskel_cowtan.spacegroup().symbol_hm();
 
-      std::cout << "INFO:: setting spacegroup of Baton Atoms to be: " << spacegroup << std::endl;
-      std::cout << "INFO:: setting cell of Baton Atoms to be: "
-   << molecules[imol_for_skel].xskel_cowtan.cell().format() << std::endl;
+      // std::cout << "INFO:: setting spacegroup of Baton Atoms to be: " << spacegroup << std::endl;
+      logger.log(log_t::INFO, "setting spacegroup of Baton Atoms to be:", spacegroup);
+      // std::cout << "INFO:: setting cell of Baton Atoms to be: "
+      //    << molecules[imol_for_skel].xskel_cowtan.cell().format() << std::endl;
+      logger.log(log_t::INFO, "setting cell of Baton Atoms to be:", molecules[imol_for_skel].xskel_cowtan.cell().format());
 
       int istat_spgr = MMDBManager->SetSpaceGroup(spacegroup.c_str());
       if (istat_spgr != 0) {
@@ -4056,7 +4065,8 @@ graphics_info_t::baton_build_atoms_molecule() const {
    imol = create_molecule();
    molecules[imol].install_model(imol, asc, graphics_info_t::Geom_p(), "Baton Atoms", 1);
 
-   std::cout << "INFO:: returning baton atom molecule " << imol << std::endl;
+   // std::cout << "INFO:: returning baton atom molecule " << imol << std::endl;
+   logger.log(log_t::INFO, "returning baton atom molecule", imol);
    return imol;
 }
 
@@ -4160,7 +4170,8 @@ graphics_info_t::baton_tip_by_ca_option(int index) const {
    {
       if (uindex >= baton_next_ca_options.size()) {
          if ((uindex == 0) && (baton_next_ca_options.size() == 0)) {
-            std::cout << "INFO:: no baton next positions from here\n";
+            // std::cout << "INFO:: no baton next positions from here\n";
+            logger.log(log_t::INFO, "no baton next positions from here");
             tip_pos = non_skeleton_tip_pos();
          } else {
             std::cout << "ERROR: bad baton_next_ca_options index: "
@@ -4231,10 +4242,12 @@ graphics_info_t::toggle_baton_mode() {
 
    if (baton_mode == 0) {
       baton_mode = 1;
-      std::cout << "INFO::baton rotation mode on." << std::endl;
+      // std::cout << "INFO::baton rotation mode on." << std::endl;
+      logger.log(log_t::INFO, "baton rotation mode on.");
    } else {
       baton_mode = 0;
-      std::cout << "INFO::baton rotation mode off." << std::endl;
+      // std::cout << "INFO::baton rotation mode off." << std::endl;
+      logger.log(log_t::INFO, "baton rotation mode off.");
    }
 }
 
@@ -6185,8 +6198,9 @@ void graphics_info_t::run_user_defined_click_func() {
       SCM mess = scm_from_locale_string("~s");
       SCM ds = scm_simple_format(dest, mess, scm_list_1(user_defined_click_scm_func));
       SCM da = scm_simple_format(dest, mess, scm_list_1(arg_list));
-      std::cout << "INFO:: run_user_defined_click_func() applying " << scm_to_locale_string(ds) << " on "
-                << scm_to_locale_string(da) << std::endl;
+      // std::cout << "INFO:: run_user_defined_click_func() applying " << scm_to_locale_string(ds) << " on "
+      //           << scm_to_locale_string(da) << std::endl;
+      logger.log(log_t::INFO, "run_user_defined_click_func() applying", scm_to_locale_string(ds), "on", scm_to_locale_string(da));
 
       SCM rest = SCM_EOL;
       SCM v = scm_apply_1(user_defined_click_scm_func, arg_list, rest);
@@ -6203,8 +6217,9 @@ void graphics_info_t::run_user_defined_click_func() {
                   << user_defined_click_py_func->ob_type->tp_name<<std::endl;
       } else {
          // what are we running? Print it out.
-         std::cout << "INFO:: (py) run_user_defined_click_func() applying > "
-                   << PyEval_GetFuncName(user_defined_click_py_func) << " < on:\n";
+         // std::cout << "INFO:: (py) run_user_defined_click_func() applying > "
+         //           << PyEval_GetFuncName(user_defined_click_py_func) << " < on:\n";
+         logger.log(log_t::INFO, "(py) run_user_defined_click_func() applying >", PyEval_GetFuncName(user_defined_click_py_func), "< on:");
 
          PyObject *arg_list_py = PyTuple_New(user_defined_atom_pick_specs.size());
          for (unsigned int i=0; i<user_defined_atom_pick_specs.size(); i++) {
@@ -6751,38 +6766,51 @@ graphics_info_t::quick_save() {
 void
 graphics_info_t::set_bond_colour_from_user_defined_colours(int icol) {
 
-   if (use_graphics_interface_flag) {
-      int n_user_defined_colours = user_defined_colours.size();
-      if (icol < n_user_defined_colours) {
-         if (icol >= 0) {
-            const coot::colour_holder &ch = user_defined_colours[icol];
-            glColor3f(ch.red, ch.green, ch.blue);
-         } else {
-            coot::colour_holder ch;
-            glColor3f(ch.red, ch.green, ch.blue);
-         }
-      } else {
-         coot::colour_holder ch;
-         glColor3f(ch.red, ch.green, ch.blue);
-      }
-   }
+   std::cout << "Don't call this function " <<  __FUNCTION__ << std::endl;
 }
 
 // static
 void
-graphics_info_t::set_user_defined_colours(const std::vector<coot::colour_holder> &user_defined_colours_in) {
+graphics_info_t::set_user_defined_colours(const std::vector<std::pair<unsigned int, coot::colour_holder> > &user_defined_colours_in) {
 
    user_defined_colours = user_defined_colours_in;
-   std::vector<glm::vec4> t_cols(user_defined_colours.size());
-   for (unsigned int i=0; i<user_defined_colours.size(); i++) {
-      const auto &col = user_defined_colours[i];
-      float alpha = 1.0; // put alpha into coot::colour_holder
-      t_cols[i] = glm::vec4(col.red, col.green, col.blue, alpha);
-   }
-   if (! user_defined_colours.empty())
-      texture_for_hud_colour_bar = Texture(400, 200, t_cols, 5);
 
+#if 0
+   // (2026-02-04-PE I don't understand what this does)
+   // texture colours:
+   if (! user_defined_colours.empty()) {
+      std::vector<glm::vec4> t_cols(user_defined_colours.size());
+      for (unsigned int i=0; i<user_defined_colours.size(); i++) {
+         unsigned int idx = user_defined_colours[i].first;
+         const auto &col  = user_defined_colours[i].second;
+         float alpha = 1.0; // put alpha into coot::colour_holder
+         if (idx < t_cols.size())
+            t_cols[idx] = glm::vec4(col.red, col.green, col.blue, alpha);
+         else
+            std::cout << "ERROR:: idx out of range in set_user_defined_colours() " << idx << std::endl;
+      }
+      texture_for_hud_colour_bar = Texture(400, 200, t_cols, 5);
+   }
+#endif
 }
+
+
+// static
+void graphics_info_t::print_user_defined_colour_table() {
+
+   if (user_defined_colours.empty()) {
+      // std::cout << "INFO:: no user-defined colours" << std::endl;
+      logger.log(log_t::INFO, "no user-defined colours");
+      return;
+   }
+
+   for (unsigned int i=0; i<user_defined_colours.size(); i++) {
+      unsigned int icol = user_defined_colours[i].first;
+      const auto &col   = user_defined_colours[i].second;
+      std::cout << "   user-defined colour-table: " << icol << " col " << col << std::endl;
+   }
+}
+
 
 
 // static

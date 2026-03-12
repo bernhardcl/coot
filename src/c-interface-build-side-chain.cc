@@ -1441,22 +1441,24 @@ PyObject *get_residues_in_chain_py(int imol, const std::string &chain_id) {
             int n_chains = model_p->GetNumberOfChains();
             for (int ichain=0; ichain<n_chains; ichain++) {
                mmdb::Chain *chain_p = model_p->GetChain(ichain);
-               int n_res = chain_p->GetNumberOfResidues();
-               std::vector<coot::residue_spec_t> res_specs;
-               for (int ires=0; ires<n_res; ires++) {
-                  mmdb::Residue *residue_p = chain_p->GetResidue(ires);
-                  if (residue_p) {
-                     coot::residue_spec_t rs(residue_p);
-                     res_specs.push_back(rs);
+               if (chain_id == chain_p->GetChainID()) {
+                  int n_res = chain_p->GetNumberOfResidues();
+                  std::vector<coot::residue_spec_t> res_specs;
+                  for (int ires=0; ires<n_res; ires++) {
+                     mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+                     if (residue_p) {
+                        coot::residue_spec_t rs(residue_p);
+                        res_specs.push_back(rs);
+                     }
                   }
-               }
-               if (! res_specs.empty()) {
-                  // delete l here
-                  l = PyList_New(res_specs.size());
-                  for (unsigned int i=0; i<res_specs.size(); i++) {
-                     const auto &rs = res_specs[i];
-                     PyObject *o = residue_spec_to_py(rs);
-                     PyList_SetItem(l, i, o);
+                  if (! res_specs.empty()) {
+                     // delete l here
+                     l = PyList_New(res_specs.size());
+                     for (unsigned int i=0; i<res_specs.size(); i++) {
+                        const auto &rs = res_specs[i];
+                        PyObject *o = residue_spec_to_py(rs);
+                        PyList_SetItem(l, i, o);
+                     }
                   }
                }
             }
@@ -1464,4 +1466,25 @@ PyObject *get_residues_in_chain_py(int imol, const std::string &chain_id) {
       }
    }
    return l;
+}
+
+
+//! does the specfied residue exist?
+//!
+//! @param imol the molecule index
+//! @param spec is the residue spec to test for existance
+//! @return 0 for no, 1 for yes, -1 for error
+int residue_exists_py(int imol, PyObject *residue_spec_py) {
+
+   int r = -1;
+
+   if (is_valid_model_molecule(imol)) {
+      coot::residue_spec_t res_spec = residue_spec_from_py(residue_spec_py);
+      mmdb::Residue *residue_p = graphics_info_t::molecules[imol].get_residue(res_spec);
+      if (residue_p)
+         r = 1;
+      else
+         r = 0;
+   }
+   return r;
 }

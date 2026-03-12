@@ -22,36 +22,28 @@ coot.set_refinement_immediate_replacement(1)
 - Need to call `coot.set_refinement_immediate_replacement()` before using refinement functions (just once is enough)
   which should remove the risk of threading conflicts and crashes, race conditions between refinement and rendering.
 
-**When to use:** Any time you're scripting refinement operations (auto_fit_best_rotamer, refine_zone, etc.)
+**When to use:** Any time you're scripting refinement operations (refine_residues_py, refine_zone, etc.)
 
 ## Safe Refinement Workflow
 
-### Single Residue Refinement
-
-```python
 # 1. Enable immediate replacement
 coot.set_refinement_immediate_replacement(1)
 
-# 2. Fix rotamer
-coot.auto_fit_best_rotamer(
-    imol,
-    chain_id,
-    res_no,
-    ins_code,
-    alt_loc,
-    imol_map,
-    clash_flag,
-    probability_lim
-)
+# 2. Set the refinement map
+coot.set_imol_refinement_map(imol_map)
 
-# 3. Refine in context (sphere refinement)
-coot.refine_residues_py(
-    imol,
-    [['A', 43, ""], ['A', 44, '']]
-)
+# 3. Refine residues (preferred method)
+# Pass a list of residue specs: [["A", 42, ""], ["A", 43, ""], ...]
+residue_specs = [["A", resno, ""] for resno in range(start_resno, end_resno + 1)]
+result = coot.refine_residues_py(imol, residue_specs)
 
-# No need for accept_moving_atoms_py() with immediate replacement!
-```
+# 4. so-called "sphere refine" is often useful because it allows movement/improvement
+# of residues that are close in space but distant in sequence.
+central_residue_spec = ['A', 12, '']
+neigbs = coot.residues_near_residue(imol, central_residue_spec)
+residue_spec = neigbs
+residue_specs.append(central_residue_spec)
+result = coot.refine_residues_py(imol, residue_specs)
 
 ### Zone Refinement
 
@@ -110,12 +102,6 @@ gtk_gl_area_snapshot
 
 ### Asynchronous Refinement Without Accept
 
-**Problem:** Refinement starts but coordinates aren't committed before next operation.
-
-**Solution:** Either:
-1. Use immediate replacement mode (recommended)
-2. OR call `accept_moving_atoms_py()` after each refinement
-
 ## Multi-Line Code Limitation
 
 Coot only returns values if code is a single line:
@@ -151,16 +137,16 @@ worst = coot.get_n_residues_with_worst_density_fit(0, 10)
 # 3. For each poor residue:
 for residue in worst:
     chain_id, resno, inscode, corr = residue
-    
+
     # Build CID
     cid = f"//{chain_id}/{resno}"
-    
+
     # Try rotamer fix
     coot.auto_fit_best_rotamer(cid, "", 0, 1, 1, 0.1)
-    
+
     # Refine in context
     coot.refine_residues_using_atom_cid(0, cid, "SPHERE", 4000)
-    
+
     # Check improvement
     new_corr = coot.density_correlation_analysis_scm(0, chain_id, resno, inscode)
     print(f"{cid}: {corr:.3f} → {new_corr['all-atom']:.3f}")

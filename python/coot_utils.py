@@ -4149,19 +4149,20 @@ def rebuild_residues_using_db_loop(imol, middle_residue_spec, n_neighbs):
             if isinstance(res_name, str):
                 if res_name == "GLY":
                     res_no_gly = resno_low + residue_idx
-                    delete_atom(imol_db_loop, ch_id, res_no_gly, "", " CB ", "")
+                    coot.delete_atom(imol_db_loop, ch_id, res_no_gly, "", " CB ", "")
 
     # main line
 
     resno_mid = residue_spec_to_res_no(middle_residue_spec)
     resno_low = resno_mid - n_neighbs
     resno_high = resno_mid + n_neighbs
-    r = range(resno_mid - 4 - n_neighbs, resno_mid + n_neighbs + 0) + \
-        range(resno_mid + 1 + n_neighbs, resno_mid + 3 + n_neighbs)
+    r = list(range(resno_mid - 4 - n_neighbs, resno_mid + n_neighbs + 0)) + \
+        list(range(resno_mid + 1 + n_neighbs, resno_mid + 3 + n_neighbs))
     ch_id = residue_spec_to_chain_id(middle_residue_spec)
     residue_specs = map(lambda res_no: [ch_id, res_no, ""], r)
+    db_loop_preserve_residue_names = True
 
-    loop_mols = protein_db_loops(imol, residue_specs, imol_refinement_map(),
+    loop_mols = protein_db_loops(imol, residue_specs, coot.imol_refinement_map(),
                                  1, db_loop_preserve_residue_names)
     residue_spec_of_residues_to_be_replaced = [middle_residue_spec] \
         if n_neighbs == 0 else map(lambda rno: [ch_id, rno, ""],
@@ -4645,7 +4646,7 @@ def toggle_full_screen(widget=None):
 
 
 def split_active_water():
-    with coot_utils.UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code, aa_atom_name, aa_alt_conf]:
+    with UsingActiveAtom() as [aa_imol, aa_chain_id, aa_res_no, aa_ins_code, aa_atom_name, aa_alt_conf]:
         coot.split_water(aa_imol, aa_chain_id, aa_res_no, aa_ins_code)
 
 # helper function to test for a number
@@ -4744,7 +4745,7 @@ def set_alt_conf_occ(imol, chain_id, res_no, ins_code, alt_conf_list):
     """
     # first check if we have alt confs:
     alt_confs = residue_alt_confs(imol, chain_id, res_no, ins_code)
-    if (alt_confs > 1):
+    if len(alt_confs) > 1:
         atom_ls = coot.residue_info_py(imol, chain_id, res_no, ins_code)
         change_list = []
         for i in range(len(atom_ls)):

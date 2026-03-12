@@ -65,6 +65,7 @@
 #include "rsr-functions.hh"
 #include "cc-interface-user-defined-atom-colours.hh"
 #include "cc-interface-alignment.hh"
+#include "cc-interface-graphics.hh"
 #include "init_coot_as_python_module.hh"
 #include "curl-utils.hh"
 #include "cfc-2025.hh"
@@ -72,6 +73,7 @@
 #ifdef USE_MOLECULES_TO_TRIANGLES
 #include "cc-interface-molecular-representation.hh"
 #endif // USE_MOLECULES_TO_TRIANGLES
+#include "nef.hh"
 %}
 
 
@@ -85,6 +87,8 @@ namespace std {
 %template(IntVector) vector<int>;
 %template(vector_atom_spec)      vector<coot::atom_spec_t>;
 %template(vector_mtz_type_label) vector<coot::mtz_type_label>;
+%template(pair_string_string)    pair<std::string, std::string>;
+%template(vector_pair_string_string) vector<std::pair<std::string, std::string> >;
 }
 
 %init %{
@@ -104,6 +108,10 @@ namespace std {
 %include "coot_cc_interface_docs.i"
 %include "coot_c_interface_docs.i"
 %include "coot_rsr_functions_docs.i"
+%include "coot_network_functions_docs.i"
+%include "coot_read_molecule_docs.i"
+%include "coot_cc_interface_user_defined_atom_colours.i"
+%include "coot_cc_interface_molecular_representation.i"
 
 #include "globjects.h"  //includes gtk/gtk.h
 #include "coot-utils/coot-coord-utils.hh"
@@ -154,7 +162,9 @@ namespace std {
 %include "curl-utils.hh"
 %include "M2T-interface.hh"
 %include "cc-interface-alignment.hh"
+%include "cc-interface-graphics.hh"
 %include "cfc-2025.hh"
+%include "nef.hh"
 
 // # ignore some functions with c++ objects
 %ignore rigid_body_fit_with_residue_range();

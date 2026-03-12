@@ -24,6 +24,7 @@
  *
  */
 
+#include "stereo-eye.hh"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp> // for to_string()
 
@@ -86,16 +87,18 @@ graphics_info_t::translation_gizmo_picked() {
 
    // 20250719-PE c.f. atom_pick_gtk3()
 
+   stereo_eye_t eye = stereo_eye_t::MONO; // PASS THIS
+
    translation_gizmo_t::pick_info_t pick_info = translation_gizmo_t::pick_info_t::NONE;
    if (translation_gizmo_mesh.get_draw_this_mesh()) {
-      std::cout << "translation gizmo is being drawn" << std::endl;
+      // std::cout << "translation gizmo is being drawn" << std::endl;
       graphics_info_t g;
       GtkAllocation allocation = get_glarea_allocation();
       int w = allocation.width;
       int h = allocation.height;
       float mouseX = g.GetMouseBeginX() / (w * 0.5f) - 1.0f;  // should be static?
       float mouseY = g.GetMouseBeginY() / (h * 0.5f) - 1.0f;
-      glm::mat4 mvp = get_molecule_mvp();
+      glm::mat4 mvp = get_molecule_mvp(eye);
       glm::mat4 vp_inv = glm::inverse(mvp);
       float real_y = - mouseY; // in range -1 -> 1
       glm::vec4 screenPos_f = glm::vec4(mouseX, real_y, -1.0f, 1.0f);
@@ -111,7 +114,7 @@ graphics_info_t::translation_gizmo_picked() {
       // translation_gizmo_axis_dragged = pick_info;
 
       if (pick_info != translation_gizmo_t::pick_info_t::NONE) {
-         std::cout << "translation gizmo picked! " << pick_info << std::endl;
+         // std::cout << "translation gizmo picked! " << pick_info << std::endl;
       }
    }
    return pick_info;
@@ -228,6 +231,11 @@ graphics_info_t::on_glarea_drag_update_primary(GtkGestureDrag *gesture,
       } else {
          if (control_is_pressed) {
             do_drag_pan_gtk3(gl_area, drag_delta_x, drag_delta_y); // 20220613-PE no redraw here currently
+            // Update mouse_x/mouse_y so that if ctrl is released mid-drag,
+            // the next view rotation starts from the current position
+            // (not the stale position from when panning started).
+            mouse_x = drag_begin_x + drag_delta_x;
+            mouse_y = drag_begin_y + drag_delta_y;
             handled = true;
             graphics_draw();
          } else {
@@ -239,6 +247,7 @@ graphics_info_t::on_glarea_drag_update_primary(GtkGestureDrag *gesture,
                      rotate_chi(delta_delta_x, delta_delta_y); // does its own graphics_draw()
                   } else {
                      // view rotation is the last thing to test for/do
+                     // 2026-03-04-PE recall that drag_delta_x and drag_delta_y are passed variables
                      do_view_rotation(drag_delta_x, drag_delta_y);
                      graphics_draw();
                   }
@@ -633,7 +642,9 @@ graphics_info_t::on_glarea_click(GtkGestureClick *controller,
                         if (naii.success) {
                            int imol = naii.imol;
                            mmdb::Atom *at = molecules[imol].atom_sel.atom_selection[naii.atom_index];
+
                            molecules[imol].add_to_labelled_atom_list(naii.atom_index);
+                           add_picked_atom_info_to_status_bar(naii.imol, naii.atom_index);
                            graphics_draw();
                            handled = true;
                         }
@@ -731,13 +742,15 @@ graphics_info_t::on_glarea_click(GtkGestureClick *controller,
 void
 graphics_info_t::do_drag_pan_gtk4(GtkWidget *widget, double drag_delta_x, double drag_delta_y) {
 
+   stereo_eye_t eye = stereo_eye_t::MONO; // PASS THIS
+
    GtkAllocation allocation;
    gtk_widget_get_allocation(widget, &allocation);
    int w = allocation.width;
    int h = allocation.height;
 
    graphics_info_t g;
-   glm::mat4 mvp = g.get_molecule_mvp(); // modeglml matrix includes orientation with the quaternion
+   glm::mat4 mvp = g.get_molecule_mvp(eye); // modeglml matrix includes orientation with the quaternion
 
    mouse_current_x = mouse_clicked_begin.first  + drag_delta_x;
    mouse_current_y = mouse_clicked_begin.second + drag_delta_y;
@@ -775,7 +788,7 @@ graphics_info_t::do_drag_pan_gtk4(GtkWidget *widget, double drag_delta_x, double
                 << mouse_current_x - get_mouse_previous_position_x() << " "
                 << mouse_current_y - get_mouse_previous_position_y() << std::endl;
    }
-   if (false) {
+   if (true) {
       std::cout << "in do_drag_pan_gtk4() mouse-current: "
                 << mouse_current_x << " " << mouse_current_y << " "
                 << "mouse-prev: " << get_mouse_previous_position_x() << " " << get_mouse_previous_position_y()
@@ -805,13 +818,15 @@ graphics_info_t::do_drag_pan_gtk3(GtkWidget *widget, double drag_delta_x, double
 
    // This should be a graphics_info_t function
 
+   stereo_eye_t eye = stereo_eye_t::MONO; // PASS THIS
+
    GtkAllocation allocation;
    gtk_widget_get_allocation(widget, &allocation);
    int w = allocation.width;
    int h = allocation.height;
 
    graphics_info_t g;
-   glm::mat4 mvp = g.get_molecule_mvp(); // modeglml matrix includes orientation with the quaternion
+   glm::mat4 mvp = g.get_molecule_mvp(eye); // modeglml matrix includes orientation with the quaternion
 
    mouse_current_x = mouse_clicked_begin.first  + drag_delta_x;
    mouse_current_y = mouse_clicked_begin.second + drag_delta_y;
@@ -964,7 +979,6 @@ graphics_info_t::on_glarea_key_controller_key_released(GtkEventControllerKey *co
    delete_item_atom = 0; // turn off pick-delete, otherwise if Ctrl is released, delete_item_atom
                          // is still active, leading to delete of atom on next atom pick - which
                          // is probably not what is wanted.
-
 }
 
 

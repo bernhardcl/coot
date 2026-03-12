@@ -40,7 +40,7 @@ add an extension to be treated as coordinate files
 
 Parameters
 ----------
-ext : const char *
+ext : str
     the extension to be added
 ";
 
@@ -51,7 +51,7 @@ add an extension to be treated as data (reflection) files
 
 Parameters
 ----------
-ext : const char *
+ext : str
     the extension to be added
 ";
 
@@ -62,7 +62,7 @@ add an extension to be treated as geometry dictionary files
 
 Parameters
 ----------
-ext : const char *
+ext : str
     the extension to be added
 ";
 
@@ -71,7 +71,7 @@ add an extension to be treated as geometry map files
 
 Parameters
 ----------
-ext : const char *
+ext : str
 ";
 
 %feature("docstring") remove_coordinates_glob_extension "
@@ -81,7 +81,7 @@ remove an extension to be treated as coordinate files
 
 Parameters
 ----------
-ext : const char *
+ext : str
     the extension to be added
 ";
 
@@ -92,7 +92,7 @@ remove an extension to be treated as data (reflection) files
 
 Parameters
 ----------
-ext : const char *
+ext : str
     the extension to be removed
 ";
 
@@ -103,7 +103,7 @@ remove an extension to be treated as geometry dictionary files
 
 Parameters
 ----------
-ext : const char *
+ext : str
     the extension to be removed
 ";
 
@@ -112,7 +112,7 @@ remove an extension to be treated as geometry map files
 
 Parameters
 ----------
-ext : const char *
+ext : str
 ";
 
 %feature("docstring") set_sticky_sort_by_date "
@@ -146,7 +146,7 @@ is the given file name suitable to be read as coordinates?
 
 Parameters
 ----------
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") open_coords_dialog "
@@ -173,7 +173,7 @@ show the export map GUI
 
 Parameters
 ----------
-export_map_fragment : short int
+export_map_fragment : int
 ";
 
 %feature("docstring") set_main_window_title "
@@ -183,7 +183,20 @@ function added for Lothar Esser
 
 Parameters
 ----------
-s : const char *
+s : str
+";
+
+%feature("docstring") set_validation_graphs_is_docked "
+set the state of the validation graphs box
+
+By \"docked\" I mean, in the main window. The alternative is a floating dialog.
+
+  state  0 is not docked, 1 is docked
+
+Parameters
+----------
+state : int
+    0 is not docked, 1 is docked
 ";
 
 %feature("docstring") manage_column_selector "
@@ -193,7 +206,7 @@ We try as .phs and .cif files first
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") chain_n_residues "
@@ -203,7 +216,7 @@ the number of residues
 
 Parameters
 ----------
-chain_id : const char *
+chain_id : str
 imol : int
 ";
 
@@ -226,7 +239,7 @@ a residue seqnum (normal residue number) from a residue serial number
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 serial_num : int
 ";
 
@@ -238,7 +251,7 @@ NULL (scheme False) on failure.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 serial_num : int
 ";
 
@@ -315,7 +328,7 @@ Parameters
 ----------
 imol : int
     is the molecule index
-chain_id : const char *
+chain_id : str
     is the chain id (e.g. \"A\" or \"B\")
 ";
 
@@ -329,7 +342,7 @@ This is a raw interface function, you should generally not use this, but instead
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ";
 
 %feature("docstring") is_nucleotide_chain_p "
@@ -342,7 +355,7 @@ This is a raw interface function, you should generally not use this, but instead
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ";
 
 %feature("docstring") n_residues "
@@ -378,9 +391,9 @@ imol : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") remarks_py "
@@ -395,9 +408,9 @@ imol : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") model_composition_statistics_scm "
@@ -446,6 +459,19 @@ Parameters
 imol : int
 ";
 
+%feature("docstring") get_header_secondary_structure_info "
+get the secondary structure from the header
+
+  imol  the molecule index a dictionary of header info Returns: {'helices': [...], 'strands': [...]} Each helix dict contains: serNum, helixID, initChainID, initSeqNum, endChainID, endSeqNum, length, comment
+
+Each strand dict contains: SheetID, strandNo, initChainID, initSeqNum, endChainID, endSeqNum
+
+Parameters
+----------
+imol : int
+    the molecule index
+";
+
 %feature("docstring") add_header_secondary_structure_info "
 add secondary structure info to the internal representation of the model
 
@@ -459,7 +485,7 @@ imol : int
 Parameters
 ----------
 imol : int
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") copy_molecule "
@@ -480,10 +506,10 @@ This function is used when adding a new (modified) ligand to a structure. It cre
 Parameters
 ----------
 imol_ligand_new : int
-chain_id_ligand_new : const char *
+chain_id_ligand_new : str
 resno_ligand_new : int
 imol_current : int
-chain_id_ligand_current : const char *
+chain_id_ligand_current : str
 resno_ligand_current : int
 ";
 
@@ -543,7 +569,7 @@ set the molecule name of the imol-th molecule
 Parameters
 ----------
 imol : int
-new_name : const char *
+new_name : str
 ";
 
 %feature("docstring") coot_checked_exit "
@@ -626,8 +652,8 @@ Return 1 on success. Return 0 on a file without Rfree, return -1 on complete fai
 
 Parameters
 ----------
-cif_file_name : const char *
-mtz_file_name : const char *
+cif_file_name : str
+mtz_file_name : str
 ";
 
 %feature("docstring") set_do_anti_aliasing "
@@ -669,7 +695,7 @@ set the GUI dark mode state
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") python_at_prompt_at_startup_state "
@@ -760,7 +786,7 @@ If the file updates, then the model will be updated.
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") show_calculate_updating_maps_pythonic_gui "
@@ -782,7 +808,7 @@ default off (0).
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") get_input_model_was_cif_state_scm "
@@ -817,9 +843,9 @@ Return 1 on atoms changes, 0 on not. Return -1 if residue not found.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") residue_has_hetatms "
@@ -830,9 +856,9 @@ return 1 if all atoms of the specified residue are HETATMs, else, return 0. If r
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") het_group_residues_scm "
@@ -858,7 +884,7 @@ Return -1 on comp-id not found in dictionary.
 
 Parameters
 ----------
-comp_id : const char *
+comp_id : str
 ";
 
 %feature("docstring") replace_fragment "
@@ -868,7 +894,7 @@ Parameters
 ----------
 imol_target : int
 imol_fragment : int
-atom_selection : const char *
+atom_selection : str
 ";
 
 %feature("docstring") copy_residue_range "
@@ -879,9 +905,9 @@ resno_range_start and resno_range_end are inclusive.
 Parameters
 ----------
 imol_target : int
-chain_id_target : const char *
+chain_id_target : str
 imol_reference : int
-chain_id_reference : const char *
+chain_id_reference : str
 resno_range_start : int
 resno_range_end : int
 ";
@@ -911,7 +937,7 @@ replace pdb. Fail if molecule_number is not a valid model molecule. Return -1 on
 Parameters
 ----------
 molecule_number : int
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") screendump_image "
@@ -921,7 +947,7 @@ You can use this, in conjunction with spinning and view moving functions to make
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") check_for_dark_blue_density "
@@ -934,7 +960,7 @@ sets the density map of the given molecule to be drawn as a (transparent) solid 
 Parameters
 ----------
 imol : int
-state : short int
+state : int
 ";
 
 %feature("docstring") set_draw_map_standard_lines "
@@ -947,7 +973,7 @@ If you want to just turn off a map, don't use this, use set_map_displayed() .
 Parameters
 ----------
 imol : int
-state : short int
+state : int
 ";
 
 %feature("docstring") set_solid_density_surface_opacity "
@@ -975,7 +1001,7 @@ Default is 1 (on.
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_scroll_by_wheel_mouse "
@@ -1061,8 +1087,8 @@ Given that we are in chain current_chain, apply the NCS operator that maps curre
 Parameters
 ----------
 imol : int
-current_chain : const char *
-next_ncs_chain : const char *
+current_chain : str
+next_ncs_chain : str
 ";
 
 %feature("docstring") apply_ncs_to_view_orientation_and_screen_centre "
@@ -1071,9 +1097,9 @@ as above, but shift the screen centre also.
 Parameters
 ----------
 imol : int
-current_chain : const char *
-next_ncs_chain : const char *
-forward_flag : short int
+current_chain : str
+next_ncs_chain : str
+forward_flag : int
 ";
 
 %feature("docstring") set_show_fps "
@@ -1163,6 +1189,8 @@ Put the blob under the cursor to the screen centre. Check only positive blobs. U
 
 The refinement map must be set. (We can't check all maps because they are not (or may not be) on the same scale).
 
+Not useful for MCP. For interactive use only.
+
 1 if successfully found a blob and moved there. return 0 if no move.
 ";
 
@@ -1172,6 +1200,8 @@ return scheme false or a list of molecule number and an atom spec
 
 %feature("docstring") select_atom_under_pointer_py "
 return Python false or a list of molecule number and an atom spec
+
+Not useful for MCP. For interactive use only.
 ";
 
 %feature("docstring") normal_cursor "
@@ -1209,7 +1239,7 @@ Allow the changing of Model/Fit/Refine button label from \"Rotate/Translate Zone
 
 Parameters
 ----------
-txt : const char *
+txt : str
 ";
 
 %feature("docstring") set_model_fit_refine_place_atom_at_pointer_label "
@@ -1217,7 +1247,7 @@ Allow the changing of Model/Fit/Refine button label from \"Place Atom at Pointer
 
 Parameters
 ----------
-txt : const char *
+txt : str
 ";
 
 %feature("docstring") set_refinement_move_atoms_with_zero_occupancy "
@@ -1269,6 +1299,10 @@ imol : int
 
 %feature("docstring") apply_undo "
 apply undo - the \"Undo\" button callback
+
+undo the most recent modification on the model set in set_undo_molecule() .
+
+1 on succesful undo, 0 on failed to undo.
 ";
 
 %feature("docstring") apply_redo "
@@ -1354,7 +1388,7 @@ Parameters
 ----------
 imol : int
     the model molecule index @description a description that goes along with this back point
-description : const char *
+description : str
 ";
 
 %feature("docstring") restore_to_backup_checkpoint "
@@ -1375,7 +1409,7 @@ backup_index : int
 %feature("docstring") compare_current_model_to_backup "
 Compare current model to backup.
 
-  imol  the model molecule index   backup_index  the backup index to restore to a Python dict, with 2 items, a \"status\" which is either \"ok\" or \"error\" or \"bad-index\" and a list of residue specs for residues that have at least one atom in a different place (which might be empty).
+  imol  the model molecule index   backup_index  the backup index to restore to a Python dict, with 2 items, a \"status\" which is either \"ok\" or \"error\" or \"bad-index\". The other key is \"moved-residues-list\", the value for which is a list of residue specs for residues that have at least one atom in a different place (which might be empty).
 
 Parameters
 ----------
@@ -1383,6 +1417,14 @@ imol : int
     the model molecule index
 backup_index : int
     the backup index to restore to
+";
+
+%feature("docstring") print_backup_history_info "
+Print the history info.
+
+Parameters
+----------
+imol : int
 ";
 
 %feature("docstring") get_backup_info "
@@ -1409,7 +1451,7 @@ fire up a GUI, which asks us which model molecule we want to calc phases from. O
 
 Parameters
 ----------
-mtz_file_name : const char *
+mtz_file_name : str
 ";
 
 %feature("docstring") map_from_mtz_by_refmac_calc_phases "
@@ -1419,9 +1461,9 @@ the new molecule number, -1 on a problem.
 
 Parameters
 ----------
-mtz_file_name : const char *
-f_col : const char *
-sigf_col : const char *
+mtz_file_name : str
+f_col : str
+sigf_col : str
 imol_coords : int
 ";
 
@@ -1432,9 +1474,9 @@ the new molecule number.
 
 Parameters
 ----------
-mtz_file_name : const char *
-f_col : const char *
-sigf_col : const char *
+mtz_file_name : str
+f_col : str
+sigf_col : str
 imol_coords : int
 ";
 
@@ -1573,7 +1615,7 @@ set the colour of the imolth map using a (7-character) hex colour
 Parameters
 ----------
 imol : int
-hex_colour : const char *
+hex_colour : str
 ";
 
 %feature("docstring") set_contour_level_absolute "
@@ -1627,7 +1669,7 @@ Parameters
 ----------
 imol : int
 f : float
-state : short int
+state : int
 ";
 
 %feature("docstring") data_resolution "
@@ -1654,7 +1696,7 @@ Return 0 on failure, 1 on success.
 Parameters
 ----------
 imol : int
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") export_map_fragment "
@@ -1667,7 +1709,7 @@ x : float
 y : float
 z : float
 radius : float
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") export_map_fragment_with_text_radius "
@@ -1676,8 +1718,8 @@ convenience function, called from callbacks.c
 Parameters
 ----------
 imol : int
-radius_text : const char *
-filename : const char *
+radius_text : str
+filename : str
 ";
 
 %feature("docstring") export_map_fragment_with_origin_shift "
@@ -1690,7 +1732,7 @@ x : float
 y : float
 z : float
 radius : float
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") export_map_fragment_to_plain_file "
@@ -1703,7 +1745,7 @@ x : float
 y : float
 z : float
 radius : float
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") transform_map_raw "
@@ -1727,7 +1769,7 @@ pt0 : float
 pt1 : float
 pt2 : float
 box_half_size : float
-ref_space_group : const char *
+ref_space_group : str
 cell_a : float
 cell_b : float
 cell_c : float
@@ -1832,7 +1874,7 @@ val : float
 
 Parameters
 ----------
-text : const char *
+text : str
 imol : int
 ";
 
@@ -1855,7 +1897,7 @@ set the difference maps iso-map level increment
 
 Parameters
 ----------
-text : const char *
+text : str
 imol : int
 ";
 
@@ -1866,7 +1908,7 @@ find the molecule for which the single map dialog applies and set the contour le
 
 Parameters
 ----------
-text : const char *
+text : str
 ";
 
 %feature("docstring") set_map_sampling_rate "
@@ -1890,7 +1932,7 @@ if is_increment=1 the contour level is increased. If is_increment=0 the map cont
 
 Parameters
 ----------
-is_increment : short int
+is_increment : int
 ";
 
 %feature("docstring") set_last_map_contour_level "
@@ -1978,10 +2020,10 @@ given mtz file mtz_file_name and F column f_col and phases column phi_col and op
 
 Parameters
 ----------
-mtz_file_name : const char *
-f_col : const char *
-phi_col : const char *
-weight : const char *
+mtz_file_name : str
+f_col : str
+phi_col : str
+weight : str
 use_weights : int
 is_diff_map : int
 ";
@@ -1991,10 +2033,10 @@ the function is a synonym of the above function - which now has an archaic-style
 
 Parameters
 ----------
-mtz_file_name : const char *
-f_col : const char *
-phi_col : const char *
-weight : const char *
+mtz_file_name : str
+f_col : str
+phi_col : str
+weight : str
 use_weights : int
 is_diff_map : int
 ";
@@ -2008,17 +2050,17 @@ pass along the refmac column labels for storage (not used in the creation of the
 
 Parameters
 ----------
-mtz_file_name : const char *
-a : const char *
-b : const char *
-weight : const char *
+mtz_file_name : str
+a : str
+b : str
+weight : str
 use_weights : int
 is_diff_map : int
-have_refmac_params : short int
-fobs_col : const char *
-sigfobs_col : const char *
-r_free_col : const char *
-sensible_f_free_col : short int
+have_refmac_params : int
+fobs_col : str
+sigfobs_col : str
+r_free_col : str
+sensible_f_free_col : int
 ";
 
 %feature("docstring") make_and_draw_map_with_reso_with_refmac_params "
@@ -2026,19 +2068,19 @@ as the above function, except set expert options too.
 
 Parameters
 ----------
-mtz_file_name : const char *
-a : const char *
-b : const char *
-weight : const char *
+mtz_file_name : str
+a : str
+b : str
+weight : str
 use_weights : int
 is_diff_map : int
-have_refmac_params : short int
-fobs_col : const char *
-sigfobs_col : const char *
-r_free_col : const char *
-sensible_f_free_col : short int
-is_anomalous : short int
-use_reso_limits : short int
+have_refmac_params : int
+fobs_col : str
+sigfobs_col : str
+r_free_col : str
+sensible_f_free_col : int
+is_anomalous : int
+use_reso_limits : int
 low_reso_limit : float
 high_reso_lim : float
 ";
@@ -2050,10 +2092,10 @@ If the file updates, then the map will be updated.
 
 Parameters
 ----------
-mtz_file_name : const char *
-f_col : const char *
-phi_col : const char *
-weight : const char *
+mtz_file_name : str
+f_col : str
+phi_col : str
+weight : str
 use_weights : int
 is_diff_map : int
 ";
@@ -2084,7 +2126,7 @@ does the mtz file have phases?
 
 Parameters
 ----------
-mtz_file_name : const char *
+mtz_file_name : str
 ";
 
 %feature("docstring") is_mtz_file_p "
@@ -2092,7 +2134,7 @@ is the given filename an mtz file?
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") cns_file_has_phases_p "
@@ -2100,14 +2142,14 @@ does the given file have cns phases?
 
 Parameters
 ----------
-cns_file_name : const char *
+cns_file_name : str
 ";
 
 %feature("docstring") wrapped_auto_read_make_and_draw_maps "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") set_auto_read_do_difference_map_too "
@@ -2132,8 +2174,8 @@ e.g. (set-auto-read-column-labels \"2FOFCWT\" \"PH2FOFCWT\" 0)
 
 Parameters
 ----------
-fwt : const char *
-phwt : const char *
+fwt : str
+phwt : str
 is_for_diff_map_flag : int
 ";
 
@@ -2141,14 +2183,14 @@ is_for_diff_map_flag : int
 
 Parameters
 ----------
-text : const char *
+text : str
 ";
 
 %feature("docstring") set_density_size_em_from_widget "
 
 Parameters
 ----------
-text : const char *
+text : str
 ";
 
 %feature("docstring") set_map_radius "
@@ -2187,7 +2229,7 @@ Give me this nice message str when I start coot.
 
 Parameters
 ----------
-str : const char *
+str : str
 ";
 
 %feature("docstring") get_map_radius "
@@ -2230,7 +2272,7 @@ success status, 0 -> failure (imol does not have a map)
 Parameters
 ----------
 imol : int
-bool_flag : short int
+bool_flag : int
 ";
 
 %feature("docstring") map_is_difference_map "
@@ -2372,7 +2414,7 @@ write molecule number imol as a PDB to file file_name
 Parameters
 ----------
 imol : int
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") write_cif_file "
@@ -2381,7 +2423,7 @@ write molecule number imol as a mmCIF to file file_name
 Parameters
 ----------
 imol : int
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") write_residue_range_to_pdb_file "
@@ -2390,10 +2432,10 @@ write molecule number imol's residue range as a PDB to file file_name
 Parameters
 ----------
 imol : int
-chainid : const char *
+chainid : str
 resno_start : int
 resno_end : int
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") write_chain_to_pdb_file "
@@ -2401,8 +2443,8 @@ filename : const char *
 Parameters
 ----------
 imol : int
-chainid : const char *
-filename : const char *
+chainid : str
+filename : str
 ";
 
 %feature("docstring") quick_save "
@@ -2428,7 +2470,7 @@ create a dialog with information string txt. User has to click to dismiss it, bu
 
 Parameters
 ----------
-txt : const char *
+txt : str
 ";
 
 %feature("docstring") info_dialog_and_text "
@@ -2438,7 +2480,7 @@ as info_dialog but print to console as well.
 
 Parameters
 ----------
-txt : const char *
+txt : str
 ";
 
 %feature("docstring") info_dialog_with_markup "
@@ -2448,7 +2490,20 @@ This dialog is left-justified and can use markup such as angled bracketted tt or
 
 Parameters
 ----------
-txt : const char *
+txt : str
+";
+
+%feature("docstring") ephemeral_overlay_label "
+created an ephemeral label in the graphics window
+
+the text stays on screen for about 2 sesconds.
+
+  txt  the text
+
+Parameters
+----------
+txt : str
+    the text
 ";
 
 %feature("docstring") set_refmac_counter "
@@ -2498,7 +2553,7 @@ Parameters
 
 Parameters
 ----------
-text : const char *
+text : str
 ";
 
 %feature("docstring") set_symmetry_size "
@@ -2525,7 +2580,7 @@ set display symmetry, master controller
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_show_symmetry_molecule "
@@ -2536,7 +2591,7 @@ pass with state=0 for off, state=1 for on
 Parameters
 ----------
 mol_no : int
-state : short int
+state : int
 ";
 
 %feature("docstring") symmetry_as_calphas "
@@ -2547,7 +2602,7 @@ pass with state=0 for off, state=1 for on
 Parameters
 ----------
 mol_no : int
-state : short int
+state : int
 ";
 
 %feature("docstring") get_symmetry_as_calphas_state "
@@ -2633,7 +2688,7 @@ Allow a shift of the coordinates to the origin before symmetry expansion is apll
 Parameters
 ----------
 imol : int
-filename : const char *
+filename : str
 symop_no : int
 shift_a : int
 shift_b : int
@@ -2657,7 +2712,7 @@ Return -1 on failure.
 Parameters
 ----------
 imol : int
-name : const char *
+name : str
 m11 : float
 m12 : float
 m13 : float
@@ -2689,8 +2744,8 @@ Return -1 on failure.
 Parameters
 ----------
 imol : int
-name : const char *
-mmdb_atom_selection_string : const char *
+name : str
+mmdb_atom_selection_string : str
 m11 : float
 m12 : float
 m13 : float
@@ -2714,7 +2769,7 @@ create a new molecule (molecule number is the return value) from imol.
 Parameters
 ----------
 imol : int
-symop_string : const char *
+symop_string : str
 pre_shift_to_origin_na : int
 pre_shift_to_origin_nb : int
 pre_shift_to_origin_nc : int
@@ -2758,7 +2813,7 @@ the success status of the setting (1 good, 0 fail).
 Parameters
 ----------
 imol : int
-spg : const char *
+spg : str
 ";
 
 %feature("docstring") set_unit_cell_and_space_group "
@@ -2777,7 +2832,7 @@ c : float
 alpha : float
 beta : float
 gamma : float
-space_group : const char *
+space_group : str
 ";
 
 %feature("docstring") set_unit_cell_and_space_group_using_molecule "
@@ -2830,7 +2885,7 @@ set a flag to show the text command equivalent of gui commands in the console as
 
 Parameters
 ----------
-istate : short int
+istate : int
 ";
 
 %feature("docstring") set_console_display_commands_hilights "
@@ -2842,8 +2897,8 @@ colour_index 0 to 7 inclusive for various different colourings.
 
 Parameters
 ----------
-bold_flag : short int
-colour_flag : short int
+bold_flag : int
+colour_flag : int
 colour_index : int
 ";
 
@@ -2856,7 +2911,7 @@ save the current state to file filename
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") save_state_file_py "
@@ -2864,7 +2919,7 @@ save the current state to file filename
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") set_save_state_file_name "
@@ -2872,7 +2927,7 @@ set the default state file name (default 0-coot.state.scm)
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") save_state_file_name_scm "
@@ -2894,7 +2949,7 @@ set run state file status
 
 Parameters
 ----------
-istat : short int
+istat : int
 ";
 
 %feature("docstring") run_state_file "
@@ -2973,7 +3028,7 @@ set the state of show unit cell for all molecules
 
 Parameters
 ----------
-istate : short int
+istate : int
 ";
 
 %feature("docstring") set_show_unit_cell "
@@ -2984,7 +3039,7 @@ set the state of show unit cell for the particular molecule number imol
 Parameters
 ----------
 imol : int
-istate : short int
+istate : int
 ";
 
 %feature("docstring") set_unit_cell_colour "
@@ -3018,7 +3073,7 @@ shall the hue change step be used?
 
 Parameters
 ----------
-i : short int
+i : int
     0 for no, 1 for yes
 ";
 
@@ -3029,7 +3084,7 @@ shall the colour map rotation apply only to C atoms?
 
 Parameters
 ----------
-i : short int
+i : int
     0 for no, 1 for yes
 ";
 
@@ -3047,7 +3102,7 @@ colour molecule number imol by chain type
 Parameters
 ----------
 imol : int
-goodsell_mode : short int
+goodsell_mode : int
 ";
 
 %feature("docstring") set_colour_by_chain_goodsell_mode "
@@ -3130,7 +3185,7 @@ set the aniso atom limit
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_show_aniso "
@@ -3159,11 +3214,20 @@ imol : int
 state : int
 ";
 
+%feature("docstring") set_show_aniso_atoms_as_empty "
+set show aniso atoms as ortep
+
+Parameters
+----------
+imol : int
+state : int
+";
+
 %feature("docstring") set_aniso_limit_size_from_widget "
 
 Parameters
 ----------
-text : const char *
+text : str
 ";
 
 %feature("docstring") set_aniso_probability "
@@ -3254,27 +3318,30 @@ try to turn on mono mode
 %feature("docstring") side_by_side_stereo_mode "
 turn on side bye side stereo mode
 
+  use_wall_eye_mode  1 mean wall-eyed, 0 means cross-eyed
+
 Parameters
 ----------
-use_wall_eye_mode : short int
+use_wall_eye_mode : int
+    1 mean wall-eyed, 0 means cross-eyed
 ";
 
 %feature("docstring") set_dti_stereo_mode "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
-%feature("docstring") set_hardware_stereo_angle_factor "
-how much should the eyes be separated in stereo mode?
+%feature("docstring") set_stereo_angle "
+set the stereo angle
 
-  f  the angular difference (in multiples of 4.5 degrees)
+  angle  stereo angle in degrees - default is 6 degrees
 
 Parameters
 ----------
-f : float
-    the angular difference (in multiples of 4.5 degrees)
+angle : float
+    stereo angle in degrees - default is 6 degrees
 ";
 
 %feature("docstring") hardware_stereo_angle_factor_state "
@@ -3389,7 +3456,7 @@ return the smooth scrolling state
 
 Parameters
 ----------
-t : const char *
+t : str
 ";
 
 %feature("docstring") set_smooth_scroll_steps "
@@ -3406,7 +3473,7 @@ i : int
 
 Parameters
 ----------
-t : const char *
+t : str
 ";
 
 %feature("docstring") set_smooth_scroll_limit "
@@ -3497,7 +3564,7 @@ set the recentre-on-pdb state
 
 Parameters
 ----------
- : short int
+ : int
 ";
 
 %feature("docstring") set_rotation_centre "
@@ -3558,9 +3625,9 @@ i : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 iresno : int
-atom_id : const char *
+atom_id : str
 ";
 
 %feature("docstring") atom_index_full "
@@ -3568,11 +3635,11 @@ atom_id : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 iresno : int
-inscode : const char *
-atom_id : const char *
-altconf : const char *
+inscode : str
+atom_id : str
+altconf : str
 ";
 
 %feature("docstring") atom_index_first_atom_in_residue "
@@ -3580,9 +3647,9 @@ altconf : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 iresno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") atom_index_first_atom_in_residue_with_altconf "
@@ -3590,10 +3657,10 @@ ins_code : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 iresno : int
-ins_code : const char *
-alt_conf : const char *
+ins_code : str
+alt_conf : str
 ";
 
 %feature("docstring") min_resno_in_chain "
@@ -3602,7 +3669,7 @@ return the minimum residue number for imol chain chain_id
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ";
 
 %feature("docstring") max_resno_in_chain "
@@ -3611,7 +3678,7 @@ return the maximum residue number for imol chain chain_id
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ";
 
 %feature("docstring") median_temperature_factor "
@@ -3694,9 +3761,9 @@ bf : float
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") get_residue_alt_confs_py "
@@ -3705,9 +3772,9 @@ Return either False (on failure) or a list of alt-conf strings (might be [\"\"])
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") swap_atom_alt_conf "
@@ -3716,11 +3783,11 @@ swap atom alt-confs
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
-atom_name : const char *
-alt_conf : const char *
+ins_code : str
+atom_name : str
+alt_conf : str
 ";
 
 %feature("docstring") swap_residue_alt_confs "
@@ -3729,9 +3796,9 @@ swap atom alt-confs
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") set_atom_attribute "
@@ -3742,12 +3809,12 @@ Attributes can be \"x\", \"y\",\"z\", \"B\", \"occ\" and the attribute val is a 
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-atom_name : const char *
-alt_conf : const char *
-attribute_name : const char *
+ins_code : str
+atom_name : str
+alt_conf : str
+attribute_name : str
 val : float
 ";
 
@@ -3759,13 +3826,13 @@ Attributes can be \"atom-name\", \"alt-conf\", \"element\" or \"segid\".
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-atom_name : const char *
-alt_conf : const char *
-attribute_name : const char *
-attribute_value : const char *
+ins_code : str
+atom_name : str
+alt_conf : str
+attribute_name : str
+attribute_value : str
 ";
 
 %feature("docstring") set_atom_attributes "
@@ -3789,10 +3856,10 @@ set the residue name of the specified residue
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
-new_residue_name : const char *
+ins_code : str
+new_residue_name : str
 ";
 
 %feature("docstring") skeletonize_map "
@@ -3805,7 +3872,7 @@ NOTE:: The arguments to have been reversed for coot 0.8.3 and later (now the mol
 Parameters
 ----------
 imol : int
-prune_flag : short int
+prune_flag : int
 ";
 
 %feature("docstring") unskeletonize_map "
@@ -3830,14 +3897,14 @@ v : int
 
 Parameters
 ----------
-txt : const char *
+txt : str
 ";
 
 %feature("docstring") set_skeleton_box_size_from_widget "
 
 Parameters
 ----------
-txt : const char *
+txt : str
 ";
 
 %feature("docstring") set_skeleton_box_size "
@@ -3856,7 +3923,7 @@ status 1 is good (success), 0 is fail.
 Parameters
 ----------
 imol : int
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") set_save_coordinates_in_original_directory "
@@ -3881,7 +3948,7 @@ uses pending data to make the map.
 
 Parameters
 ----------
-pdb_filename : const char *
+pdb_filename : str
 ";
 
 %feature("docstring") read_phs_and_make_map_using_cell_symm_from_previous_mol "
@@ -3891,7 +3958,7 @@ For use with phs data filename provided on the command line
 
 Parameters
 ----------
-phs_filename : const char *
+phs_filename : str
 ";
 
 %feature("docstring") read_phs_and_make_map_using_cell_symm_from_mol "
@@ -3901,7 +3968,7 @@ the new molecule number, return -1 if problem creating the map (e.g. not phs dat
 
 Parameters
 ----------
-phs_filename : const char *
+phs_filename : str
 imol : int
 ";
 
@@ -3919,8 +3986,8 @@ in degrees
 
 Parameters
 ----------
-phs_file_name : const char *
-hm_spacegroup : const char *
+phs_file_name : str
+hm_spacegroup : str
 a : float
 b : float
 c : float
@@ -3938,7 +4005,7 @@ Parameters
 ----------
 imol : int
     is the molecule number of the reference (coordinates) molecule from which the cell and symmetry can be obtained.
-phs_file_name : const char *
+phs_file_name : str
     is the name of the phs data file.
 reso_lim_low : float
     the low resoluion limit (currently ignored).
@@ -3958,7 +4025,7 @@ phs_filename : const gchar *
 Parameters
 ----------
 imol : int
-field : const char *
+field : str
 ";
 
 %feature("docstring") undo_last_move "
@@ -4002,10 +4069,10 @@ transform fragment of molecule number imol by the given rotation matrix, then tr
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno_start : int
 resno_end : int
-ins_code : const char *
+ins_code : str
 m11 : float
 m12 : float
 m13 : float
@@ -4057,9 +4124,9 @@ the success status of the go to. 0 for fail, 1 for success.
 
 Parameters
 ----------
-t1_chain_id : const char *
+t1_chain_id : str
 iresno : int
-t3_atom_name : const char *
+t3_atom_name : str
 ";
 
 %feature("docstring") set_go_to_atom_chain_residue_atom_name_full "
@@ -4071,11 +4138,11 @@ the success status of the go to. 0 for fail, 1 for success.
 
 Parameters
 ----------
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-atom_name : const char *
-alt_conf : const char *
+ins_code : str
+atom_name : str
+alt_conf : str
 ";
 
 %feature("docstring") set_go_to_atom_chain_residue_atom_name_no_redraw "
@@ -4083,10 +4150,10 @@ set go to atom but don't redraw
 
 Parameters
 ----------
-t1 : const char *
+t1 : str
 iresno : int
-t3 : const char *
-make_the_move_flag : short int
+t3 : str
+make_the_move_flag : int
 ";
 
 %feature("docstring") set_go_to_atom_chain_residue_atom_name_strings "
@@ -4115,9 +4182,9 @@ what is the atom index of the given atom?
 Parameters
 ----------
 mol : int
-chain : const char *
+chain : str
 resno : int
-atom_name : const char *
+atom_name : str
 ";
 
 %feature("docstring") full_atom_spec_to_atom_index "
@@ -4126,11 +4193,11 @@ what is the atom index of the given atom?
 Parameters
 ----------
 imol : int
-chain : const char *
+chain : str
 resno : int
-inscode : const char *
-atom_name : const char *
-altloc : const char *
+inscode : str
+atom_name : str
+altloc : str
 ";
 
 %feature("docstring") update_go_to_atom_window_on_changed_mol "
@@ -4339,9 +4406,9 @@ align and mutate the given chain to the given sequence
 Parameters
 ----------
 imol : int
-chain_id : const char *
-fasta_maybe : const char *
-renumber_residues_flag : short int
+chain_id : str
+fasta_maybe : str
+renumber_residues_flag : int
 ";
 
 %feature("docstring") set_alignment_gap_and_space_penalty "
@@ -4358,8 +4425,8 @@ wspace : float
 Parameters
 ----------
 imol : int
-chain_id : const char *
-seq : const char *
+chain_id : str
+seq : str
 ";
 
 %feature("docstring") nearest_residue_by_sequence_scm "
@@ -4370,9 +4437,9 @@ scheme false if not possible
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") alignment_results_py "
@@ -4380,8 +4447,8 @@ ins_code : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
-seq : const char *
+chain_id : str
+seq : str
 ";
 
 %feature("docstring") nearest_residue_by_sequence_py "
@@ -4390,9 +4457,9 @@ return the residue spec of the nearest residue by sequence numbering. Return Pyt
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") renumber_residue_range "
@@ -4401,7 +4468,7 @@ renumber the given residue range by offset residues
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 start_res : int
 last_res : int
 offset : int
@@ -4413,11 +4480,11 @@ change chain id, residue number or insertion code for given residue
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 current_resno : int
-current_inscode : const char *
+current_inscode : str
 new_resno : int
-new_inscode : const char *
+new_inscode : str
 ";
 
 %feature("docstring") change_chain_id "
@@ -4426,9 +4493,9 @@ change the chain id of the specified residue
 Parameters
 ----------
 imol : int
-from_chain_id : const char *
-to_chain_id : const char *
-use_res_range_flag : short int
+from_chain_id : str
+to_chain_id : str
+use_res_range_flag : int
 from_resno : int
 to_resno : int
 ";
@@ -4438,9 +4505,9 @@ to_resno : int
 Parameters
 ----------
 imol : int
-from_chain_id : const char *
-to_chain_id : const char *
-use_res_range_flag : short int
+from_chain_id : str
+to_chain_id : str
+use_res_range_flag : int
 from_resno : int
 to_resno : int
 ";
@@ -4450,9 +4517,9 @@ to_resno : int
 Parameters
 ----------
 imol : int
-from_chain_id : const char *
-to_chain_id : const char *
-use_res_range_flag : short int
+from_chain_id : str
+to_chain_id : str
+use_res_range_flag : int
 from_resno : int
 to_resno : int
 ";
@@ -4484,7 +4551,7 @@ run script file
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") run_guile_script "
@@ -4492,7 +4559,7 @@ guile run script file
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") run_python_script "
@@ -4500,7 +4567,7 @@ run python script file
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") import_python_module "
@@ -4508,7 +4575,7 @@ import python module
 
 Parameters
 ----------
-module_name : const char *
+module_name : str
 use_namespace : int
 ";
 
@@ -4517,8 +4584,8 @@ return a list of compoundIDs in the dictionary of which the given string is a su
 
 Parameters
 ----------
-compound_name_fragment : const char *
-allow_minimal_descriptions_flag : short int
+compound_name_fragment : str
+allow_minimal_descriptions_flag : int
 ";
 
 %feature("docstring") comp_id_to_name_scm "
@@ -4528,7 +4595,7 @@ return scheme false if not found
 
 Parameters
 ----------
-comp_id : const char *
+comp_id : str
 ";
 
 %feature("docstring") auto_load_dictionary "
@@ -4538,7 +4605,7 @@ return 0 on failure. return 1 on successful auto-load. return 2 on already-read.
 
 Parameters
 ----------
-comp_id : const char *
+comp_id : str
 ";
 
 %feature("docstring") reload_dictionary "
@@ -4546,7 +4613,7 @@ as above, but dictionary is cleared and re-read if it already exists
 
 Parameters
 ----------
-comp_id : const char *
+comp_id : str
 ";
 
 %feature("docstring") add_non_auto_load_residue_name "
@@ -4554,7 +4621,7 @@ add residue name to the list of residue names that don't get auto-loaded from th
 
 Parameters
 ----------
-s : const char *
+s : str
 ";
 
 %feature("docstring") remove_non_auto_load_residue_name "
@@ -4562,7 +4629,7 @@ remove residue name from the list of residue names that don't get auto-loaded fr
 
 Parameters
 ----------
-s : const char *
+s : str
 ";
 
 %feature("docstring") matching_compound_names_from_dictionary_py "
@@ -4570,8 +4637,8 @@ return a list of compoundIDs in the dictionary which the given string is a subst
 
 Parameters
 ----------
-compound_name_fragment : const char *
-allow_minimal_descriptions_flag : short int
+compound_name_fragment : str
+allow_minimal_descriptions_flag : int
 ";
 
 %feature("docstring") comp_id_to_name_py "
@@ -4581,21 +4648,21 @@ return python false if not found
 
 Parameters
 ----------
-comp_id : const char *
+comp_id : str
 ";
 
 %feature("docstring") do_regularize "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") do_refine "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") add_planar_peptide_restraints "
@@ -4621,7 +4688,7 @@ i.e. omega in trans-peptides is restraints to 180 degrees.
 
 Parameters
 ----------
-on_off_state : short int
+on_off_state : int
 ";
 
 %feature("docstring") add_omega_torsion_restriants "
@@ -4643,11 +4710,16 @@ state : int
 ";
 
 %feature("docstring") set_refinement_immediate_replacement "
-set immediate replacement mode for refinement and regularization. You need this (call with istate=1) if you are scripting refinement/regularization
+set immediate replacement mode for refinement and regularization
+
+This can enable synchronous refinement (with istate = 1). You need this (call with istate=1) if you are scripting refinement/regularization
+
+  istate  set the state of immediate-refinemnt
 
 Parameters
 ----------
 istate : int
+    set the state of immediate-refinemnt
 ";
 
 %feature("docstring") refinement_immediate_replacement_state "
@@ -4658,7 +4730,7 @@ query the state of the immediate replacement mode
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_residue_selection_flash_frames_number "
@@ -4674,7 +4746,7 @@ i : int
 %feature("docstring") c_accept_moving_atoms "
 accept the new positions of the regularized or refined residues
 
-If you are scripting refinement and/or regularization, this is the function that you need to call after refine-zone or regularize-zone.
+If you are scripting refinement and/or regularization, this is not the function that you need to call after refine-zone or regularize-zone. If you are using Python, use accept_moving_atoms_py() and that will provide a return value that may be of some use.
 ";
 
 %feature("docstring") accept_regularizement "
@@ -4720,7 +4792,7 @@ Parameters
 ----------
 imol : int
 r : SCM
-alt_conf : const char *
+alt_conf : str
 ";
 
 %feature("docstring") refine_residues_with_modes_with_alt_conf_scm "
@@ -4729,7 +4801,7 @@ Parameters
 ----------
 imol : int
 residues_spec_list_scm : SCM
-alt_conf : const char *
+alt_conf : str
 mode_1 : SCM
 mode_2 : SCM
 mode_3 : SCM
@@ -4749,7 +4821,7 @@ Parameters
 ----------
 imol : int
 r : SCM
-alt_conf : const char *
+alt_conf : str
 ";
 
 %feature("docstring") refine_residues_py "
@@ -4769,7 +4841,7 @@ Parameters
 ----------
 imol : int
 r : object
-alt_conf : const char *
+alt_conf : str
 mode_1 : object
 mode_2 : object
 mode_3 : object
@@ -4781,7 +4853,7 @@ Parameters
 ----------
 imol : int
 r : object
-alt_conf : const char *
+alt_conf : str
 ";
 
 %feature("docstring") regularize_residues_py "
@@ -4798,14 +4870,14 @@ Parameters
 ----------
 imol : int
 r : object
-alt_conf : const char *
+alt_conf : str
 ";
 
 %feature("docstring") set_refinement_use_soft_mode_nbc_restraints "
 
 Parameters
 ----------
-flag : short int
+flag : int
 ";
 
 %feature("docstring") shiftfield_b_factor_refinement "
@@ -4905,10 +4977,10 @@ presumes that imol_Refinement_Map has been set
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno1 : int
 resno2 : int
-altconf : const char *
+altconf : str
 ";
 
 %feature("docstring") repeat_refine_zone "
@@ -4920,10 +4992,10 @@ repeat the previous (user-selected) refine zone
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno1 : int
 resno2 : int
-altconf : const char *
+altconf : str
 ";
 
 %feature("docstring") regularize_zone_with_score_scm "
@@ -4931,10 +5003,10 @@ altconf : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno1 : int
 resno2 : int
-altconf : const char *
+altconf : str
 ";
 
 %feature("docstring") refine_zone_with_score_py "
@@ -4942,10 +5014,10 @@ altconf : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno1 : int
 resno2 : int
-altconf : const char *
+altconf : str
 ";
 
 %feature("docstring") regularize_zone_with_score_py "
@@ -4953,10 +5025,10 @@ altconf : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno1 : int
 resno2 : int
-altconf : const char *
+altconf : str
 ";
 
 %feature("docstring") refine_auto_range "
@@ -4967,9 +5039,9 @@ presumes that imol_Refinement_Map has been set
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno1 : int
-altconf : const char *
+altconf : str
 ";
 
 %feature("docstring") regularize_zone "
@@ -4980,10 +5052,10 @@ a status, whether the regularisation was done or not. 0 for no, 1 for yes.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno1 : int
 resno2 : int
-altconf : const char *
+altconf : str
 ";
 
 %feature("docstring") set_dragged_refinement_steps_per_frame "
@@ -5093,7 +5165,7 @@ state : int
 Parameters
 ----------
 combobox_item_idx : int
-t : const char *
+t : str
 ";
 
 %feature("docstring") set_refinement_lennard_jones_epsilon_from_text "
@@ -5101,7 +5173,7 @@ t : const char *
 Parameters
 ----------
 combobox_item_idx : int
-t : const char *
+t : str
 ";
 
 %feature("docstring") set_refinement_ramachandran_restraints_weight_from_text "
@@ -5109,14 +5181,14 @@ t : const char *
 Parameters
 ----------
 combobox_item_idx : int
-t : const char *
+t : str
 ";
 
 %feature("docstring") set_refinement_overall_weight_from_text "
 
 Parameters
 ----------
-t : const char *
+t : str
 ";
 
 %feature("docstring") set_refinement_torsion_weight_from_text "
@@ -5124,7 +5196,7 @@ t : const char *
 Parameters
 ----------
 combobox_item_index : int
-t : const char *
+t : str
 ";
 
 %feature("docstring") set_refine_params_dialog_more_control_frame_is_active "
@@ -5185,7 +5257,7 @@ For experienced Cooters who don't like Coot nannying about chiral volumes during
 
 Parameters
 ----------
-istate : short int
+istate : int
 ";
 
 %feature("docstring") set_secondary_structure_restraints_type "
@@ -5230,9 +5302,9 @@ Does the residue exist? (Raw function)
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-inscode : const char *
+inscode : str
 ";
 
 %feature("docstring") delete_restraints "
@@ -5242,7 +5314,7 @@ success status (0 is failed, 1 is success)
 
 Parameters
 ----------
-comp_id : const char *
+comp_id : str
 ";
 
 %feature("docstring") add_extra_bond_restraint "
@@ -5255,16 +5327,16 @@ the index of the new restraint. -1 when the atoms were not found and no extra bo
 Parameters
 ----------
 imol : int
-chain_id_1 : const char *
+chain_id_1 : str
 res_no_1 : int
-ins_code_1 : const char *
-atom_name_1 : const char *
-alt_conf_1 : const char *
-chain_id_2 : const char *
+ins_code_1 : str
+atom_name_1 : str
+alt_conf_1 : str
+chain_id_2 : str
 res_no_2 : int
-ins_code_2 : const char *
-atom_name_2 : const char *
-alt_conf_2 : const char *
+ins_code_2 : str
+atom_name_2 : str
+alt_conf_2 : str
 bond_dist : float
 esd : float
 ";
@@ -5279,16 +5351,16 @@ the index of the new restraint. -1 when the atoms were not found and no extra bo
 Parameters
 ----------
 imol : int
-chain_id_1 : const char *
+chain_id_1 : str
 res_no_1 : int
-ins_code_1 : const char *
-atom_name_1 : const char *
-alt_conf_1 : const char *
-chain_id_2 : const char *
+ins_code_1 : str
+atom_name_1 : str
+alt_conf_1 : str
+chain_id_2 : str
 res_no_2 : int
-ins_code_2 : const char *
-atom_name_2 : const char *
-alt_conf_2 : const char *
+ins_code_2 : str
+atom_name_2 : str
+alt_conf_2 : str
 bond_dist : float
 esd : float
 ";
@@ -5313,7 +5385,7 @@ extra_bond_restraints_py : object
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") add_extra_angle_restraint "
@@ -5321,21 +5393,21 @@ state : short int
 Parameters
 ----------
 imol : int
-chain_id_1 : const char *
+chain_id_1 : str
 res_no_1 : int
-ins_code_1 : const char *
-atom_name_1 : const char *
-alt_conf_1 : const char *
-chain_id_2 : const char *
+ins_code_1 : str
+atom_name_1 : str
+alt_conf_1 : str
+chain_id_2 : str
 res_no_2 : int
-ins_code_2 : const char *
-atom_name_2 : const char *
-alt_conf_2 : const char *
-chain_id_3 : const char *
+ins_code_2 : str
+atom_name_2 : str
+alt_conf_2 : str
+chain_id_3 : str
 res_no_3 : int
-ins_code_3 : const char *
-atom_name_3 : const char *
-alt_conf_3 : const char *
+ins_code_3 : str
+atom_name_3 : str
+alt_conf_3 : str
 torsion_angle : float
 esd : float
 ";
@@ -5345,26 +5417,26 @@ esd : float
 Parameters
 ----------
 imol : int
-chain_id_1 : const char *
+chain_id_1 : str
 res_no_1 : int
-ins_code_1 : const char *
-atom_name_1 : const char *
-alt_conf_1 : const char *
-chain_id_2 : const char *
+ins_code_1 : str
+atom_name_1 : str
+alt_conf_1 : str
+chain_id_2 : str
 res_no_2 : int
-ins_code_2 : const char *
-atom_name_2 : const char *
-alt_conf_2 : const char *
-chain_id_3 : const char *
+ins_code_2 : str
+atom_name_2 : str
+alt_conf_2 : str
+chain_id_3 : str
 res_no_3 : int
-ins_code_3 : const char *
-atom_name_3 : const char *
-alt_conf_3 : const char *
-chain_id_4 : const char *
+ins_code_3 : str
+atom_name_3 : str
+alt_conf_3 : str
+chain_id_4 : str
 res_no_4 : int
-ins_code_4 : const char *
-atom_name_4 : const char *
-alt_conf_4 : const char *
+ins_code_4 : str
+atom_name_4 : str
+alt_conf_4 : str
 torsion_angle : float
 esd : float
 period : int
@@ -5375,11 +5447,11 @@ period : int
 Parameters
 ----------
 imol : int
-chain_id_1 : const char *
+chain_id_1 : str
 res_no_1 : int
-ins_code_1 : const char *
-atom_name_1 : const char *
-alt_conf_1 : const char *
+ins_code_1 : str
+atom_name_1 : str
+alt_conf_1 : str
 esd : float
 ";
 
@@ -5388,11 +5460,11 @@ esd : float
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
-atom_name : const char *
-alt_conf : const char *
+ins_code : str
+atom_name : str
+alt_conf : str
 x : float
 y : float
 z : float
@@ -5413,9 +5485,9 @@ clear out all the extra/user-defined restraints for this residue in molecule num
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") delete_extra_restraints_for_residue_spec_scm "
@@ -5448,7 +5520,7 @@ read in prosmart (typically) extra restraints
 Parameters
 ----------
 imol : int
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") set_show_extra_restraints "
@@ -5482,7 +5554,7 @@ generate external distance local self restraints
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 local_dist_max : float
 ";
 
@@ -5522,7 +5594,7 @@ Parameters
 imol_1 : int
 imol_2 : int
 n_steps : int
-file_name_stub : const char *
+file_name_stub : str
 ";
 
 %feature("docstring") write_interpolated_models_and_extra_restraints "
@@ -5535,7 +5607,7 @@ Parameters
 imol_1 : int
 imol_2 : int
 n_steps : int
-file_name_stub : const char *
+file_name_stub : str
 interpolation_mode : int
 ";
 
@@ -5559,12 +5631,12 @@ imol : int
 Parameters
 ----------
 imol : int
-chain_id_1 : const char *
+chain_id_1 : str
 re_no_1 : int
-ins_code_1 : const char *
-chain_id_2 : const char *
+ins_code_1 : str
+chain_id_2 : str
 re_no_2 : int
-ins_code_2 : const char *
+ins_code_2 : str
 ";
 
 %feature("docstring") set_extra_restraints_representation_for_bonds_go_to_CA "
@@ -5572,7 +5644,7 @@ ins_code_2 : const char *
 Parameters
 ----------
 imol : int
-state : short int
+state : int
 ";
 
 %feature("docstring") delete_extra_restraint_scm "
@@ -5610,7 +5682,7 @@ set use only extra torsion restraints for torsions
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") use_only_extra_torsion_restraints_for_torsions_state "
@@ -5644,8 +5716,8 @@ Parameters
 ----------
 res1 : int
 res2 : int
-altloc : const char *
-chain_id : const char *
+altloc : str
+chain_id : str
 imol : int
 imol_for_map : int
 ";
@@ -5657,8 +5729,8 @@ Parameters
 ----------
 res1 : int
 res2 : int
-altloc : const char *
-chain_id : const char *
+altloc : str
+chain_id : str
 imol : int
 imol_for_map : int
 ";
@@ -5680,7 +5752,7 @@ mode should be \"auto-correct\", \"ignore\", \"prompt\". The default is \"prompt
 
 Parameters
 ----------
-mode : const char *
+mode : str
 ";
 
 %feature("docstring") output_atom_info_as_text "
@@ -5689,11 +5761,11 @@ output to the terminal the Atom Info for the give atom specs
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-atname : const char *
-altconf : const char *
+ins_code : str
+atname : str
+altconf : str
 ";
 
 %feature("docstring") output_residue_info_dialog "
@@ -5710,9 +5782,9 @@ show residue info dialog for given residue
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") output_residue_info_as_text "
@@ -5721,6 +5793,13 @@ Parameters
 ----------
 atom_index : int
 imol : int
+";
+
+%feature("docstring") set_show_distance_labels "
+
+Parameters
+----------
+state : int
 ";
 
 %feature("docstring") set_show_environment_distances "
@@ -5789,7 +5868,7 @@ Label the atoms with their B-factors.
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") add_geometry_distance "
@@ -5904,7 +5983,7 @@ read CNS data (currently only a placeholder)
 
 Parameters
 ----------
-filename : const char *
+filename : str
 imol : int
 ";
 
@@ -5915,7 +5994,7 @@ a, b,c are in Angstroems. alpha, beta, gamma are in degrees. spg is the space gr
 
 Parameters
 ----------
-filename : const char *
+filename : str
 imol : int
 a : float
 b : float
@@ -5923,35 +6002,35 @@ c : float
 alpha : float
 beta : float
 gamma : float
-spg_info : const char *
+spg_info : str
 ";
 
 %feature("docstring") auto_read_cif_data_with_phases "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") read_cif_data_with_phases_sigmaa "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") read_cif_data_with_phases_diff_sigmaa "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") read_cif_data "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 imol_coords : int
 ";
 
@@ -5959,7 +6038,7 @@ imol_coords : int
 
 Parameters
 ----------
-filename : const char *
+filename : str
 imol_coords : int
 ";
 
@@ -5967,7 +6046,7 @@ imol_coords : int
 
 Parameters
 ----------
-filename : const char *
+filename : str
 imol_coords : int
 ";
 
@@ -5975,21 +6054,21 @@ imol_coords : int
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") read_cif_data_with_phases_2fo_fc "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") read_cif_data_with_phases_nfo_fc "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 map_type : int
 ";
 
@@ -5997,15 +6076,15 @@ map_type : int
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") write_connectivity "
 
 Parameters
 ----------
-monomer_name : const char *
-filename : const char *
+monomer_name : str
+filename : str
 ";
 
 %feature("docstring") open_cif_dictionary_file_selector_dialog "
@@ -6032,21 +6111,21 @@ imol : int
 
 Parameters
 ----------
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") read_small_molecule_data_cif "
 
 Parameters
 ----------
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") read_small_molecule_data_cif_and_make_map_using_coords "
 
 Parameters
 ----------
-file_name : const char *
+file_name : str
 imol_coords : int
 ";
 
@@ -6195,14 +6274,14 @@ set the given torsion the given residue. tors is in degrees. Return the resultin
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-insertion_code : const char *
-alt_conf : const char *
-atom_name_1 : const char *
-atom_name_2 : const char *
-atom_name_3 : const char *
-atom_name_4 : const char *
+insertion_code : str
+alt_conf : str
+atom_name_1 : str
+atom_name_2 : str
+atom_name_3 : str
+atom_name_4 : str
 tors : float
 ";
 
@@ -6232,14 +6311,14 @@ set the given torsion the given residue. tors is in degrees. Return the resultin
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-insertion_code : const char *
-alt_conf : const char *
-atom_name_1 : const char *
-atom_name_2 : const char *
-atom_name_3 : const char *
-atom_name_4 : const char *
+insertion_code : str
+alt_conf : str
+atom_name_1 : str
+atom_name_2 : str
+atom_name_3 : str
+atom_name_4 : str
 tors : float
 ";
 
@@ -6256,7 +6335,7 @@ residues_specs_py : object
 
 Parameters
 ----------
-mode : short int
+mode : int
 ";
 
 %feature("docstring") atom_overlap_score "
@@ -6337,14 +6416,14 @@ this does the same as accept_moving_atoms()
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") setup_dynamic_distances "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") ramachandran_plot_differences "
@@ -6363,8 +6442,8 @@ Parameters
 ----------
 imol1 : int
 imol2 : int
-a_chain : const char *
-b_chain : const char *
+a_chain : str
+b_chain : str
 ";
 
 %feature("docstring") sequence_view "
@@ -6392,9 +6471,9 @@ update the sequnce view current position highlight based on active atom
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 iresno : int
-atom_id : const char *
+atom_id : str
 ";
 
 %feature("docstring") remove_atom_label "
@@ -6402,9 +6481,9 @@ atom_id : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 iresno : int
-atom_id : const char *
+atom_id : str
 ";
 
 %feature("docstring") set_label_on_recentre_flag "
@@ -6510,7 +6589,7 @@ return the view number
 
 Parameters
 ----------
-view_name : const char *
+view_name : str
 ";
 
 %feature("docstring") add_view_raw "
@@ -6526,7 +6605,7 @@ quat2 : float
 quat3 : float
 quat4 : float
 zoom : float
-view_name : const char *
+view_name : str
 ";
 
 %feature("docstring") remove_named_view "
@@ -6534,7 +6613,7 @@ the view with the given name
 
 Parameters
 ----------
-view_name : const char *
+view_name : str
 ";
 
 %feature("docstring") remove_view "
@@ -6564,7 +6643,7 @@ snap_to_view_flag : int
 
 Parameters
 ----------
-view_name : const char *
+view_name : str
 n_steps : int
 degrees_total : float
 ";
@@ -6575,7 +6654,7 @@ Add a view description/annotation to the give view number.
 Parameters
 ----------
 view_number : int
-description : const char *
+description : str
 ";
 
 %feature("docstring") add_action_view "
@@ -6585,8 +6664,8 @@ the view number for this (new) view.
 
 Parameters
 ----------
-view_name : const char *
-action_function : const char *
+view_name : str
+action_function : str
 ";
 
 %feature("docstring") insert_action_view_after_view "
@@ -6597,8 +6676,8 @@ the view number for this (new) view.
 Parameters
 ----------
 view_number : int
-view_name : const char *
-action_function : const char *
+view_name : str
+action_function : str
 ";
 
 %feature("docstring") save_views "
@@ -6606,7 +6685,7 @@ save views to view_file_name
 
 Parameters
 ----------
-view_file_name : const char *
+view_file_name : str
 ";
 
 %feature("docstring") set_views_play_speed "
@@ -6668,7 +6747,7 @@ Clear the view list.
 
 Parameters
 ----------
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") set_movie_frame_number "
@@ -6754,7 +6833,7 @@ n : int
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_find_ligand_multi_solutions_per_cluster "
@@ -6845,7 +6924,7 @@ Parameters
 ----------
 imol_ligand : int
 imol_ref : int
-chain_id_ref : const char *
+chain_id_ref : str
 resno_ref : int
 ";
 
@@ -6855,7 +6934,7 @@ Parameters
 ----------
 imol_ligand : int
 imol_ref : int
-chain_id_ref : const char *
+chain_id_ref : str
 resno_ref : int
 ";
 
@@ -6865,7 +6944,7 @@ Parameters
 ----------
 imol_ligand : int
 imol_ref : int
-chain_id_ref : const char *
+chain_id_ref : str
 resno_ref : int
 ";
 
@@ -6875,7 +6954,7 @@ Parameters
 ----------
 imol_ligand : int
 imol_ref : int
-chain_id_ref : const char *
+chain_id_ref : str
 resno_ref : int
 ";
 
@@ -6885,7 +6964,7 @@ Parameters
 ----------
 imol_ligand : int
 imol_ref : int
-chain_id_ref : const char *
+chain_id_ref : str
 resno_ref : int
 ";
 
@@ -6895,7 +6974,7 @@ Parameters
 ----------
 imol_ligand : int
 imol_ref : int
-chain_id_ref : const char *
+chain_id_ref : str
 resno_ref : int
 ";
 
@@ -6905,7 +6984,7 @@ Parameters
 ----------
 imol_ligand : int
 imol_ref : int
-chain_id_ref : const char *
+chain_id_ref : str
 resno_ref : int
 ";
 
@@ -6917,13 +6996,13 @@ By using graph matching, make the names of the atoms of the given ligand/residue
 Parameters
 ----------
 imol_ligand : int
-chain_id_ligand : const char *
+chain_id_ligand : str
 resno_ligand : int
-ins_code_ligand : const char *
+ins_code_ligand : str
 imol_reference : int
-chain_id_reference : const char *
+chain_id_reference : str
 resno_reference : int
-ins_code_reference : const char *
+ins_code_reference : str
 ";
 
 %feature("docstring") match_ligand_atom_names_to_comp_id "
@@ -6936,10 +7015,10 @@ This doesn't create a new dictionary for the selected ligand - and that's a big 
 Parameters
 ----------
 imol_ligand : int
-chain_id_ligand : const char *
+chain_id_ligand : str
 resno_ligand : int
-ins_code_ligand : const char *
-comp_id_ref : const char *
+ins_code_ligand : str
+comp_id_ref : str
 ";
 
 %feature("docstring") exchange_ligand "
@@ -6947,9 +7026,9 @@ comp_id_ref : const char *
 Parameters
 ----------
 imol_lig : int
-chain_id_lig : const char *
+chain_id_lig : str
 resno_lig : int
-ins_code_lig : const char *
+ins_code_lig : str
 ";
 
 %feature("docstring") flip_ligand "
@@ -6958,7 +7037,7 @@ flip the ligand (usually active residue) around its eigen vectors to the next fl
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
 ";
 
@@ -6967,12 +7046,12 @@ resno : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
-atom_name : const char *
-alt_conf : const char *
-invert_selection : short int
+ins_code : str
+atom_name : str
+alt_conf : str
+invert_selection : int
 ";
 
 %feature("docstring") show_create_find_waters_dialog "
@@ -6994,7 +7073,7 @@ Parameters
 ----------
 imol_for_map : int
 imol_for_protein : int
-new_waters_mol_flag : short int
+new_waters_mol_flag : int
 rmsd_cut_off : float
 ";
 
@@ -7004,9 +7083,9 @@ Parameters
 ----------
 imol_for_map : int
 imol_for_protein : int
-new_waters_mol_flag : short int
+new_waters_mol_flag : int
 rmsd_cut_off : float
-show_blobs_dialog : short int
+show_blobs_dialog : int
 ";
 
 %feature("docstring") move_waters_to_around_protein "
@@ -7074,12 +7153,14 @@ i : int
 %feature("docstring") execute_find_blobs "
 find blobs
 
+Not useful for MCP. For interactive use only.
+
 Parameters
 ----------
 imol_model : int
 imol_for_map : int
 cut_off : float
-interactive_flag : short int
+interactive_flag : int
 ";
 
 %feature("docstring") split_water "
@@ -7091,12 +7172,18 @@ If there is more than one atom in the specified resiue, don't do anything.
 
 If the given atom does not have an alt conf of \"\", don't do anything.
 
+  imol  the index of the molecule   chain_id  the chain id   res_no  the residue number   ins_code  the insertion code of the residue
+
 Parameters
 ----------
 imol : int
-chain_id : const char *
+    the index of the molecule
+chain_id : str
+    the chain id
 res_no : int
-ins_code : const char *
+    the residue number
+ins_code : str
+    the insertion code of the residue
 ";
 
 %feature("docstring") set_default_bond_thickness "
@@ -7129,7 +7216,7 @@ allow lines that are further away to be thinner
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_bond_colour_rotation_for_molecule "
@@ -7146,7 +7233,7 @@ set default for the drawing of atoms in stick mode (default is on (1))
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") get_bond_colour_rotation_for_molecule "
@@ -7227,17 +7314,20 @@ turn on with state = 1
 Parameters
 ----------
 imol : int
-state : short int
+state : int
 ";
 
 %feature("docstring") set_draw_missing_residues_loops "
 set the state for drawing missing resiude loops
 
-For taking screenshots, we often don't want to see them.
+Used, for example, when taking screenshots, we often don't want to see them in such cases. Or maybe there's just too many of them to be useful
+
+  state  the draw state (0 for \"off\", 1 for \"on\")
 
 Parameters
 ----------
-state : short int
+state : int
+    the draw state (0 for \"off\", 1 for \"on\")
 ";
 
 %feature("docstring") graphics_to_ca_representation "
@@ -7355,9 +7445,14 @@ imol : int
 %feature("docstring") graphics_to_user_defined_atom_colours_all_atoms_representation "
 draw molecule number imol all atoms coloured by user-defined atom colours
 
+Use this function after using set_user_defined_atom_colour_by_selection_py() and/or set_user_defined_atom_colour_py(). When atom selection colouring has been created or updated, then calling this function actually forces the regeneration and drawing of the molecule with the new colour scheme.
+
+  imol  the molecule index
+
 Parameters
 ----------
 imol : int
+    the molecule index
 ";
 
 %feature("docstring") get_graphics_molecule_bond_type "
@@ -7391,7 +7486,7 @@ make the carbon atoms for molecule imol be grey
 Parameters
 ----------
 imol : int
-state : short int
+state : int
 ";
 
 %feature("docstring") set_grey_carbon_colour "
@@ -7422,7 +7517,7 @@ e.g. (make-ball-and-stick 0 \"/1\" 0.15 0.25 1)
 Parameters
 ----------
 imol : int
-atom_selection_str : const char *
+atom_selection_str : str
 bond_thickness : float
 sphere_size : float
 do_spheres_flag : int
@@ -7452,7 +7547,7 @@ Parameters
 ----------
 imol : int
 mesh_index : int
-state : short int
+state : int
 ";
 
 %feature("docstring") set_show_additional_representation "
@@ -7480,7 +7575,7 @@ Parameters
 ----------
 imol : int
 representation_number : int
-ball_and_sticks_off_too_flag : short int
+ball_and_sticks_off_too_flag : int
 ";
 
 %feature("docstring") delete_additional_representation "
@@ -7498,7 +7593,7 @@ removed from API brief return the index of the additional representation. Return
 Parameters
 ----------
 imol : int
-atom_selection : const char *
+atom_selection : str
 representation_type : int
 bonds_box_type : int
 bond_width : float
@@ -7513,10 +7608,10 @@ return the index of the additional representation.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno_start : int
 resno_end : int
-ins_code : const char *
+ins_code : str
 representation_type : int
 bonds_box_type : int
 bond_width : float
@@ -7566,8 +7661,8 @@ return a generic objects handle (which can be used to remove later)
 Parameters
 ----------
 imol : int
-atom_selection_str : const char *
-dots_object_name : const char *
+atom_selection_str : str
+dots_object_name : str
 dot_density : float
 sphere_size_scale : float
 ";
@@ -7610,7 +7705,7 @@ clear the first dots object for imol with given name
 Parameters
 ----------
 imol : int
-dots_object_name : const char *
+dots_object_name : str
 ";
 
 %feature("docstring") n_dots_sets "
@@ -7625,19 +7720,27 @@ imol : int
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") pepflip "
-pepflip the given residue
+pepflip (flip the peptide) of the given residue
+
+Rotate the the carbonyl C and O atom of this residue and the N of the next residue around a vector between the two CA atoms by 180 degrees. This is often a useful modelling operation to create a different hypothesis about the orientation of the main-chain atoms - that can then be used for refinement. This can sometimes allow the model to be removed from local minima of backbone conformations.
+
+  imol  is the index of the model molecule   chain_id  is the chain-id   res_no  is the residue number (the residue that has the C and O atoms)   inscode  the insertion code (typically \"\")   altconf  the altconf (typically \"\")
 
 Parameters
 ----------
 imol : int
-chain_id : const char *
+    is the index of the model molecule
+chain_id : str
+    is the chain-id
 resno : int
-inscode : const char *
-altconf : const char *
+inscode : str
+    the insertion code (typically \"\")
+altconf : str
+    the altconf (typically \"\")
 ";
 
 %feature("docstring") pepflip_using_difference_map_scm "
@@ -7662,7 +7765,7 @@ n_sigma : float
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") rigid_body_refine_zone "
@@ -7673,7 +7776,7 @@ where we set the atom selection holders according to the arguments and then call
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 reso_start : int
 resno_end : int
 ";
@@ -7683,7 +7786,7 @@ resno_end : int
 Parameters
 ----------
 imol : int
-atom_selection_string : const char *
+atom_selection_string : str
 ";
 
 %feature("docstring") rigid_body_refine_by_residue_ranges_scm "
@@ -7708,7 +7811,7 @@ residue_ranges : object
 
 Parameters
 ----------
-auto_range_flag : short int
+auto_range_flag : int
 ";
 
 %feature("docstring") set_rigid_body_fit_acceptable_fit_fraction "
@@ -7733,7 +7836,7 @@ i : int
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_add_terminal_residue_n_phi_psi_trials "
@@ -7754,21 +7857,21 @@ i : int
 
 Parameters
 ----------
-v : short int
+v : int
 ";
 
 %feature("docstring") set_terminal_residue_do_rigid_body_refine "
 
 Parameters
 ----------
-v : short int
+v : int
 ";
 
 %feature("docstring") set_add_terminal_residue_debug_trials "
 
 Parameters
 ----------
-debug_state : short int
+debug_state : int
 ";
 
 %feature("docstring") set_add_terminal_residue_immediate_addition "
@@ -7784,17 +7887,40 @@ i : int
 %feature("docstring") add_terminal_residue "
 Add a terminal residue.
 
-residue type can be \"auto\" and immediate_add is recommended to be 1.
+Some text here that should be a detailed-description
 
-0 on failure, 1 on success
+  residue_type  can be \"auto\"   immediate_add  is recommended to be 1. 0 on failure, 1 on success
 
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 residue_number : int
-residue_type : const char *
+residue_type : str
+    can be \"auto\"
 immediate_add : int
+    is recommended to be 1.
+";
+
+%feature("docstring") add_residue_by_map_fit "
+Add a residue to a chain or at the end of a fragment.
+
+This can be used to fill a gap of one residue or to fill a gap of multiple residues by being called several times. Probably RSR refinement would be useful after each call to this function in such a case.
+
+  imol  the molecule index   chain_id  the chain ID   residue_number  the residue number (of the existing residue to attach to)   residue_type  the type for new residue, can be \"auto\"   immediate_add  is recommended to be 1 0 on failure, 1 on success
+
+Parameters
+----------
+imol : int
+    the molecule index
+chain_id : str
+    the chain ID
+residue_number : int
+    the residue number (of the existing residue to attach to)
+residue_type : str
+    the type for new residue, can be \"auto\"
+immediate_add : int
+    is recommended to be 1
 ";
 
 %feature("docstring") add_nucleotide "
@@ -7805,23 +7931,28 @@ No fitting is done
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
 ";
 
 %feature("docstring") add_terminal_residue_using_phi_psi "
 Add a terminal residue using given phi and psi angles.
 
-the success status, 0 on failure, 1 on success
+  imol  the molecule index   chain_id  the chain ID   residue_number  the residue number (of the existing residue to attach to   residue_type  can be \"auto\"   phi  is phi in degrees   psi  is psi in degrees the success status, 0 on failure, 1 on success
 
 Parameters
 ----------
 imol : int
-chain_id : const char *
+    the molecule index
+chain_id : str
+    the chain ID
 res_no : int
-residue_type : const char *
+residue_type : str
+    can be \"auto\"
 phi : float
+    is phi in degrees
 psi : float
+    is psi in degrees
 ";
 
 %feature("docstring") set_add_terminal_residue_default_residue_type "
@@ -7829,7 +7960,7 @@ set the residue type of an added terminal residue.
 
 Parameters
 ----------
-type : const char *
+type : str
 ";
 
 %feature("docstring") set_add_terminal_residue_do_post_refine "
@@ -7837,7 +7968,7 @@ set a flag to run refine zone on terminal residues after an addition.
 
 Parameters
 ----------
-istat : short int
+istat : int
 ";
 
 %feature("docstring") add_terminal_residue_do_post_refine_state "
@@ -7849,7 +7980,7 @@ what is the value of the previous flag?
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
 ";
 
@@ -7858,7 +7989,7 @@ resno : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
 ";
 
@@ -7881,7 +8012,7 @@ Parameters
 ----------
 imol : int
 index : int
-do_delete_dialog : short int
+do_delete_dialog : int
 ";
 
 %feature("docstring") delete_residue_by_atom_index "
@@ -7890,7 +8021,7 @@ Parameters
 ----------
 imol : int
 index : int
-do_delete_dialog : short int
+do_delete_dialog : int
 ";
 
 %feature("docstring") delete_residue_hydrogens_by_atom_index "
@@ -7899,7 +8030,7 @@ Parameters
 ----------
 imol : int
 index : int
-do_delete_dialog : short int
+do_delete_dialog : int
 ";
 
 %feature("docstring") delete_residue_range "
@@ -7908,7 +8039,7 @@ delete residue range
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno_start : int
 end_resno : int
 ";
@@ -7916,12 +8047,18 @@ end_resno : int
 %feature("docstring") delete_residue "
 delete residue
 
+  imol  the molecule index   chain_id  the chain id   res_no  the residue number   inscode  the insertion code 0 on failure to delete, return 1 on residue successfully deleted
+
 Parameters
 ----------
 imol : int
-chain_id : const char *
-resno : int
-inscode : const char *
+    the molecule index
+chain_id : str
+    the chain id
+res_no : int
+    the residue number
+inscode : str
+    the insertion code
 ";
 
 %feature("docstring") delete_residue_with_full_spec "
@@ -7931,10 +8068,10 @@ Parameters
 ----------
 imol : int
 imodel : int
-chain_id : const char *
+chain_id : str
 resno : int
-inscode : const char *
-altloc : const char *
+inscode : str
+altloc : str
 ";
 
 %feature("docstring") delete_residues_scm "
@@ -7961,10 +8098,10 @@ delete hydrogen atoms in residue
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-inscode : const char *
-altloc : const char *
+inscode : str
+altloc : str
 ";
 
 %feature("docstring") delete_atom "
@@ -7973,11 +8110,11 @@ delete atom in residue
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-at_name : const char *
-altloc : const char *
+ins_code : str
+at_name : str
+altloc : str
 ";
 
 %feature("docstring") delete_residue_sidechain "
@@ -7986,10 +8123,10 @@ delete all atoms in residue that are not main chain or CB
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-do_delete_dialog : short int
+ins_code : str
+do_delete_dialog : int
 ";
 
 %feature("docstring") delete_hydrogen_atoms "
@@ -8026,7 +8163,7 @@ imol : int
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") db_mainchain "
@@ -8041,10 +8178,10 @@ return the new molecule number
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 iresno_start : int
 iresno_end : int
-direction : const char *
+direction : str
 ";
 
 %feature("docstring") db_mainchains_fragment "
@@ -8055,7 +8192,7 @@ Both directions are built. This is the modern interface.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
 ";
 
@@ -8083,7 +8220,7 @@ mode : int
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") do_rotamers "
@@ -8099,10 +8236,10 @@ imol : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-altconf : const char *
+ins_code : str
+altconf : str
 ";
 
 %feature("docstring") set_rotamer_lowest_probability "
@@ -8129,10 +8266,10 @@ return the score, for some not very good reason. clash_flag determines if we use
 Parameters
 ----------
 imol_coords : int
-chain_id : const char *
+chain_id : str
 resno : int
-insertion_code : const char *
-altloc : const char *
+insertion_code : str
+altloc : str
 imol_map : int
 clash_flag : int
 lowest_probability : float
@@ -8157,17 +8294,17 @@ i : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-insertion_code : const char *
-alt_conf : const char *
+insertion_code : str
+alt_conf : str
 ";
 
 %feature("docstring") setup_auto_fit_rotamer "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") n_rotamers "
@@ -8176,9 +8313,9 @@ return the number of rotamers for this residue - return -1 on no residue found.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") set_residue_to_rotamer_number "
@@ -8187,10 +8324,10 @@ set the residue specified to the rotamer number specifed.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-alt_conf : const char *
+ins_code : str
+alt_conf : str
 rotamer_number : int
 ";
 
@@ -8204,11 +8341,11 @@ return value is 0 if atoms were not moved (e.g. because rotamer-name was not kno
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-alt_conf : const char *
-rotamer_name : const char *
+ins_code : str
+alt_conf : str
+rotamer_name : str
 ";
 
 %feature("docstring") get_rotamer_name_scm "
@@ -8216,9 +8353,9 @@ rotamer_name : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") get_rotamer_name_py "
@@ -8226,9 +8363,9 @@ ins_code : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") fill_partial_residues "
@@ -8246,9 +8383,9 @@ imol : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-inscode : const char *
+inscode : str
 ";
 
 %feature("docstring") simple_fill_partial_residues "
@@ -8301,24 +8438,24 @@ rotate 180 degrees around the last chi angle
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-inscode : const char *
-altconf : const char *
+inscode : str
+altconf : str
 ";
 
 %feature("docstring") setup_180_degree_flip "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") setup_mutate "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") setup_mutate_auto_fit "
@@ -8328,15 +8465,15 @@ that we have a map define is checked first
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") do_mutation "
 
 Parameters
 ----------
-type : const char *
-is_stub_flag : short int
+type : str
+is_stub_flag : int
 ";
 
 %feature("docstring") mutate_active_residue "
@@ -8347,7 +8484,7 @@ display a dialog that allows the choice of residue type to which to mutate
 
 Parameters
 ----------
-chain_id : const char *
+chain_id : str
 imol : int
 ";
 
@@ -8361,10 +8498,10 @@ Return 1 on a good mutate.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ires : int
-inscode : const char *
-target_res_type : const char *
+inscode : str
+target_res_type : str
 ";
 
 %feature("docstring") mutate_base "
@@ -8373,10 +8510,10 @@ mutate a base. return success status, 1 for a good mutate.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
-res_type : const char *
+ins_code : str
+res_type : str
 ";
 
 %feature("docstring") nudge_residue_sequence "
@@ -8384,11 +8521,11 @@ res_type : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no_range_start : int
 res_no_range_end : int
 nudge_by : int
-nudge_residue_numbers_also : short int
+nudge_residue_numbers_also : int
 ";
 
 %feature("docstring") set_mutate_auto_fit_do_post_refine "
@@ -8398,7 +8535,7 @@ Do you want Coot to automatically run a refinement after every mutate and autofi
 
 Parameters
 ----------
-istate : short int
+istate : int
 ";
 
 %feature("docstring") mutate_auto_fit_do_post_refine_state "
@@ -8412,7 +8549,7 @@ Do you want Coot to automatically run a refinement after every rotamer autofit?
 
 Parameters
 ----------
-istate : short int
+istate : int
 ";
 
 %feature("docstring") rotamer_auto_fit_do_post_refine_state "
@@ -8432,7 +8569,7 @@ Parameters
 ----------
 ires_ser : int
     is the serial number of the residue, not the seqnum
-chain_id : const char *
+chain_id : str
     is the chain-id
 imol : int
     is the index of the model molecule
@@ -8446,9 +8583,9 @@ ires is the seqnum of the residue (conventional)
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ires : int
-inscode : const char *
+inscode : str
 target_res_type : char
 ";
 
@@ -8460,17 +8597,17 @@ mutate and auto-fit
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 start_res_no : int
 stop_res_no : int
-sequence : const char *
+sequence : str
 ";
 
 %feature("docstring") do_base_mutation "
 
 Parameters
 ----------
-type : const char *
+type : str
 ";
 
 %feature("docstring") set_residue_type_chooser_stub_state "
@@ -8478,22 +8615,22 @@ set a flag saying that the residue chosen by mutate or auto-fit mutate should on
 
 Parameters
 ----------
-istat : short int
+istat : int
 ";
 
 %feature("docstring") handle_residue_type_chooser_entry_chose_type "
 
 Parameters
 ----------
-entry_text : const char *
-stub_mode : short int
+entry_text : str
+stub_mode : int
 ";
 
 %feature("docstring") set_add_alt_conf_split_type_number "
 
 Parameters
 ----------
-i : short int
+i : int
 ";
 
 %feature("docstring") add_alt_conf_scm "
@@ -8504,10 +8641,10 @@ Return the new alt_conf chain_id on sucess, scheme false on fail
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
-alt_conf : const char *
+ins_code : str
+alt_conf : str
 rotamer_number : int
 ";
 
@@ -8519,10 +8656,10 @@ Return the new alt_conf chain_id on sucess, python False on fail
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
-alt_conf : const char *
+ins_code : str
+alt_conf : str
 rotamer_number : int
 ";
 
@@ -8545,7 +8682,7 @@ i : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ires1 : int
 ires2 : int
 ";
@@ -8555,7 +8692,7 @@ ires2 : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ires1 : int
 ires2 : int
 ";
@@ -8565,7 +8702,7 @@ ires2 : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ires1 : int
 ires2 : int
 occ : float
@@ -8576,7 +8713,7 @@ occ : float
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ires1 : int
 ires2 : int
 bval : float
@@ -8587,7 +8724,7 @@ bval : float
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ires1 : int
 ires2 : int
 ";
@@ -8596,7 +8733,7 @@ ires2 : int
 
 Parameters
 ----------
-type : const char *
+type : str
 ";
 
 %feature("docstring") set_pointer_atom_is_dummy "
@@ -8626,7 +8763,7 @@ toggle so that mouse movement moves the baton not rotates the view.
 
 Parameters
 ----------
-i : short int
+i : int
 ";
 
 %feature("docstring") try_set_draw_baton "
@@ -8634,7 +8771,7 @@ draw the baton or not
 
 Parameters
 ----------
-i : short int
+i : int
 ";
 
 %feature("docstring") accept_baton_position "
@@ -8669,8 +8806,8 @@ set the parameters for the start of a new baton-built fragment. direction can ei
 Parameters
 ----------
 istart_resno : int
-chain_id : const char *
-direction : const char *
+chain_id : str
+direction : str
 ";
 
 %feature("docstring") add_OXT_to_residue "
@@ -8678,9 +8815,9 @@ direction : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 reso : int
-insertion_code : const char *
+insertion_code : str
 ";
 
 %feature("docstring") set_draw_crosshairs "
@@ -8688,14 +8825,14 @@ draw the distance crosshairs, 0 for off, 1 for on.
 
 Parameters
 ----------
-i : short int
+i : int
 ";
 
 %feature("docstring") setup_edit_chi_angles "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") rotate_chi "
@@ -8710,7 +8847,7 @@ show torsions that rotate hydrogens in the torsion angle manipulation dialog. No
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_graphics_edit_current_chi "
@@ -8728,10 +8865,10 @@ return a status of 0 if it failed to fined the residue, return a value of 1 if i
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-altconf : const char *
+ins_code : str
+altconf : str
 ";
 
 %feature("docstring") set_show_chi_angle_bond "
@@ -8745,7 +8882,7 @@ imode : int
 
 Parameters
 ----------
-istate : short int
+istate : int
 ";
 
 %feature("docstring") setup_torsion_general "
@@ -8753,14 +8890,14 @@ beloved torsion general at last makes an entrance onto the Coot scene...
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") setup_residue_partial_alt_locs "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") backrub_rotamer "
@@ -8771,10 +8908,10 @@ the success status, 0 for fail, 1 for successful fit.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
-alt_conf : const char *
+ins_code : str
+alt_conf : str
 ";
 
 %feature("docstring") backrub_rotamer_intermediate_atoms "
@@ -8790,7 +8927,7 @@ Parameters
 ----------
 map_mol_no : int
 coord_mol_no : int
-invert_flag : short int
+invert_flag : int
 ";
 
 %feature("docstring") mask_map_by_atom_selection "
@@ -8800,8 +8937,8 @@ Parameters
 ----------
 map_mol_no : int
 coords_mol_no : int
-mmdb_atom_selection : const char *
-invert_flag : short int
+mmdb_atom_selection : str
+invert_flag : int
 ";
 
 %feature("docstring") make_masked_maps_split_by_chain "
@@ -8865,9 +9002,9 @@ b_factor_lim : float
 map_sigma_lim : float
 min_dist : float
 max_dist : float
-part_occ_contact_flag : short int
-zero_occ_flag : short int
-logical_operator_and_or_flag : short int
+part_occ_contact_flag : int
+zero_occ_flag : int
+logical_operator_and_or_flag : int
 ";
 
 %feature("docstring") check_waters_by_difference_map "
@@ -8928,10 +9065,10 @@ Parameters
 ----------
 reference_resno_start : int
 reference_resno_end : int
-chain_id_reference : const char *
+chain_id_reference : str
 moving_resno_start : int
 moving_resno_end : int
-chain_id_moving : const char *
+chain_id_moving : str
 match_type : int
 ";
 
@@ -9028,7 +9165,7 @@ Parameters
 ----------
 imol : int
 limit : float
-keep_higher : short int
+keep_higher : int
 ";
 
 %feature("docstring") pLDDT_to_b_factor "
@@ -9044,49 +9181,49 @@ create a r3d file for the current view
 
 Parameters
 ----------
-rd3_filename : const char *
+rd3_filename : str
 ";
 
 %feature("docstring") povray "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") renderman "
 
 Parameters
 ----------
-rib_filename : const char *
+rib_filename : str
 ";
 
 %feature("docstring") make_image_raster3d "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") make_image_povray "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") make_image_raster3d_py "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") make_image_povray_py "
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") set_raster3d_bond_thickness "
@@ -9150,7 +9287,7 @@ set the font size (as a string) for raster3d
 
 Parameters
 ----------
-size_in : const char *
+size_in : str
 ";
 
 %feature("docstring") raster_screen_shot "
@@ -9160,29 +9297,37 @@ run raster3d and display the resulting image.
 %feature("docstring") superpose "
 simple interface to superposition.
 
-Superpose all residues of imol2 onto imol1. imol1 is reference, we can either move imol2 or copy it to generate a new molecule depending on the vaule of move_imol2_flag (1 for copy 0 for move).
+  imol1  the reference model index   imol2  the index of the superposed molecule Superpose all residues of imol2 onto imol1. imol1 is reference, we can either move imol2 or copy it to generate a new molecule depending on the vaule of move_imol2_flag (1 for copy 0 for move).
 
 Parameters
 ----------
 imol1 : int
+    the reference model index
 imol2 : int
-move_imol2_flag : short int
+    the index of the superposed molecule
+move_imol2_flag : int
 ";
 
 %feature("docstring") superpose_with_chain_selection "
 chain-based interface to superposition.
 
-Superpose the given chains of imol2 onto imol1. imol1 is reference, we can either move imol2 or copy it to generate a new molecule depending on the vaule of move_imol2_flag (1 for move 0 for copy).
+  imol1  the reference model index   imol2  the index of the superposed molecule   chain_imol1  the chain_id of imol1   chain_imol2  the chain_id of imol2   chain_used_flag_imol1  should the chain-id be used for imol1 (1 for yes, 0 for no)   chain_used_flag_imol2  should the chain-id be used for imol2 (1 for yes, 0 for no)   move_imol2_coppy_flag  flag to control if imol2 is copied (1) or moved (0) Superpose the given chains of imol2 onto imol1. imol1 is reference, we can either move imol2 or copy it to generate a new molecule depending on the vaule of move_imol2_flag (1 for move 0 for copy).
 
 Parameters
 ----------
 imol1 : int
+    the reference model index
 imol2 : int
-chain_imol1 : const char *
-chain_imol2 : const char *
+    the index of the superposed molecule
+chain_imol1 : str
+    the chain_id of imol1
+chain_imol2 : str
+    the chain_id of imol2
 chain_used_flag_imol1 : int
+    should the chain-id be used for imol1 (1 for yes, 0 for no)
 chain_used_flag_imol2 : int
-move_imol2_copy_flag : short int
+    should the chain-id be used for imol2 (1 for yes, 0 for no)
+move_imol2_copy_flag : int
 ";
 
 %feature("docstring") superpose_with_atom_selection "
@@ -9190,15 +9335,19 @@ detailed interface to superposition.
 
 Superpose the given atom selection (specified by the mmdb atom selection strings) of imol2 onto imol1. imol1 is reference, we can either move imol2 or copy it to generate a new molecule depending on the vaule of move_imol2_flag (1 for move 0 for copy).
 
-the index of the superposed molecule - which could either be a new molecule (if move_imol2_flag was 1) or the imol2 or -1 (signifying failure to do the SMM superposition).
+the index of the superposed molecule - which could either be a new molecule (if move_imol2_flag was 1) or the imol2 or -1 (signifying failure to do the SSM superposition).   imol1  the reference model index   imol2  the index of the superposed molecule   mmdb_atom_sel_str_1  the mmdb-format atom selection for imol1   mmdb_atom_sel_str_2  the mmdb-format atom selection for imol2   move_imol2_coppy_flag  flag to control if imol2 is copied (1) or moved (0)
 
 Parameters
 ----------
 imol1 : int
+    the reference model index
 imol2 : int
-mmdb_atom_sel_str_1 : const char *
-mmdb_atom_sel_str_2 : const char *
-move_imol2_copy_flag : short int
+    the index of the superposed molecule
+mmdb_atom_sel_str_1 : str
+    the mmdb-format atom selection for imol1
+mmdb_atom_sel_str_2 : str
+    the mmdb-format atom selection for imol2
+move_imol2_copy_flag : int
 ";
 
 %feature("docstring") set_draw_ncs_ghosts "
@@ -9258,8 +9407,8 @@ Add NCS matrix.
 Parameters
 ----------
 imol : int
-this_chain_id : const char *
-target_chain_id : const char *
+this_chain_id : str
+target_chain_id : str
 m11 : float
 m12 : float
 m13 : float
@@ -9289,8 +9438,8 @@ for CNS strict NCS usage: expand like normal symmetry does
 Parameters
 ----------
 imol : int
-this_chain_id : const char *
-target_chain_id : const char *
+this_chain_id : str
+target_chain_id : str
 m11 : float
 m12 : float
 m13 : float
@@ -9343,8 +9492,8 @@ Copy single NCS chain.
 Parameters
 ----------
 imol : int
-from_chain : const char *
-to_chain : const char *
+from_chain : str
+to_chain : str
 ";
 
 %feature("docstring") copy_from_ncs_master_to_others "
@@ -9353,7 +9502,7 @@ Copy chain from master to all related NCS chains.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ";
 
 %feature("docstring") copy_residue_range_from_ncs_master_to_others "
@@ -9364,7 +9513,7 @@ If the target residues do not exist in the peer chains, then create them.
 Parameters
 ----------
 imol : int
-master_chain_id : const char *
+master_chain_id : str
 residue_range_start : int
 residue_range_end : int
 ";
@@ -9375,7 +9524,7 @@ Copy chain from master to specified related NCS chains.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 other_chain_id_list_scm : SCM
 ";
 
@@ -9396,7 +9545,7 @@ imol : int
 Parameters
 ----------
 imol : int
-master_chain_id : const char *
+master_chain_id : str
 residue_range_start : int
 residue_range_end : int
 chain_id_list : SCM
@@ -9408,7 +9557,7 @@ Copy chain from master to a list of NCS chains.
 Parameters
 ----------
 imol : int
-master_chain_id : const char *
+master_chain_id : str
 chain_id_list : SCM
 ";
 
@@ -9418,7 +9567,7 @@ Copy chain from master to specified other NCS chains.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 other_chain_id_list_py : object
 ";
 
@@ -9434,7 +9583,7 @@ imol : int
 Parameters
 ----------
 imol : int
-master_chain_id : const char *
+master_chain_id : str
 residue_range_start : int
 residue_range_end : int
 chain_id_list : object
@@ -9445,7 +9594,7 @@ chain_id_list : object
 Parameters
 ----------
 imol : int
-master_chain_id : const char *
+master_chain_id : str
 chain_id_list : object
 ";
 
@@ -9464,7 +9613,7 @@ change the NCS master chain (by chain_id)
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ";
 
 %feature("docstring") ncs_control_display_chain "
@@ -9489,7 +9638,7 @@ flag : int
 Parameters
 ----------
 imol : int
-master_chain_id : const char *
+master_chain_id : str
 ";
 
 %feature("docstring") ncs_chain_ids_scm "
@@ -9509,7 +9658,7 @@ imol : int
 Parameters
 ----------
 imol : int
-master_chain_id : const char *
+master_chain_id : str
 ";
 
 %feature("docstring") ncs_chain_ids_py "
@@ -9605,10 +9754,10 @@ the index of the new molecule.
 
 Parameters
 ----------
-use_helix : short int
+use_helix : int
 helix_length : int
 helix_target : int
-use_strand : short int
+use_strand : int
 strand_length : int
 strand_target : int
 ";
@@ -9622,10 +9771,10 @@ the index of the new molecule.
 
 Parameters
 ----------
-use_helix : short int
+use_helix : int
 helix_length : int
 helix_target : int
-use_strand : short int
+use_strand : int
 strand_length : int
 strand_target : int
 radius : float
@@ -9651,7 +9800,7 @@ the new molecule number, -1 means an error.
 Parameters
 ----------
 imol : int
-residue_type : const char *
+residue_type : str
 ";
 
 %feature("docstring") new_molecule_by_atom_selection "
@@ -9662,7 +9811,7 @@ the new molecule number, -1 means an error.
 Parameters
 ----------
 imol : int
-atom_selection : const char *
+atom_selection : str
 ";
 
 %feature("docstring") new_molecule_by_sphere_selection "
@@ -9677,7 +9826,7 @@ x : float
 y : float
 z : float
 r : float
-allow_partial_residues : short int
+allow_partial_residues : int
 ";
 
 %feature("docstring") new_molecule_by_residue_specs_py "
@@ -9715,10 +9864,10 @@ the new molecule number or -1 if a problem
 
 Parameters
 ----------
-RNA_or_DNA : const char *
-form : const char *
-single_stranged_flag : short int
-sequence : const char *
+RNA_or_DNA : str
+form : str
+single_stranged_flag : int
+sequence : str
 ";
 
 %feature("docstring") pucker_info_scm "
@@ -9755,7 +9904,7 @@ Return a molecule that contains a residue that is the WC pair partner of the cli
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
 ";
 
@@ -9765,7 +9914,7 @@ add base pairs for the given residue range, modify molecule imol by creating a n
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno_start : int
 resno_end : int
 ";
@@ -9783,7 +9932,7 @@ Print the sequence to the console of the given molecule.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 ";
 
 %feature("docstring") print_sequence_chain_general "
@@ -9792,10 +9941,10 @@ optionally write the sequence to the file for the given molecule, optionally in 
 Parameters
 ----------
 imol : int
-chain_id : const char *
-pir_format : short int
-file_output : short int
-file_name : const char *
+chain_id : str
+pir_format : int
+file_output : int
+file_name : str
 ";
 
 %feature("docstring") assign_fasta_sequence "
@@ -9804,8 +9953,8 @@ Assign a FASTA sequence to a given chain in the molecule.
 Parameters
 ----------
 imol : int
-chain_id_in : const char *
-seq : const char *
+chain_id_in : str
+seq : str
 ";
 
 %feature("docstring") assign_pir_sequence "
@@ -9814,8 +9963,8 @@ Assign a PIR sequence to a given chain in the molecule. If the chain of the mole
 Parameters
 ----------
 imol : int
-chain_id_in : const char *
-seq : const char *
+chain_id_in : str
+seq : str
 ";
 
 %feature("docstring") assign_sequence "
@@ -9824,7 +9973,7 @@ Parameters
 ----------
 imol_model : int
 imol_map : int
-chain_id : const char *
+chain_id : str
 ";
 
 %feature("docstring") assign_sequence_from_file "
@@ -9833,7 +9982,7 @@ Assign a sequence to a given molecule from (whatever) sequence file by alignment
 Parameters
 ----------
 imol : int
-file : const char *
+file : str
 ";
 
 %feature("docstring") assign_sequence_from_string "
@@ -9842,8 +9991,8 @@ Assign a sequence to a given molecule from a simple string.
 Parameters
 ----------
 imol : int
-chain_id_in : const char *
-seq : const char *
+chain_id_in : str
+seq : str
 ";
 
 %feature("docstring") delete_all_sequences_from_molecule "
@@ -9860,7 +10009,7 @@ Delete the sequence for a given chain_id from a given molecule.
 Parameters
 ----------
 imol : int
-chain_id_in : const char *
+chain_id_in : str
 ";
 
 %feature("docstring") associate_sequence_from_file "
@@ -9869,7 +10018,7 @@ Associate the sequence to the molecule - to be used later for sequence assignmen
 Parameters
 ----------
 imol : int
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") sequence_info "
@@ -9956,7 +10105,7 @@ per-chain functions can be added later
 Parameters
 ----------
 imol : int
-selection_string : const char *
+selection_string : str
 ";
 
 %feature("docstring") make_electrostatic_surface "
@@ -9967,7 +10116,7 @@ per-chain functions can be added later
 Parameters
 ----------
 imol : int
-selection_string : const char *
+selection_string : str
 ";
 
 %feature("docstring") set_electrostatic_surface_charge_range "
@@ -10031,7 +10180,7 @@ feed the main thread a scheme script to evaluate
 
 Parameters
 ----------
-s : const char *
+s : str
 ";
 
 %feature("docstring") set_socket_python_string_waiting "
@@ -10039,7 +10188,7 @@ feed the main thread a python script to evaluate
 
 Parameters
 ----------
-s : const char *
+s : str
 ";
 
 %feature("docstring") set_remote_control_port "
@@ -10073,7 +10222,7 @@ try to open given url in Web browser
 
 Parameters
 ----------
-url : const char *
+url : str
 ";
 
 %feature("docstring") set_browser_interface "
@@ -10083,7 +10232,7 @@ examples are \"open\" or \"mozilla\"
 
 Parameters
 ----------
-browser : const char *
+browser : str
 ";
 
 %feature("docstring") handle_online_coot_search_request "
@@ -10093,7 +10242,7 @@ find words, construct a url and open it.
 
 Parameters
 ----------
-entry_text : const char *
+entry_text : str
 ";
 
 %feature("docstring") handle_read_draw_probe_dots "
@@ -10101,7 +10250,7 @@ pass a filename that contains molprobity's probe output in XtalView format
 
 Parameters
 ----------
-dots_file : const char *
+dots_file : str
 ";
 
 %feature("docstring") handle_read_draw_probe_dots_unformatted "
@@ -10109,7 +10258,7 @@ pass a filename that contains molprobity's probe output in unformatted format
 
 Parameters
 ----------
-dots_file : const char *
+dots_file : str
 imol : int
 show_clash_gui_flag : int
 ";
@@ -10119,7 +10268,7 @@ shall we run molprobity for on edit chi angles intermediate atoms?
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") do_probe_dots_on_rotamers_and_chis_state "
@@ -10131,7 +10280,7 @@ shall we run molprobity after a refinement has happened?
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") do_probe_dots_post_refine_state "
@@ -10142,7 +10291,7 @@ show the state of shall we run molprobity after a refinement has happened?
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") unmangle_hydrogen_name "
@@ -10150,7 +10299,7 @@ make an attempt to convert pdb hydrogen name to the name used in Coot (and the r
 
 Parameters
 ----------
-pdb_hydrogen_name : const char *
+pdb_hydrogen_name : str
 ";
 
 %feature("docstring") set_interactive_probe_dots_molprobity_radius "
@@ -10172,7 +10321,7 @@ return the parsed user mod fields from the PDB file file_name (output by reduce 
 
 Parameters
 ----------
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") user_mods_py "
@@ -10180,7 +10329,7 @@ return the parsed user mod fields from the PDB file file_name (output by reduce 
 
 Parameters
 ----------
-file_name : const char *
+file_name : str
 ";
 
 %feature("docstring") sharpen "
@@ -10198,7 +10347,7 @@ Parameters
 ----------
 imol : int
 b_factor : float
-try_gompertz : short int
+try_gompertz : int
 gompertz_factor : float
 ";
 
@@ -10282,8 +10431,8 @@ state : int
 
 Parameters
 ----------
-ipick : short int
-is_unpick : short int
+ipick : int
+is_unpick : int
 ";
 
 %feature("docstring") clear_all_fixed_atoms "
@@ -10307,9 +10456,9 @@ show the partial charges for the residue of the given specs (charges are read fr
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") scale_cell "
@@ -10354,7 +10503,7 @@ ignore pseudo-zeros when calculationg maps stats (default 1 = true)
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") ccp4i_projects_scm "
@@ -10372,7 +10521,7 @@ use state=0 to turn it off
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") write_ccp4mg_picture_description "
@@ -10380,7 +10529,7 @@ write a ccp4mg picture description file
 
 Parameters
 ----------
-filename : const char *
+filename : str
 ";
 
 %feature("docstring") delete_dipole "
@@ -10406,9 +10555,9 @@ return the dipole number
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") add_dipole_py "
@@ -10417,9 +10566,9 @@ generate a dipole from all atoms in the given residues.
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") add_dipole_for_residues_py "
@@ -10448,7 +10597,7 @@ set the button label of the external Refinement program
 
 Parameters
 ----------
-button_label : const char *
+button_label : str
 ";
 
 %feature("docstring") place_text "
@@ -10458,7 +10607,7 @@ a text handle size variable is currently ignored.
 
 Parameters
 ----------
-text : const char *
+text : str
 x : float
 y : float
 z : float
@@ -10478,7 +10627,7 @@ text_handle : int
 Parameters
 ----------
 text_handle : int
-new_text : const char *
+new_text : str
 ";
 
 %feature("docstring") text_index_near_position "
@@ -10565,9 +10714,9 @@ jiggle fit to the current refinment map. return < -100 if not possible, else ret
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
+ins_code : str
 n_trials : int
 jiggle_scale_factor : float
 ";
@@ -10599,7 +10748,7 @@ jiggle fit the chain to the current refinment map. return < -100 if not possible
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 n_trials : int
 jiggle_scale_factor : float
 ";
@@ -10612,7 +10761,7 @@ Use a map that is blurred by the give factor for fitting. < -100 if not possible
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 n_trials : int
 jiggle_scale_factor : float
 map_blur_factor : float
@@ -10623,7 +10772,7 @@ return a list of compoundIDs of in SBase of which the given string is a substrin
 
 Parameters
 ----------
-compound_name_fragment : const char *
+compound_name_fragment : str
 ";
 
 %feature("docstring") matching_compound_names_from_sbase_py "
@@ -10631,7 +10780,7 @@ return a list of compoundIDs of in SBase of which the given string is a substrin
 
 Parameters
 ----------
-compound_name_fragment : const char *
+compound_name_fragment : str
 ";
 
 %feature("docstring") get_ccp4srs_monomer_and_dictionary "
@@ -10643,7 +10792,7 @@ Return -1 on failure to get monomer.
 
 Parameters
 ----------
-comp_id : const char *
+comp_id : str
 ";
 
 %feature("docstring") get_sbase_monomer "
@@ -10651,7 +10800,7 @@ same as above but using old name for back-compatibility
 
 Parameters
 ----------
-comp_id : const char *
+comp_id : str
 ";
 
 %feature("docstring") fle_view "
@@ -10659,42 +10808,10 @@ comp_id : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 dist_max : float
-";
-
-%feature("docstring") fle_view_internal "
-
-Parameters
-----------
-imol : int
-chain_id : const char *
-res_no : int
-ins_code : const char *
-imol_ligand_fragment : int
-prodrg_output_flat_mol_file_name : const char *
-prodrg_output_flat_pdb_file_name : const char *
-prodrg_output_3d_pdb_file_name : const char *
-prodrg_output_dict_cif_file_name : const char *
-";
-
-%feature("docstring") fle_view_internal_to_png "
-
-Parameters
-----------
-imol : int
-chain_id : const char *
-res_no : int
-ins_code : const char *
-imol_ligand_fragment : int
-prodrg_output_flat_mol_file_name : const char *
-prodrg_output_flat_pdb_file_name : const char *
-prodrg_output_3d_pdb_file_name : const char *
-prodrg_output_dict_cif_file_name : const char *
-output_to_png_file_flag : int
-png_file_name : const char *
 ";
 
 %feature("docstring") fle_view_with_rdkit "
@@ -10702,9 +10819,9 @@ png_file_name : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 residues_near_radius : float
 ";
 
@@ -10713,11 +10830,11 @@ residues_near_radius : float
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 residues_near_radius : float
-png_file_name : const char *
+png_file_name : str
 ";
 
 %feature("docstring") fle_view_with_rdkit_to_svg "
@@ -10725,11 +10842,11 @@ png_file_name : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 residues_near_radius : float
-svg_file_name : const char *
+svg_file_name : str
 ";
 
 %feature("docstring") fle_view_with_rdkit_internal "
@@ -10737,12 +10854,12 @@ svg_file_name : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 residues_near_radius : float
-file_format : const char *
-file_name : const char *
+file_format : str
+file_name : str
 ";
 
 %feature("docstring") fle_view_set_water_dist_max "
@@ -10773,9 +10890,9 @@ success status. use RDKit for enterprise version
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 res_no : int
-ins_code : const char *
+ins_code : str
 ";
 
 %feature("docstring") lsq_improve "
@@ -10788,9 +10905,9 @@ Kleywegt and Jones set n_res to 4 and dist_crit to 6.0.
 Parameters
 ----------
 imol_ref : int
-ref_selection : const char *
+ref_selection : str
 imol_moving : int
-moving_selection : const char *
+moving_selection : str
 n_res : int
 dist_crit : float
 ";
@@ -11169,7 +11286,7 @@ atom_index : int
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_backbone_torsion_peptide_button_start_pos "
@@ -11208,7 +11325,7 @@ iy : int
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_rotate_translate_zone_rotates_about_zone_centre "
@@ -11222,7 +11339,7 @@ istate : int
 
 Parameters
 ----------
-rt_type : short int
+rt_type : int
 ";
 
 %feature("docstring") do_cis_trans_conversion_setup "
@@ -11237,9 +11354,9 @@ istate : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-altconf : const char *
+altconf : str
 ";
 
 %feature("docstring") cis_peptides "
@@ -11288,7 +11405,7 @@ A fragment is a consecutive range of residues - where there is a gap in the numb
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
 ";
 
@@ -11296,7 +11413,7 @@ resno : int
 
 Parameters
 ----------
-i : short int
+i : int
 ";
 
 %feature("docstring") set_axis_orientation_matrix "
@@ -11335,9 +11452,9 @@ a new molecule number or -1 on failure
 
 Parameters
 ----------
-mtz_file_name : const char *
-f_col : const char *
-sigf_col : const char *
+mtz_file_name : str
+f_col : str
+sigf_col : str
 ";
 
 %feature("docstring") make_and_draw_patterson_using_intensities "
@@ -11347,9 +11464,9 @@ a new molecule number or -1 on failure
 
 Parameters
 ----------
-mtz_file_name : const char *
-i_col : const char *
-sigi_col : const char *
+mtz_file_name : str
+i_col : str
+sigi_col : str
 ";
 
 %feature("docstring") add_linked_residue "
@@ -11357,11 +11474,11 @@ sigi_col : const char *
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-new_residue_comp_id : const char *
-link_type : const char *
+ins_code : str
+new_residue_comp_id : str
+link_type : str
 n_trials : int
 ";
 
@@ -11370,11 +11487,11 @@ n_trials : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-new_residue_comp_id : const char *
-link_type : const char *
+ins_code : str
+new_residue_comp_id : str
+link_type : str
 mode : int
 ";
 
@@ -11383,11 +11500,11 @@ mode : int
 Parameters
 ----------
 imol : int
-chain_id : const char *
+chain_id : str
 resno : int
-ins_code : const char *
-new_residue_comp_id : const char *
-link_type : const char *
+ins_code : str
+new_residue_comp_id : str
+link_type : str
 mode : int
 ";
 
@@ -11402,39 +11519,43 @@ state : int
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_visible_toolbar_multi_refine_continue_button "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") set_visible_toolbar_multi_refine_cancel_button "
 
 Parameters
 ----------
-state : short int
+state : int
 ";
 
 %feature("docstring") toolbar_multi_refine_button_set_sensitive "
 
 Parameters
 ----------
-button_type : const char *
-state : short int
+button_type : str
+state : int
 ";
 
 %feature("docstring") load_tutorial_model_and_data "
 load tutorial model and data
+
+Loads an example dataset - the sample is an RNase structure (model and maps) and is used for learning and testing.
+
+This is the standard Coot tutorial dataset for practicing model building and validation.
 ";
 
 %feature("docstring") handle_go_to_residue_keyboarding_mode "
 
 Parameters
 ----------
-text : const char *
+text : str
 ";
 

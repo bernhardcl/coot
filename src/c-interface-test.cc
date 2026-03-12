@@ -325,13 +325,6 @@ int test_function(int i, int j) {
       }
    }
 
-
-   if (0) {
-      std::vector<std::pair<std::string, int> > h =
-	 coot::get_prodrg_hybridizations("coot-ccp4/tmp-prodrg-flat.log");
-
-   }
-
    if (0) {
       // atom_selection_container_t asc = get_atom_selection("double.pdb");
       atom_selection_container_t asc = get_atom_selection("test-frag.pdb", false, true, false);
@@ -1267,7 +1260,7 @@ PyObject *test_function_py(PyObject *i_py, PyObject *j_py) {
       add_unhappy_atom_marker(0, atom_spec);
    }
 
-   if (false) {
+   if (true) {
       pandda();
    }
 

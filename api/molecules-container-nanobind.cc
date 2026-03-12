@@ -9,6 +9,8 @@
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/vector.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/array.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/operators.h>
 
@@ -19,6 +21,7 @@
 #include "coords/mmdb-crystal.hh"
 #include "coot-utils/acedrg-types-for-residue.hh"
 #include "coot-utils/g_triangle.hh"
+#include "ideal/simple-restraint.hh"
 #include "mini-mol/mini-mol-utils.hh"
 
 #if NB_VERSION_MAJOR // for flychecking
@@ -699,6 +702,11 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::fourier_shell_correlation,
          nb::arg("imol_map_1"), nb::arg("imol_map_2"),
          get_docstring_from_xml("fourier_shell_correlation").c_str())
+    .def("gaussian_surface_to_map_molecule",
+         &molecules_container_t::gaussian_surface_to_map_molecule,
+         nb::arg("imol"), nb::arg("cid"), nb::arg("sigma"),
+         nb::arg("box_radius"), nb::arg("grid_scale"), nb::arg("b_factor"),
+         get_docstring_from_xml("gaussian_surface_to_map_molecule").c_str())
     .def("generate_self_restraints",
          &molecules_container_t::generate_self_restraints,
          nb::arg("imol"), nb::arg("local_dist_max"),
@@ -740,11 +748,11 @@ NB_MODULE(coot_headless_api, m) {
          get_docstring_from_xml("get_bonds_mesh").c_str())
     .def("get_bonds_mesh_for_selection_instanced",
          &molecules_container_t::get_bonds_mesh_for_selection_instanced,
-         nb::arg("imol"), nb::arg("atom_selection_cid"), nb::arg("mode"), nb::arg("against_a_dark_background"), nb::arg("bond_width"), nb::arg("atom_radius_to_bond_width_ratio"), nb::arg("show_atoms_as_aniso_flag"), nb::arg("show_aniso_atoms_as_ortep_flag"), nb::arg("draw_hydrogen_atoms_flag"), nb::arg("smoothness_factor"),
+         nb::arg("imol"), nb::arg("atom_selection_cid"), nb::arg("mode"), nb::arg("against_a_dark_background"), nb::arg("bond_width"), nb::arg("atom_radius_to_bond_width_ratio"), nb::arg("show_atoms_as_aniso_flag"), nb::arg("show_aniso_atoms_as_ortep_flag"), nb::arg("show_aniso_atoms_as_empty_flag"), nb::arg("draw_hydrogen_atoms_flag"), nb::arg("smoothness_factor"),
          get_docstring_from_xml("get_bonds_mesh_for_selection_instanced").c_str())
     .def("get_bonds_mesh_instanced",
          &molecules_container_t::get_bonds_mesh_instanced,
-         nb::arg("imol"), nb::arg("mode"), nb::arg("against_a_dark_background"), nb::arg("bond_width"), nb::arg("atom_radius_to_bond_width_ratio"), nb::arg("show_atoms_as_aniso_flag"), nb::arg("show_aniso_atoms_as_ortep_flag"), nb::arg("draw_hydrogen_atoms_flag"), nb::arg("smoothness_factor"),
+         nb::arg("imol"), nb::arg("mode"), nb::arg("against_a_dark_background"), nb::arg("bond_width"), nb::arg("atom_radius_to_bond_width_ratio"), nb::arg("show_atoms_as_aniso_flag"), nb::arg("show_aniso_atoms_as_ortep_flag"), nb::arg("show_aniso_atoms_as_empty_flag"), nb::arg("draw_hydrogen_atoms_flag"), nb::arg("smoothness_factor"),
          get_docstring_from_xml("get_bonds_mesh_instanced").c_str())
     .def("get_cell",
          &molecules_container_t::get_cell,
@@ -780,8 +788,14 @@ NB_MODULE(coot_headless_api, m) {
          get_docstring_from_xml("get_distances_between_atoms_of_residues").c_str())
     .def("get_gaussian_surface",
          &molecules_container_t::get_gaussian_surface,
-         nb::arg("imol"), nb::arg("sigma"), nb::arg("contour_level"), nb::arg("box_radius"), nb::arg("grid_scale"), nb::arg("b_factor"),
+         nb::arg("imol"), nb::arg("sigma"), nb::arg("contour_level"), nb::arg("box_radius"),
+         nb::arg("grid_scale"), nb::arg("b_factor"),
          get_docstring_from_xml("get_gaussian_surface").c_str())
+    .def("get_gaussian_surface_for_atom_selection",
+         &molecules_container_t::get_gaussian_surface_for_atom_selection,
+         nb::arg("imol"), nb::arg("sigma"), nb::arg("cid"), nb::arg("contour_level"),
+         nb::arg("box_radius"), nb::arg("grid_scale"), nb::arg("b_factor"),
+         get_docstring_from_xml("get_gaussian_surface_for_atom_selection").c_str())
     .def("get_goodsell_style_mesh_instanced",
          &molecules_container_t::get_goodsell_style_mesh_instanced,
          nb::arg("imol"), nb::arg("colour_wheel_rotation_step"), nb::arg("saturation"), nb::arg("goodselliness"),
@@ -1186,6 +1200,10 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::print_secondary_structure_info,
          nb::arg("imol"),
          get_docstring_from_xml("print_secondary_structure_info").c_str())
+    .def("pyrogen_from_SMILES",
+            &molecules_container_t::pyrogen_from_SMILES,
+            nb::arg("SMILES_string"), nb::arg("compound_id"),
+            get_docstring_from_xml("pyrogen_from_SMILES").c_str())
     .def("rail_points_total",
          &molecules_container_t::rail_points_total,
          get_docstring_from_xml("rail_points_total").c_str())
@@ -1222,6 +1240,11 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::read_small_molecule_cif,
          nb::arg("file_name"),
          get_docstring_from_xml("read_small_molecule_cif").c_str())
+    .def("read_amber_trajectory",
+         &molecules_container_t::read_amber_trajectory,
+         nb::arg("imol_coords"), nb::arg("trajectory_file_name"),
+         nb::arg("start_frame"), nb::arg("end_frame"), nb::arg("stride"),
+         get_docstring_from_xml("read_amber_trajectory").c_str())
     .def("redo",
          &molecules_container_t::redo,
          nb::arg("imol"),
@@ -1383,6 +1406,10 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::set_refinement_geman_mcclure_alpha,
          nb::arg("a"),
          get_docstring_from_xml("set_refinement_geman_mcclure_alpha").c_str())
+    .def("set_residue_properties",
+         &molecules_container_t::set_residue_properties,
+         nb::arg("imol"), nb::arg("json_string_properties"),
+         get_docstring_from_xml("set_residue_properties").c_str())
     .def("set_residue_to_rotamer_number",
          &molecules_container_t::set_residue_to_rotamer_number,
          nb::arg("imol"), nb::arg("residue_cid"),
@@ -1552,19 +1579,29 @@ NB_MODULE(coot_headless_api, m) {
        .def_ro("restraint_type", &coot::simple_restraint::restraint_type)
        .def_ro("target_value",   &coot::simple_restraint::target_value)
     ;
-    nb::class_<coot::geometry_distortion_info_t>(m, "geometry_distortion_info_t")
-       .def_ro("distortion_score",  &coot::geometry_distortion_info_t::distortion_score)
-       .def_ro("atom_indices",      &coot::geometry_distortion_info_t::atom_indices)
-       .def_ro("atom_specs",        &coot::geometry_distortion_info_t::atom_specs)
-       .def_ro("residue_spec",      &coot::geometry_distortion_info_t::residue_spec)
-       .def_ro("restraint",         &coot::geometry_distortion_info_t::restraint)
+    nb::class_<coot::refinement_results_mini_stats_t>(m, "refinement_results_mini_stats_t")
+       .def_ro("is_set",         &coot::refinement_results_mini_stats_t::is_set)
+       .def_ro("restraint_type", &coot::refinement_results_mini_stats_t::type)
+       .def_ro("distortion",     &coot::refinement_results_mini_stats_t::distortion)
+       .def_ro("target_value",   &coot::refinement_results_mini_stats_t::target_value)
+       .def_ro("observed_value", &coot::refinement_results_mini_stats_t::observed_value)
+       .def_ro("nZ",             &coot::refinement_results_mini_stats_t::nZ)
+    ;
+    nb::class_<coot::geometry_distortion_info_pod_t>(m, "geometry_distortion_info_pod_t")
+       .def_ro("is_set",            &coot::geometry_distortion_info_pod_t::is_set)
+       .def_ro("atom_specs",        &coot::geometry_distortion_info_pod_t::atom_specs)
+       .def_ro("residue_spec",      &coot::geometry_distortion_info_pod_t::residue_spec)
+       .def_ro("restraint",         &coot::geometry_distortion_info_pod_t::restraint)
+       .def_ro("mini_stats",        &coot::geometry_distortion_info_pod_t::mini_stats)
+       .def("get_distortion",       &coot::geometry_distortion_info_pod_t::get_distortion)
        ;
-    nb::class_<coot::geometry_distortion_info_container_t>(m, "geometry_distortion_info_container_t")
-       .def_ro("chain_id",            &coot::geometry_distortion_info_container_t::chain_id)
-       .def("distortion_sum",         &coot::geometry_distortion_info_container_t::distortion_sum)
-       .def("size",                   &coot::geometry_distortion_info_container_t::size)
-       .def("get_geometry_distortion_info", &coot::geometry_distortion_info_container_t::get_geometry_distortion_info)
-       .def_ro("geometry_distortion", &coot::geometry_distortion_info_container_t::geometry_distortion)
+    nb::class_<coot::geometry_distortion_info_pod_container_t>(m, "geometry_distortion_info_pod_container_t")
+       .def_ro("chain_id",            &coot::geometry_distortion_info_pod_container_t::chain_id)
+       .def("print",                  &coot::geometry_distortion_info_pod_container_t::print)
+       .def("size",                   &coot::geometry_distortion_info_pod_container_t::size)
+       .def("get_geometry_distortion_info", &coot::geometry_distortion_info_pod_container_t::get_geometry_distortion_info)
+       .def_ro("min_resno",           &coot::geometry_distortion_info_pod_container_t::min_resno)
+       .def_ro("max_resno",           &coot::geometry_distortion_info_pod_container_t::max_resno)
     ;
     nb::class_<molecules_container_t::fit_ligand_info_t>(m, "fit_ligand_info_t")
     .def_ro("imol", &molecules_container_t::fit_ligand_info_t::imol)

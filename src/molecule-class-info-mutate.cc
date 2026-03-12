@@ -106,23 +106,44 @@ molecule_class_info_t::mutate(int resno, const std::string &insertion_code,
 // this is the interface from the GUI.
 int
 molecule_class_info_t::mutate(int atom_index, const std::string &residue_type,
-			      short int do_stub_flag) {
+			      short int make_stub_flag) {
 
-   mmdb::Residue *res = atom_sel.atom_selection[atom_index]->residue;
-   int r = mutate(res, residue_type);
+   int r = -1;
 
-   if (atom_sel.mol) {
+   if (false) {
+      // 20260119-PE this function is crashing. What's happend to the molecule?
+      //
+      // the problem was mixing old thinking about transfer of atom and residue info
+      // into the new thinking.
+      std::cout << "::::::::::::::: atom_index " << atom_index << std::endl;
+      for (int iat=0; iat<atom_sel.n_selected_atoms; iat++) {
+         mmdb::Atom *at = atom_sel.atom_selection[iat];
+         std::cout << "atom " << at->residue->GetSeqNum() << " " << at->GetAtomName() << std::endl;
+      }
+   }
 
-      if (do_stub_flag) {
-	 int resno = res->GetSeqNum();
-	 std::string chain_id(res->GetChainID());
-	 std::string inscode(res->GetInsCode());
-     // BL says:: we made a new CB with a new B-factor
-     // we should either not delete it (pass do stub_flag) or
-     // save the b_factor and apply again. Not sure whats preferred,
-     // so leave it for now (shouldnt do stubbing anyway...?!)
-     // FIXME
-	 delete_residue_sidechain(chain_id, resno, inscode);
+   if (atom_index < 0) return r;
+
+   if (atom_index < atom_sel.n_selected_atoms) {
+      mmdb:: Atom *at = atom_sel.atom_selection[atom_index];
+      if (at) {
+         mmdb::Residue *res = at->residue;
+         if (res) {
+            r = mutate(res, residue_type);
+            if (atom_sel.mol) {
+               if (make_stub_flag) {
+                  int resno = res->GetSeqNum();
+                  std::string chain_id(res->GetChainID());
+                  std::string inscode(res->GetInsCode());
+                  // BL says:: we made a new CB with a new B-factor
+                  // we should either not delete it (pass do stub_flag) or
+                  // save the b_factor and apply again. Not sure whats preferred,
+                  // so leave it for now (shouldnt do stubbing anyway...?!)
+                  // FIXME
+                  delete_residue_sidechain(chain_id, resno, inscode);
+               }
+            }
+         }
       }
    }
    return r;
@@ -138,9 +159,10 @@ molecule_class_info_t::mutate(mmdb::Residue *res, const std::string &residue_typ
    int istate = 0;
 
    if (verbose_mode)
-      std::cout << "INFO:: mutate " << res->GetSeqNum() << " "
-                << res->GetChainID() << " to a " << residue_type
-                << std::endl;
+      // std::cout << "INFO:: mutate " << res->GetSeqNum() << " "
+      //           << res->GetChainID() << " to a " << residue_type
+      //           << std::endl;
+      logger.log(log_t::INFO, "mutate", res->GetSeqNum(), res->GetChainID(), "to a", residue_type);
 
    // get the standard orientation residue for this residue type
    mmdb::PPResidue SelResidue;
@@ -472,15 +494,19 @@ molecule_class_info_t::mutate_chain(const std::string &chain_id,
 		  SelResidues[ires]->seqNum--;
 	       }
 	    } else {
-	       std::cout << "INFO:: found a null residue at " << ires
-			 << std::endl;
+	       // std::cout << "INFO:: found a null residue at " << ires
+	       //          << std::endl;
+	       logger.log(log_t::INFO, "found a null residue at", ires);
 	    }
 	 }
       }
 
-      std::cout << "INFO:: Applied " << n_insertions << " insertions " << std::endl;
-      std::cout << "INFO:: Applied " << n_mutations << " mutations " << std::endl;
-      std::cout << "INFO:: Applied " << n_deletions << " deletions " << std::endl;
+      // std::cout << "INFO:: Applied " << n_insertions << " insertions " << std::endl;
+      logger.log(log_t::INFO, "Applied", n_insertions, "insertions");
+      // std::cout << "INFO:: Applied " << n_mutations << " mutations " << std::endl;
+      logger.log(log_t::INFO, "Applied", n_mutations, "mutations");
+      // std::cout << "INFO:: Applied " << n_deletions << " deletions " << std::endl;
+      logger.log(log_t::INFO, "Applied", n_deletions, "deletions");
 
       atom_sel.mol->PDBCleanup(mmdb::PDBCLEAN_SERIAL|mmdb::PDBCLEAN_INDEX);
       atom_sel.mol->FinishStructEdit();
@@ -570,8 +596,10 @@ molecule_class_info_t::align_on_chain(const std::string &chain_id,
    bool allow_ligands = false;
    std::string model = coot::util::model_sequence(vseq, allow_ligands);
    if (console_output || debug) {
-      std::cout << "INFO:: input model  sequence: " << model  << std::endl;
-      std::cout << "INFO:: input target sequence: " << target  << std::endl;
+      // std::cout << "INFO:: input model  sequence: " << model  << std::endl;
+      logger.log(log_t::INFO, "input model  sequence:", model);
+      // std::cout << "INFO:: input target sequence: " << target  << std::endl;
+      logger.log(log_t::INFO, "input target sequence:", target);
    }
 
    mmdb::math::Alignment align;
@@ -639,7 +667,8 @@ molecule_class_info_t::align_on_chain(const std::string &chain_id,
 	 std::cout << name_ << std::endl;
 	 std::cout << align.GetAlignedS() << std::endl;
 	 std::cout << "> target seq: \n" << align.GetAlignedT() << std::endl;
-	 std::cout << "INFO:: alignment score " << align.GetScore() << std::endl;
+	 // std::cout << "INFO:: alignment score " << align.GetScore() << std::endl;
+	 logger.log(log_t::INFO, "alignment score", align.GetScore());
       } else {
 
 	 std::string aligned = align.GetAlignedS();
@@ -1317,7 +1346,8 @@ molecule_class_info_t::exchange_chain_ids_for_seg_ids() {
 
 	 // OK, so we have vector of vectors of atoms.  We need to make
 	 // new atoms and residues to put them in.
-	 std::cout << "INFO:: Creating " << atom_chain_vec.size() << " new chains\n";
+	 // std::cout << "INFO:: Creating " << atom_chain_vec.size() << " new chains\n";
+	 logger.log(log_t::INFO, "Creating", atom_chain_vec.size(), "new chains");
 	 for (unsigned int inch=0; inch<atom_chain_vec.size(); inch++) {
 	    mmdb::Chain *chain_p = new mmdb::Chain;
 	    const char *chid = atom_chain_vec[inch].second.c_str();

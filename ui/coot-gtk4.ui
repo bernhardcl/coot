@@ -61,6 +61,10 @@
           <attribute name="action">app.fetch_pdbe_ligand_description_action</attribute>
         </item>
         <item>
+          <attribute name="label">Fetch Ligand Restraints</attribute>
+          <attribute name="action">app.fetch_ligand_restraints_from_github_action</attribute>
+        </item>
+        <item>
           <attribute name="label">Fetch COD Entry...</attribute>
           <attribute name="action">app.show_accession_code_fetch_frame_cod</attribute>
         </item>
@@ -105,6 +109,12 @@
         <item>
           <attribute name="label">Curlew...</attribute>
           <attribute name="action">app.curlew_action</attribute>
+        </item>
+      </section>
+      <section>
+        <item>
+          <attribute name="label">Start RCP Server...</attribute>
+          <attribute name="action">app.start_rpc_server_action</attribute>
         </item>
       </section>
       <section>
@@ -401,6 +411,10 @@
           <attribute name="action">app.add_OXT_to_residue_action</attribute>
         </item>
         <item>
+          <attribute name="label">Add PTM to residue...</attribute>
+          <attribute name="action">app.add_PTM_to_residue_action</attribute>
+        </item>
+        <item>
           <attribute name="label">Arrange Waters Around Protein</attribute>
           <attribute name="action">app.arrange_waters_around_protein_action</attribute>
         </item>
@@ -569,7 +583,7 @@
               <attribute name="action">app.background_white_action</attribute>
             </item>
           </submenu>
-         
+
           <item>
             <attribute name="label">Display Only Active</attribute>
             <attribute name="action">app.display_only_active_action</attribute>
@@ -600,9 +614,26 @@
             </submenu>
           </section>
           <item>
-            <attribute name="label">̶S̶c̶r̶e̶e̶n̶s̶h̶o̶t̶</attribute>
+            <attribute name="label">Screenshot</attribute>
             <attribute name="action">app.screenshot_action</attribute>
           </item>
+          <section>
+            <submenu>
+              <attribute name="label">Side-by-side Stereo...</attribute>
+              <item>
+                <attribute name="label">Mono</attribute>
+                <attribute name="action">app.side_by_side_stereo_mono_action</attribute>
+              </item>
+              <item>
+                <attribute name="label">Cross-Eyed</attribute>
+                <attribute name="action">app.side_by_side_stereo_cross_eyed_action</attribute>
+              </item>
+              <item>
+                <attribute name="label">Wall-Eyed</attribute>
+                <attribute name="action">app.side_by_side_stereo_wall_eyed_action</attribute>
+              </item>
+            </submenu>
+          </section>
           <item>
             <attribute name="label">Spin View</attribute>
             <attribute name="action">app.spin_view_action</attribute>
@@ -1105,6 +1136,10 @@
         <attribute name="action">app.delete_item_water</attribute>
       </item>
       <item>
+        <attribute name="label" translatable="yes">All Waters</attribute>
+        <attribute name="action">app.delete_item_all_waters</attribute>
+      </item>
+      <item>
         <attribute name="label" translatable="yes">Side-chain</attribute>
         <attribute name="action">app.delete_item_side_chain</attribute>
       </item>
@@ -1272,6 +1307,10 @@
       <item>
         <attribute name="label" translatable="no">Jiggle Fit Residue</attribute>
         <attribute name="action">app.jiggle_fit_active_residue_action</attribute>
+      </item>
+      <item>
+        <attribute name="label">Ligand Builder...</attribute>
+        <attribute name="action">app.ligand_builder_action</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">Make LINK...</attribute>
@@ -1468,7 +1507,7 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
     <property name="license-type">lgpl-3-0</property>
     <property name="logo-icon-name">coot</property>
     <property name="program-name">Coot</property>
-    <property name="version">1.1.20</property>
+    <property name="version">1.1.x-pre</property>
     <property name="website">https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot</property>
     <property name="website-label">The Coot Website</property>
     <signal name="close-request" handler="on_about_dialog_close_request"/>
@@ -1622,7 +1661,7 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
             <property name="spacing">4</property>
             <child>
               <object class="GtkButton" id="add_OXT_cancel_button">
-                <property name="label" translatable="yes">  Cancel  </property>
+                <property name="label" translatable="yes"> Cancel </property>
                 <property name="can-focus">1</property>
                 <property name="use-underline">1</property>
                 <signal name="clicked" handler="on_add_OXT_cancel_button_clicked" swapped="no"/>
@@ -1634,7 +1673,7 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
             </child>
             <child>
               <object class="GtkButton" id="add_OXT_ok_button">
-                <property name="label" translatable="yes">  Add it  </property>
+                <property name="label" translatable="yes"> Add it </property>
                 <property name="can-focus">1</property>
                 <property name="use-underline">1</property>
                 <signal name="clicked" handler="on_add_OXT_ok_button_clicked" swapped="no"/>
@@ -1700,16 +1739,16 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
           </object>
         </child>
         <child>
-            <object class="GtkBox" id="hbox60">
-              <child>
-                <object class="GtkButton" id="add_alt_conf_cancel_button">
-                  <property name="label" translatable="yes">  Cancel  </property>
-                  <property name="can-focus">0</property>
-                  <property name="use-underline">1</property>
-                  <signal name="clicked" handler="on_add_alt_conf_cancel_button_clicked" swapped="no"/>
-                </object>
-              </child>
-            </object>
+          <object class="GtkBox" id="hbox60">
+            <child>
+              <object class="GtkButton" id="add_alt_conf_cancel_button">
+                <property name="label" translatable="yes">  Cancel  </property>
+                <property name="can-focus">0</property>
+                <property name="use-underline">1</property>
+                <signal name="clicked" handler="on_add_alt_conf_cancel_button_clicked" swapped="no"/>
+              </object>
+            </child>
+          </object>
         </child>
       </object>
     </child>
@@ -2086,7 +2125,7 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
   </object>
 
   <object class="GtkWindow" id="aniso_window">
-    <property name="title" translatable="yes">Coot:: Anisotropic Atoms</property>
+    <property name="title" translatable="yes">Coot: Anisotropic Atoms</property>
     <property name="deletable">0</property>
     <child>
       <object class="GtkBox" id="vbox16">
@@ -2256,7 +2295,11 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
     </child>
   </object>
 
-  <!-- ribbons, I mean. It should be part of a redesigned Display Manager - but this quick fix will do for now -->
+  <!-- ribbons, I mean. It should be part of a redesigned Display Manager - but this quick
+       fix will do for now.
+       20260302-PE Now the ribbons *are* part of the Display Manager, so this is not needed,
+       I think
+  -->
   <object class="GtkDialog" id="molecular_representations_dialog">
     <property name="title" translatable="yes">Coot: Representations</property>
     <property name="width-request">180</property>
@@ -2468,9 +2511,8 @@ Copyright 2023, 2024, 2025 Global Phasing Ltd.</property>
     <action-widgets>
       <action-widget response="0">baton_dialog_ok_button</action-widget>
     </action-widgets>
-    <child type="titlebar">
-    </child>
   </object>
+
   <object class="GtkDialog" id="baton_mode_make_skeleton_dialog">
     <property name="title" translatable="yes">Make Skeleton?</property>
     <property name="deletable">0</property>
@@ -2740,6 +2782,41 @@ Calculate a skeleton now?
                         </child>
                       </object>
                     </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Mesh Style:  Off</property>
+                            <property name="margin-top">2</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-end">4</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="show_anisotropic_atoms_as_empty">
+                            <property name="active">False</property>
+                            <property name="width-request">40</property>
+                            <property name="margin-top">2</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-end">4</property>
+                            <signal name="state-set" handler="show_anisotropic_atoms_as_empty_switch_state_set"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">On</property>
+                            <property name="margin-top">2</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-end">4</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
@@ -2846,8 +2923,6 @@ Calculate a skeleton now?
     <action-widgets>
       <action-widget response="0">centre_atom_label_ok_button</action-widget>
     </action-widgets>
-    <child type="titlebar">
-    </child>
   </object>
 
   <object class="GtkDialog" id="change_chain_id_dialog">
@@ -3036,8 +3111,6 @@ Calculate a skeleton now?
           </object>
         </child>
       </object>
-    </child>
-    <child type="titlebar">
     </child>
   </object>
 
@@ -4941,381 +5014,390 @@ that you wish to delete.               </property>
         <property name="orientation">vertical</property>
         <property name="spacing">4</property>
         <child>
-          <object class="GtkBox" id="vbox44">
-            <property name="orientation">vertical</property>
-            <property name="spacing">4</property>
+          <object class="GtkScrolledWindow" id="find_ligands_scrolledwindow">
+            <property name="width-request">220</property>
+            <property name="height-request">500</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vexpand">1</property>
+            <property name="hexpand">1</property>
             <child>
-              <object class="GtkBox" id="vbox47">
-                <property name="orientation">vertical</property>
-                <!-- <child> -->
-                <!--   <object class="GtkLabel" id="label75"> -->
-                <!--     <property name="label" translatable="yes">Select Ligands to Search for:</property> -->
-                <!--     <property name="justify">center</property> -->
-                <!--   </object> -->
-                <!-- </child> -->
-                <child>
-                  <object class="GtkFrame" id="frame37">
-                    <property name="label" translatable="yes">Select Ligands to Search for:</property>
-                    <property name="margin-start">8</property>
-                    <property name="margin-end">8</property>
-                    <property name="margin-top">4</property>
-                    <property name="margin-bottom">4</property>
-                    <child>
-                      <object class="GtkScrolledWindow" id="find_ligands_ligands_scrolledwindow">
-                        <child>
-                          <object class="GtkViewport" id="viewport16">
-                            <!-- <child> -->
-                            <!--   <object class="GtkBox" id="find_ligand_ligands_vbox"> -->
-                            <!--     <property name="orientation">vertical</property> -->
-                            <!--   </object> -->
-                            <!-- </child> -->
-                            <child>
-                              <object class="GtkGrid" id="find_ligands_select_ligands_grid">
-                              </object>
-                            </child>
+                <object class="GtkBox" id="vbox44">
+                  <property name="orientation">vertical</property>
+                  <property name="spacing">4</property>
+                  <child>
+                    <object class="GtkBox" id="vbox47">
+                      <property name="orientation">vertical</property>
+                      <!-- <child> -->
+                      <!--   <object class="GtkLabel" id="label75"> -->
+                      <!--     <property name="label" translatable="yes">Select Ligands to Search for:</property> -->
+                      <!--     <property name="justify">center</property> -->
+                      <!--   </object> -->
+                      <!-- </child> -->
+                      <child>
+                        <object class="GtkFrame" id="frame37">
+                          <property name="label" translatable="yes">Select Ligands to Search for:</property>
+                          <property name="margin-start">8</property>
+                          <property name="margin-end">8</property>
+                          <property name="margin-top">4</property>
+                          <property name="margin-bottom">4</property>
+                          <child>
+                            <object class="GtkScrolledWindow" id="find_ligands_ligands_scrolledwindow">
+                              <child>
+                                <object class="GtkViewport" id="viewport16">
+                                  <!-- <child> -->
+                                  <!--   <object class="GtkBox" id="find_ligand_ligands_vbox"> -->
+                                  <!--     <property name="orientation">vertical</property> -->
+                                  <!--   </object> -->
+                                  <!-- </child> -->
+                                  <child>
+                                    <object class="GtkGrid" id="find_ligands_select_ligands_grid">
+                                    </object>
+                                  </child>
 
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkBox" id="vbox45">
-                <property name="orientation">vertical</property>
-                <property name="spacing">4</property>
-                <!-- <child> -->
-                <!--   <object class="GtkLabel" id="label73"> -->
-                <!--     <property name="label" translatable="yes">Select Map:</property> -->
-                <!--   </object> -->
-                <!-- </child> -->
-                <child>
-                  <object class="GtkFrame" id="frame35">
-                    <property name="label" translatable="yes">Select Map:</property>
+                                </object>
+                              </child>
+                            </object>
+                          </child>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkBox" id="vbox45">
+                      <property name="orientation">vertical</property>
+                      <property name="spacing">4</property>
+                      <!-- <child> -->
+                      <!--   <object class="GtkLabel" id="label73"> -->
+                      <!--     <property name="label" translatable="yes">Select Map:</property> -->
+                      <!--   </object> -->
+                      <!-- </child> -->
+                      <child>
+                        <object class="GtkFrame" id="frame35">
+                          <property name="label" translatable="yes">Select Map:</property>
 
-                    <child>
-                      <object class="GtkComboBoxText" id="find_ligands_map_comboboxtext">
-                        <property name="margin-start">8</property>
-                        <property name="margin-end">8</property>
-                        <property name="margin-top">4</property>
-                        <property name="margin-bottom">4</property>
-                      </object>
-                    </child>
+                          <child>
+                            <object class="GtkComboBoxText" id="find_ligands_map_comboboxtext">
+                              <property name="margin-start">8</property>
+                              <property name="margin-end">8</property>
+                              <property name="margin-top">4</property>
+                              <property name="margin-bottom">4</property>
+                            </object>
+                          </child>
 
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkBox" id="vbox46">
-                <property name="orientation">vertical</property>
-                <property name="spacing">4</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkBox" id="vbox46">
+                      <property name="orientation">vertical</property>
+                      <property name="spacing">4</property>
 
-                <!-- <child> -->
-                <!--   <object class="GtkLabel" id="label74"> -->
-                <!--     <property name="label" translatable="yes">Select Protein (Masks Map):</property> -->
-                <!--     <property name="justify">center</property> -->
-                <!--   </object> -->
-                <!-- </child> -->
+                      <!-- <child> -->
+                      <!--   <object class="GtkLabel" id="label74"> -->
+                      <!--     <property name="label" translatable="yes">Select Protein (Masks Map):</property> -->
+                      <!--     <property name="justify">center</property> -->
+                      <!--   </object> -->
+                      <!-- </child> -->
 
-                <child>
-                  <object class="GtkFrame">
-                    <property name="label" translatable="yes">Select Protein (Masks Map):</property>
-                    <property name="margin-start">8</property>
-                    <property name="margin-end">8</property>
-                    <property name="margin-top">4</property>
-                    <property name="margin-bottom">4</property>
+                      <child>
+                        <object class="GtkFrame">
+                          <property name="label" translatable="yes">Select Protein (Masks Map):</property>
+                          <property name="margin-start">8</property>
+                          <property name="margin-end">8</property>
+                          <property name="margin-top">4</property>
+                          <property name="margin-bottom">4</property>
 
-                    <child>
-                      <object class="GtkComboBoxText" id="find_ligands_coords_comboboxtext">
-                        <property name="margin-start">8</property>
-                        <property name="margin-end">8</property>
-                        <property name="margin-top">4</property>
-                        <property name="margin-bottom">4</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkFrame" id="frame108">
-                <property name="margin-start">8</property>
-                <property name="margin-end">8</property>
-                <property name="margin-top">4</property>
-                <property name="margin-bottom">4</property>
-                <child type="label">
-                  <object class="GtkLabel" id="label279">
-                    <property name="label" translatable="yes">Mask Waters?</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkBox" id="vbox112">
-                    <property name="orientation">vertical</property>
-                    <property name="spacing">4</property>
-                    <child>
-                      <object class="GtkCheckButton" id="find_ligand_mask_waters_yes_radiobutton">
-                        <property name="label" translatable="yes">Treat waters like protein (mask) atoms</property>
-                        <property name="active">1</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkCheckButton" id="find_ligand_mask_waters_no_radiobutton">
-                        <property name="label" translatable="yes">Ignore waters for mask</property>
-                        <property name="active">0</property>
-                        <property name="group">find_ligand_mask_waters_yes_radiobutton</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkFrame">
-                <property name="label" translatable="yes">Where to Search?</property>
-                <property name="margin-start">8</property>
-                <property name="margin-end">8</property>
-                <property name="margin-top">4</property>
-                <property name="margin-bottom">4</property>
-                <child>
-                  <object class="GtkBox">
-                    <child>
-                      <object class="GtkCheckButton" id="find_ligands_search_all_radiobutton">
-                        <property name="label" translatable="yes">Everywhere</property>
-                        <property name="can-focus">1</property>
-                        <property name="use-underline">1</property>
-                        <property name="active">0</property>
-                      </object>
-                    </child>
+                          <child>
+                            <object class="GtkComboBoxText" id="find_ligands_coords_comboboxtext">
+                              <property name="margin-start">8</property>
+                              <property name="margin-end">8</property>
+                              <property name="margin-top">4</property>
+                              <property name="margin-bottom">4</property>
+                            </object>
+                          </child>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkFrame" id="frame108">
+                      <property name="margin-start">8</property>
+                      <property name="margin-end">8</property>
+                      <property name="margin-top">4</property>
+                      <property name="margin-bottom">4</property>
+                      <child type="label">
+                        <object class="GtkLabel" id="label279">
+                          <property name="label" translatable="yes">Mask Waters?</property>
+                        </object>
+                      </child>
+                      <child>
+                        <object class="GtkBox" id="vbox112">
+                          <property name="orientation">vertical</property>
+                          <property name="spacing">4</property>
+                          <child>
+                            <object class="GtkCheckButton" id="find_ligand_mask_waters_yes_radiobutton">
+                              <property name="label" translatable="yes">Treat waters like protein (mask) atoms</property>
+                              <property name="active">1</property>
+                            </object>
+                          </child>
+                          <child>
+                            <object class="GtkCheckButton" id="find_ligand_mask_waters_no_radiobutton">
+                              <property name="label" translatable="yes">Ignore waters for mask</property>
+                              <property name="active">0</property>
+                              <property name="group">find_ligand_mask_waters_yes_radiobutton</property>
+                            </object>
+                          </child>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkFrame">
+                      <property name="label" translatable="yes">Where to Search?</property>
+                      <property name="margin-start">8</property>
+                      <property name="margin-end">8</property>
+                      <property name="margin-top">4</property>
+                      <property name="margin-bottom">4</property>
+                      <child>
+                        <object class="GtkBox">
+                          <child>
+                            <object class="GtkCheckButton" id="find_ligands_search_all_radiobutton">
+                              <property name="label" translatable="yes">Everywhere</property>
+                              <property name="can-focus">1</property>
+                              <property name="use-underline">1</property>
+                              <property name="active">0</property>
+                            </object>
+                          </child>
 
-                    <child>
-                      <object class="GtkCheckButton" id="find_ligands_search_here_radiobutton">
-                        <property name="label" translatable="yes">Right Here</property>
-                        <property name="can-focus">1</property>
-                        <property name="use-underline">1</property>
-                        <property name="active">1</property>
-                        <property name="group">find_ligands_search_all_radiobutton</property>
-                      </object>
-                    </child>
+                          <child>
+                            <object class="GtkCheckButton" id="find_ligands_search_here_radiobutton">
+                              <property name="label" translatable="yes">Right Here</property>
+                              <property name="can-focus">1</property>
+                              <property name="use-underline">1</property>
+                              <property name="active">1</property>
+                              <property name="group">find_ligands_search_all_radiobutton</property>
+                            </object>
+                          </child>
 
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkFrame" id="frame85">
-                <property name="margin-start">8</property>
-                <property name="margin-end">8</property>
-                <property name="margin-top">4</property>
-                <property name="margin-bottom">4</property>
-                <child>
-                  <object class="GtkBox" id="hbox79">
-                    <child>
-                      <object class="GtkEntry" id="find_ligand_sigma_level_entry">
-                        <property name="can-focus">1</property>
-                        <property name="tooltip-text" translatable="yes">Used for blob analysis (set this to a high number (3 say) if you only want the most dense blobs to be considered as ligands</property>
-                        <property name="primary-icon-activatable">0</property>
-                        <property name="secondary-icon-activatable">0</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkLabel" id="label145">
-                        <property name="justify">center</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child type="label">
-                  <object class="GtkLabel" id="label280">
-                    <property name="tooltip-text" translatable="yes">Used for blob analysis</property>
-                    <property name="label" translatable="yes">r.m.s.d. Level</property>
-                  </object>
-                </child>
-              </object>
-            </child>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkFrame" id="frame85">
+                      <property name="margin-start">8</property>
+                      <property name="margin-end">8</property>
+                      <property name="margin-top">4</property>
+                      <property name="margin-bottom">4</property>
+                      <child>
+                        <object class="GtkBox" id="hbox79">
+                          <child>
+                            <object class="GtkEntry" id="find_ligand_sigma_level_entry">
+                              <property name="can-focus">1</property>
+                              <property name="tooltip-text" translatable="yes">Used for blob analysis (set this to a high number (3 say) if you only want the most dense blobs to be considered as ligands</property>
+                              <property name="primary-icon-activatable">0</property>
+                              <property name="secondary-icon-activatable">0</property>
+                            </object>
+                          </child>
+                          <child>
+                            <object class="GtkLabel" id="label145">
+                              <property name="justify">center</property>
+                            </object>
+                          </child>
+                        </object>
+                      </child>
+                      <child type="label">
+                        <object class="GtkLabel" id="label280">
+                          <property name="tooltip-text" translatable="yes">Used for blob analysis</property>
+                          <property name="label" translatable="yes">r.m.s.d. Level</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
 
-            <child>
-              <object class="GtkFrame" id="ligand_conformers_frame">
-                <property name="margin-start">8</property>
-                <property name="margin-end">8</property>
-                <property name="margin-top">4</property>
-                <property name="margin-bottom">4</property>
-                <property name="label">Conformer Options</property>
-                <child>
-                  <object class="GtkBox">
-                    <child>
-                      <object class="GtkLabel" id="label261">
-                        <property name="label" translatable="yes">  Number of Conformers to Search:  </property>
-                        <property name="justify">center</property>
-                      </object>
-                    </child>
+                  <child>
+                    <object class="GtkFrame" id="ligand_conformers_frame">
+                      <property name="margin-start">8</property>
+                      <property name="margin-end">8</property>
+                      <property name="margin-top">4</property>
+                      <property name="margin-bottom">4</property>
+                      <property name="label">Conformer Options</property>
+                      <child>
+                        <object class="GtkBox">
+                          <child>
+                            <object class="GtkLabel" id="label261">
+                              <property name="label" translatable="yes">  Number of Conformers to Search:  </property>
+                              <property name="justify">center</property>
+                            </object>
+                          </child>
 
-                    <child>
-                      <object class="GtkEntry" id="ligand_n_samples_entry">
-                        <property name="width-request">5</property>
-                        <property name="can-focus">1</property>
-                      </object>
-                    </child>
-                    
-                  </object>
-                </child>
-              </object>
-            </child>
+                          <child>
+                            <object class="GtkEntry" id="ligand_n_samples_entry">
+                              <property name="width-request">5</property>
+                              <property name="can-focus">1</property>
+                            </object>
+                          </child>
+                          
+                        </object>
+                      </child>
+                    </object>
+                  </child>
 
 
-            <child>
-              <object class="GtkFrame" id="ligand_multi_solution_frame">
-                <property name="margin-start">8</property>
-                <property name="margin-end">8</property>
-                <property name="margin-top">4</property>
-                <property name="margin-bottom">4</property>
-                <property name="label">Multi-Solution Options</property>
-                <child>
-                  <object class="GtkBox">
-                    <property name="orientation">vertical</property>
+                  <child>
+                    <object class="GtkFrame" id="ligand_multi_solution_frame">
+                      <property name="margin-start">8</property>
+                      <property name="margin-end">8</property>
+                      <property name="margin-top">4</property>
+                      <property name="margin-bottom">4</property>
+                      <property name="label">Multi-Solution Options</property>
+                      <child>
+                        <object class="GtkBox">
+                          <property name="orientation">vertical</property>
 
-                    <child>
-                      <object class="GtkCheckButton" id="find_ligand_multi_solution_checkbutton">
-                        <property name="label" translatable="yes">Multi-Solutions</property>
-                        <property name="active">0</property>
-                        <property name="margin-start">8</property>
-                        <property name="margin-end">8</property>
-                        <property name="margin-top">4</property>
-                        <property name="margin-bottom">4</property>
-                      </object>
-                    </child>
+                          <child>
+                            <object class="GtkCheckButton" id="find_ligand_multi_solution_checkbutton">
+                              <property name="label" translatable="yes">Multi-Solutions</property>
+                              <property name="active">0</property>
+                              <property name="margin-start">8</property>
+                              <property name="margin-end">8</property>
+                              <property name="margin-top">4</property>
+                              <property name="margin-bottom">4</property>
+                            </object>
+                          </child>
 
-                    <child>
-                      <object class="GtkGrid">
+                          <child>
+                            <object class="GtkGrid">
 
-                        <child>
-                          <object class="GtkLabel">
-                            <property name="label" translatable="yes"> Fraction for Scoring </property>
-                            <property name="justify">right</property>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">0</property>
-                            </layout>
-                          </object>
-                        </child>
+                              <child>
+                                <object class="GtkLabel">
+                                  <property name="label" translatable="yes"> Fraction for Scoring </property>
+                                  <property name="justify">right</property>
+                                  <layout>
+                                    <property name="column">0</property>
+                                    <property name="row">0</property>
+                                  </layout>
+                                </object>
+                              </child>
 
-                        <child>
-                          <object class="GtkEntry" id="find_ligand_multi_solution_entry_1">
-                            <property name="width-request">5</property>
-                            <property name="can-focus">1</property>
-                            <layout>
-                              <property name="row">0</property>
-                              <property name="column">1</property>
-                            </layout>
-                          </object>
-                        </child>
-                        
-                        <child>
-                          <object class="GtkLabel">
-                            <property name="label" translatable="yes"> Fraction for Correlation </property>
-                            <property name="justify">right</property>
-                            <layout>
-                              <property name="row">1</property>
-                              <property name="column">0</property>
-                            </layout>
-                          </object>
-                        </child>
+                              <child>
+                                <object class="GtkEntry" id="find_ligand_multi_solution_entry_1">
+                                  <property name="width-request">5</property>
+                                  <property name="can-focus">1</property>
+                                  <layout>
+                                    <property name="row">0</property>
+                                    <property name="column">1</property>
+                                  </layout>
+                                </object>
+                              </child>
+                              
+                              <child>
+                                <object class="GtkLabel">
+                                  <property name="label" translatable="yes"> Fraction for Correlation </property>
+                                  <property name="justify">right</property>
+                                  <layout>
+                                    <property name="row">1</property>
+                                    <property name="column">0</property>
+                                  </layout>
+                                </object>
+                              </child>
 
-                        <child>
-                          <object class="GtkEntry" id="find_ligand_multi_solution_entry_2">
-                            <property name="width-request">5</property>
-                            <property name="can-focus">1</property>
-                            <layout>
-                              <property name="row">1</property>
-                              <property name="column">1</property>
-                            </layout>
-                          </object>
-                        </child>
+                              <child>
+                                <object class="GtkEntry" id="find_ligand_multi_solution_entry_2">
+                                  <property name="width-request">5</property>
+                                  <property name="can-focus">1</property>
+                                  <layout>
+                                    <property name="row">1</property>
+                                    <property name="column">1</property>
+                                  </layout>
+                                </object>
+                              </child>
 
-                      </object>
-                    </child>
+                            </object>
+                          </child>
 
-                   </object>
-                </child>
-              </object>
-            </child>
+                         </object>
+                      </child>
+                    </object>
+                  </child>
 
-            <child>
-              <object class="GtkFrame" id="ligand_fitting_post_fit_options">
-                <property name="label">Post-Fit Options</property>
-                <property name="margin-start">8</property>
-                <property name="margin-end">8</property>
-                <property name="margin-top">4</property>
-                <property name="margin-bottom">4</property>
+                  <child>
+                    <object class="GtkFrame" id="ligand_fitting_post_fit_options">
+                      <property name="label">Post-Fit Options</property>
+                      <property name="margin-start">8</property>
+                      <property name="margin-end">8</property>
+                      <property name="margin-top">4</property>
+                      <property name="margin-bottom">4</property>
 
-                <child>
-                  <object class="GtkCheckButton" id="find_ligand_real_space_refine_solutions_checkbutton">
-                    <property name="label" translatable="yes">Real Space Refine Solutions</property>
-                    <property name="can-focus">1</property>
-                    <property name="use-underline">1</property>
-                    <property name="active">1</property>
-                  </object>
-                </child>
+                      <child>
+                        <object class="GtkCheckButton" id="find_ligand_real_space_refine_solutions_checkbutton">
+                          <property name="label" translatable="yes">Real Space Refine Solutions</property>
+                          <property name="can-focus">1</property>
+                          <property name="use-underline">1</property>
+                          <property name="active">1</property>
+                        </object>
+                      </child>
 
-              </object>
-            </child>
-            
-            <child>
-              <object class="GtkFrame" id="ligand_expert_frame">
-                <property name="margin-start">8</property>
-                <property name="margin-end">8</property>
-                <property name="margin-top">4</property>
-                <property name="margin-bottom">4</property>
-                <child>
-                  <object class="GtkBox" id="vbox166">
-                    <property name="orientation">vertical</property>
-                    <child>
-                      <object class="GtkGrid">
-                        <child>
-                          <object class="GtkLabel" id="label262">
-                            <property name="label" translatable="yes">  Search Number of Top Sites:        </property>
-                            <property name="justify">center</property>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">1</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkEntry" id="ligand_n_top_ligands_entry">
-                            <property name="width-request">5</property>
-                            <property name="can-focus">1</property>
-                            <property name="primary-icon-activatable">0</property>
-                            <property name="secondary-icon-activatable">0</property>
-                            <layout>
-                              <property name="column">1</property>
-                              <property name="row">1</property>
-                            </layout>
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkBox" id="hbox131">
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkBox" id="hbox132">
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child type="label">
-                  <object class="GtkLabel" id="label281">
-                    <property name="label" translatable="yes">Expert Options</property>
-                  </object>
-                </child>
-              </object>
-            </child>
-          </object>
-        </child>
+                    </object>
+                  </child>
+                  
+                  <child>
+                    <object class="GtkFrame" id="ligand_expert_frame">
+                      <property name="margin-start">8</property>
+                      <property name="margin-end">8</property>
+                      <property name="margin-top">4</property>
+                      <property name="margin-bottom">4</property>
+                      <child>
+                        <object class="GtkBox" id="vbox166">
+                          <property name="orientation">vertical</property>
+                          <child>
+                            <object class="GtkGrid">
+                              <child>
+                                <object class="GtkLabel" id="label262">
+                                  <property name="label" translatable="yes">  Search Number of Top Sites:        </property>
+                                  <property name="justify">center</property>
+                                  <layout>
+                                    <property name="column">0</property>
+                                    <property name="row">1</property>
+                                  </layout>
+                                </object>
+                              </child>
+                              <child>
+                                <object class="GtkEntry" id="ligand_n_top_ligands_entry">
+                                  <property name="width-request">5</property>
+                                  <property name="can-focus">1</property>
+                                  <property name="primary-icon-activatable">0</property>
+                                  <property name="secondary-icon-activatable">0</property>
+                                  <layout>
+                                    <property name="column">1</property>
+                                    <property name="row">1</property>
+                                  </layout>
+                                </object>
+                              </child>
+                            </object>
+                          </child>
+                          <child>
+                            <object class="GtkBox" id="hbox131">
+                            </object>
+                          </child>
+                          <child>
+                            <object class="GtkBox" id="hbox132">
+                            </object>
+                          </child>
+                        </object>
+                      </child>
+                      <child type="label">
+                        <object class="GtkLabel" id="label281">
+                          <property name="label" translatable="yes">Expert Options</property>
+                        </object>
+                      </child>
+                    </object>
+                  </child>
+                </object>
+              </child>
+            </object>
+          </child>
         <child type="action">
           <object class="GtkBox" id="hbox35">
             <property name="homogeneous">1</property>
@@ -5354,8 +5436,6 @@ that you wish to delete.               </property>
           </object>
         </child>
       </object>
-    </child>
-    <child type="titlebar">
     </child>
   </object>
 
@@ -5551,6 +5631,7 @@ Do you want to continue?
 
         <child type="action">
           <object class="GtkBox" id="hbox43">
+            <property name="halign">end</property>
             <property name="spacing">10</property>
             <property name="margin-start">4</property>
             <property name="margin-end">4</property>
@@ -7472,6 +7553,73 @@ Do you want to continue?
                 </child>
               </object>
             </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="start_rpc_server_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+
+                <child>
+                  <object class="GtkBox" id="vbox_for_start_rpc_server">
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">  Port  </property>
+                            <property name="justify">center</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="start_rpc_server_entry">
+                            <property name="width-request">5</property>
+                            <property name="can-focus">1</property>
+                            <property name="text">9090</property>
+                            <property name="halign">end</property>
+                            <property name="margin-top">2</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="margin-end">6</property>
+                            <property name="margin-start">4</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+                        <property name="margin-end">6</property>
+                        <property name="margin-start">4</property>
+                        <property name="halign">end</property>
+                        <child>
+                          <object class="GtkButton" id="start_rpc_server_cancel_button">
+                            <property name="label" translatable="yes">Cancel</property>
+                            <property name="halign">end</property>
+                            <signal name="clicked" handler="on_start_rpc_server_cancel_button_clicked" />
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="start_rpc_server_ok_button">
+                            <property name="label" translatable="yes">OK</property>
+                            <signal name="clicked" handler="on_start_rpc_server_ok_button_clicked" />
+                            <style>
+                              <class name="suggested-action"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
             <child type="overlay">
               <object class="GtkFrame" id="copy_fragment_frame">
                 <property name="halign">center</property>
@@ -7841,6 +7989,60 @@ Do you want to continue?
                         <signal name="changed" handler="on_keyboard_mutate_entry_changed" swapped="no"/>
                       </object>
                     </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="add_PTM_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">2</property>
+
+                    <child>
+                      <object class="GtkComboBoxText" id="add_PTM_combobox">
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="halign">end</property>
+                        <child>
+                          <object class="GtkButton" id="add_PTM_cancel_button">
+                            <signal name="clicked" handler="on_add_PTM_cancel_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Cancel</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="add_PTM_apply_button">
+                            <signal name="clicked" handler="on_add_PTM_apply_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Apply</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                            <style>
+                              <class name="suggested-action"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
                   </object>
                 </child>
               </object>
@@ -8567,31 +8769,29 @@ Do you want to continue?
                   <object class="GtkBox">
                     <property name="orientation">vertical</property>
                     <property name="spacing">5</property>
-
-		    <child>
-		      <object class="GtkFrame" id="acedrg_link_bond_order_frame">
-			<property name="label">Bond Order</property>
-			<child>
-			  <object class="GtkComboBoxText" id="acedrg_link_bond_order_combobox">
-			    <property name="margin-bottom">5</property>
-			    <property name="margin-end">6</property>
-			    <property name="margin-start">6</property>
-			    <property name="margin-top">5</property>
-
-                            <layout>
-                              <property name="column">1</property>
-                              <property name="row">1</property>
-                            </layout>
+                    <child>
+                      <object class="GtkFrame" id="acedrg_link_bond_order_frame">
+                        <property name="label">Bond Order</property>
+                        <child>
+                          <object class="GtkComboBoxText" id="acedrg_link_bond_order_combobox">
+                            <property name="margin-bottom">5</property>
+                            <property name="margin-end">6</property>
+                            <property name="margin-start">6</property>
+                            <property name="margin-top">5</property>
+                            <property name="active">0</property>
                             <items>
                               <item translatable="yes">single</item>
                               <item translatable="yes">double</item>
                               <item translatable="yes">triple</item>
                             </items>
-
-			  </object>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
                         </child>
                       </object>
-                   </child>
+                    </child>
 
 		   <child>
 		     <object class="GtkFrame" id="acedrg_link_interface_first_residue">
@@ -8890,6 +9090,8 @@ Do you want to continue?
 		       <property name="halign">end</property>
 		       <property name="margin-end">5</property>
 		       <property name="margin-start">4</property>
+		       <property name="margin-top">4</property>
+		       <property name="margin-bottom">4</property>
 		       <child>
 			 <object class="GtkButton" id="acedrg_link_cancel_button">
 			   <property name="label" translatable="yes">Cancel</property>
@@ -12437,7 +12639,7 @@ density (too big to be waters):
           <object class="GtkFrame" id="frame110">
             <child>
               <object class="GtkBox" id="vbox116">
-                <property name="spacing">8</property>
+                <property name="spacing">4</property>
                 <property name="margin-start">4</property>
                 <property name="margin-end">4</property>
                 <property name="margin-top">4</property>
@@ -12523,7 +12725,7 @@ density (too big to be waters):
                         <property name="orientation">vertical</property>
                         <child>
                           <object class="GtkLabel" id="label245">
-                            <property name="label" translatable="yes">Successive Peptides by Ramachandran search (this may not work well)</property>
+                            <property name="label" translatable="yes">Fit Loop by Ramachandran search</property>
                             <property name="justify">center</property>
                           </object>
                         </child>
@@ -13530,7 +13732,7 @@ If you need symmetry, setup ccp4 before starting coot
   </object>
 
   <object class="GtkDialog" id="nucleotide_builder_dialog">
-    <property name="title" translatable="yes">Nucleotide Builder</property>
+    <property name="title" translatable="yes">Coot: Nucleotide Builder</property>
     <child>
       <object class="GtkBox" id="dialog-vbox94">
         <property name="orientation">vertical</property>
@@ -13649,6 +13851,9 @@ If you need symmetry, setup ccp4 before starting coot
                     <child>
                       <object class="GtkEntry" id="nucleotide_sequence">
                         <property name="can-focus">1</property>
+                        <property name="margin-start">4</property>
+                        <property name="margin-end">4</property>
+                        <property name="margin-bottom">4</property>
                       </object>
                     </child>
                   </object>
@@ -15773,8 +15978,8 @@ Then use &quot;Run Refmac...&quot; from the &quot;Model/Fit/Refine&quot; dialog.
   <object class="GtkDialog" id="shader_settings_dialog">
     <property name="title" translatable="yes">Coot Shader Settings</property>
     <signal name="close" handler="on_shader_settings_dialog_close" swapped="no"/>
-    <signal name="destroy" handler="on_shader_settings_dialog_destroy" swapped="no"/>
     <signal name="response" handler="on_shader_settings_dialog_response" swapped="no"/>
+    <signal name="close-request" handler="on_shader_settings_dialog_close_request" swapped="no"/>
     <child>
       <object class="GtkBox">
         <property name="margin-start">8</property>
@@ -16264,6 +16469,94 @@ Then use &quot;Run Refmac...&quot; from the &quot;Model/Fit/Refine&quot; dialog.
                         </child>
                       </object>
                     </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkFrame">
+                <child>
+                  <object class="GtkExpander" id="material_lighting_expander">
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child type="label">
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Expand</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">6</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="margin-top">6</property>
+                        <property name="margin-bottom">6</property>
+                        <child>
+                          <object class="GtkBox" id="material_lighting_molecule_hbox">
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Molecule:</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="material_lighting_molecule_comboboxtext">
+                                <property name="hexpand">1</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Ambient:</property>
+                                <property name="width-chars">8</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkColorButton" id="material_lighting_ambient_colorbutton">
+                                <property name="hexpand">1</property>
+                                <property name="use-alpha">0</property>
+                                <signal name="color-set" handler="on_material_lighting_ambient_colorbutton_color_set" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Diffuse:</property>
+                                <property name="width-chars">8</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkColorButton" id="material_lighting_diffuse_colorbutton">
+                                <property name="hexpand">1</property>
+                                <property name="use-alpha">0</property>
+                                <signal name="color-set" handler="on_material_lighting_diffuse_colorbutton_color_set" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child type="label">
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Material Lighting</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
                   </object>
                 </child>
               </object>
@@ -18088,6 +18381,55 @@ Move a copy?</property>
                     </child>
                   </object>
                 </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+
+  <object class="GtkDialog" id="validation_graphs_dialog">
+    <property name="title" translatable="yes">Coot: Validation Graphs</property>
+    <property name="default-width">500</property>
+    <signal name="destroy" handler="on_validation_graphs_dialog_destroy" swapped="no"/>
+
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
+            <property name="height-request">210</property>
+            <child>
+              <object class="GtkBox" id="validation_graphs_dialog_vbox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">2</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <child type="action">
+          <object class="GtkBox">
+            <property name="homogeneous">1</property>
+            <property name="spacing">6</property>
+            <property name="margin-start">4</property>
+            <property name="margin-top">4</property>
+            <property name="margin-bottom">4</property>
+            <child>
+              <object class="GtkButton" id="validation_graphs_dialog_close_button">
+                <property name="label" translatable="yes">  Close  </property>
+                <property name="can-focus">1</property>
+                <property name="use-underline">1</property>
+                <property name="margin-start">4</property>
+                <property name="margin-end">4</property>
+                <property name="margin-top">4</property>
+                <property name="margin-bottom">4</property>
+                <signal name="clicked" handler="on_validation_graphs_dialog_close_button_clicked" swapped="no"/>
               </object>
             </child>
           </object>

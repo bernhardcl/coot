@@ -20,6 +20,7 @@
  * write to the Free Software Foundation, Inc., 51 Franklin Street,  02110-1301, USA
  */
 
+#include "gtk/gtk.h"
 #if defined (USE_PYTHON)
 #include "Python.h"  // before system includes to stop "POSIX_C_SOURCE" redefined problems
 #endif
@@ -69,6 +70,11 @@
 #include "widget-from-builder.hh"
 
 #include "guile-fixups.h"
+#ifdef USE_GUILE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvolatile"
+#endif // USE_GUILE
+
 #include "layla/layla_embedded.hpp"
 
 void clear_out_container(GtkWidget *vbox);  // in c-interface.cc
@@ -1370,6 +1376,12 @@ show_acedrg_link_interface_overlay() {
 
    GtkWidget *w = widget_from_builder("acedrg_link_interface_frame");
    gtk_widget_set_visible(w, TRUE);
+
+   GtkWidget *cb = widget_from_builder("acedrg_link_bond_order_combobox");
+   if (cb) {
+      // setting this in the ui file doesn't seem to work
+      gtk_combo_box_set_active(GTK_COMBO_BOX(cb), 0);
+   }
 
    // This doesn't work and it's too much effort to get right
    // GtkWidget *frame_1 = widget_from_builder("acedrg_link_bond_order_frame");

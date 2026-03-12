@@ -93,6 +93,7 @@
 #include "guile-fixups.h"
 #include "widget-from-builder.hh"
 #include "c-interface-gtk-widgets.h"
+#include "gtk-manual.hh"
 
 #include "utils/logging.hh"
 extern logging logger;
@@ -399,10 +400,12 @@ void
 graphics_info_t::set_directory_for_filechooser(GtkWidget *filechooser) const {
 
    if (directory_for_filechooser != "") {
-      std::cout << "INFO:: set directory_for_filechooser " << directory_for_filechooser << std::endl;
+      // std::cout << "INFO:: set directory_for_filechooser " << directory_for_filechooser << std::endl;
+      logger.log(log_t::INFO, "set directory_for_filechooser", directory_for_filechooser);
 
       // 20220602-PE FIXME
-      std::cout << "INFO:: in set_directory_for_filechooser() FIXME" << std::endl;
+      // std::cout << "INFO:: in set_directory_for_filechooser() FIXME" << std::endl;
+      logger.log(log_t::INFO, "in set_directory_for_filechooser() FIXME");
       GFile *f = g_file_new_for_path(directory_for_filechooser.c_str());
       GError *err = NULL;
       gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filechooser), f, &err);
@@ -825,8 +828,9 @@ graphics_info_t::skeletonize_map_by_combobox(GtkWidget *combobox) {
       if (do_it)
 	 graphics_info_t::skeletonize_map(graphics_info_t::map_for_skeletonize, prune_it);
       else {
-	 std::cout << "INFO:: unskeletonizing map number "
-		   << graphics_info_t::map_for_skeletonize << std::endl;
+	 // std::cout << "INFO:: unskeletonizing map number "
+	 //            << graphics_info_t::map_for_skeletonize << std::endl;
+	 logger.log(log_t::INFO, "unskeletonizing map number", graphics_info_t::map_for_skeletonize);
 	 graphics_info_t::unskeletonize_map(graphics_info_t::map_for_skeletonize);
       }
    }
@@ -1777,6 +1781,9 @@ graphics_info_t::new_fill_combobox_with_coordinates_options(GtkWidget *combobox_
 
    std::vector<int> molecule_indices = get_molecule_indices();
 
+   if (!molecule_indices.empty())
+      gtk_combo_box_set_active(GTK_COMBO_BOX(combobox_molecule), 0);
+
    GtkTreeModel *model_1 = gtk_combo_box_get_model(GTK_COMBO_BOX(combobox_molecule));
    std::cout << "debug:: new_fill_combobox_with_coordinates_options() model_1 " << model_1 << std::endl;
    GtkListStore *list_store = GTK_LIST_STORE(model_1);
@@ -1797,7 +1804,7 @@ graphics_info_t::new_fill_combobox_with_coordinates_options(GtkWidget *combobox_
       gtk_list_store_append(store, &iter);
       gtk_list_store_set(store, &iter, 0, imol, 1, ss.c_str(), -1);
    }
-   
+
    GtkTreeModel *model = GTK_TREE_MODEL(store);
    GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
    gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(combobox_molecule), renderer, true);
@@ -2231,7 +2238,8 @@ graphics_info_t::undo_molecule_combobox_changed(GtkWidget *combobox, gpointer da
    graphics_info_t g;
    int imol = g.combobox_get_imol(GTK_COMBO_BOX(combobox));
    g.set_undo_molecule_number(imol);
-   std::cout << "INFO:: undo molecule number set to " << imol << std::endl;
+   // std::cout << "INFO:: undo molecule number set to " << imol << std::endl;
+   logger.log(log_t::INFO, "undo molecule number set to", imol);
 }
 
 void
@@ -3450,12 +3458,13 @@ graphics_info_t::wrapped_create_checked_waters_by_variance_dialog(const std::vec
 
       for (unsigned int i=0; i<v.size(); i++) {
 
-	 std::cout << "INFO:: Suspicious water: "
-		   << v[i].atom_name
-		   << v[i].alt_conf << " "
-		   << v[i].res_no << " "
-		   << v[i].ins_code << " "
-		   << v[i].chain_id << "\n";
+	 // std::cout << "INFO:: Suspicious water: "
+	 //            << v[i].atom_name
+	 //            << v[i].alt_conf << " "
+	 //            << v[i].res_no << " "
+	 //            << v[i].ins_code << " "
+	 //            << v[i].chain_id << "\n";
+	 logger.log(log_t::INFO, "Suspicious water:", v[i].atom_name, v[i].alt_conf, v[i].res_no, v[i].ins_code, v[i].chain_id);
 
 	 std::string button_label(" ");
 	 button_label += v[i].chain_id;
@@ -3488,7 +3497,8 @@ graphics_info_t::wrapped_create_checked_waters_by_variance_dialog(const std::vec
          gtk_widget_set_margin_end(toggle_button, 6);
       }
    } else {
-      std::cout << "INFO:: There are no unusual waters\n";
+      // std::cout << "INFO:: There are no unusual waters\n";
+      logger.log(log_t::INFO, "There are no unusual waters");
       std::string s = "There were no strange/anomalous waters\n";
       s += "(in relation to the difference map).";
       w = wrapped_nothing_bad_dialog(s);
@@ -3722,8 +3732,9 @@ graphics_info_t::fill_bond_parameters_internals(GtkWidget *combobox_for_molecule
 	    if (molecules[imol_active].has_ncs_p()) {
 	       make_insensitive = 0;
 	    } else {
-	       std::cout << "INFO:: in fill_bond_parameters_internals no NCS for  "
-			 << imol_active << "\n";
+	       // std::cout << "INFO:: in fill_bond_parameters_internals no NCS for  "
+	       //          << imol_active << "\n";
+	       logger.log(log_t::INFO, "in fill_bond_parameters_internals no NCS for", imol_active);
 	    }
 	 } else {
 	    std::cout << "ERROR:: bad imol in fill_bond_parameters_internals no model "
@@ -4156,8 +4167,8 @@ graphics_info_t::fill_difference_map_peaks_button_box() {
 
    // does nothing if the diff map peaks dialog is not realized.
 
-   auto make_label = [] (unsigned int i_peak, const std::vector<std::pair<clipper::Coord_orth, float> > &centres,
-                        float map_sigma) {
+   auto make_map_parts_of_label = [] (unsigned int i_peak, const std::vector<std::pair<clipper::Coord_orth, float> > &centres,
+                                      float map_sigma) {
 
       std::string label = "Peak ";
       float f = centres[i_peak].second/map_sigma;
@@ -4180,15 +4191,74 @@ graphics_info_t::fill_difference_map_peaks_button_box() {
       return label;
    };
 
-   auto fill_difference_map_button_box_inner = [make_label] (GtkWidget *button_vbox,
-                                                             const std::vector<std::pair<clipper::Coord_orth, float> > &centres,
-                                                             float map_sigma) {
+   auto make_model_parts_of_label = [] (unsigned int i_peak,
+                                        const std::vector<std::pair<clipper::Coord_orth, float> > &centres,
+                                        int imol_coords) {
+
+      std::string l;
+      const clipper::Coord_orth &c = centres[i_peak].first;
+      if (is_valid_model_molecule(imol_coords)) {
+         coot::Cartesian p(c.x(), c.y(), c.z());
+         coot::at_dist_info_t at_info = molecules[imol_coords].closest_atom(p, false);
+         if (at_info.dist < 5.0) {
+            if (at_info.atom) {
+               l = " ";
+               l += at_info.atom->GetChainID();
+               l += " ";
+               l += std::to_string(at_info.atom->GetSeqNum());
+               l += " (";
+               l += at_info.atom->GetResName();
+               l += ") ";
+               l += at_info.atom->GetAtomName();
+               l += " d: ";
+               l += coot::util::float_to_string_using_dec_pl(at_info.dist, 2);
+            }
+         }
+      }
+      return l;
+   };
+
+   auto on_diff_map_button_key_controller_key_pressed = +[] (GtkEventControllerKey *controller,
+                                                    guint                  keyval,
+                                                    guint                  keycode,
+                                                    guint                  modifiers,
+                                                    GtkButton             *button) {
+   };
+
+   auto on_diff_map_button_key_controller_key_released = +[] (GtkEventControllerKey *controller,
+                                                     guint                  keyval,
+                                                     guint                  keycode,
+                                                     guint                  modifiers,
+                                                     GtkButton             *button) {
+
+      std::cout << "key released" << std::endl;
+      std::cout << "debug:: keyval " << keyval << std::endl;
+      std::cout << "debug:: keycode " << keycode << std::endl;
+      std::cout << "debug:: modifiers " << modifiers << std::endl;
+      if (keyval == GDK_KEY_Up) {
+         std::cout << ".... up list" << std::endl;
+      }
+      if (keyval == GDK_KEY_Down) {
+         std::cout << ".... down list" << std::endl;
+      }
+   };
+
+   auto fill_difference_map_button_box_inner = [make_map_parts_of_label, make_model_parts_of_label,
+                                                on_diff_map_button_key_controller_key_pressed,
+                                                on_diff_map_button_key_controller_key_released]
+      (GtkWidget *button_vbox,
+       const std::vector<std::pair<clipper::Coord_orth, float> > &centres,
+       float map_sigma,
+       int imol_coords) {
 
       clear_out_container(button_vbox);
       // a cutn'paste jobby from fill_rotamer_selection_buttons().
       GtkWidget *group = nullptr; // initially
       for (unsigned int i=0; i<centres.size(); i++) {
-         std::string label = make_label(i, centres, map_sigma);
+         std::string label = make_map_parts_of_label(i, centres, map_sigma);
+         std::string m_lab = make_model_parts_of_label(i, centres, imol_coords);
+         if (! m_lab.empty())
+            label += m_lab;
          GtkWidget *radio_button = gtk_toggle_button_new_with_label(label.c_str());
          std::string button_name = "difference_map_peaks_button_";
          button_name += int_to_string(i);
@@ -4210,6 +4280,13 @@ graphics_info_t::fill_difference_map_peaks_button_box() {
                           G_CALLBACK(on_diff_map_peak_button_selection_toggled), hd);
          gtk_box_append(GTK_BOX(button_vbox), radio_button);
 
+#if 0 // 20260103-PE I don't want a keybinding on the button, I want it in the graphics window (it seems (for focus-related reasons)).
+         // --------------------- key binding --------------------
+         GtkEventController *key_controller = gtk_event_controller_key_new();
+         g_signal_connect(key_controller, "key-pressed",  G_CALLBACK(on_diff_map_button_key_controller_key_pressed),  radio_button);
+         g_signal_connect(key_controller, "key-released", G_CALLBACK(on_diff_map_button_key_controller_key_released), radio_button);
+         gtk_widget_add_controller(radio_button, key_controller);
+#endif
       }
    };
 
@@ -4261,21 +4338,21 @@ graphics_info_t::fill_difference_map_peaks_button_box() {
    GtkWidget *outer_vbox = widget_from_builder("diff_map_peaks_outer_vbox");
    gtk_widget_set_visible(outer_vbox,   TRUE);
 
-   GtkWidget *button_vbox = widget_from_builder("diff_map_peaks_vbox");
+   GtkWidget *buttons_vbox = widget_from_builder("diff_map_peaks_vbox");
 
    GtkWidget *vboxes_vbox = widget_from_builder("validation_boxes_vbox");
    gtk_widget_set_visible(vboxes_vbox,   TRUE);
 
-   std::vector<std::pair<clipper::Coord_orth, float> > centres = make_diff_map_peaks(button_vbox);
+   std::vector<std::pair<clipper::Coord_orth, float> > centres = make_diff_map_peaks(buttons_vbox);
    // std::cout << "make_diff_map_peaks() made " << centres.size() << " centres" << std::endl;
    logger.log(log_t::INFO, logging::function_name_t("make_diff_map_peaks()"),
 	      {"made", std::to_string(centres.size()), "centres"});
    float map_sigma = 0.5;
-   int imol_map = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button_vbox), "imol_map"));
+   int imol_map = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(buttons_vbox), "imol_map"));
    if (is_valid_map_molecule(imol_map))
       map_sigma = molecules[imol_map].map_sigma();
-
-   fill_difference_map_button_box_inner(button_vbox, centres, map_sigma);
+   int imol_coords = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(buttons_vbox), "imol_model"));
+   fill_difference_map_button_box_inner(buttons_vbox, centres, map_sigma, imol_coords);
 }
 
 
@@ -4554,15 +4631,19 @@ graphics_info_t::add_molecular_representation(int imol,
              << "colour-scheme: \"" << colour_scheme << "\" "
              << "style \"" << style << "\"" << std::endl;
 
+#if 0 // 20260222-PE We no longer use this widget
    GtkWidget *w = widget_from_builder("molecular_representations_dialog");
    gtk_widget_set_visible(w, TRUE);
    set_transient_for_main_window(w);
+#endif
 
    attach_buffers();
 
-   int status = molecules[imol].add_molecular_representation(atom_selection, colour_scheme, style, secondary_structure_usage_flag);
+   int status = molecules[imol].add_molecular_representation(atom_selection, colour_scheme, style,
+                                                             secondary_structure_usage_flag);
 
    update_molecular_representation_widgets();
+   update_display_control_mesh_toggles(imol);
    graphics_draw();
    return status;
 }
@@ -4571,7 +4652,11 @@ int
 graphics_info_t::add_ribbon_representation_with_user_defined_colours(int imol, const std::string &name) {
 
    GtkWidget *w = widget_from_builder("molecular_representation_meshes_frame");
-   gtk_widget_set_visible(w, TRUE);
+   if (w) {
+      gtk_widget_set_visible(w, TRUE);
+   } else {
+      std::cout << "DEBUG:: failed to lookup molecular_representation_meshes_frame!!!!!!!!" << std::endl;
+   }
 
    attach_buffers();
 
@@ -4579,6 +4664,7 @@ graphics_info_t::add_ribbon_representation_with_user_defined_colours(int imol, c
    molecules[imol].add_ribbon_representation_with_user_defined_residue_colours(user_defined_colours, name);
 
    update_molecular_representation_widgets();
+   update_display_control_mesh_toggles(imol);
    graphics_draw();
    return status;
 }
@@ -4612,7 +4698,7 @@ graphics_info_t::set_show_molecular_representation(int imol, unsigned int mesh_i
          auto mesh = meshes[mesh_idx];
          mesh.set_draw_mesh_state(on_off);
       }
-   } 
+   }
 }
 
 // static
@@ -4656,6 +4742,10 @@ graphics_info_t::molecular_representation_meshes_checkbutton_toggled(GtkCheckBut
 
 void
 graphics_info_t::update_molecular_representation_widgets() {
+
+   // 20260222-PE
+   // this is no longer needed - now that the molecular meshes are in the display manager
+   return;
 
    // find the display toggle button for mesh idx_mesh for molecule imol
    auto find_button = [] (GtkWidget *box, unsigned int imol, unsigned int idx_mesh) {

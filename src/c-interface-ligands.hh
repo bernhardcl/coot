@@ -36,21 +36,16 @@
 
 // not for swig
 
-namespace coot { 
+namespace coot {
 
    void write_solvent_accessibilities(const std::vector<std::pair<coot::atom_spec_t, float> > &sav,
 				      mmdb::Residue *reference_residue);
 
-   
    std::map<std::string, std::string> make_flat_ligand_name_map(mmdb::Residue *flat_res);
-
 
    bool standard_residue_name_p(const std::string &rn);
 
    enum { SP_HYBRIDIZATION, SP2_HYBRIDIZATION, SP3_HYBRIDIZATION };
-
-   std::vector<std::pair<std::string, int> >
-   get_prodrg_hybridizations(const std::string &prodrg_log_file_name);
 
    std::vector<std::pair<mmdb::Atom *, std::vector<clipper::Coord_orth> > >
    get_cannonball_vectors(mmdb::Residue *ligand_res_3d,
