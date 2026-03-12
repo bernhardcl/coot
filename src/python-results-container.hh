@@ -6,7 +6,7 @@ class execute_python_results_container_t {
    public:
    PyObject *result;
    std::string error_message;
-   std::string stdout;
+   std::string stdout_py;
    execute_python_results_container_t() {
       result = nullptr;
    }

@@ -6997,7 +6997,7 @@ execute_python_results_container_t execute_python_code_with_result_internal(cons
             const char* output_str = PyUnicode_AsUTF8(captured);
             if (output_str && strlen(output_str) > 0) {
                std::cout << output_str;  // Print to terminal
-               rc.stdout = output_str;
+               rc.stdout_py = output_str;
             }
             Py_DECREF(captured);
          }
@@ -7090,7 +7090,7 @@ execute_python_results_container_t execute_python_multiline_code_with_result_int
             const char* output_str = PyUnicode_AsUTF8(captured);
             if (output_str && strlen(output_str) > 0) {
                std::cout << output_str;  // Print to terminal
-               rc.stdout = output_str;
+               rc.stdout_py = output_str;
             }
             Py_DECREF(captured);
          }
@@ -7158,7 +7158,7 @@ execute_python_results_container_t execute_python_multiline_code_with_result_int
          if (output_str && strlen(output_str) > 0) {
             std::cout << output_str;  // Print to terminal
             // You could also save to a file here if needed
-            rc.stdout = output_str;
+            rc.stdout_py = output_str;
          }
          Py_DECREF(captured);
       }

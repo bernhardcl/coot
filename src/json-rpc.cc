@@ -525,8 +525,8 @@ gint coot_socket_listener_idle_func(gpointer data) {
             std::string s = PyBytes_AS_STRING(PyUnicode_AsUTF8String(o));
             json j_result;
             j_result["value"] = s;
-            if (!rrr.stdout.empty())
-               j_result["stdout"] = rrr.stdout;
+            if (!rrr.stdout_py.empty())
+               j_result["stdout"] = rrr.stdout_py;
             j_response["result"] = j_result;
             Py_DECREF(o);  // Don't leak!
          } else {
