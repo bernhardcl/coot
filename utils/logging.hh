@@ -118,6 +118,7 @@ public:
    void log(log_t type_in, const std::string &s1, bool v1, const std::string &s2, const std::string &s3);
    void log(log_t type_in, const std::string &s1, int, const std::string &s2);
    void log(log_t type_in, const std::string &s1, unsigned int, const std::string &s2);
+   void log(log_t type_in, const std::string &s1, unsigned long, const std::string &s2);
    void log(log_t type_in, const std::string &s1, std::size_t s, const std::string &s2);
    void log(log_t type_in, const std::string &s1, double d, const std::string &s2);
    void log(log_t type_in, const std::string &s1);
