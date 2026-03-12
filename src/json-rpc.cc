@@ -7,7 +7,11 @@
 #include <thread>
 
 #include <gtk/gtk.h>
+#ifdef WINDOWS_MINGW
+#include <winsock2.h>
+#else
 #include <netinet/in.h>
+#endif // MINGW
 #include <fcntl.h>
 #include <coot-utils/json.hpp>
 
@@ -34,13 +38,68 @@ struct func_doc {
 
 
 
+#ifdef WINDOWS_MINGW
+static SOCKET server_fd = INVALID_SOCKET;
+static SOCKET client_fd = INVALID_SOCKET;
+#else
 static int server_fd = -1;
 static int client_fd = -1;
+#endif //WINDOWS_MINGW
 static int server_listen_count = 0;
 static std::vector<unsigned char> json_rpc_server_incoming_accumulator;
 static int32_t json_rpc_server_expected_length = -1;
 gint coot_socket_listener_idle_func(gpointer data);
 
+#ifdef WINDOWS_MINGW
+// BL says:: ported to windows
+void init_coot_socket_listener() {
+
+   int port = graphics_info_t::remote_control_port_number;
+
+           // before we can do anything we need to initialise Winsock
+   WSADATA wsaData;
+   int wsa_status = WSAStartup(MAKEWORD(2, 2), &wsaData);
+   if (wsa_status != 0) {
+      std::cerr << "BL ERROR:: WSAStartup failed: " << wsa_status << "\n";
+      return;
+   }
+
+   server_fd = socket(AF_INET, SOCK_STREAM, 0);
+   if (server_fd == INVALID_SOCKET) {
+      std::cerr << "Error: Unable to create socket\n";
+      return;
+   }
+
+   sockaddr_in addr;
+   std::memset(&addr, 0, sizeof(addr));
+   addr.sin_family = AF_INET;
+   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // localhost only
+   addr.sin_port = htons(port);
+
+   BOOL optval = TRUE;
+   setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(optval));
+
+   if (bind(server_fd, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+      std::cerr << "Error: Unable to bind socket\n";
+      closesocket(server_fd);
+      server_fd = INVALID_SOCKET;
+      return;
+   }
+   if (listen(server_fd, 1) == SOCKET_ERROR) {
+      std::cerr << "Error: Unable to listen\n";
+      close(server_fd);
+      server_fd = INVALID_SOCKET;
+      return;
+   }
+
+           // Make server socket non-blocking
+   u_long mode = 1;
+   ioctlsocket(server_fd, FIONBIO, &mode);
+
+           // log this
+   std::cout << "INFO:: Socket listener initialized on port " << port << std::endl;
+}
+#else
 void init_coot_socket_listener() {
 
    int port = graphics_info_t::remote_control_port_number;
@@ -79,6 +138,7 @@ void init_coot_socket_listener() {
    // log this
    std::cout << "INFO:: Socket listener initialized on port " << port << std::endl;
 }
+#endif // WINDOWS_MINGW
 
 // called by c_inner_main() if we have guile
 void make_socket_listener_maybe() {
@@ -684,6 +744,44 @@ gint coot_socket_listener_idle_func(gpointer data) {
 
    };
 
+#ifdef WINDOWS_MINGW
+   auto write_all = [] (SOCKET fd, const std::string &s) {
+
+      const char* p = static_cast<const char*>(s.c_str());
+      size_t length = s.length();
+      int errno;
+      while (length > 0) {
+         int n = send(fd, p, static_cast<int>(length), 0);
+         if (n == SOCKET_ERROR) {
+            errno = WSAGetLastError();
+            std::cout << "BL DEBUG:: send() error: " << errno << std::endl;
+            switch(errno) {
+               case (WSAEINTR):
+                  std::cout << "DEBUG:: WSAEINTR" << std::endl;
+                  // try again
+                  break;
+               case (WSAEWOULDBLOCK):
+                  std::cout << "DEBUG:: WSAEWOULDBLOCK" << std::endl;
+                  // output buffer was filled - send() needs to be called again to finish sending s
+                  std::this_thread::sleep_for(std::chrono::microseconds(200));
+                  break;
+               default:
+                  std::cout << "DEBUG:: neither WSAEINTR not WSAEWOULDBLOCK, error is"
+                            << errno << std::endl;
+                  return false;  // real error
+            }
+         }
+         if (n == 0) {
+            return false;  // connection closed
+         }
+         if (n > 0) {
+            p += n;
+            length -= n;
+         }
+      }
+      return true;
+   };
+#else
    auto write_all = [] (int fd, const std::string &s) {
 
       const char* p = static_cast<const char*>(s.c_str());
@@ -718,10 +816,66 @@ gint coot_socket_listener_idle_func(gpointer data) {
       }
       return true;
    };
+#endif // WINDOWS_MINGW
 
    std::cout << "listening " << server_listen_count << "..."<< std::endl;
    server_listen_count++;
 
+#ifdef WINDOWS_MINGW
+   // If no active client connection, accept one non-blockingly
+   if (client_fd == INVALID_SOCKET && server_fd != INVALID_SOCKET) {
+      client_fd = accept(server_fd, nullptr, nullptr);
+      if (client_fd != INVALID_SOCKET) {
+         // Set client socket non-blocking too
+         u_long mode = 1;
+         ioctlsocket(client_fd, FIONBIO, &mode);
+         std::cout << "Accepted new client socket connection.\n";
+      }
+   }
+   // If we have a client, read any incoming data non-blockingly
+   if (client_fd != INVALID_SOCKET) {
+      char buffer[4096];
+      int n_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+      std::cout << "debug:: n_read: " << n_read << std::endl;
+      if (n_read > 4) {
+         int n_sent = int(buffer[3]) + 256 * int(buffer[2]) + 256 * 256 * int(buffer[1]) + 256 * 256 * 256 * int(buffer[0]);
+         std::cout << "debug:: n_sent: " << n_sent << std::endl;
+         buffer[n_read] = '\0';
+         std::cout << "Received: " << buffer+4 << std::endl;
+         std::string buf_as_string(buffer+4, n_read);
+         std::string r = handle_string_as_json(buf_as_string);
+
+         const std::string &response_str = r;
+         int32_t len = response_str.size();
+
+         std::cout << "debug:: response_str len " << len << std::endl;
+
+         char header[4];
+         header[0] = (len >> 24) & 0xFF;
+         header[1] = (len >> 16) & 0xFF;
+         header[2] = (len >> 8)  & 0xFF;
+         header[3] = (len)       & 0xFF;
+
+         std::string framed;
+         framed.reserve(4 + response_str.size());
+         framed.append(header, 4);        // 4-byte header
+         framed.append(response_str);     // JSON body
+         bool write_statue = write_all(client_fd, framed);
+         // std::cout << "DEBUG:: write_status: " << write_statue << std::endl;
+
+      } else if (n_read == 0) {
+         // Client disconnected
+         std::cout << "Client disconnected.\n";
+         closesocket(client_fd);
+         client_fd = INVALID_SOCKET;
+      } else if (n_read == SOCKET_ERROR) {
+         std::cerr << "Socket read error\n";
+         closesocket(client_fd);
+         client_fd = INVALID_SOCKET;
+      }
+      // else: nothing to read right now
+   }
+#else
    // If no active client connection, accept one non-blockingly
    if (client_fd < 0 && server_fd >= 0) {
       client_fd = accept(server_fd, nullptr, nullptr);
@@ -840,6 +994,7 @@ gint coot_socket_listener_idle_func(gpointer data) {
          }
       }
    }
+#endif // WINDOWS_MINGW
    // Always return 1 (TRUE) to keep idle handler running
    return 1;
 

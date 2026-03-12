@@ -9225,8 +9225,12 @@ void handle_online_coot_search_request(const char *entry_text) {
 /* section Remote Control */
 
 #include <sys/types.h>
+#ifdef WINDOWS_MINGW
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
