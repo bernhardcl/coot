@@ -632,7 +632,8 @@ graphics_info_t::refinement_loop_threaded() {
          // Maybe It shouldn't go off if there is no intervention.
          // Unless it's really good.
          //
-         std::pair<bool, std::string> hooray = rr.hooray();
+         // std::pair<bool, std::string> hooray = rr.hooray();
+         std::pair<bool, std::string> hooray(false, ""); // turn off hooray for now
 
          if (hooray.first) {
             // we can't touch Gtk or OpenGL because this we are in a thread
@@ -4950,7 +4951,7 @@ graphics_info_t::generate_moving_atoms_from_rotamer(int imol, coot::atom_spec_t 
    if (std::string(residue->name) == "GLY" ||
        std::string(residue->name) == "ALA") {
       // std::cout << "INFO:: This residue type ("<< residue->name << ") doesn't have rotamers\n";
-      logger.log(log_t::INFO, "This residue type (", residue->name, ") doesn't have rotamers");
+      logger.log(log_t::INFO, "This residue type (", std::string(residue->name), ") doesn't have rotamers");
       return 0;
    }
 
