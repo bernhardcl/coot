@@ -4,6 +4,8 @@
 #include <string>
 #include <iostream> // for debugging - remove later.
 
+#include "lig-build.hh"
+
 class svg_container_t {
 
 public:
@@ -38,7 +40,7 @@ public:
 
    bool update_bounds(float min_xx, float min_yy, float max_xx, float max_yy) {
       bool bounding_box_updated = false;
-#if 1
+#if 0
       if (min_xx < min_x) { std::cout << "debug:: min_x was " << min_x << " now " << min_xx << std::endl; }
       if (min_yy < min_y) { std::cout << "debug:: min_y was " << min_y << " now " << min_yy << std::endl; }
       if (max_xx > max_x) { std::cout << "debug:: max_x was " << max_x << " now " << max_xx << std::endl; }
@@ -52,13 +54,20 @@ public:
       return bounding_box_updated;
    }
 
+   // used to add a key to flev
+   void add_to_y_bounds(double yy) {
+      max_y += yy;
+   }
+
    std::string make_viewbox_string() const {
 
+      float width  = max_x - min_x;
+      float height = max_y - min_y;
       std::string viewBox_string = "viewBox=" + std::string("\"") +
          std::to_string(min_x) + std::string(" ") +
          std::to_string(min_y) + std::string(" ") +
-         std::to_string(max_x) + std::string(" ") +
-         std::to_string(max_y) + std::string("\"");
+         std::to_string(width) + std::string(" ") +
+         std::to_string(height) + std::string("\"");
       return viewBox_string;
    }
 
@@ -66,19 +75,77 @@ public:
       svg += s;
    }
 
+   void prepend(const svg_container_t &svgc_in) {
+      svg = svgc_in.svg + svg;
+      update_bounds(svgc_in.min_x, svgc_in.min_y, svgc_in.max_x, svgc_in.max_y);
+   }
+
    void add(const svg_container_t &svgc_in) {
       svg += svgc_in.svg;
       update_bounds(svgc_in.min_x, svgc_in.min_y, svgc_in.max_x, svgc_in.max_y);
    }
 
-   std::string compose() const {
+   void add_comment(const std::string &comment) {
+      svg += "<!-- ";
+      svg += comment;
+      svg += " -->\n";
+   }
 
-      std::string s = svg_header_1;
-      s += make_viewbox_string();
-      s += svg_header_2;
-      s += svg;
-      s += svg_footer;
-      return s;
+   void add_line(const lig_build::pos_t &p1, const lig_build::pos_t &p2,
+                 double line_width, const std::string &stroke_colour, bool dashed) {
+      std::string s;
+      s += "   <line x1=\"" + std::to_string(p1.x) + "\" y1=\"" + std::to_string(-p1.y) + "\" ";
+      s += "x2=\"" + std::to_string(p2.x) + "\" y2=\"" + std::to_string(-p2.y) + "\" ";
+      s += "style=\"stroke:" + stroke_colour + ";stroke-width:" + std::to_string(line_width) + ";";
+      s += "stroke-linecap:round;";
+      if (dashed)
+         s += "stroke-dasharray:0.1,0.2;";
+      s += "\" />\n";
+      svg += s;
+   };
+
+
+
+   std::string compose(bool add_background_rect) const {
+
+      auto quoted = [] (float v) {
+         std::string s = std::to_string(v);
+         return std::string("'" + s + "'");
+      };
+
+      auto make_background_rect = [quoted] (float min_x, float min_y, float max_x, float max_y) {
+
+         float w = max_x - min_x;
+         float h = max_y - min_y;
+         std::string s = "<!-- background-rectangle -->\n";
+         s += "   <rect style='opacity:1.0;fill:#FFFFFF;stroke:none' width=";
+         // s += "400.0' height='400.0' x='0.0' y='0.0'";
+         s += quoted(w);
+         s += " ";
+         s += "height=";
+         s += quoted(h);
+         s += " ";
+         s += "x=";
+         s += quoted(min_x);
+         s += " ";
+         s += "y=";
+         s += quoted(min_y);
+         s += "> </rect>\n";
+         return s;
+      };
+
+      if (max_x > min_x) {
+         std::string s = svg_header_1;
+         s += make_viewbox_string();
+         s += svg_header_2;
+         if (add_background_rect)
+            s += make_background_rect(min_x, min_y, max_x, max_y);
+         s += svg;
+         s += svg_footer;
+         return s;
+      } else {
+         return "";
+      }
    }
 
 };

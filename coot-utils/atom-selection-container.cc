@@ -40,6 +40,9 @@
 #include "gemmi/mmdb.hpp"
 #endif
 
+#include "utils/logging.hh"
+extern logging logger;
+
 mmdb::Residue *
 atom_selection_container_t::get_next(mmdb::Residue *residue_in) const {
 
@@ -81,6 +84,22 @@ atom_selection_container_t::get_previous(mmdb::Residue *residue_in) const {
    }
    return r;
 }
+
+//! clear the atom selection of all pointers
+void
+atom_selection_container_t::clear_up() {
+
+   if (read_success)
+      if (SelectionHandle)
+         if (mol)
+            mol->DeleteSelection(SelectionHandle);
+   delete mol;
+   atom_selection = 0;
+   mol = 0;
+   read_success = 0;
+}
+
+
 
 // This is used for pick_test  (a function that returns
 // an atom selection from a pdb_file name string is not
@@ -170,8 +189,10 @@ get_atom_selection(std::string pdb_name,
 
       std::vector<mmdb::Link> mmdb_links;
       for (const gemmi::Connection &con : st.connections) {
-         if (true) // debugging
-            std::cout << con.name << " " << con.partner1.str() << " " << con.partner2.str() << std::endl;
+         if (false) // debugging
+            // std::cout << "INFO:: gemmi connection: " << con.name
+            //           << " " << con.partner1.str() << " " << con.partner2.str() << std::endl;
+            logger.log(log_t::INFO, "gemmi connection:", con.name, con.partner1.str(), con.partner2.str());
          mmdb::Link l;
          std::string atom_name = con.partner1.atom_name;
          bool atom_1_is_metal = false;
@@ -293,9 +314,12 @@ get_atom_selection(std::string pdb_name,
    };
 #endif // USE_GEMMI
 
-   if (true) // too noisy
-      std::cout << "debug():: ============ get_atom_selection() with file \"" << pdb_name << "\""
-                << " use_gemmi " << use_gemmi << std::endl;
+   if (false) // too noisy
+      std::cout << "DEBUG:: get_atom_selection() with file \"" << pdb_name << "\""
+                << " use_gemmi: " << use_gemmi << std::endl;
+
+   logger.log(log_t::DEBUG, logging::function_name_t(__FUNCTION__),
+              {logging::ltw("with file"), pdb_name, logging::ltw("use_gemmi"), use_gemmi});
 
    mmdb::ERROR_CODE err;
    mmdb::Manager* MMDBManager;
@@ -404,8 +428,9 @@ get_atom_selection(std::string pdb_name,
 #endif
              MMDBManager->PDBCleanup(mmdb::PDBCLEAN_ELEMENT);
 
-             if (verbose_mode)
-                std::cout << "INFO:: Reading coordinate file: " << pdb_name.c_str() << "\n";
+             // std::cout << "INFO:: Reading coordinate file: " << pdb_name.c_str() << "\n";
+             logger.log(log_t::INFO, "Reading coordinate file:", pdb_name);
+
              err = MMDBManager->ReadCoorFile(pdb_name.c_str());
 
              if (err) {
@@ -450,8 +475,10 @@ get_atom_selection(std::string pdb_name,
 
                 MMDBManager->PDBCleanup(mmdb::PDBCLEAN_ELEMENT);
 
-                if (verbose_mode)
-                   std::cout << "INFO:: file " << pdb_name.c_str() << " has been read.\n";
+                if (verbose_mode) {
+                   // std::cout << "INFO:: file " << pdb_name.c_str() << " has been read.\n";
+                   logger.log(log_t::INFO, "File", pdb_name, "has been read");
+                }
                 asc.read_success = 1; // TRUE
 
                 // atom_selection_container.read_error_message = NULL; // its a string
@@ -474,13 +501,16 @@ get_atom_selection(std::string pdb_name,
        if (MMDBManager) {
           char *str = MMDBManager->GetSpaceGroup();
           if (str) {
-             if (false) {
+             if (verbose_mode) {
                 std::string sgrp(str);
-                std::cout << "Spacegroup: " << sgrp << "\n";
+                // std::cout << "Spacegroup: " << sgrp << "\n";
+                logger.log(log_t::INFO, "File", pdb_name, "has spacegroup", sgrp);
              }
           } else {
-             // Too noisy, not valuable
-             // std::cout << "No Spacegroup found for this PDB file\n";
+             if (verbose_mode) {
+                // std::cout << "No Spacegroup found for this PDB file\n";
+                logger.log(log_t::INFO, "File", pdb_name, "no spacegroup found");
+             }
           }
        }
 
@@ -943,13 +973,17 @@ make_asc(mmdb::Manager *mol, bool transfer_atom_index_flag) {
    asc.mol->GetSelIndex(asc.SelectionHandle, asc.atom_selection, asc.n_selected_atoms);
 
    int uddHnd = mol->RegisterUDInteger(mmdb::UDR_ATOM, "atom index");
+   if (false)
+      std::cout << "debug:: in make_asc(): uddHnd " << uddHnd << " for 'atom index' for mol "
+                << mol << std::endl;
    if (uddHnd < 0) {
       std::cout << "ERROR:: ----------------- atom index registration failed.\n";
    } else {
       // std::cout << "in make_asc() saving UDDAtomIndexHandle " << uddHnd << std::endl;
       asc.UDDAtomIndexHandle = uddHnd;
-      for (int i=0; i<asc.n_selected_atoms; i++)
-         asc.atom_selection[i]->PutUDData(uddHnd,i);
+      for (int i=0; i<asc.n_selected_atoms; i++) {
+         int status = asc.atom_selection[i]->PutUDData(uddHnd,i);
+      }
    }
    asc.read_error_message = "No error";
    asc.read_success = 1;
@@ -1011,18 +1045,18 @@ atom_selection_container_t read_standard_residues() {
       struct stat buf;
       int status = stat(standard_file_name.c_str(), &buf);
       if (status != 0) { // standard-residues file was not found in
-			 // default location either...
-	 std::cout << "WARNING: environment variable for standard residues ";
-	 std::cout << standard_env_dir << "\n";
-	 std::cout << "         is not set.";
-	 std::cout << " Mutations will not be possible\n";
-	 // mark as not read then:
-	 standard_residues_asc.read_success = 0;
-	 // std::cout << "DEBUG:: standard_residues_asc marked as
-	 // empty" << std::endl;
+                         // default location either...
+         std::cout << "WARNING: environment variable for standard residues ";
+         std::cout << standard_env_dir << "\n";
+         std::cout << "         is not set.";
+         std::cout << " Mutations will not be possible\n";
+         // mark as not read then:
+         standard_residues_asc.read_success = 0;
+         // std::cout << "DEBUG:: standard_residues_asc marked as
+         // empty" << std::endl;
       } else {
-	 // stat success:
-	 standard_residues_asc = get_atom_selection(standard_file_name, false, true, false);
+         // stat success:
+         standard_residues_asc = get_atom_selection(standard_file_name, false, true, false);
       }
    } else {
       standard_residues_asc = get_atom_selection(filename, false, true, false);
@@ -1031,10 +1065,22 @@ atom_selection_container_t read_standard_residues() {
    return standard_residues_asc;
 }
 
+void
+atom_selection_container_t::debug_write_pdb() {
+
+   if (mol) {
+      std::string fn = "debug-" + std::to_string(user_data) + ".pdb";
+      mol->WritePDBASCII(fn.c_str());
+   }
+
+}
+
 
 // return an estimate of the molecule diameter
 float
 coot::get_molecule_diameter(const atom_selection_container_t &asc) {
+
+   // c.f. radius_of_gyration
 
    float f = -1;
 
@@ -1073,4 +1119,5 @@ coot::get_molecule_diameter(const atom_selection_container_t &asc) {
    return f;
 
 }
+
 

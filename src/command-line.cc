@@ -56,7 +56,6 @@
 #include <gtk/gtk.h>
 
 // #include "mtz-bits.h" use cmtz-interface
-#include "cmtz-interface.hh"
 
 #include "graphics-info.h"
 // Including python needs to come after graphics-info.h, because
@@ -65,7 +64,6 @@
 // BL says:: and (2.3 - dewinter), i.e. is a Mac - Python issue
 // since the follwing two include python graphics-info.h is moved up
 #include "c-interface.h"
-#include "cc-interface.hh"
 #include "coot-version.hh"
 #include "command-line.hh"
 
@@ -107,6 +105,7 @@ parse_command_line(int argc, char ** argv ) {
       {"hklin",  1, 0, 0},
       {"auto",   1, 0, 0},
       {"script", 1, 0, 0},
+      {"buster", 1, 0, 0},
       {"command", 1, 0, 0},
       {"ccp4-project", 1, 0, 0},
       {"dictionary", 1, 0, 0},
@@ -124,6 +123,7 @@ parse_command_line(int argc, char ** argv ) {
       {"run-state-script",   0, 0, 0},
       {"splash-screen",      1, 0, 0}, // alternate splash screen
       {"self-test",          0, 0, 0},
+      {"show-ccp4i2-save-button", 0, 0, 0},
       {"opengl-es",          0, 0, 0},
       {"no-state-script",    0, 0, 0},
       {"no-startup-scripts", 0, 0, 0},
@@ -196,6 +196,9 @@ parse_command_line(int argc, char ** argv ) {
 	    if (arg_str == "dictionary") {
 	       cld.dictionaries.push_back(coot_optarg);
 	    }
+	    if (arg_str == "dictionary-with-mol") {
+	       cld.dictionaries_with_mol.push_back(coot_optarg);
+	    }
 	    if (arg_str == "ccp4-project") {
 	       cld.ccp4_project = coot_optarg;
 	    }
@@ -210,6 +213,12 @@ parse_command_line(int argc, char ** argv ) {
 	    }
 	    if (arg_str == "comp-id") {
 	       cld.comp_ids.push_back(coot_optarg);
+	    }
+	    if (arg_str == "show-ccp4i2-save-button") {
+	       cld.show_ccp4i2_save_button = true;
+	    }
+	    if (arg_str == "buster") {
+	       cld.open_buster_output_files = true;
 	    }
 	    if (arg_str == "title") {
 	       cld.title = coot_optarg;
@@ -241,6 +250,7 @@ parse_command_line(int argc, char ** argv ) {
 			       << "            [--hklin mtz-file-name]\n"
 			       << "            [--auto mtz-file-name]\n"
 			       << "            [--dictionary cif-dictionary-file-name]\n"
+			       << "            [--dictionary-with-mol cif-dictionary-file-name]\n"
 			       << "            [--script script-file-name]\n"
 			       << "            [--em]\n"
 			       << "            [--title some-title]\n"
@@ -248,18 +258,19 @@ parse_command_line(int argc, char ** argv ) {
 			       << "            [--small-screen]\n"
 			       << "            [--splash-screen]\n"
 			       << "            [--stereo]\n"
-			       << "            [--zalman-stereo]\n"
-			       << "            [--side-by-side]\n"
+                        //			       << "            [--zalman-stereo]\n"
+                        //             << "            [--side-by-side]\n"
 			       << "            [--version]\n"
-// 			       << "            [--update-self]\n"
+			       << "            [--show-ccp4i2-save-button]\n"
 			       << "            [--self-test]\n"
 			       << "            [--no-state-script]\n"
 			       << "            [--no-startup-scripts]\n"
 			       << "            [--no-splash-screen]\n"
+			       << "            [--opengl-es]\n"
 			       << "            [--no-graphics]\n"
 			       << "            [--no-guano]\n"
 			       << std::endl;
-		     coot_no_state_real_exit(0);
+		     coot_no_state_real_exit(0); // merge conflict resolved 4c1ace414
 		  } else {
 
 			if (arg_str == "version") {
@@ -304,10 +315,9 @@ parse_command_line(int argc, char ** argv ) {
 			      std::cout << std::endl;
 			   }
 			   std::string s = COOT_BUILD_INFO_STRING;
-			   if (s.length())
+			   if (s.length() > 0)
 			      std::cout << "Builder_info: " << s << std::endl;
 			   exit(0);
-
 			} else {
 			   if (arg_str == "python") {
 			      cld.script_is_python_flag = 1;
@@ -346,13 +356,17 @@ parse_command_line(int argc, char ** argv ) {
                                                             if (arg_str == "opengl-es") {
                                                                cld.use_opengl_es = true;
                                                             } else {
-                                                               if (arg_str == "update-self") {
-                                                                  cld.update_self = 1;
-                                                                  cld.do_graphics = 0;
+                                                               if (arg_str == "show-ccp4i2-save-button") {
+                                                                  cld.show_ccp4i2_save_button = true;
                                                                } else {
-                                                                  std::cout << "WARNING! Malformed option - needs an argument: "
-                                                                            << long_options[option_index].name
-                                                                            << std::endl << std::endl;
+                                                                  if (arg_str == "update-self") {
+                                                                     cld.update_self = 1;
+                                                                     cld.do_graphics = 0;
+                                                                  } else {
+                                                                     std::cout << "WARNING! Malformed option - needs an argument: "
+                                                                               << long_options[option_index].name
+                                                                               << std::endl << std::endl;
+                                                                  }
                                                                }
                                                             }
                                                          }

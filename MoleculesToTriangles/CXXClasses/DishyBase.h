@@ -26,6 +26,7 @@
 #define DISHY_BASE_H
 
 #include <vector>
+#include <compat/coot-sysdep.h>
 #include <clipper/core/clipper_types.h>
 #include <mmdb2/mmdb_manager.h>
 #include "MoleculesToTriangles/CXXSurface/CXXCoord.h"

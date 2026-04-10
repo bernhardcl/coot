@@ -51,6 +51,10 @@
 #include "compat/coot-sysdep.h"
 
 #include "lbg-graph.hh"
+#include "utils/xdg-base.hh"
+
+#include "utils/logging.hh"
+extern logging logger;
 
 // std::string 
 // coot::basic_dict_restraint_t::atom_id_1_4c() const {
@@ -314,20 +318,24 @@ coot::operator<<(std::ostream &s, const dict_atom &at) {
      << " \"" << at.pdbx_stereo_config.second << "\" ";
    if (at.formal_charge.first)
       s << "formal-charge " << at.formal_charge.second << " ";
-   else 
+   else
       s << "no-formal-charge ";
    if (at.partial_charge.first)
       s << "partial-charge " << at.partial_charge.second << " ";
-   else 
+   else
       s << "no-partial-charge ";
-   s << "model-pos " << at.model_Cartn.first << " ";
+   s << "\n      model-pos-flag: " << at.model_Cartn.first << " ";
    if (at.model_Cartn.first)
       s << at.model_Cartn.second.format() << " ";
-   s << "ideal-pos " << at.pdbx_model_Cartn_ideal.first << " ";
+   else
+      s << "no model_Cartn ";
+   s << "ideal-pos-flag: " << at.pdbx_model_Cartn_ideal.first << " ";
    if (at.pdbx_model_Cartn_ideal.first)
       s << at.pdbx_model_Cartn_ideal.second.format();
+   else
+      s << "no model_Cartn_ideal";
    return s;
-} 
+}
 
 
 std::ostream&
@@ -456,25 +464,24 @@ coot::protein_geometry::get_padded_name(const std::string &atom_id,
 void
 coot::protein_geometry::info() const {
 
-
    std::cout << "::::: MONOMER GEOMETRY:" << std::endl;
    for (unsigned int idr=0; idr<size(); idr++) {
       // ejd says that "restraints" has an "n" in it.  Fixed.
       std::cout << dict_res_restraints[idr].second.residue_info.comp_id << std::endl;
       std::cout << "   " << dict_res_restraints[idr].second.bond_restraint.size()
-		<< " bond restraints " << std::endl;
+                << " bond restraints " << std::endl;
       std::cout << "   " << dict_res_restraints[idr].second.angle_restraint.size()
-		<< " angle restraints " << std::endl;
+                << " angle restraints " << std::endl;
       std::cout << "   " << dict_res_restraints[idr].second.torsion_restraint.size()
-		<< " torsion restraints " << std::endl;
+                << " torsion restraints " << std::endl;
       std::cout << "   " << dict_res_restraints[idr].second.plane_restraint.size()
-		<< " plane restraints " << std::endl;
+                << " plane restraints " << std::endl;
 //       for (int i=0; i<dict_res_restraints[idr].plane_restraint.size(); i++) {
-// 	 for (int j=0; j<dict_res_restraints[idr].plane_restraint[i].atom_ids.size(); j++) {
-// 	    std::cout << "      " << dict_res_restraints[idr].plane_restraint[i].plane_id
-// 		      << " " << dict_res_restraints[idr].plane_restraint[i].atom_ids[j]
-// 		      << std::endl;
-// 	 }
+//          for (int j=0; j<dict_res_restraints[idr].plane_restraint[i].atom_ids.size(); j++) {
+//             std::cout << "      " << dict_res_restraints[idr].plane_restraint[i].plane_id
+//                       << " " << dict_res_restraints[idr].plane_restraint[i].atom_ids[j]
+//                       << std::endl;
+//          }
 //       }
    }
 
@@ -482,17 +489,17 @@ coot::protein_geometry::info() const {
    for (unsigned int idr=0; idr<dict_link_res_restraints.size(); idr++) {
       std::cout << dict_link_res_restraints[idr].link_id << std::endl;
       std::cout << "   " << dict_link_res_restraints[idr].link_bond_restraint.size()
-		<< " link bond restraits " << std::endl;
+                << " link bond restraits " << std::endl;
       std::cout << "   " << dict_link_res_restraints[idr].link_angle_restraint.size()
-		<< " link angle restraits " << std::endl;
+                << " link angle restraits " << std::endl;
       std::cout << "   " << dict_link_res_restraints[idr].link_torsion_restraint.size()
-		<< " link torsion restraits " << std::endl;
+                << " link torsion restraits " << std::endl;
       std::cout << "   " << dict_link_res_restraints[idr].link_plane_restraint.size()
-		<< " link plane restraits " << std::endl;
+                << " link plane restraits " << std::endl;
    }
-   
-} 
-      
+
+}
+
 void
 coot::protein_geometry::set_verbose(bool verbose_flag) {
    verbose_mode = verbose_flag;
@@ -505,29 +512,35 @@ coot::protein_geometry::comp_id_to_file_name(const std::string &comp_id) const {
 
    std::string file_name;
 
-   if (comp_id.length() > 0) { 
+   if (comp_id.length() > 0) {
       char *cmld = getenv("COOT_MONOMER_LIB_DIR");
       std::string d;
       if (! cmld) {
-	 d = PKGDATADIR;
-	 d = util::append_dir_dir(d, "lib");
-	 d = util::append_dir_dir(d, "data");
-	 d = util::append_dir_dir(d, "monomers");
+         d = PKGDATADIR;
+         d = util::append_dir_dir(d, "lib");
+         d = util::append_dir_dir(d, "data");
+         d = util::append_dir_dir(d, "monomers");
       } else {
-	 d = cmld;
+         d = cmld;
       }
 
       if (! d.empty()) {
-	 std::string c0(1,comp_id[0]);
-	 std::string lc0 = util::downcase(c0);
-	 d = util::append_dir_dir(d, lc0);
-	 std::string lfn = comp_id + ".cif";
-	 file_name = util::append_dir_file(d, lfn);
+         std::string c0(1,comp_id[0]);
+         std::string lc0 = util::downcase(c0);
+         d = util::append_dir_dir(d, lc0);
+         std::string lfn = comp_id + ".cif";
+         file_name = util::append_dir_file(d, lfn);
       }
    }
    return file_name;
 }
 
+int
+coot::protein_geometry::check_and_try_dynamic_add(const std::string &resname, int imol_enc, int read_number) {
+
+   bool try_autoload = true;
+   return have_dictionary_for_residue_type(resname, imol_enc, read_number, try_autoload);
+}
 
 // Return 0 on failure to do a dynamic add (actually, the number of
 // atoms read).
@@ -537,16 +550,20 @@ coot::protein_geometry::comp_id_to_file_name(const std::string &comp_id) const {
 int
 coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_number) {
 
+   bool debug = false;
+   // if (verbose_mode) debug = true;
+
    int success = 0;  // fail initially and is set to the number of
-		     // atoms read from the mmcif dictionary file in
-		     // init_refmac_mon_lib().
+                     // atoms read from the mmcif dictionary file in
+                     // init_refmac_mon_lib().
 
    // If this is INH, DRG etc, don't try to auto-add
    //
    if (is_non_auto_load_ligand(resname)) {
-      std::cout << "INFO:: comp-id: " << resname
-		<< " is marked for non-autoloading - stopping dynamic_add() now "
-		<< std::endl;
+      // std::cout << "INFO:: comp-id: " << resname
+      //           << " is marked for non-autoloading - stopping dynamic_add() now "
+      //           << std::endl;
+      logger.log(log_t::INFO, "comp-id:", resname, "is marked for non-autoloading - stopping dynamic_add() now");
       return success;
    }
 
@@ -558,37 +575,58 @@ coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_num
    // If COOT_REFMAC_LIB_DIR is then try CLIB (a CCP4 setting).
    // If that is not set, then we fall back to the default directory:
    // $prefix/share/coot onto which we tag a "lib" dir.
-   // 
+   //
 
-   char *s  = getenv("COOT_REFMAC_LIB_DIR");
-   char *cmld = getenv("COOT_MONOMER_LIB_DIR");
+   char *s         = getenv("COOT_REFMAC_LIB_DIR");
+   char *cmld      = getenv("COOT_MONOMER_LIB_DIR");
+   char *clibd     = getenv("CLIBD");     // a CCP4 setting
+   char *clibd_mon = getenv("CLIBD_MON"); // a CCP4 setting
 
    if (s) {
 
+      if (debug)
+         std::cout << "PATH p-A" << std::endl;
+
    } else {
-      s  = getenv("CLIB");
+
+      if (debug)
+         std::cout << "PATH p-B" << std::endl;
+
+      s = clibd;
 
       if (! s) {
-         if (false)
-	    std::cout << "DEBUG:: try_dynamic_add() using package_data_dir(): " << package_data_dir()
-		      << std::endl;
-	 std::string tmp_string = package_data_dir();
-	 tmp_string = util::append_dir_dir(tmp_string, "lib");
-	 s = new char[tmp_string.length() + 1];
-	 strcpy(s, tmp_string.c_str());
+         if (debug)
+            std::cout << "PATH p-C" << std::endl;
+         if (debug)
+            std::cout << "DEBUG:: try_dynamic_add() using package_data_dir(): " << package_data_dir()
+                      << std::endl;
+         std::string dir_1 = package_data_dir();
+         std::string dir_2 = util::append_dir_dir(dir_1, "lib");
+         std::string dir_3 = util::append_dir_dir(dir_2, "data");
+         s = new char[dir_3.length() + 1];
+         strcpy(s, dir_3.c_str());
       } else {
-	 if (verbose_mode)
-	    std::cout << "INFO:: using standard CCP4 Refmac dictionary"
-		      << " to search for \"" << resname << "\"" << std::endl; 
+         if (verbose_mode)
+            // std::cout << "INFO:: using standard CCP4 Refmac dictionary"
+            //           << " to search for \"" << resname << "\"" << std::endl;
+            logger.log(log_t::INFO, "using standard CCP4 Refmac dictionary to search for", resname);
       }
    }
 
    if (!s) {
 
-      std::string pref_dir = coot::prefix_dir();
+      std::string pref_dir = coot::prefix_dir(); // checks COOT_PREFIX env var
       std::string ss = pref_dir + "/share/coot/lib/data";
       if (ss.length() < 2048)
          strcpy(cmld, ss.c_str());
+   }
+
+   if (debug) {
+      std::cout << ":::::::::::::::: debug in try_dynamic_add() here A with s " << s << std::endl;
+      if (cmld)
+         std::cout << ":::::::::::::::: debug in try_dynamic_add() here A with cmld " << cmld << std::endl;
+      else
+         std::cout << ":::::::::::::::: debug in try_dynamic_add() here A with null cmld " << std::endl;
    }
 
    // 20241001-PE hostage to fortune...
@@ -601,113 +639,152 @@ coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_num
       std::string alt_beta_anomer_name;
       std::string alt_alpha_anomer_name;
 
-      if (cmld) { 
-	 filename = cmld;
-	 filename += "/";
+      if (cmld) {
+         filename = cmld;
+         filename += "/";
       } else {
-	 filename += "/data/monomers/";
+         filename += "/monomers/";
       }
 
       filename = coot::util::intelligent_debackslash(filename);
 
-      if (false)
-         std::cout << "debug:: try_dynamic_add(): filename " << filename << std::endl;
+      if (debug)
+         std::cout << "debug:: try_dynamic_add(): here C filename " << filename << std::endl;
 
       if (resname.length() > 0) {
-	 const char rs = resname[0];
-	 const char v = tolower(rs); // get the sub directory name
+         const char rs = resname[0];
+         const char v = tolower(rs); // get the sub directory name
          char v1[2];
-	 v1[0] = v;
-	 v1[1] = '\0';
-	 std::string letter(v1);
-	 filename += letter;
-	 filename += "/";
-	 std::string upcased_resname_filename = filename;
-	 if (resname.length() > 2 ) { 
-	    if (resname[2] != ' ') { 
-	       filename += resname;
-	       upcased_resname_filename += coot::util::upcase(resname);
-	    } else {
-	       filename += resname.substr(0,2);
-	       upcased_resname_filename += coot::util::upcase(resname.substr(0,2));
-	    }
-	 } else {
-	    filename += resname;
-	    upcased_resname_filename += coot::util::upcase(resname);	    
-	 }
-	 beta_anomer_name = filename;
-	 beta_anomer_name += "-b-D.cif";
-	 alt_beta_anomer_name = filename;
-	 alt_beta_anomer_name += "-B-D.cif";
-	 alpha_anomer_name  = filename;
-	 alpha_anomer_name += "-a-L.cif";
-	 alt_alpha_anomer_name  = filename;
-	 alt_alpha_anomer_name += "-A-L.cif";
-	 filename += ".cif";
-	 upcased_resname_filename += ".cif";
-	 
-	 struct stat buf;
-	 int istat = stat(filename.c_str(), &buf);
-	 if (istat == 0) {
-	    if (coot::is_regular_file(filename)) {
+         v1[0] = v;
+         v1[1] = '\0';
+         std::string letter(v1);
+         filename += letter;
+         filename += "/";
+         std::string upcased_resname_filename = filename;
+         if (resname.length() > 2 ) {
+            if (resname[2] != ' ') {
+               filename += resname;
+               upcased_resname_filename += coot::util::upcase(resname);
+            } else {
+               filename += resname.substr(0,2);
+               upcased_resname_filename += coot::util::upcase(resname.substr(0,2));
+            }
+         } else {
+            filename += resname;
+            upcased_resname_filename += coot::util::upcase(resname);
+         }
+         beta_anomer_name = filename;
+         beta_anomer_name += "-b-D.cif";
+         alt_beta_anomer_name = filename;
+         alt_beta_anomer_name += "-B-D.cif";
+         alpha_anomer_name  = filename;
+         alpha_anomer_name += "-a-L.cif";
+         alt_alpha_anomer_name  = filename;
+         alt_alpha_anomer_name += "-A-L.cif";
+         filename += ".cif";
+         upcased_resname_filename += ".cif";
 
-	       coot::read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(filename, read_number);
-	       success = rmit.success;
-	    } else {
+         struct stat buf;
+         int istat = stat(filename.c_str(), &buf);
+         if (istat == 0) {
+            if (coot::is_regular_file(filename)) {
 
-	       // error/warning
-	       if (! coot::is_dir_or_link(filename)) {
-		  std::cout << "WARNING: " << filename << ": no such file (or directory)\n";
-	       } else {
-		  std::cout << "ERROR: dictionary " << filename << " is not a regular file" << std::endl;
-	       }
-	    }
-	 } else { 
-	    
-	    // Regular file doesn't exist,
-	    
-	    // Try the upcased filename
-	    // 
-	    istat = stat(upcased_resname_filename.c_str(), &buf);
-	    if (istat == 0) {
-	       read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(upcased_resname_filename, read_number);
-	       success = rmit.success;
-	    } else { 
+               coot::read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(filename, read_number);
+               success = rmit.success;
+            } else {
 
-	       // try the beta anomer version
-	       istat = stat(beta_anomer_name.c_str(), &buf);
-	       if (istat == 0) {
-		  read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(beta_anomer_name, read_number);
-		  success = rmit.success;
-	       } else {
-		  // try the upcased file name e.g. xxx/NAG-B-D.cif
-		  istat = stat(alt_beta_anomer_name.c_str(), &buf);
-		  if (istat == 0) {
-		     read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(alt_beta_anomer_name, read_number);
-		     success = rmit.success;
-		  } else {
-		     // alpha?
-		     istat = stat(alpha_anomer_name.c_str(), &buf);
-		     if (istat == 0) {
-			read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(alpha_anomer_name, read_number);
-			success = rmit.success;
-		     } else {
-			istat = stat(alt_alpha_anomer_name.c_str(), &buf);
-			if (istat == 0) {
-			   read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(alt_alpha_anomer_name, read_number);
-			   success = rmit.success;
-			}
-		     }
-		  }
-	       }
-	    }
-	 }
+               // error/warning
+               if (! coot::is_dir_or_link(filename)) {
+                  std::cout << "WARNING: " << filename << ": no such file (or directory)\n";
+               } else {
+                  std::cout << "ERROR: dictionary " << filename << " is not a regular file" << std::endl;
+               }
+            }
+         } else {
+
+            // Regular file doesn't exist,
+
+            // Try the upcased filename
+            //
+            istat = stat(upcased_resname_filename.c_str(), &buf);
+            if (istat == 0) {
+               read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(upcased_resname_filename, read_number);
+               success = rmit.success;
+            } else {
+
+               // try the beta anomer version
+               istat = stat(beta_anomer_name.c_str(), &buf);
+               if (istat == 0) {
+                  read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(beta_anomer_name, read_number);
+                  success = rmit.success;
+               } else {
+                  // try the upcased file name e.g. xxx/NAG-B-D.cif
+                  istat = stat(alt_beta_anomer_name.c_str(), &buf);
+                  if (istat == 0) {
+                     read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(alt_beta_anomer_name, read_number);
+                     success = rmit.success;
+                  } else {
+                     // alpha?
+                     istat = stat(alpha_anomer_name.c_str(), &buf);
+                     if (istat == 0) {
+                        read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(alpha_anomer_name, read_number);
+                        success = rmit.success;
+                     } else {
+                        istat = stat(alt_alpha_anomer_name.c_str(), &buf);
+                        if (istat == 0) {
+                           read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(alt_alpha_anomer_name, read_number);
+                           success = rmit.success;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   if (!success) {
+      // try the XDG Base Directory Protocol cache
+      xdg_t xdg;
+      bool debug = false;
+      std::filesystem::path ch = xdg.get_cache_home();
+      if (std::filesystem::exists(ch)) {
+         std::filesystem::path monomers_path = ch / "monomers";
+         if (std::filesystem::exists(monomers_path)) {
+            const char rs = resname[0];
+            const char v = tolower(rs); // get the sub directory name
+            std::string letter(1, v);
+            std::filesystem::path sub_dir = monomers_path / letter;
+            if (std::filesystem::exists(sub_dir)) {
+               std::string cif_file_name = resname + ".cif";
+               std::filesystem::path cif_file_path = sub_dir / cif_file_name;
+               if (std::filesystem::exists(cif_file_path)) {
+                  // read it
+                  read_refmac_mon_lib_info_t rmit = init_refmac_mon_lib(cif_file_path.string(), read_number);
+                  success = rmit.success;
+               } else {
+                  // we will need to download it then
+                  // and put it in the above directory)
+                  if (debug)
+                     std::cout << "DEBUG:: try_dynamic_add(): " << cif_file_path.string() << " does not exist" << std::endl;
+               }
+            } else {
+               if (debug)
+                  std::cout << "DEBUG:: try_dynamic_add(): " << sub_dir.string() << " does not exist" << std::endl;
+            }
+         } else {
+            if (debug)
+               std::cout << "DEBUG:: try_dynamic_add(): " << monomers_path.string() << " does not exist" << std::endl;
+         }
+      } else {
+         if (debug)
+            std::cout << "DEBUG:: try_dynamic_add(): " << ch.string() << " does not exist" << std::endl;
       }
    }
 
    // now, did we get something with minimal description? If so,
    // delete it, it was a fail.
-   // 
+   //
    std::pair<bool, dictionary_residue_restraints_t> p = get_monomer_restraints(resname, IMOL_ENC_ANY);
 
    if (p.first) {
@@ -726,9 +803,9 @@ coot::protein_geometry::try_dynamic_add(const std::string &resname, int read_num
       success = 0;
    } else {
       // elide minimal description restraints.
-      if (p.second.residue_info.description_level == "M") { 
-	 success = 0;
-	 delete_mon_lib(resname, IMOL_ENC_ANY);
+      if (p.second.residue_info.description_level == "M") {
+         success = 0;
+         delete_mon_lib(resname, IMOL_ENC_ANY);
       }
    }
    return success;
@@ -742,9 +819,9 @@ coot::protein_geometry::is_non_auto_load_ligand(const std::string &resname) cons
    std::vector<std::string>::const_iterator it;
    for (it=non_auto_load_residue_names.begin(); it!=non_auto_load_residue_names.end(); ++it) {
       if (*it == resname) {
-	 r = true;
-	 break;
-      } 
+         r = true;
+         break;
+      }
    }
    return r;
 }
@@ -756,11 +833,11 @@ coot::protein_geometry::add_non_auto_load_residue_name(const std::string &res_na
    std::vector<std::string>::const_iterator it;
    for (it=non_auto_load_residue_names.begin(); it!=non_auto_load_residue_names.end(); it++) {
       if (*it == res_name) {
-	 found = true;
-	 break;
+         found = true;
+         break;
       }
       if (found)
-	 break;
+         break;
    }
    if (! found)
       non_auto_load_residue_names.push_back(res_name);
@@ -772,11 +849,11 @@ coot::protein_geometry::remove_non_auto_load_residue_name(const std::string &res
    std::vector<std::string>::iterator it;
    for (it=non_auto_load_residue_names.begin(); it!=non_auto_load_residue_names.end(); it++) {
       if (*it == res_name) {
-	 non_auto_load_residue_names.erase(it);
-	 break;
+         non_auto_load_residue_names.erase(it);
+         break;
       }
    }
-} 
+}
 
 
 
@@ -796,7 +873,7 @@ coot::protein_geometry::fill_default_non_auto_load_residue_names() { // build-it
    non_auto_load_residue_names.push_back("09");
    for (unsigned int i=1; i<10; i++) {
       for (unsigned int j=0; j<10; j++) {
-	 std::string ss = std::to_string(i) + std::to_string(j);
+         std::string ss = std::to_string(i) + std::to_string(j);
          non_auto_load_residue_names.push_back(ss);
       }
    }
@@ -805,7 +882,7 @@ coot::protein_geometry::fill_default_non_auto_load_residue_names() { // build-it
 
 std::vector <coot::dict_torsion_restraint_t>
 coot::protein_geometry::get_monomer_torsions_from_geometry(const std::string &monomer_type,
-							   int imol_enc) {
+                                                           int imol_enc) {
 
    bool ifound = false;
    std::vector <coot::dict_torsion_restraint_t> rv;
@@ -818,10 +895,10 @@ coot::protein_geometry::get_monomer_torsions_from_geometry(const std::string &mo
    }
 
    // check synonyms before 3-letter codes.  Maybe needs matches_imol() test
-   // 
-   if (! ifound) { 
+   //
+   if (! ifound) {
       // OK, that failed to, perhaps there is a synonym?
-      for (unsigned int i=0; i<residue_name_synonyms.size(); i++) { 
+      for (unsigned int i=0; i<residue_name_synonyms.size(); i++) {
 	 if (residue_name_synonyms[i].comp_alternative_id == monomer_type) {
 	    if (matches_imol(dict_res_restraints[i].first, imol_enc)) { // is this the right test?
 	       int ndict = dict_res_restraints.size();
@@ -1148,7 +1225,14 @@ coot::protein_geometry::standard_protein_monomer_files() const {
    s.push_back("d/DT.cif");
 
    s.push_back("h/HOH.cif");
-   s.push_back("n/NA.cif"); // for quiet
+
+   // Metals
+   s.push_back("n/NA.cif");
+   s.push_back("k/K.cif");
+   s.push_back("c/CA.cif");
+   s.push_back("m/MG.cif");
+   s.push_back("n/NI.cif");
+   s.push_back("z/ZN.cif");
 
    return s;
 }
@@ -1161,8 +1245,11 @@ coot::protein_geometry::have_dictionary_for_residue_type(const std::string &mono
 							 int read_number_in,
 							 bool try_autoload_if_needed) {
 
+   bool debug = false;
+
    bool ifound = false;
    int ndict = dict_res_restraints.size();
+   std::string path = "--start--";
    read_number = read_number_in;
 
    // ---------------- FIXME ----------------------------------------------------
@@ -1172,6 +1259,10 @@ coot::protein_geometry::have_dictionary_for_residue_type(const std::string &mono
    if (idr >= 0) {
       ifound = true;
    }
+
+   if (debug)
+      // std::cout << "INFO:: pg::have_dictionary_for_residue_type() idr here is " << idr << std::endl;
+      logger.log(log_t::INFO, "pg::have_dictionary_for_residue_type() idr here is", idr);
 
    // check synonyms before checking three-letter-codes
 
@@ -1186,8 +1277,10 @@ coot::protein_geometry::have_dictionary_for_residue_type(const std::string &mono
 	       }
 	    }
 	 }
-	 if (ifound)
+	 if (ifound) {
+            path = "path-1";
 	    break;
+         }
       }
    }
 
@@ -1200,6 +1293,7 @@ coot::protein_geometry::have_dictionary_for_residue_type(const std::string &mono
 	 if (dict_res_restraints[i].second.residue_info.three_letter_code == monomer_type) {
 	    if (! dict_res_restraints[i].second.is_bond_order_data_only()) {
 	       ifound = 1;
+               path = "path-2";
 	       break;
 	    }
 	 }
@@ -1209,14 +1303,16 @@ coot::protein_geometry::have_dictionary_for_residue_type(const std::string &mono
    if (! ifound) {
       if (try_autoload_if_needed) {
 	 ifound = try_dynamic_add(monomer_type, read_number);
+         path = "path-3";
 	 // std::cout << "DEBUG:: here in have_dictionary_for_residue_type() try_dynamic_add returned "
          // << ifound << std::endl;
       }
    }
 
-   if (false)
-      std::cout << ".......................have_dictionary_for_residue_type() " << monomer_type
-                << " " << imol_enc << " returns " << ifound << std::endl;
+   if (debug)
+      // std::cout << "INFO:: pg::have_dictionary_for_residue_type() " << monomer_type
+      //           << " " << imol_enc << " path " << path << " returns " << ifound << std::endl;
+      logger.log(log_t::INFO, std::vector<logging::ltw> {"pg::have_dictionary_for_residue_type()", monomer_type, imol_enc, "path", path, "returns", ifound});
 
    return ifound;
 }
@@ -1253,7 +1349,7 @@ coot::protein_geometry::have_dictionary_for_residue_types(const std::vector<std:
       int ifound = have_dictionary_for_residue_type(residue_types[i], imol_enc, read_number);
       if (ifound == 0) {
 	 have_all = 0;
-      } 
+      }
       read_number++;
    }
    return have_all;
@@ -1265,15 +1361,36 @@ coot::protein_geometry::have_restraints_dictionary_for_residue_types(const std::
                                                                      int imol_enc,
                                                                      int read_number) {
 
+   if (false) {
+      std::cout << "debug:: in have_restraints_dictionary_for_residue_types() --- start --- " << std::endl;
+      for (const auto &r : residue_types)
+	 std::cout << "debug:: in have_restraints_dictionary_for_residue_types() type :" << r << ":" << std::endl;
+   }
+
    bool have_all = true;
    for (unsigned int i=0; i<residue_types.size(); i++) {
+      if (! have_all) continue;
       const std::string &rt = residue_types[i];
-      int idx = get_monomer_restraints_index(rt, imol_enc, false);
+      int idx = get_monomer_restraints_index(rt, imol_enc, false);  // const function
       if (idx != -1) {
          const coot::dictionary_residue_restraints_t &restraints = dict_res_restraints[idx].second;
-         if (restraints.bond_restraint.empty()) {
+	 // this test does not make sense for MG, or other single atoms
+         // if (restraints.bond_restraint.empty()) {
+	 bool has_bonds = false;
+	 if (restraints.atom_info.size() > 1) has_bonds = true;
+         if (has_bonds && restraints.bond_restraint.empty()) {
             have_all = false;
             break;
+         } else {
+            for (auto it=restraints.bond_restraint.begin(); it!=restraints.bond_restraint.end(); ++it) {
+               try {
+                  // this will throw an exception if there are no bond *restraints*
+                  float v = it->value_dist();
+               }
+               catch (const std::runtime_error &e) {
+                  have_all = false;
+               }
+            }
          }
       } else {
          have_all = false;
@@ -1570,8 +1687,9 @@ coot::protein_geometry::get_monomer_restraints_internal(const std::string &monom
 							bool allow_minimal_flag) const {
 
    if (false)
-      std::cout << "debug:: get_monomer_restraints_internal() called with "
-                << monomer_type << " imol_enc: " << imol_enc << " allow-minimal: " << allow_minimal_flag << std::endl;
+      std::cout << "debug:: get_monomer_restraints_internal() called with type: "
+                << monomer_type << " imol_enc: " << imol_enc
+                << " allow-minimal: " << allow_minimal_flag << std::endl;
 
    // 20161028
    // Compiling with SRS causes a crash when we access dict_res_restraints.
@@ -1676,19 +1794,21 @@ coot::protein_geometry::get_monomer_restraints_index(const std::string &monomer_
 						     bool allow_minimal_flag) const {
 
    int r = -1;
-   bool debug = false;
+   bool debug = false; // hello again
 
    unsigned int nrest = dict_res_restraints.size();
    for (unsigned int i=0; i<nrest; i++) {
+
       if (debug)
 	 std::cout << "in get_monomer_restraints_index() comparing dict: \""
 		   << dict_res_restraints[i].second.residue_info.comp_id << "\" vs mine: \"" << monomer_type
 		   << "\" and dict: " << dict_res_restraints[i].first << " vs mine: " <<  imol_enc
 		   << "     with allow_minimal_flag " << allow_minimal_flag << std::endl;
+
       if (dict_res_restraints[i].second.residue_info.comp_id == monomer_type) {
 	 if (matches_imol(dict_res_restraints[i].first, imol_enc)) {
 	    // if (dict_res_restraints[i].first == imol_enc) {
-	    if ((allow_minimal_flag == 1) || (! dict_res_restraints[i].second.is_bond_order_data_only())) { 
+	    if ((allow_minimal_flag == 1) || (! dict_res_restraints[i].second.is_bond_order_data_only())) {
 	       r = i;
 	       break;
 	    }
@@ -1700,7 +1820,7 @@ coot::protein_geometry::get_monomer_restraints_index(const std::string &monomer_
       for (unsigned int i=0; i<nrest; i++) {
 	 if (dict_res_restraints[i].second.residue_info.comp_id  == monomer_type) {
 	    if (matches_imol(dict_res_restraints[i].first, imol_enc)) {
-	       if ((allow_minimal_flag == 1) || (! dict_res_restraints[i].second.is_bond_order_data_only())) { 
+	       if ((allow_minimal_flag == 1) || (! dict_res_restraints[i].second.is_bond_order_data_only())) {
 		  r = i;
 		  break;
 	       }
@@ -1708,10 +1828,10 @@ coot::protein_geometry::get_monomer_restraints_index(const std::string &monomer_
 	 }
       }
    }
-   
+
    if (r == -1) {
       // OK, that failed to, perhaps there is a synonym?
-      for (unsigned int i=0; i<residue_name_synonyms.size(); i++) { 
+      for (unsigned int i=0; i<residue_name_synonyms.size(); i++) {
 	 if (residue_name_synonyms[i].comp_alternative_id == monomer_type) {
 	    if (matches_imol(dict_res_restraints[i].first, imol_enc)) {
 	       int ndict = dict_res_restraints.size();
@@ -1727,12 +1847,12 @@ coot::protein_geometry::get_monomer_restraints_index(const std::string &monomer_
 	 }
       }
    }
-   
+
    if (r == -1) {
       for (unsigned int i=0; i<nrest; i++) {
-	 if (dict_res_restraints[i].second.residue_info.three_letter_code  == monomer_type) {
+	 if (dict_res_restraints[i].second.residue_info.three_letter_code == monomer_type) {
 	    if (matches_imol(dict_res_restraints[i].first, imol_enc)) {
-	       if ((allow_minimal_flag == 1) || (! dict_res_restraints[i].second.is_bond_order_data_only())) { 
+	       if ((allow_minimal_flag == 1) || (! dict_res_restraints[i].second.is_bond_order_data_only())) {
 		  r = i;
 		  break;
 	       }
@@ -1740,15 +1860,36 @@ coot::protein_geometry::get_monomer_restraints_index(const std::string &monomer_
 	 }
       }
    }
-   
+
+   // std::cout << "get_monomer_restraints_index() for " << monomer_type << " returns r " << r << std::endl;
+
    return r;
 }
+
+// 20250124-PE and the reverse
+//
+// return the second blank on lookup failure
+std::pair<int, std::string>
+coot::protein_geometry::get_monomer_name(int monomer_index) const {
+
+   int imol = -1;
+   std::string comp_id;
+   int n_rest = dict_res_restraints.size();
+   if (monomer_index >= 0) {
+      if (monomer_index < n_rest) {
+         imol = dict_res_restraints[monomer_index].first;
+         comp_id = dict_res_restraints[monomer_index].second.residue_info.comp_id;
+      }
+   }
+   return std::make_pair(imol, comp_id);
+}
+
 
 
 std::string
 coot::protein_geometry::get_type_energy(const std::string &atom_name,
 					const std::string &residue_name,
-					int imol) const { 
+					int imol) const {
    // return "" if not found, else return the energy type found in ener_lib.cif
    //
    std::string r;
@@ -1761,7 +1902,7 @@ coot::protein_geometry::get_type_energy(const std::string &atom_name,
 }
 
 // return -1.1 on failure to look up.
-// 
+//
 double
 coot::protein_geometry::get_vdw_radius(const std::string &atom_name,
 				       const std::string &residue_name,
@@ -1951,17 +2092,21 @@ coot::protein_geometry::remove_planar_peptide_restraint() {
 	    if (it->plane_id == plane_id) {
 	       ifound++;
 	       if (0)
-		  std::cout << "INFO:: before removal of plane3 TRANS has " 
-			    << dict_link_res_restraints[i].link_plane_restraint.size()
-			    << " plane restraints\n";
-	       
+		  // std::cout << "INFO:: before removal of plane3 TRANS has "
+		  //           << dict_link_res_restraints[i].link_plane_restraint.size()
+		  //           << " plane restraints\n";
+		  logger.log(log_t::INFO, "before removal of plane3 TRANS has",
+		             dict_link_res_restraints[i].link_plane_restraint.size(), "plane restraints");
+
 	       // let's remove it
  	       dict_link_res_restraints[i].link_plane_restraint.erase(it);
-	       
-	       if (0)
-		  std::cout << "INFO::  after removal of plane3 TRANS has " 
-			    << dict_link_res_restraints[i].link_plane_restraint.size()
-			    << " plane restraints\n";
+
+	       if (false)
+		  // std::cout << "INFO::  after removal of plane3 TRANS has "
+		  //           << dict_link_res_restraints[i].link_plane_restraint.size()
+		  //           << " plane restraints\n";
+		  logger.log(log_t::INFO, "after removal of plane3 TRANS has",
+		             dict_link_res_restraints[i].link_plane_restraint.size(), "plane restraints");
 	       break;
 	    }
 	 }
@@ -1981,7 +2126,7 @@ coot::protein_geometry::planar_peptide_restraint_state() const {
 
    for (unsigned int i=0; i<dict_link_res_restraints.size(); i++) {
       if (dict_link_res_restraints[i].link_id == link_id) { // e.g "TRANS"
-	 
+
 	 std::vector<coot::dict_link_plane_restraint_t>::const_iterator it;
 	 for (it = dict_link_res_restraints[i].link_plane_restraint.begin();
 	      it != dict_link_res_restraints[i].link_plane_restraint.end(); it++) {
@@ -1994,6 +2139,22 @@ coot::protein_geometry::planar_peptide_restraint_state() const {
    }
    return ifound;
 }
+
+coot::dictionary_residue_link_restraints_t coot::protein_geometry::link(const std::string &id_in) const {
+
+   // std::cout << "debug:: link() found " << dict_link_res_restraints.size() << " links" << std::endl;
+
+   dictionary_residue_link_restraints_t r;
+   for (unsigned int id=0; id<dict_link_res_restraints.size(); id++) {
+      // std::cout << "................. comparing " << dict_link_res_restraints[id].link_id << " " << id_in << std::endl;
+      if (dict_link_res_restraints[id].link_id == id_in) {
+         r = dict_link_res_restraints[id];
+         break;
+      }
+   }
+   return r;
+}
+
 
 
 // restraints for omega for both CIS and TRANS links (and
@@ -2232,23 +2393,37 @@ coot::protein_geometry::monomer_types() const {
 // so that find_link_type_rigourous() works for link type "p" (RNA/DNA
 // stuff).  (Problem found when trying to sphere refine a on RNA -
 // 3l0u).
-// 
+//
+// 2026-01-27-PE this causes a crash related to links when refining.
+// Instead of checking all the functions that call this function, I
+// will merely add a try/catch here.
 std::string
 coot::protein_geometry::get_group(mmdb::Residue *r) const {
 
    std::string res_name = r->GetResName();
-   return get_group(res_name);
+   try {
+      std::string group = get_group(res_name);
+      return group;
+   }
+   catch(const std::runtime_error& e) {
+      std::cout << "ERROR:: pg::get_group" << res_name << " " << e.what() << '\n';
+      return std::string("");
+   }  
 }
 
 
 std::string
 coot::protein_geometry::get_group(const std::string &res_name_in) const {
-   
+
    bool found = false;
    std::string group;
    std::string res_name = res_name_in;
-   if (res_name.length() > 3)
-      res_name = res_name.substr(0,2);
+
+   // 20250331-PE Why would I do this?
+   //             Comment it out.
+   // if (res_name.length() > 3)
+   //    res_name = res_name.substr(0,2);
+
    unsigned int s = size(); // fails if the protein_geometry pointer was not valid
    for (unsigned int i=0; i<s; i++) {
       if (three_letter_code(i) == res_name) {
@@ -2267,7 +2442,7 @@ coot::protein_geometry::get_group(const std::string &res_name_in) const {
    }
 
    if (! found) {
-      std::string s = "No dictionary group found for residue type :";
+      std::string s = "WARNING:: get_group(): No dictionary group found for residue type :";
       s += res_name;
       s += ":";
       throw std::runtime_error(s);
@@ -2359,18 +2534,20 @@ coot::protein_geometry::get_residue(const std::string &comp_id, int imol_enc,
    // If the coordinates for the model are (0,0,0) then this function
    // returns a null.
 
+   bool debug = false;
+
    mmdb::Residue *residue_p = NULL;
 
    // might use try_dynamic_add (if needed).
    bool r = have_dictionary_for_residue_type(comp_id, imol_enc, try_autoload_if_needed);
 
-   if (false)
-      std::cout << "------------------ in get_residue() have_dictionary_for_residue_type() returns  "
+   if (debug)
+      std::cout << "------------------ in pr::get_residue() have_dictionary_for_residue_type() returns  "
                 << r << std::endl;
    if (r) {
       for (unsigned int i=0; i<dict_res_restraints.size(); i++) {
          const dictionary_residue_restraints_t &rest = dict_res_restraints[i].second;
-         if (false)
+         if (debug)
             std::cout << "   testing comp_id " << rest.residue_info.comp_id << std::endl;
          if (rest.residue_info.comp_id == comp_id) {
             int imol_for_dict = dict_res_restraints[i].first;
@@ -2382,6 +2559,9 @@ coot::protein_geometry::get_residue(const std::string &comp_id, int imol_enc,
          }
       }
    }
+   if (debug)
+      std::cout << "------------------ in pr::get_residue() returns " << residue_p << std::endl;
+
    return residue_p;
 }
 
@@ -2421,7 +2601,8 @@ coot::protein_geometry::mol_from_dictionary(const std::string &three_letter_code
 
    mmdb::Manager *mol = NULL;
    mmdb::Residue *residue_p = get_residue(three_letter_code, imol_enc, idealised_flag);
-   if (residue_p) { 
+
+   if (residue_p) {
       mmdb::Chain *chain_p = new mmdb::Chain;
       chain_p->SetChainID("A");
       chain_p->AddResidue(residue_p);
@@ -2430,7 +2611,9 @@ coot::protein_geometry::mol_from_dictionary(const std::string &three_letter_code
       mol = new mmdb::Manager;
       mol->AddModel(model_p);
    } else {
-      std::cout << "WARNING:: Null residue in mol_from_dictionary() for " << three_letter_code << std::endl;
+      std::cout << "WARNING:: protein_geometry::mol_from_dictionary(): "
+                << "Null residue in mol_from_dictionary() for "
+                << three_letter_code << std::endl;
    }
    // debug_mol(mol);
    return mol;
@@ -2450,7 +2633,7 @@ coot::protein_geometry::mol_from_dictionary(int monomer_index,
       if (monomer_index < r_size)
 	 residue_p = dict_res_restraints[monomer_index].second.GetResidue(idealised_flag, b_factor);
 
-   if (residue_p) { 
+   if (residue_p) {
       mmdb::Chain *chain_p = new mmdb::Chain;
       chain_p->SetChainID("A");
       chain_p->AddResidue(residue_p);
@@ -2501,9 +2684,10 @@ coot::protein_geometry::OXT_in_residue_restraints_p(const std::string &residue_t
 	 }
       }
    } else {
-      if (0) 
-	 std::cout << "INFO:: residue type :" << residue_type << ": not found in dictionary"
-		   << std::endl;
+      if (0)
+	 // std::cout << "INFO:: residue type :" << residue_type << ": not found in dictionary"
+	 //           << std::endl;
+	 logger.log(log_t::INFO, "residue type:", residue_type, ": not found in dictionary");
    } 
    return r;
 }
@@ -2641,30 +2825,32 @@ coot::protein_geometry::monomer_restraints_comp_ids() const {
    for (unsigned int i=0; i<dict_res_restraints.size(); i++)
       v.push_back(dict_res_restraints[i].second.residue_info.comp_id);
    return v;
-} 
+}
 
 
 // can throw a std::runtime_error
 std::string
-coot::protein_geometry::Get_SMILES_for_comp_id(const std::string &comp_id) const {
+coot::protein_geometry::Get_SMILES_for_comp_id(const std::string &comp_id, int imol_enc) const {
 
    bool found = false;
-   std::string s; 
+   std::string s;
    for (unsigned int i=0; i<dict_res_restraints.size(); i++) {
 
       if (dict_res_restraints[i].second.residue_info.comp_id == comp_id) {
+         if (dict_res_restraints[i].first == imol_enc) {
 
-	 unsigned int nd = dict_res_restraints[i].second.descriptors.descriptors.size();
-	 for (unsigned int idesc=0; idesc<nd; idesc++) { 
-	    if (dict_res_restraints[i].second.descriptors.descriptors[idesc].type == "SMILES_CANONICAL") { 
-	       s = dict_res_restraints[i].second.descriptors.descriptors[idesc].descriptor;
-	       found = true;
-	       break;
-	    }
-	 }
+            unsigned int nd = dict_res_restraints[i].second.descriptors.descriptors.size();
+            for (unsigned int idesc=0; idesc<nd; idesc++) {
+               if (dict_res_restraints[i].second.descriptors.descriptors[idesc].type == "SMILES_CANONICAL") {
+                  s = dict_res_restraints[i].second.descriptors.descriptors[idesc].descriptor;
+                  found = true;
+                  break;
+               }
+            }
+         }
+         if (found)
+            break;
       }
-      if (found)
-	 break;
    }
 
    if (! found){
@@ -2674,7 +2860,7 @@ coot::protein_geometry::Get_SMILES_for_comp_id(const std::string &comp_id) const
       if (dict_res_restraints[i].second.residue_info.comp_id == comp_id) {
 
 	 unsigned int nd = dict_res_restraints[i].second.descriptors.descriptors.size();
-	 for (unsigned int idesc=0; idesc<nd; idesc++) { 
+	 for (unsigned int idesc=0; idesc<nd; idesc++) {
 	    if (dict_res_restraints[i].second.descriptors.descriptors[idesc].type == "SMILES") {
 	       s = dict_res_restraints[i].second.descriptors.descriptors[idesc].descriptor;
 	       found = true;

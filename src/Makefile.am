@@ -80,7 +80,6 @@ COOT_EXTRA_LIBS = \
 	$(top_builddir)/coot-utils/libcoot-map-utils.la  	\
 	$(top_builddir)/coot-utils/libcoot-coord-extras.la  	\
 	$(top_builddir)/coot-utils/libcoot-coord-utils.la  	\
-	$(top_builddir)/utils/libcoot-utils.la  		\
 	$(top_builddir)/mini-mol/libcoot-mini-mol.la    	\
 	$(top_builddir)/analysis/libcoot-analysis.la 		\
 	$(top_builddir)/protein_db/libcoot-protein-db.la      	\
@@ -88,6 +87,7 @@ COOT_EXTRA_LIBS = \
 	$(top_builddir)/cootaneer/libcootaneer.la 		\
 	$(top_builddir)/MoleculesToTriangles/CXXClasses/libMoleculesToTrianglesCXXClasses.la     		\
 	$(top_builddir)/MoleculesToTriangles/CXXSurface/libMoleculesToTrianglesCXXSurface.la     		\
+	$(top_builddir)/utils/libcoot-utils.la  		\
 	$(top_builddir)/compat/libcoot-compat.la
 
 
@@ -98,11 +98,34 @@ EXTRA_DIST = \
 	coot.i post-glade add-c-extern.sh blank.cc fix-gettext.sh \
 	mol-hierarchy.cc \
 	junk.cc coot-gtk2.defs coot-dox.cfg post-gtk2-glade.sh \
-	post-process-coot-wrap-guile.sh \
+	post-process-coot-wrap-guile.sh  \
 	post-process-coot-wrap-python.sh \
-	fixup-interface.h.sh \
-	coot_wrap_guile_pre.cc
+	fixup-interface.h.sh      \
+	coot_wrap_guile_pre.cc    \
+	coot_rsr_functions_docs.i \
+	coot_network_functions_docs.i \
+	coot_c_interface_docs.i   \
+	coot_cc_interface_docs.i \
+	coot_cc_interface_graphics.i \
+        coot_cc_interface_molecular_representation.i \
+        coot_cc_interface_user_defined_atom_colours.i \
+	coot_read_molecule_functions_docs.i
 
+regen-interface-docs-for-swig:
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output       coot_c_interface_docs.i $(top_srcdir)/src/doxygen/xml/c-interface_8h.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output      coot_cc_interface_docs.i $(top_srcdir)/src/doxygen/xml/cc-interface_8hh.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output     coot_rsr_functions_docs.i $(top_srcdir)/src/doxygen/xml/rsr-functions_8hh.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output coot_network_functions_docs.i $(top_srcdir)/src/doxygen/xml/network-get_8hh.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output coot_read_molecule_functions_docs.i $(top_srcdir)/src/doxygen/xml/read-molecule_8hh.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output coot_cc_interface_molecular_representation.i  $(top_srcdir)/src/doxygen/xml/cc-interface-molecular-representation_8hh.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output coot_cc_interface_user_defined_atom_colours.i $(top_srcdir)/src/doxygen/xml/cc-interface-user-defined-atom-colours_8hh.xml
+	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output coot_cc_interface_graphics.i $(top_srcdir)/src/doxygen/xml/cc-interface-graphics_8hh.xml
+# or
+# coot_c_interface_docs.i:
+#	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output  coot_c_interface_docs.i $(top_srcdir)/src/doxygen/xml/c-interface_8h.xml
+# coot_cc_interface_docs.i:
+#	python3 $(top_srcdir)/src/xml-to-swig-docstrings.py --output  coot_cc_interface_docs.i $(top_srcdir)/src/doxygen/xml/c-interface_8hh.xml
+# and add coot_c_interface_docs.i and coot_cc_interface_docs.ii to the coot_wrap_python_pre.cc dependencies
 
 # subpkgdatadir = $(pkgdatadir)
 # subpkgdata_DATA = dynarama.glade geometry_graphs_builder.glade
@@ -130,7 +153,8 @@ dist_cootdata_DATA = atom-label.shader blur.shader central-cube.shader \
 		     meshes-for-ssao.shader effects.shader 9.ssao_blur.shader 9.ssao_geometry.shader 9.ssao.shader \
 		     instanced-meshes-for-ssao.shader texture-meshes-for-ssao.shader texture-meshes-with-shadows.shader \
 		     texture-meshes-shadow-map.shader shadow-map-image-texture.shader \
-		     rotation-centre-cross-hairs-for-ssao.shader background-image.shader
+		     rotation-centre-cross-hairs-for-ssao.shader background-image.shader \
+		     moleculestotriangles-with-shadows.shader
 
 MOLTRIANGLES_CPPFLAGS=-DUSE_MOLECULES_TO_TRIANGLES
 
@@ -147,7 +171,7 @@ coot_wrap_guile_pre.cc:      $(top_srcdir)/src/c-interface.h    \
                              $(top_srcdir)/src/c-interface-refine.hh \
                              $(top_srcdir)/src/c-interface-ligands-swig.hh \
                              $(top_srcdir)/src/c-interface-generic-objects.h \
-                             $(top_srcdir)/src/cfc.hh \
+                             $(top_srcdir)/src/pythonic-cfc.hh \
                              $(top_srcdir)/src/curlew.h \
                              $(top_srcdir)/src/curlew.hh \
                              $(top_srcdir)/src/validation.hh \
@@ -176,7 +200,7 @@ coot_wrap_python_pre.cc: $(top_srcdir)/src/c-interface.h      \
                          $(top_srcdir)/src/c-interface-refine.hh \
                          $(top_srcdir)/src/c-interface-ligands-swig.hh \
                          $(top_srcdir)/src/c-interface-generic-objects.h \
-                         $(top_srcdir)/src/cfc.hh \
+                         $(top_srcdir)/src/pythonic-cfc.hh \
                          $(top_srcdir)/src/curlew.h \
                          $(top_srcdir)/src/curlew.hh \
                          $(top_srcdir)/src/validation.hh \
@@ -229,12 +253,12 @@ AM_CXXFLAGS = \
 	-DXDATADIR='"$(datadir)"'    \
 	-DCOOT_SYS_BUILD_TYPE='"$(COOT_SYS_BUILD_TYPE)"' \
 	-DCOOT_BUILD_INFO_STRING='"$(COOT_BUILD_INFO_STRING)"' \
-        $(OpenAL_CFLAGS)        \
+    $(openal_CFLAGS)        \
+	$(RSVG_CFLAGS)		\
 	$(USE_LIBCURL)          \
 	$(WITH_GUILE_CFLAGS)	\
 	$(GUILE_CFLAGS)		\
-        $(MyPyGObject_CFLAGS)   \
-	$(PYGOBJECT_CFLAGS)	\
+        $(PyGObject_CFLAGS)     \
 	$(PYTHON_CPPFLAGS)	\
 	$(PYTHON_CFLAGS)	\
 	$(COOT_WINDOWS_CFLAGS)	\
@@ -272,7 +296,6 @@ AM_CPPFLAGS = \
 	$(GLOB_CFLAGS)                  \
 	$(WITH_SOUND)                   \
 	$(VORBISFILE_CFLAGS)            \
-	$(ALSA_CFLAGS)                  \
 	$(SOUND_FLAGS)                  \
 	$(SQLITE3_CFLAGS)               \
 	$(GEMMI_CXXFLAGS)               \
@@ -303,12 +326,12 @@ _coot_la_LDFLAGS = -module $(SHARED_LDFLAGS) --no-undefined  \
 	   $(top_builddir)/pli/libcoot-pli.la                \
 	   $(top_builddir)/lidia-core/libcoot-lidia-core.la  \
 	   $(top_builddir)/utils/libcoot-utils.la            \
-	   $(OpenAL_LIBS) $(PYTHON_LIBS) $(CLIPPER_LIBS)
+	   $(PYTHON_LIBS) $(CLIPPER_LIBS)
 
 
 if OS_WIN32
 # no more libexec for windows
-bin_PROGRAMS     = coot-bin coot-density-score-by-residue-bin
+bin_PROGRAMS     = WinCoot coot-density-score-by-residue-bin
 else
 if OS_DARWIN
 libexec_PROGRAMS = MacCoot coot-density-score-by-residue-bin
@@ -321,14 +344,14 @@ endif
 
 dist_bin_SCRIPTS = coot coot-density-score-by-residue
 
-check_PROGRAMS = test-coot-align test-cholesky
+check_PROGRAMS = test-coot-align test-cholesky test-tubular-spline
 
 #coot_fix_nomenclature_errors_SOURCES = \
 #	fix-nomenclature.cc    \
 #	coot-nomenclature.cc
 
 if OS_WIN32
-coot_bin_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc \
+WinCoot_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc \
         glade-callbacks-preferences.cc glade-callbacks-shader-settings.cc \
         new-startup.cc \
         setup-gui-components.cc \
@@ -359,7 +382,7 @@ endif
 # is it a good idea to move functions from coot-bin dependencies into libcootsumo?
 # e.g. atoms_with_zero_occupancy()?
 if OS_WIN32
-coot_bin_LDADD =  \
+WinCoot_LDADD =  \
 	libcootsumo.la                                     \
 	$(top_builddir)/pli/libcoot-pli.la                 \
 	$(top_builddir)/density-contour/libcoot-isosurface.la  	\
@@ -491,6 +514,7 @@ libcootsumo_la_SOURCES = \
 	c-interface.cc		 \
 	c-interface-test.cc      \
 	cc-interface.hh		 \
+	cc-interface-utils.cc    \
 	cc-interface-alignment.cc \
 	cc-interface-graphics.cc \
 	cc-interface-graphics.hh \
@@ -501,18 +525,24 @@ libcootsumo_la_SOURCES = \
 	cc-interface-molecular-symmetry.cc \
 	cc-interface-network.hh  \
 	cc-interface-mogul.hh    \
-	cc-interface-scripting.cc\
-	cc-interface-scripting.hh\
+	cc-interface-scripting.cc  \
+	cc-interface-scripting.hh  \
+	cc-interface-subprocess.cc \
 	cc-interface-map-utils.cc\
 	cc-interface-image.hh    \
 	cc-interface-png.cc      \
+	cc-interface-validation.cc      \
 	cc-interface-user-defined-atom-colours.hh \
 	cc-interface-user-defined-atom-colours.cc \
 	cc-interface-molecular-representation.hh  \
 	canvas-fixes.hh          \
-	cfc.cc cfc.hh            \
+	pythonic-cfc.cc pythonic-cfc.hh            \
 	cfc-widgets.hh           \
 	cfc-widgets-c-interface.h \
+	cfc-2025.cc              \
+	cfc-2025.hh              \
+	cfc-gui.cc               \
+	cfc-gui.hh               \
 	change-dir.cc		 \
 	change-dir.hh		 \
 	cmtz-interface-gui.hh	 \
@@ -532,8 +562,6 @@ libcootsumo_la_SOURCES = \
 	coot-database.hh	 \
 	coot-colour.hh		 \
 	coot-colour.cc		 \
-	coot-align.cc		 \
-	coot-align.hh		 \
 	coot-nomenclature.cc	 \
 	coot-nomenclature.hh     \
 	coot-fileselections.h    \
@@ -562,17 +590,19 @@ libcootsumo_la_SOURCES = \
 	density-results-container-t.hh \
 	dots-representation.hh   \
 	draw.cc                  \
-	graphics-info-tick-function.cc \
 	draw.hh                  \
 	draw-2.hh                \
 	drag-and-drop.hh         \
 	drag-and-drop.cc         \
 	draw-generic-display-objects.cc \
+	drawn-ghost-molecule-display.hh \
 	dynamic-validation.cc    \
 	dynamic-validation.hh    \
 	eyes.cc eyes.hh		 \
 	event-controller-callbacks.hh \
 	event-controller-callbacks.cc \
+	file-system-utils.cc     \
+	file-system-utils.hh     \
 	fit-loop-gui.cc          \
 	fit-loop-gui.hh          \
 	flev.hh			 \
@@ -598,19 +628,25 @@ libcootsumo_la_SOURCES = \
 	gl-rama-plot.hh          \
 	gl-bits.hh		 \
 	globjects.cc 		 \
-	globjects.h gl-matrix.h  \
+	globjects.h              \
 	globularize.cc           \
 	glarea_tick_function.hh  \
 	globularize.hh           \
+	gphl-screen.cc           \
+	gphl-screen.hh           \
 	graphics-info.cc	 \
 	graphics-info-defines.cc \
 	graphics-info-defines-gtk4.cc \
 	graphics-info-draw.cc    \
+	graphics-info-draw-utils.cc \
 	graphics-info-draw-models.cc \
+	graphics-info-enums.hh \
+	graphics-info-geometry-graphs.cc \
 	graphics-info-graphs.cc	 \
 	graphics-info-gui.cc	 \
 	graphics-info-init.cc	 \
 	graphics-info-intermediate.cc    \
+	graphics-info-keybindings.cc     \
 	graphics-info-modelling.cc       \
 	graphics-info-navigation.cc	 \
 	graphics-info-navigation-gtk2.cc \
@@ -625,16 +661,18 @@ libcootsumo_la_SOURCES = \
 	graphics-info-render-scene.cc \
 	graphics-info-residues.cc     \
 	graphics-info-refine.cc	 \
+	graphics-info-restraints-editor.cc \
 	graphics-info-scripting.cc	\
 	graphics-info-state.cc	 \
 	graphics-info-statics.cc \
 	graphics-info-superpose.cc	\
+	graphics-info-tick-function.cc \
 	graphics-info-trackball.cc	\
+	graphics-info-utils.cc	 \
 	graphics-ligand-view.cc	 \
 	graphics-ligand-view.hh	 \
 	graphics-ligand-mesh-molecule.cc \
 	graphics-ligand-mesh-molecule.hh \
-	gl-matrix.cc 		 \
 	graphics-info.h 	 \
 	gtkglarea-rama-plot.cc   \
 	gtkglarea-rama-plot.hh   \
@@ -647,6 +685,7 @@ libcootsumo_la_SOURCES = \
 	gtk-utils.hh \
 	guile-fixups.h		 \
 	history_list.hh		 \
+	intermediate-atom.hh     \
 	HUDMesh.cc               \
 	HUDMesh.hh               \
 	HUDTextureMesh.cc        \
@@ -657,6 +696,7 @@ libcootsumo_la_SOURCES = \
 	init-from-gtkbuilder.cc  \
         idles.hh                 \
 	interface.h              \
+	json-rpc.cc              \
 	key-bindings.cc	         \
 	key-bindings.hh	         \
 	manipulation-modes.hh    \
@@ -694,6 +734,7 @@ libcootsumo_la_SOURCES = \
 	molecule-class-info.cc		 \
 	molecule-class-info-alignment.cc \
 	molecule-class-info-analysis.cc \
+	molecule-class-info-backup.cc   \
 	molecule-class-info-bonds.cc    \
 	molecule-class-info-build.cc	\
 	molecule-class-info-maps.cc	\
@@ -720,10 +761,17 @@ libcootsumo_la_SOURCES = \
 	molecular-mesh-generator.hh \
 	mtz-column-auto-read.hh  \
 	named-rotamer-score.hh   \
+	network-get.hh           \
+	nef.hh                   \
+	nef.cc                   \
+	new-molecule-by-symmetry-matrix.hh \
 	nsv.hh                   \
 	obj_loader.h obj_loader.cc \
+	pandda-inspect.cc        \
+	pae-interface.cc         \
 	pisa-interface.hh	 \
-	pick.hh pick.cc	 \
+	pisa-internal.hh         \
+	pick.hh pick.cc	         \
 	positioned-widgets.h     \
 	positron-plot.cc         \
 	pre-load.hh              \
@@ -736,6 +784,7 @@ libcootsumo_la_SOURCES = \
 	python-classes.hh	 \
 	python-3-interface.hh	 \
 	python-scripting-gui.hh  \
+	python-results-container.hh \
 	Particle.cc Particle.hh  \
 	pulse-data.hh            \
 	rail-points.hh           \
@@ -771,14 +820,17 @@ libcootsumo_la_SOURCES = \
 	startup-utils.cc         \
 	startup-scripts.hh       \
 	startup-scripts.hh       \
+	stringify-error-code.hh  \
 	testing.cc testing-2.cc  \
 	testing-data.hh          \
 	testing.hh               \
 	Texture.cc Texture.hh    \
 	TextureMesh.cc TextureMesh.hh \
-	tomo-tools.cc \
+	tomo-tools.cc            \
+	translation-gizmo.cc     \
+	translation-gizmo.hh     \
 	triangle-extras.h        \
-	user-mods.hh user-mods.cc\
+	user-mods.hh user-mods.cc \
 	xmap-utils.cc 		 \
 	xmap-utils.h             \
 	remarks-browser-gtk-widgets.hh \
@@ -788,6 +840,7 @@ libcootsumo_la_SOURCES = \
 	spherical-density.cc     \
 	single-map-properties-dialog.cc \
 	single-map-properties-dialog.hh \
+	stereo-eye.hh            \
 	fragment-info.hh	 \
 	atom-name-bits.hh	 \
 	additional-representation.hh	   \
@@ -867,7 +920,7 @@ endif
 # coot_bin_LDFLAGS = -static -lstdc++
 #
 if OS_WIN32
-coot_bin_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
+WinCoot_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
 else
 if OS_DARWIN
 MacCoot_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
@@ -888,7 +941,6 @@ endif
 libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
                 $(COOT_EXTRA_LIBS)      \
 		$(VORBISFILE_LIBS)      \
-		$(ALSA_LIBS)            \
 		$(GTK_LIBS)             \
 		$(CLIPPER_LIBS) 	\
 		$(LIBSSM_LIBS)		\
@@ -902,13 +954,15 @@ libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
 		$(gsl_LIBS) -lblas    \
 		$(MYSQL_LIBS)	      \
 		$(CURL_LIBS)	      \
+		$(RSVG_LIBS)	      \
 	  	$(RDKIT_LIBS)	      \
 		$(BOOST_LDFLAGS)      \
 		$(L_BOOST_PYTHON)     \
 		-lfreetype            \
 		$(SQLITE3_LIBS)       \
+		$(openal_LIBS)        \
 		$(SHARED_LDFLAGS)     \
-		-lz                   \
+		$(COOT_WINDOWS_LDFLAGS)     \
 		-lpthread
 
 # make freetype a configure variable FREETYPE_LIBS
@@ -927,6 +981,11 @@ test_cholesky_LDADD =	\
 	$(top_builddir)/utils/libcoot-utils.la            \
         $(RDKIT_LIBS) \
 	$(CLIPPER_LIBS) $(MMDB_LIBS) $(gsl_LIBS)
+
+test_tubular_spline_SOURCES = test-tubular-spline.cc
+test_tubular_spline_LDADD = \
+	$(top_builddir)/coot-utils/libcoot-coord-utils.la \
+	$(top_builddir)/MoleculesToTriangles/CXXClasses/libMoleculesToTrianglesCXXClasses.la
 
 # testmap_SOURCES = testmap.cc xmap-interface.cc
 # testmap_LDADD = $(COOT_EXTRA_LIBS) $(SURFACE_LIB) $(CLIPPER_LIBS)

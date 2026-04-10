@@ -30,7 +30,10 @@
 #include <iostream>
 #include <cstddef> // needed for gmp.h I think.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvolatile"
 #include <libguile.h>
+#pragma GCC diagnostic pop
 #include <glib.h>
 #include <gtk/gtk.h>
 
@@ -181,7 +184,11 @@ void try_load_dot_coot_and_preferences() {
 	 }
 
          // update preferences
-         make_preferences_internal();
+	 // BL says:: sorry not any more - only pythonic ones are allowes... 
+	 // at least for now. Not evern sure if this is ever run. NB not using xdg anyway ;-)
+	 // well, at the moment this can still be run but doesnt update the preferences... maybe
+	 // shouldnt even do this?!
+         // make_preferences_internal();
 
       }
    }

@@ -71,6 +71,9 @@
 #include "c-interface-gui.hh" // for set_transient_for_main_window()
 #include "coot-preferences.h"
 
+#include "utils/logging.hh"
+extern logging logger;
+
 #include "widget-from-builder.hh"
 
 #include "utils/xdg-base.hh"
@@ -282,10 +285,11 @@ void initialize_preferences() {
    std::vector<float> def_vec;
 
    // Mouse rotation button
+   // Note:: this is bool even though the coot function use_trackpad uses int
    coot_preferences.register_preference("use_trackpad",[](const preferences_value& value) {
-      set_use_primary_mouse_button_for_rotation(std::get<bool>(value));},
-         []() -> preferences_value { graphics_info_t gg; return gg.using_trackpad;},
-   g.using_trackpad);
+       set_use_primary_mouse_button_for_view_rotation(std::get<bool>(value));},
+         []() -> preferences_value { graphics_info_t gg; return gg.use_primary_mouse_for_view_rotation_flag;},
+   g.use_primary_mouse_for_view_rotation_flag);
 
    // Virtual trackball
    coot_preferences.register_preference("virtual_trackball",[](const preferences_value& value) {
@@ -423,8 +427,8 @@ void initialize_preferences() {
     // pink pointer size
     coot_preferences.register_preference("rotation_centre_cube_size", [](const preferences_value& value) {
        set_rotation_centre_size(std::get<double>(value));},
-          []() -> preferences_value { graphics_info_t gg; return gg.rotation_centre_cube_size;},
-    g.rotation_centre_cube_size);
+          []() -> preferences_value { graphics_info_t gg; return gg.user_defined_rotation_centre_crosshairs_size_scale_factor;},
+    g.user_defined_rotation_centre_crosshairs_size_scale_factor);
 
 }
 
@@ -923,7 +927,25 @@ void add_status_bar_text(const std::string &s) {
 
    graphics_info_t g;
    g.add_status_bar_text(std::string(s));
-} 
+}
+
+//! set the logging level
+//!
+//! @param level is either "LOW" or "HIGH" or "DEBUGGING"
+void set_logging_level(const std::string &level) {
+   if (level == "LOW")       logger.output_type = logging::output_t::INTERNAL;
+   if (level == "HIGH")      logger.output_type = logging::output_t::TERMINAL;
+   if (level == "DEBUGGING") logger.output_type = logging::output_t::TERMINAL_WITH_DEBUGGING;
+
+   if (level == "LOW" || level == "HIGH" || level == "DEBUGGING") {
+   } else {
+      // let's see the error message!
+      std::cout << "WARNING:: set_logging_level(): bad level name: " << level << std::endl;
+      logger.log(log_t::WARNING, std::string("set_logging_level(): bad level name:"), level);
+   }
+}
+
+
 
 
 
@@ -931,14 +953,14 @@ void add_status_bar_text(const std::string &s) {
 /*                  Other interface preferences                            */
 /*  ----------------------------------------------------------------------- */
 
-void set_model_fit_refine_dialog_stays_on_top(int istate) { 
+void set_model_fit_refine_dialog_stays_on_top(int istate) {
    graphics_info_t::model_fit_refine_dialog_stays_on_top_flag = istate;
 }
 
 int model_fit_refine_dialog_stays_on_top_state() {
 
    return graphics_info_t::model_fit_refine_dialog_stays_on_top_flag;
-} 
+}
 
 void save_accept_reject_dialog_window_position(GtkWidget *acc_rej_dialog) {
    graphics_info_t g;
@@ -1032,25 +1054,28 @@ void user_defined_click_scm(int n_clicks, SCM func) {
     g.user_defined_click_scm_func = func;
     g.pick_cursor_maybe();
   } else {
-    std::cout<<"INFO:: number of clicks less than 1, cannot define user click"<<std::endl;
-  } 
-} 
+    // std::cout<<"INFO:: number of clicks less than 1, cannot define user click"<<std::endl;
+    logger.log(log_t::INFO, "number of clicks less than 1, cannot define user click");
+  }
+}
 #endif // USE_GUILE
 
 #ifdef USE_PYTHON
 void user_defined_click_py(int n_clicks, PyObject *func) {
-  if (n_clicks > 0) {
-    graphics_info_t g;
-    g.user_defined_atom_pick_specs.clear();
-    g.in_user_defined_define = n_clicks;
-    g.user_defined_click_py_func = func;
-    Py_XINCREF(g.user_defined_click_py_func);
-    g.pick_cursor_maybe();
-  } else {
-    std::cout<<"INFO:: number of clicks less than 1, cannot define user click"<<std::endl;
-  } 
-} 
+   if (n_clicks > 0) {
+      graphics_info_t g;
+      g.user_defined_atom_pick_specs.clear();
+      g.in_user_defined_define = n_clicks;
+      g.user_defined_click_py_func = func;
+      Py_XINCREF(g.user_defined_click_py_func);
+      g.pick_cursor_maybe();
+   } else {
+      // std::cout<<"INFO:: number of clicks less than 1, cannot define user click"<<std::endl;
+      logger.log(log_t::INFO, "number of clicks less than 1, cannot define user click");
+   }
+}
 #endif // USE_PYTHON
+
 /*  ------------------------------------------------------------------------ */
 /*                     state (a graphics_info thing)                         */
 /*  ------------------------------------------------------------------------ */

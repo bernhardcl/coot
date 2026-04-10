@@ -64,6 +64,6 @@ result = unittest.TextTestRunner(stream=log, verbosity=2).run(suite)
 # cheating?! We only exit Coot if we are not in graphics mode
 if (coot.use_graphics_interface_state() == 0):
     if (result.wasSuccessful()):
-        coot.coot_real_exit(0)
+        coot.coot_no_state_real_exit(0)
     else:
-        coot.coot_real_exit(1)
+        coot.coot_no_state_real_exit(1)

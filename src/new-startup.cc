@@ -24,6 +24,7 @@
  *
  */
 
+#include <cstddef>
 #include <iostream>
 #include <string>
 #include <gtk/gtk.h>
@@ -32,6 +33,9 @@
 #include <clipper/core/test_core.h>
 #include <clipper/contrib/test_contrib.h>
 
+#include "glib-object.h"
+#include "glib.h"
+#include "glibconfig.h"
 #include "utils/xdg-base.hh"
 
 #include "graphics-info.h"
@@ -46,6 +50,12 @@
 
 #include "testing.hh" // for test_internal();
 
+#include "utils/logging.hh"
+#include "widget-from-builder.hh"
+std::string git_commit(); // use a header?
+
+extern logging logger;
+
 void print_opengl_info();
 
 void init_framebuffers(GtkWidget *glarea) {
@@ -54,7 +64,7 @@ void init_framebuffers(GtkWidget *glarea) {
 
    // std::cout << "DEBUG:: use_framebuffers: " << graphics_info_t::use_framebuffers << std::endl;
 
-   std::cout << "----- start init_framebuffers() ----" << std::endl;
+   // std::cout << "----- start init_framebuffers() ----" << std::endl;
 
    GtkAllocation allocation;
    gtk_widget_get_allocation(GTK_WIDGET(glarea), &allocation);
@@ -91,17 +101,21 @@ void init_framebuffers(GtkWidget *glarea) {
          std::cout << "ERROR:: init_framebuffers() --- done --- err is " << err << std::endl;
    }
 
-   std::cout << "----- done init_framebuffers() ----" << std::endl;
+   // std::cout << "----- done init_framebuffers() ----" << std::endl;
 }
 
 
 #include "text-rendering-utils.hh"
+#include "stringify-error-code.hh"
+// from c-inteerface.cc
+extern "C" void run_command_line_scripts();
+
 
 void
 new_startup_realize(GtkWidget *gl_area) {
 
    GdkDisplay *display = gdk_display_get_default();
-   GListModel* lm = gdk_display_get_monitors(display);
+   GListModel *lm = gdk_display_get_monitors(display);
 
    guint n_items = g_list_model_get_n_items(lm);
    if (n_items > 0) {
@@ -112,19 +126,25 @@ new_startup_realize(GtkWidget *gl_area) {
          const char *monitor_description = gdk_monitor_get_description(monitor);
          const char *monitor_connection  = gdk_monitor_get_connector(monitor);
          if (monitor_description)
-            std::cout << "INFO:: monitor " << imon << " description " << monitor_description << std::endl;
+            // std::cout << "INFO:: monitor " << imon << " description " << monitor_description << std::endl;
+            logger.log(log_t::INFO, "monitor", std::to_string(imon), "description", monitor_description);
          else
-            std::cout << "INFO:: monitor " << imon << " no description " << std::endl;
+            // std::cout << "INFO:: monitor " << imon << " no description " << std::endl;
+            logger.log(log_t::INFO, "monitor", std::to_string(imon), "no description");
          if (monitor_connection)
-            std::cout << "INFO:: monitor " << imon << " connection "  << monitor_connection  << std::endl;
+            // std::cout << "INFO:: monitor " << imon << " connection "  << monitor_connection  << std::endl;
+            logger.log(log_t::INFO, "monitor ", std::to_string(imon), " connection ", monitor_connection);
          int monitor_refresh_rate = gdk_monitor_get_refresh_rate(monitor);
-         std::cout << "INFO:: monitor " << imon << " refresh rate " << monitor_refresh_rate << " mHz"  << std::endl;
+         // std::cout << "INFO:: monitor " << imon << " refresh rate " << monitor_refresh_rate << " mHz"  << std::endl;
+         logger.log(log_t::INFO, "monitor", imon, "refresh rate", monitor_refresh_rate, "mHz");
          int monitor_scale_factor = gdk_monitor_get_scale_factor(monitor);
-         std::cout << "INFO:: monitor " << imon << " scale_factor " << monitor_scale_factor << std::endl;
+         // std::cout << "INFO:: monitor " << imon << " scale_factor " << monitor_scale_factor << std::endl;
+         logger.log(log_t::INFO, "monitor", std::to_string(imon), "scale_factor", monitor_scale_factor);
 
 #if GTK_MINOR_VERSION >= 14
          double monitor_scale = gdk_monitor_get_scale(monitor);
-         std::cout << "INFO:: monitor " << imon << " scale " << monitor_scale << std::endl;
+         // std::cout << "INFO:: monitor " << imon << " scale " << monitor_scale << std::endl;
+         logger.log(log_t::INFO, "monitor", std::to_string(imon), "scale", monitor_scale);
 #endif
       }
    }
@@ -154,9 +174,10 @@ new_startup_realize(GtkWidget *gl_area) {
    g.init_shaders();
    g.setup_lights();
    // 20241001-PE glDrawBuffer() in init_framebuffers() barfs with GL ES.
-   if (!g.graphics_is_gl_es)
+   if (!g.graphics_is_gl_es) {
       g.init_framebuffers(w, h);
-   g.init_joey_ssao_stuff(w, h);
+      g.init_joey_ssao_stuff(w, h);
+   }
 
    float x_scale = 4.4;  // what are these numbers!?
    float y_scale = 1.2;
@@ -171,9 +192,11 @@ new_startup_realize(GtkWidget *gl_area) {
    g.gl_rama_plot.setup_buffers(double_rama_size); // rama relative size, put it into graphics_info_t
    // and allow it to be set in the API
    g.setup_draw_for_happy_face_residue_markers_init();
-   g.setup_draw_for_bad_nbc_atom_pair_markers();
+   g.setup_draw_for_bad_nbc_atom_pair_markers(); // angry diego
+   g.setup_draw_for_bad_nbc_atom_pair_dashed_line();
    g.setup_draw_for_chiral_volume_outlier_markers();
    g.setup_draw_for_anchored_atom_markers_init();
+   g.setup_draw_for_unhappy_atom_markers();
    g.setup_lines_mesh_for_proportional_editing();
    g.lines_mesh_for_hud_lines.set_name("lines mesh for fps graph");
    unsigned int frame_time_history_list_max_n_elements = 500;
@@ -191,15 +214,35 @@ new_startup_realize(GtkWidget *gl_area) {
 
    g.tmesh_for_shadow_map.setup_quad();
 
-   g.attach_buffers();
    Material material;
+   GLenum err = glGetError();
+   if (err)
+      std::cout << "ERROR:: new_startup_realize() pos-D err is " << stringify_error_code(err)
+                << std::endl;
+   // g.attach_buffers();
+   err = glGetError();
+   if (err)
+      std::cout << "ERROR:: new_startup_realize() pos-E post attach_buffers() err is "
+                << stringify_error_code(err) << std::endl;
    g.mesh_for_extra_distance_restraints.setup_extra_distance_restraint_cylinder(material); // init
+
+   // scale the gizmo to the object being translated
+   // float scale_factor = 22.2;
+   // g.translation_gizmo.scale(scale_factor);
+   g.setup_draw_for_translation_gizmo();
 
    g.setup_key_bindings();
 
-   GLenum err = glGetError();
+   err = glGetError();
    if (err)
-      std::cout << "ERROR:: new_startup_realize() --start-- err is " << err << std::endl;
+      std::cout << "ERROR:: new_startup_realize() --end-- err is " << stringify_error_code(err)
+                << std::endl;
+
+   auto run_command_line_scripts_callback = +[] (gpointer user_data) {
+      run_command_line_scripts();
+      return G_SOURCE_REMOVE;
+   };
+   g_idle_add(run_command_line_scripts_callback, nullptr);
 
    // Hmm! - causes weird graphics problems
    // setup_python(0, NULL); // needs to called after GTK has started - because it depends on gtk.
@@ -232,17 +275,16 @@ new_startup_on_glarea_render(GtkGLArea *glarea) {
 void
 new_startup_on_glarea_resize(GtkGLArea *glarea, gint width, gint height) {
 
-   if (true)
-      std::cout << "DEBUG:: --- new_startup_on_glarea_resize() " <<  width << " " << height << std::endl;
-
-   // std::cout << "resize(): int max " << INT_MAX << " " << std::sqrt(INT_MAX) << std::endl;
-
    graphics_info_t g;
    // for the GL widget, not the window.
    g.graphics_x_size = width;
    g.graphics_y_size = height;
-   g.reset_frame_buffers(width, height); // currently makes the widget blank (not drawn)
-   g.resize_framebuffers_textures_renderbuffers(width, height); // 20220131-PE added from crows merge
+   if (g.graphics_is_gl_es) {
+      // don't touch the framebuffers
+   } else {
+       g.reset_frame_buffers(width, height); // currently makes the widget blank (not drawn)
+       g.resize_framebuffers_textures_renderbuffers(width, height); // 20220131-PE added from crows merge
+   }
    g.reset_hud_buttons_size_and_position();
    g.mouse_speed = static_cast<double>(width) / 900.0;
 
@@ -311,10 +353,13 @@ void on_glarea_drag_begin_primary(GtkGestureDrag *gesture,
 
    graphics_info_t g;
 
-   if (g.using_trackpad)
-      g.on_glarea_drag_begin_secondary(gesture, x, y, area);
-   else
-      g.on_glarea_drag_begin_primary(gesture, x, y, area);
+   // if (g.using_trackpad)
+   //    g.on_glarea_drag_begin_secondary(gesture, x, y, area);
+   // else
+   //    g.on_glarea_drag_begin_primary(gesture, x, y, area);
+
+   g.on_glarea_drag_begin_primary(gesture, x, y, area);
+
 }
 
 void on_glarea_drag_update_primary(GtkGestureDrag *gesture,
@@ -324,11 +369,13 @@ void on_glarea_drag_update_primary(GtkGestureDrag *gesture,
 
    graphics_info_t g;
 
-   if (g.using_trackpad)
-      // Hack for mac. Needs more thought.
-      g.on_glarea_drag_update_secondary(gesture, delta_x, delta_y, area);
-   else
-      g.on_glarea_drag_update_primary(gesture, delta_x, delta_y, area);
+   // if (g.using_trackpad)
+   //    // Hack for mac. Needs more thought.
+   //    g.on_glarea_drag_update_secondary(gesture, delta_x, delta_y, area);
+   // else
+   //    g.on_glarea_drag_update_primary(gesture, delta_x, delta_y, area);
+
+   g.on_glarea_drag_update_primary(gesture, delta_x, delta_y, area);
 
 }
 
@@ -416,7 +463,6 @@ on_glarea_key_controller_key_released(GtkEventControllerKey *controller,
 
    graphics_info_t g;
    g.on_glarea_key_controller_key_released(controller, keyval, keycode, modifiers);
-
 }
 
 
@@ -591,6 +637,8 @@ install_icons_into_theme(GtkWidget *w) {
    GtkIconTheme *icon_theme = gtk_icon_theme_get_for_display(gtk_widget_get_display(w));
    std::string pkg_data_dir = coot::package_data_dir();
    std::string pixmap_dir = coot::util::append_dir_dir(pkg_data_dir, "pixmaps");
+   std::string pixmap_dark_dir = coot::util::append_dir_dir(pixmap_dir, "dark");
+   gtk_icon_theme_add_search_path(icon_theme, pixmap_dark_dir.c_str());
    gtk_icon_theme_add_search_path(icon_theme, pixmap_dir.c_str());
 
    // This is only necessary when coot is installed in a non-standard location
@@ -632,7 +680,8 @@ void setup_go_to_residue_keyboarding_mode_entry_signals() {
    GtkWidget *entry = widget_from_builder("keyboard_go_to_residue_entry");
    if (entry) {
       GtkEventController *key_controller = gtk_event_controller_key_new();
-      g_signal_connect(key_controller, "key-released", G_CALLBACK(on_go_to_residue_keyboarding_mode_entry_key_controller_key_released), entry);
+      g_signal_connect(key_controller, "key-released",
+                       G_CALLBACK(on_go_to_residue_keyboarding_mode_entry_key_controller_key_released), entry);
       gtk_widget_add_controller(GTK_WIDGET(entry), key_controller);
    }
 }
@@ -641,22 +690,55 @@ void setup_go_to_residue_keyboarding_mode_entry_signals() {
 void
 handle_start_scripts() {
 
-   // 20240609-PE note to self scm_c_primitive_load() fails with a crash because we
+   auto get_scripts = [] (std::filesystem::path xdg_dir, const std::string &sub_dir_name, const std::string &extension) {
+      std::vector<std::filesystem::path> scripts;
+      std::filesystem::path path = xdg_dir / sub_dir_name;
+      if (std::filesystem::exists(path)) {
+         for (const auto &entry : std::filesystem::directory_iterator(path)) {
+            if (entry.path().extension() == extension) {
+               // std::cout << "match " << entry.path().string() << " " << extension << std::endl;
+               scripts.push_back(entry);
+            }
+         }
+      }
+      return scripts;
+   };
+
+   // 20240609-PE note to self: scm_c_primitive_load() fails with a crash because we
    // have not done the scm_boot_guile() call (g_application_run() is called where
    // scm_boot_guile() should be called. I don't know what to do).
 
    xdg_t xdg;
    std::vector<std::filesystem::path> scripts;
+
 #ifdef USE_GUILE
-   scripts = xdg.get_scheme_config_scripts();
-   for (const auto &script : scripts) {
-      std::cout << "Load scheme config script " << script.c_str() << " (ignored)" << std::endl;
+   std::vector<std::filesystem::path> scheme_scripts = xdg.get_scheme_config_scripts();
+   for (const auto &script : scheme_scripts) {
+      std::cout << "INFO:: scheme config script " << script.c_str() << " (ignored)" << std::endl;
       // scm_c_primitive_load(script.c_str());
    }
 #endif
-   scripts = xdg.get_python_config_scripts();
-   for (const auto &script : scripts) {
-      std::cout << "Load python config script " << script.string().c_str() << std::endl;
+
+   std::filesystem::path xdg_ch = xdg.get_config_home();
+   std::vector<std::filesystem::path>   py_config_scripts = xdg.get_python_config_scripts();
+   std::vector<std::filesystem::path>      curlew_scripts = get_scripts(xdg_ch, "Curlew",      ".py");
+   std::vector<std::filesystem::path> preferences_scripts = get_scripts(xdg_ch, "Preferences", ".py");
+   std::vector<std::filesystem::path>      xenops_scripts = get_scripts(xdg_ch, "Xenops",      ".py");
+
+   py_config_scripts.insert(py_config_scripts.end(),      curlew_scripts.begin(),      curlew_scripts.end());
+   py_config_scripts.insert(py_config_scripts.end(), preferences_scripts.begin(), preferences_scripts.end());
+   py_config_scripts.insert(py_config_scripts.end(),      xenops_scripts.begin(),      xenops_scripts.end());
+
+   if (false) {
+      for (const auto &script : py_config_scripts) {
+         std::cout << ":::::::::::::::: AA debuging script " << script.string() << std::endl;
+      }
+   }
+
+   for (const auto &script : py_config_scripts) {
+      // std::cout << "Load python config script " << script.c_str() << std::endl;
+      logger.log(log_t::INFO, logging::function_name_t(__FUNCTION__),
+		 "Load python script", script.string());
       run_python_script(script.string().c_str());
    }
 #ifdef USE_GUILE
@@ -673,7 +755,6 @@ handle_start_scripts() {
       if (graphics_info_t::run_state_file_status) {
          std::pair<bool, std::filesystem::path> script = xdg.get_python_state_script();
          if (script.first) {
-            std::cout << "BL DEBUG:: Load python state script " << script.second.string().c_str() << std::endl;
             run_python_script(script.second.string().c_str());
          }
       }
@@ -687,7 +768,7 @@ create_local_picture(const std::string &local_filename) {
    GtkWidget *picture = 0;
 
    std::string pdd = coot::package_data_dir();
-   std::cout << "pdd " << pdd << std::endl;
+   // std::cout << "pdd " << pdd << std::endl;
    std::string icon_dir = coot::util::append_dir_file(pdd, "images");
    std::vector<std::string> pixmap_directories_gtk4 = {};
    pixmap_directories_gtk4.push_back(icon_dir);
@@ -724,7 +805,7 @@ new_startup_create_splash_screen_window() {
    GtkWidget *splash_screen_window = gtk_window_new();
    gtk_window_set_title(GTK_WINDOW(splash_screen_window), "Coot-Splash");
    gtk_window_set_decorated(GTK_WINDOW(splash_screen_window), FALSE);
-   GtkWidget *picture = create_local_picture("coot-1.png");
+   GtkWidget *picture = create_local_picture("coot-1.2.png");
 
    gtk_widget_set_hexpand(GTK_WIDGET(picture),TRUE);
    gtk_widget_set_vexpand(GTK_WIDGET(picture),TRUE);
@@ -774,11 +855,14 @@ on_app_window_key_controller_key_pressed(GtkEventControllerKey *controller,
 void
 add_key_bindings_for_application_window(GtkWidget *app_window) {
 
-   GtkEventController *key_controller = gtk_event_controller_key_new();
-   g_signal_connect(key_controller, "key-pressed",  G_CALLBACK(on_app_window_key_controller_key_pressed), app_window);
-   gtk_widget_add_controller(app_window, key_controller);
+   // 2026-03-21-PE lets not do this for the moment. It doesn't seem useful
+   // GtkEventController *key_controller = gtk_event_controller_key_new();
+   // g_signal_connect(key_controller, "key-pressed",  G_CALLBACK(on_app_window_key_controller_key_pressed), app_window);
+   // gtk_widget_add_controller(app_window, key_controller);
 }
 
+// drag and drop code needs to be reworked. Add this here for now.
+int handle_drag_and_drop_string(const std::string &file_name);
 
 void
 new_startup_application_activate(GtkApplication *application,
@@ -788,11 +872,12 @@ new_startup_application_activate(GtkApplication *application,
 
    activate_data->application = application;
 
-#ifdef WINDOWS_MINGW
-   std::string window_name = "WinCoot-" + std::string(VERSION);
-#else
    std::string window_name = "Coot-" + std::string(VERSION);
+
+#ifdef WINDOWS_MINGW
+   window_name = "WinCoot-" + std::string(VERSION);
 #endif
+
    GtkWidget *app_window = gtk_application_window_new(application);
    gtk_window_set_application(GTK_WINDOW(app_window), application);
    gtk_window_set_title(GTK_WINDOW(app_window), window_name.c_str());
@@ -826,6 +911,7 @@ new_startup_application_activate(GtkApplication *application,
       };
 
       graphics_info_t graphics_info;
+      graphics_info.init(); // added 20241231
 
       // use this to look up things - and it is used to attach the lidia
       // application window
@@ -838,7 +924,8 @@ new_startup_application_activate(GtkApplication *application,
       // but let's do it once at least!
 
       // this is done in the python startup now.
-      // std::cout << "#################### new_startup_application_activate()  calling graphics_info.init() " << std::endl;
+      // std::cout << "#################### new_startup_application_activate()  calling graphics_info.init() "
+      //           << std::endl;
       // graphics_info.init();
 
       GtkBuilder *builder = gtk_builder_new();
@@ -887,6 +974,22 @@ new_startup_application_activate(GtkApplication *application,
       }
       graphics_info_t::set_preferences_gtkbuilder(preferences_builder);
 
+      // set the version in the about dialog
+      GtkWidget *about_dialog = GTK_WIDGET(gtk_builder_get_object(builder, "about_dialog"));
+      std::string version_str = std::string(VERSION);
+      if (version_str.find("-pre") != std::string::npos) {
+         version_str += "\n";
+         version_str += git_commit();
+         std::string s = COOT_BUILD_INFO_STRING;
+         if (! s.empty()) {
+            version_str += "\n";
+            version_str += s;
+         }
+      }
+      // override the value in the coot-gtk4.ui file.
+      gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(about_dialog), version_str.c_str());
+
+
       python_init();
 
       // 20231114-PE we can't handle the command line data until the graphics have started.
@@ -933,12 +1036,12 @@ new_startup_application_activate(GtkApplication *application,
       gtk_box_prepend(GTK_BOX(graphics_hbox), gl_area);
       gtk_window_set_application(GTK_WINDOW(app_window), application);
 #ifdef __APPLE__
-      gtk_widget_set_size_request(gl_area, 550, 550); // Hmm
-      gtk_window_set_default_size(GTK_WINDOW(app_window), 580, 580);
+      gtk_widget_set_size_request(gl_area, 600, 600); // Hmm
+      gtk_window_set_default_size(GTK_WINDOW(app_window), 700, 700);
       gtk_window_set_default_widget(GTK_WINDOW(app_window), gl_area);
-      gtk_widget_set_visible(app_window, TRUE);
-      gtk_window_set_focus_visible(GTK_WINDOW(app_window), TRUE);
 #else
+      gtk_window_set_focus_visible(GTK_WINDOW(app_window), TRUE);
+
       // 20230729-PE
       // gtk_widget_set_size_request() does't seem to work on the gl_area.
       // So expand the gl_area by setting thw window size just so. This makes the
@@ -948,11 +1051,119 @@ new_startup_application_activate(GtkApplication *application,
       // DEBUG:: --- new_startup_on_glarea_resize() 900 710
       // DEBUG:: --- new_startup_on_glarea_resize() 900 900
       // Curious.
+      // BL says:: make smaller on Windows too, to be on the safe side
+#ifdef WINDOWS_MINGW
+      gtk_window_set_default_size(GTK_WINDOW(app_window), 900, 900);
+#else
       gtk_window_set_default_size(GTK_WINDOW(app_window), 1076, 1023);
+#endif
       gtk_window_set_default_widget(GTK_WINDOW(app_window), gl_area);
       gtk_widget_set_visible(app_window, TRUE);
       gtk_window_set_focus_visible(GTK_WINDOW(app_window), TRUE);
 #endif
+
+      // ---------------------  -----------------------
+
+      // drag and drop: well, just drop for the moment:
+      //
+      // Set up drop target.
+      // GType types[2] = { GDK_TYPE_RGBA, G_TYPE_STRING };
+      GType types[7] = { GDK_TYPE_RGBA, G_TYPE_STRING, G_TYPE_PARAM,
+                         G_TYPE_OBJECT, G_TYPE_VARIANT, G_TYPE_FILE, G_TYPE_STRV};
+
+      GtkDropTarget *drop_target = gtk_drop_target_new(G_TYPE_STRING, GDK_ACTION_COPY);
+      gtk_drop_target_set_gtypes (drop_target, types, G_N_ELEMENTS (types));
+      gtk_widget_add_controller(GTK_WIDGET(gl_area), GTK_EVENT_CONTROLLER(drop_target));
+
+      auto on_drop_performed = +[] (GtkDropTarget *drop_target, const GValue *value, double x, double y) {
+
+         // return a gboolean
+         gboolean status = FALSE;
+
+         g_print("DEBUG:: Drop performed!\n");
+         GType type = G_VALUE_TYPE(value);
+         std::cout << "DEBUG:: value is of type " << type << std::endl;
+
+         if (G_VALUE_HOLDS(value, G_TYPE_FILE)) {
+            std::cout << "!!!!!!!!!!!!! value holds a file!" << std::endl;
+            GFile *file = (GFile *)g_value_get_object(value);
+            if (file) {
+               std::cout << "DEBUG:: got file: " << file << std::endl;
+               const gchar *filename = g_file_get_path(file);
+               std::cout << "DEBUG:: got filename: " << filename << std::endl;
+               handle_drag_and_drop_string(filename);
+               status = TRUE;
+            } else {
+               std::cout << "got null file " << std::endl;
+            }
+         }
+
+         if (type == G_TYPE_OBJECT) {
+            std::cout << "G_TYPE_OBJECT! " << std::endl;
+         } else {
+            std::cout << "not type G_TYPE_OBJECT! " << std::endl;
+         }
+
+         if (type == G_TYPE_STRV) {
+            std::cout << "G_TYPE_STRV! " << std::endl;
+         } else {
+            std::cout << "not type G_TYPE_STRV! " << std::endl;
+         }
+
+         if (type == G_TYPE_FILE) {
+            std::cout << "G_TYPE_FILE! " << std::endl;
+         } else {
+            std::cout << "not type G_TYPE_FILE! " << std::endl;
+         }
+
+         if (type == G_TYPE_PARAM) {
+            std::cout << "G_TYPE_PARAM! " << std::endl;
+         } else {
+            std::cout << "not type G_TYPE_PARAM! " << std::endl;
+         }
+
+         if (type == G_TYPE_VARIANT) {
+            std::cout << "G_TYPE_VARIANT! " << std::endl;
+         } else {
+            std::cout << "not type G_TYPE_VARIANT! " << std::endl;
+         }
+
+         if (type == G_TYPE_POINTER) {
+            std::cout << "G_TYPE_POINTER! " << std::endl;
+         } else {
+            std::cout << "not type G_TYPE_POINTER! " << std::endl;
+         }
+
+         if (type == G_TYPE_STRING) {
+            std::cout << "G_TYPE_STRING! " << std::endl;
+            const char *text = g_value_get_string(value);
+            if (text) {
+               unsigned long ll = strlen(text);
+               std::cout << "DEBUG:: text has length " << ll << std::endl;
+               if (ll > 0) {
+                  handle_drag_and_drop_string(text);
+                  status = TRUE;
+               }
+            } else {
+               std::cout << "DEBUG:: on_drop_performed(): text: was null" << std::endl;
+            }
+         } else {
+            std::cout << "not type G_TYPE_STRING! " << std::endl;
+         }
+         std::cout << "DEBUG:: returning from on_drop_performed()." << std::endl;
+         return status;
+      };
+      g_signal_connect(drop_target, "drop", G_CALLBACK(on_drop_performed), NULL);
+
+      // ------------------ no screenshot for macOS  -----------------------
+
+#ifdef __APPLE__
+      // GtkWidget *menu_item = widget_from_builder("screenshot-menu-item");
+      // if (menu_item)
+      // gtk_label_set_text(GTK_LABEL(menu_item), "Screenshot Not Available");
+#endif
+
+      // ---------------------  -----------------------
 
       gtk_widget_grab_focus(gl_area); // at the start, fixes focus problem
       setup_gestures_for_opengl_widget_in_main_window(gl_area);
@@ -964,7 +1175,9 @@ new_startup_application_activate(GtkApplication *application,
       setup_gui_components();
       setup_go_to_residue_keyboarding_mode_entry_signals();
 
-      handle_start_scripts(); // what used to be in ~/.coot/*.py
+      handle_start_scripts(); // what used to be in ~/.coot/*.py.
+                              // 20260124-PE Not to self: these are not
+                              // command-line scripts.
 
       // setup of the preferences (in GUI) after we read them in (in startup script)...
       setup_preferences_gui();
@@ -972,16 +1185,41 @@ new_startup_application_activate(GtkApplication *application,
       // now we are ready to show graphical objects made from reading files:
       handle_command_line_data(activate_data->cld);
 
+
+      // 20251019-PE is this the first time Coot-1 has been started?
+      {
+         bool show_first_startup_dialog = true;
+         xdg_t xdg;
+         std::filesystem::path state_home = xdg.get_state_home();
+         if (std::filesystem::exists(state_home)) {
+            std::filesystem::path state_py = state_home / "0-coot.state.py";
+            if (std::filesystem::exists(state_py)) {
+               show_first_startup_dialog = false;
+            }
+         }
+         if (show_first_startup_dialog) {
+            GtkWidget *dialog = widget_from_builder("first-startup-dialog");
+            GtkWidget *main_window_widget = graphics_info_t::get_main_window();
+            if (main_window_widget) {
+               GtkWindow *main_window = GTK_WINDOW(main_window_widget);
+               gtk_window_set_transient_for(GTK_WINDOW(dialog), main_window);
+            }
+            gtk_widget_set_visible(dialog, TRUE);
+         }
+      }
+
       // load_tutorial_model_and_data();
       delete activate_data;
 
-      g_idle_add(+[](gpointer data)-> gboolean {
-         GtkWindow* splash_screen = GTK_WINDOW(data);
-         gtk_window_destroy(splash_screen);
+      auto destroy_splash_screen_callback = +[] (gpointer data) {
+         if (data) {
+            GtkWindow* splash_screen = GTK_WINDOW(data);
+            gtk_window_destroy(splash_screen);
+         }
          return G_SOURCE_REMOVE;
-      }, splash_screen);
+      };
+      g_idle_add(destroy_splash_screen_callback, splash_screen);
 
-      g_idle_add([](gpointer user_data) { run_command_line_scripts(); return FALSE; }, nullptr);
       return G_SOURCE_REMOVE;
    }, activate_data);
 
@@ -1040,12 +1278,16 @@ int do_no_graphics_mode(command_line_data& cld, int argc, char** argv) {
 int
 do_self_tests() {
 
-   std::cout << "INFO:: Running internal self tests" << std::endl;
+   // std::cout << "INFO:: Running internal self tests" << std::endl;
+   logger.log(log_t::INFO, "Running internal self tests");
+
    // return true on success
    clipper::Test_core test_core;       bool result_core    = test_core();
    clipper::Test_contrib test_contrib; bool result_contrib = test_contrib();
-   std::cout<<" INFO:: Test Clipper core   : "<<(result_core   ?"OK":"FAIL")<<std::endl;
-   std::cout<<" INFO:: Test Clipper contrib: "<<(result_contrib?"OK":"FAIL")<<std::endl;
+   // std::cout<<" INFO:: Test Clipper core   : "<<(result_core   ?"OK":"FAIL")<<std::endl;
+   logger.log(log_t::INFO, std::string("Test Clipper core   : ") + (result_core ? "OK" : "FAIL"));
+   // std::cout<<" INFO:: Test Clipper contrib: "<<(result_contrib?"OK":"FAIL")<<std::endl;
+   logger.log(log_t::INFO, std::string("Test Clipper contrib: ") + (result_contrib ? "OK" : "FAIL"));
 
    // 20240309-PE I need tests
    //   1: internal tests (that can use tutorial-modern and rnasa)
@@ -1099,17 +1341,50 @@ int new_startup(int argc, char **argv) {
    load_css();
 
    // Tell us the GTK version
-   std::cout << "INFO:: built with GTK " << GTK_MAJOR_VERSION << "." << GTK_MINOR_VERSION << "." << GTK_MICRO_VERSION
-             << std::endl;
+   std::string gtk_version_string =
+      std::to_string(GTK_MAJOR_VERSION) + "." +
+      std::to_string(GTK_MINOR_VERSION) + "." +
+      std::to_string(GTK_MICRO_VERSION);
+   logger.log(log_t::INFO, "Built with GTK", gtk_version_string);
 
-   GtkWidget *splash_screen = new_startup_create_splash_screen_window();
-   gtk_widget_set_visible(splash_screen, TRUE);
+   GtkWidget *splash_screen = nullptr;
+   if (cld.use_splash_screen) {
+      splash_screen = new_startup_create_splash_screen_window();
+      gtk_widget_set_visible(splash_screen, TRUE);
+   }
 
    g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", TRUE, NULL);
-
    // Here's how you access that:
    // gboolean dark_mode_flag = FALSE;
    // g_object_get(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", &dark_mode_flag, NULL);
+
+   // dark mode vs light-mode switch
+   // 20251215-PE was widget_from_preferences_builder("light-mode-dark-mode-switch");
+   // I think libadwaita is needed for mode switch
+   GtkWidget *mode_switch = nullptr;
+   if (mode_switch) {
+
+      auto mode_switch_callback = +[] (GtkSwitch *sw, gboolean state, gpointer user_data) {
+
+        GtkSettings *settings = gtk_settings_get_default();
+
+        // 'state' is TRUE if the user just clicked "On"
+        // 'state' is FALSE if the user just clicked "Off"
+        if (state) {
+            //TO Dark Mode
+            g_object_set(settings, "gtk-application-prefer-dark-theme", TRUE, NULL);
+        } else {
+            // TO Light Mode
+            g_object_set(settings, "gtk-application-prefer-dark-theme", FALSE, NULL);
+        }
+
+        // Return FALSE to allow the switch to complete the animation/toggle
+        return gboolean(FALSE);
+        };
+
+         gpointer *user_data = nullptr;
+         g_signal_connect(G_OBJECT(mode_switch), "state-set", G_CALLBACK(mode_switch_callback), user_data);
+   }
 
    GError *error = NULL;
 #if GLIB_MAJOR_VERSION == 2 && GLIB_MINOR_VERSION >= 74 || GLIB_MAJOR_VERSION > 2
@@ -1132,6 +1407,10 @@ int new_startup(int argc, char **argv) {
 
    // delete activate_data; Nope. This is used in new_startup_application_activate.
    // Delete it there if you want to delete it.
+
+   // read in inchikeys - is this the right place for this?
+   // 2026-02-06-PE No. It should be in graphics_info_t::init(), as is ptm_database init.
+   graphics_info_t::read_inchikeys();
 
    int status = g_application_run(G_APPLICATION(app), 1, argv);
    std::cout << "--- g_application_run() returns with status " << status << std::endl;

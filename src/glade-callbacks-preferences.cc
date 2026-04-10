@@ -46,8 +46,10 @@
 #include "read-phs.h"
 #include "gtk-manual.h"
 #include "c-interface-refine.h"
+#include "cc-interface.hh" // 20250310-PE for set_use_primary_mouse_button_for_view_rotation()
 #include "utils/coot-utils.hh"
 
+#include "graphics-info.h" // for grab focus
 #include "widget-from-builder.hh"
 
 // this from callbacks.h (which I don't want to include here)
@@ -142,11 +144,13 @@ on_preferences_reset_button_clicked    (GtkButton       *button,
 }
 
 extern "C" G_MODULE_EXPORT
-void
-on_preferences_destroy                 (GtkWidget       *object,
-                                        gpointer         user_data)
-{
-  clear_preferences();
+gboolean
+on_preferences_close_request(GtkWidget       *dialog,
+                             gpointer         user_data) {
+   gtk_widget_set_visible(dialog, FALSE);
+   graphics_info_t g;
+   g.graphics_grab_focus();
+   return TRUE; // has been handled - no need to find another handler.
 }
 
 void set_use_trackpad(short int state); // or #include cc-interface.hh
@@ -158,7 +162,6 @@ on_preferences_view_rotation_left_mouse_checkbutton_toggled(GtkCheckButton *chec
    coot_preferences.set_preference("use_trackpad",
                                    static_cast<bool>(gtk_check_button_get_active(checkbutton)));
 }
-
 
 extern "C" G_MODULE_EXPORT
 void
@@ -210,11 +213,11 @@ extern "C" G_MODULE_EXPORT
 void
 on_preferences_bg_colour_nearlyblack_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                    gpointer         user_data) {
-
    std::vector<float> bg_colour(3, 0.035);
    if (gtk_check_button_get_active(checkbutton)) {
       coot_preferences.set_preference("background_colour", bg_colour);
    }
+
 }
 
 
@@ -299,7 +302,7 @@ static std::unordered_map<std::string, guint> timeout_id_map;
 extern "C" G_MODULE_EXPORT
 void
 on_preferences_map_radius_entry_activate(GtkEntry        *entry,
-                                         gpointer         user_data) {
+					 gpointer         user_data) {
 
    // not strictly needed but probably good to have the activate here to ensure
    // instant application of the map radius change.
@@ -469,7 +472,6 @@ on_preferences_map_sampling_entry_activate
 }
 
 
-
 extern "C" G_MODULE_EXPORT
 void
 on_preferences_map_sampling_entry_changed
@@ -635,6 +637,7 @@ on_preferences_map_drag_off_radiobutton_toggled(GtkCheckButton *checkbutton,
 }
 
 
+
 extern "C" G_MODULE_EXPORT
 void on_preferences_default_b_factor_entry_activate(GtkEntry        *entry,
                                                     gpointer         user_data) {
@@ -650,6 +653,7 @@ void on_preferences_default_b_factor_entry_activate(GtkEntry        *entry,
    }
 */
 }
+
 
 extern "C" G_MODULE_EXPORT
 void on_preferences_default_b_factor_entry_changed(GtkEditable     *editable,
@@ -726,6 +730,7 @@ on_preferences_font_colour_default_radiobutton_toggled(GtkCheckButton *checkbutt
       coot_preferences.set_preference("font_colour", font_colour);
    }
 }
+
 
 extern "C" G_MODULE_EXPORT
 void
