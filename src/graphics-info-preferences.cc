@@ -46,15 +46,15 @@ std::string
 graphics_info_t::get_preferences_directory() const {
 
    xdg_t xdg;
-   std::string preferences_dir = xdg.get_config_home().string();
+   std::filesystem::path preferences_dir = xdg.get_config_home() / "Preferences";
    std::string pkgdatadir = coot::package_data_dir();
 
    std::string fn;
 
-   if (preferences_dir.empty()) {
-      fn = coot::util::append_dir_dir(pkgdatadir, ".coot");
+   if (!std::filesystem::is_directory(preferences_dir)) {
+      fn = coot::util::append_dir_dir(pkgdatadir, "Preferences");
    } else {
-      fn = preferences_dir;
+      fn = preferences_dir.string();
    }
 
    return fn;
@@ -64,8 +64,7 @@ void
 graphics_info_t::add_to_preferences(const std::string &file_name, const std::string &contents) const {
 
    std::string pref_dir = get_preferences_directory();
-   std::string pref_subdir = coot::util::append_dir_dir(pref_dir, "preferences");
-   std::string fn = coot::util::append_dir_file(pref_subdir, file_name);
+   std::string fn = coot::util::append_dir_file(pref_dir, file_name);
 
    std::ofstream f(fn.c_str());
    if (f) {
