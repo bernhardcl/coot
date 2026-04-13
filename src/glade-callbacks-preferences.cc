@@ -845,7 +845,8 @@ void on_preferences_background_color_selected(GtkColorDialogButton *button,
       (float) color->green,
       (float) color->blue};
 
-   coot_preferences.set_preference("background_colour", bg_col);
+   GtkCheckButton *color_button = GTK_CHECK_BUTTON(widget_from_preferences_builder("preferences_bg_colour_own_radiobutton"));
+   gtk_check_button_set_active(color_button, true);
 
 }
 
@@ -859,7 +860,8 @@ void on_preferences_font_color_selected(GtkColorDialogButton *button,
                                (float) color->green,
                                (float) color->blue};
 
-   coot_preferences.set_preference("font_colour", f_col);
+   GtkCheckButton *color_button = GTK_CHECK_BUTTON(widget_from_preferences_builder("preferences_font_colour_own_radiobutton"));
+   gtk_check_button_set_active(color_button, true);
 
 }
 
