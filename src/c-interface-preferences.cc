@@ -949,7 +949,31 @@ void set_logging_level(const std::string &level) {
    }
 }
 
+// process the tick box and save state to settings.ini in XDG_CONFIG_HOME
+void post_first_startup_dialog_hook() {
 
+   GtkCheckButton *check_button = GTK_CHECK_BUTTON(widget_from_builder("first_startup_dontshow_checkbutton"));
+   // only write a setting.ini file if we dont want any more startup
+   if (gtk_check_button_get_active(check_button)) {
+      xdg_t xdg;
+      g_autoptr(GError) error = NULL;
+      g_autoptr(GKeyFile) key_file = g_key_file_new();
+      std::filesystem::path config_path = xdg.get_config_home() / "settings.ini";
+
+      // if there are/will be other seeting we should read the file if exists
+      if (std::filesystem::exists(config_path)) {
+         g_key_file_load_from_file(key_file, config_path.string().c_str(), G_KEY_FILE_NONE, nullptr);
+      }
+      g_key_file_set_boolean(key_file, "Startup", "ShowDialog", false);
+
+      if (!g_key_file_save_to_file (key_file, config_path.string().c_str(), &error)) {
+         g_warning ("Error saving key file: %s", error->message);
+      }
+      g_key_file_free(key_file);
+   } else {
+      // dont do anything!? Or save false?!
+   }
+}
 
 
 

@@ -68,6 +68,8 @@ public:
 extern preferences_manager coot_preferences;
 void initialize_preferences();
 
+void post_first_startup_dialog_hook();
+
 #ifdef __cplusplus
 #ifdef USE_PYTHON
 // python binding for preferences

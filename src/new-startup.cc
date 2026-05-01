@@ -1190,13 +1190,32 @@ new_startup_application_activate(GtkApplication *application,
       {
          bool show_first_startup_dialog = true;
          xdg_t xdg;
-         std::filesystem::path state_home = xdg.get_state_home();
+         if (0)
+         {         std::filesystem::path state_home = xdg.get_state_home();
          if (std::filesystem::exists(state_home)) {
             std::filesystem::path state_py = state_home / "0-coot.state.py";
             if (std::filesystem::exists(state_py)) {
                show_first_startup_dialog = false;
             }
          }
+         }
+
+         g_autoptr(GError) error = NULL;
+         g_autoptr(GKeyFile) key_file = g_key_file_new ();
+         std::filesystem::path config_path = xdg.get_config_home() / "settings.ini";
+
+         if (!g_key_file_load_from_file (key_file, config_path.string().c_str(), G_KEY_FILE_NONE, &error)) {
+            if (!g_error_matches (error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
+               g_warning ("Error loading key file: %s", error->message);
+            }
+         } else {
+            // happy path
+            show_first_startup_dialog = g_key_file_get_boolean(key_file, "Startup", "ShowDialog", &error);
+            if (error) {
+               show_first_startup_dialog = true;  // Default to showing
+            }
+         }
+
          if (show_first_startup_dialog) {
             GtkWidget *dialog = widget_from_builder("first-startup-dialog");
             GtkWidget *main_window_widget = graphics_info_t::get_main_window();

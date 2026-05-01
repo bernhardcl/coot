@@ -7076,6 +7076,7 @@ on_first_startup_cancel_button_clicked(GtkButton       *button,
 
    GtkWidget *dialog = widget_from_builder("first-startup-dialog");
    gtk_widget_set_visible(dialog, FALSE);
+   post_first_startup_dialog_hook();
 
 }
 
@@ -7088,6 +7089,7 @@ on_first_startup_use_left_button_clicked(GtkButton       *button,
    gtk_widget_set_visible(dialog, FALSE);
 
    coot_preferences.set_preference("use_trackpad", true);
+   post_first_startup_dialog_hook();
 }
 
 extern "C" G_MODULE_EXPORT
@@ -7099,6 +7101,7 @@ on_first_startup_use_right_button_clicked(GtkButton       *button,
    gtk_widget_set_visible(dialog, FALSE);
 
    coot_preferences.set_preference("use_trackpad", false);
+   post_first_startup_dialog_hook();
 }
 
 extern "C" G_MODULE_EXPORT
