@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <thread>
 
+#include <compat/coot-sysdep.h>
 #include <clipper/core/xmap.h>
 #include <clipper/core/map_utils.h>
 #include <clipper/core/map_interp.h>

@@ -300,6 +300,8 @@ Section "!WinCoot" SEC01
   File "${top_dir}\bin\coot-findligand"
   File "${top_dir}\bin\coot-findwaters"
   File "${top_dir}\bin\gdk-pixbuf-query-loaders.exe"
+  File "${top_dir}\bin\gspawn-win64-helper.exe"
+  File "${top_dir}\bin\gspawn-win64-helper-console.exe"
   ; render (or more?) from raster3d?!
   File "${top_dir}\bin\render.exe"
   ; clustalw2
@@ -614,6 +616,8 @@ Section Uninstall
   Delete "$INSTDIR\bin\gsl-config"
   Delete "$INSTDIR\bin\gspawn-win32-helper-console.exe"
   Delete "$INSTDIR\bin\gspawn-win32-helper.exe"
+  Delete "$INSTDIR\bin\gspawn-win64-helper.exe"
+  Delete "$INSTDIR\bin\gspawn-win64-helper-console.exe"
   Delete "$INSTDIR\bin\gtk-builder-convert"
   Delete "$INSTDIR\bin\gtk-demo.exe"
   Delete "$INSTDIR\bin\gtk-query-immodules-2.0.exe"
