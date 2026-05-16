@@ -389,8 +389,7 @@ coot::molecule_t::get_molecular_representation_mesh(const std::string &atom_sele
                   mmdb::Residue *residue_p = chain_p->GetResidue(ires);
                   if (residue_p) {
                      int res_no = residue_p->GetSeqNum();
-                     std::string res_name(residue_p->GetResName());
-                     if (res_name != "HOH") {
+                     if (! residue_p->isSolvent()) {
                         if (res_no > resno_max) resno_max = res_no;
                         if (res_no < resno_min) resno_min = res_no;
                      }
@@ -404,7 +403,41 @@ coot::molecule_t::get_molecular_representation_mesh(const std::string &atom_sele
       return ci;
    };
 
-   auto ramp_chains = [get_chains_in_selection,
+   auto get_polymer_chains_in_selection = [] (std::shared_ptr<MyMolecule> my_mol,
+                                              const std::string &atom_selection_str) {
+      std::vector<chain_info_t> ci;
+      MyMolecule *mm = my_mol.get();
+      mmdb::Manager *mol = my_mol.get()->mmdb;
+
+      int imod = 1;
+      mmdb::Model *model_p = mol->GetModel(imod);
+      if (model_p) {
+         int n_chains = model_p->GetNumberOfChains();
+         for (int ichain=0; ichain<n_chains; ichain++) {
+            mmdb::Chain *chain_p = model_p->GetChain(ichain);
+            int n_res = chain_p->GetNumberOfResidues();
+            int resno_max = -999999;
+            int resno_min = 999999;
+            if (n_res > 0) {
+               for (int ires=0; ires<n_res; ires++) {
+                  mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+                  if (residue_p) {
+                     int res_no = residue_p->GetSeqNum();
+                     if (residue_p->isAminoacid() || residue_p->isNucleotide()) {
+                        if (res_no > resno_max) resno_max = res_no;
+                        if (res_no < resno_min) resno_min = res_no;
+                     }
+                  }
+               }
+            }
+            ci.push_back(chain_info_t(chain_p, resno_min, resno_max));
+         }
+      }
+
+      return ci;
+   };
+
+   auto ramp_chains = [get_polymer_chains_in_selection,
                        molecular_representation_instance_to_mesh]
       (std::shared_ptr<MyMolecule> my_mol,
        const std::string &atom_selection_str,
@@ -413,20 +446,26 @@ coot::molecule_t::get_molecular_representation_mesh(const std::string &atom_sele
        const std::vector<std::pair<std::string, int> > &M2T_int_params) {
 
       coot::simple_mesh_t mesh;
-      auto ramp_cs  = ColorScheme::colorRampChainsScheme();
 
-      std::vector<chain_info_t> ci = get_chains_in_selection(my_mol, atom_selection_str);
+      std::vector<chain_info_t> ci = get_polymer_chains_in_selection(my_mol, atom_selection_str);
 
       for (const auto &ch : ci) {
 
-         std::string atom_selection_str = "//" + std::string(ch.chain_p->GetChainID());
-         AtomPropertyRampColorRule apcrr;
-         apcrr.setStartValue(ch.resno_min);
-         apcrr.setEndValue(ch.resno_max);
-         auto apcrr_p = std::make_shared<AtomPropertyRampColorRule> (apcrr);
+         if (ch.resno_max < ch.resno_min) continue;
+         std::string chain_sel = "//" + std::string(ch.chain_p->GetChainID());
+
+         auto ramp_cs = std::shared_ptr<ColorScheme>(new ColorScheme());
+         auto apcrr_p = std::make_shared<AtomPropertyRampColorRule>();
+         int n_ramp_points = ch.resno_max - ch.resno_min;
+         apcrr_p->setNumberOfRampPoints(n_ramp_points);
+         apcrr_p->setStartValue(ch.resno_min);
+         apcrr_p->setEndValue(ch.resno_max);
+         apcrr_p->setCompoundSelection(
+            std::shared_ptr<CompoundSelection>(new CompoundSelection(chain_sel + "/*.*/*:*")));
          ramp_cs->addRule(apcrr_p);
+
          std::shared_ptr<MolecularRepresentationInstance> molrepinst =
-            MolecularRepresentationInstance::create(my_mol, ramp_cs, atom_selection_str, style);
+            MolecularRepresentationInstance::create(my_mol, ramp_cs, chain_sel, style);
          coot::simple_mesh_t submesh = molecular_representation_instance_to_mesh(molrepinst, M2T_float_params, M2T_int_params);
          mesh.add_submesh(submesh);
       }

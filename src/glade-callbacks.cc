@@ -864,7 +864,7 @@ void on_save_coords_filechooser_dialog_response(GtkDialog *dialog,
 
    if (response == GTK_RESPONSE_YES) { // maybe not the right one, but it is the one set in
                                        // on_save_coords_dialog_save_button_clicked()
-      GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
+      GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
       GFile *file   = gtk_file_chooser_get_file(chooser);
       char *file_name = g_file_get_path(file);
       int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(dialog), "imol"));
@@ -873,6 +873,10 @@ void on_save_coords_filechooser_dialog_response(GtkDialog *dialog,
          bool save_hydrogens = true;
          bool save_conect_records = true;
          bool save_aniso_records = true;
+         const char *h = gtk_file_chooser_get_choice(chooser, "save-hydrogens");
+         const char *a = gtk_file_chooser_get_choice(chooser, "save-aniso");
+         if (h) save_hydrogens    = (std::string(h) == "true");
+         if (a) save_aniso_records = (std::string(a) == "true");
          g.molecules[imol].save_coordinates(file_name, save_hydrogens, save_aniso_records, save_conect_records);
       }
    }
@@ -926,6 +930,16 @@ on_save_coords_save_button_clicked(G_GNUC_UNUSED GtkButton       *button,
       g_object_set_data(G_OBJECT(file_chooser_dialog), "imol", GINT_TO_POINTER(imol));
       g_signal_connect(file_chooser_dialog, "response",
                        G_CALLBACK(on_save_coords_filechooser_dialog_response), NULL);
+
+      gtk_file_chooser_add_choice(GTK_FILE_CHOOSER(file_chooser_dialog),
+                                  "save-hydrogens", "Save Hydrogens", NULL, NULL);
+      gtk_file_chooser_set_choice(GTK_FILE_CHOOSER(file_chooser_dialog),
+                                  "save-hydrogens", "true");
+      gtk_file_chooser_add_choice(GTK_FILE_CHOOSER(file_chooser_dialog),
+                                  "save-aniso", "Save ANISO Records", NULL, NULL);
+      gtk_file_chooser_set_choice(GTK_FILE_CHOOSER(file_chooser_dialog),
+                                  "save-aniso", "true");
+
       gtk_widget_set_visible(file_chooser_dialog, TRUE);
       set_file_for_save_filechooser(file_chooser_dialog);
       add_filename_filter_button(file_chooser_dialog, COOT_SAVE_COORDS_FILE_SELECTION);
@@ -2061,9 +2075,9 @@ on_environment_distance_dialog_ok_button_clicked
                                         (GtkButton       *button,
                                         gpointer         user_data)
 {
-   GtkWidget *widget = widget_from_builder("environment_distance_dialog");
+   GtkWidget *dialog = widget_from_builder("environment_distances_dialog");
    execute_environment_settings(GTK_WIDGET(button));
-   gtk_widget_set_visible(widget, FALSE);
+   gtk_widget_set_visible(dialog, FALSE);
 
 }
 
@@ -4584,14 +4598,42 @@ void
 on_residue_info_occ_apply_all_checkbutton_toggled(GtkCheckButton *checkbutton,
                                                   gpointer        user_data) {
 
-   GtkWidget *entry = widget_from_builder("residue_info_master_atom_occ_entry");
-   GtkWidget *alt_conf_checkbutton = widget_from_builder("residue_info_occ_apply_to_altconf_checkbutton");
+   GtkWidget *occ_entry           = widget_from_builder("residue_info_master_atom_occ_entry");
+   GtkWidget *alt_conf_checkbox     = widget_from_builder("residue_info_occ_apply_to_altconf_checkbutton");
+   GtkWidget *alt_conf_entry  = widget_from_builder("residue_info_occ_apply_to_altconf_entry");
 
    if (gtk_check_button_get_active(checkbutton)) {
-      gtk_widget_set_sensitive(entry, TRUE);
+      // Uncheck the mutually exclusive "apply to alt conf" checkbox
+      if (gtk_check_button_get_active(GTK_CHECK_BUTTON(alt_conf_checkbox))) {
+         gtk_check_button_set_active(GTK_CHECK_BUTTON(alt_conf_checkbox), FALSE);
+      }
+      gtk_widget_set_sensitive(occ_entry, TRUE);
+      gtk_widget_set_sensitive(alt_conf_entry, FALSE);
    } else {
-      if (! gtk_check_button_get_active(GTK_CHECK_BUTTON(alt_conf_checkbutton)))
-         gtk_widget_set_sensitive(entry, FALSE);
+      if (! gtk_check_button_get_active(GTK_CHECK_BUTTON(alt_conf_checkbox)))
+         gtk_widget_set_sensitive(occ_entry, FALSE);
+   }
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_residue_info_occ_apply_to_altconf_checkbutton_toggled(GtkCheckButton *checkbutton,
+                                                         gpointer        user_data) {
+
+   GtkWidget *occ_entry       = widget_from_builder("residue_info_master_atom_occ_entry");
+   GtkWidget *alt_conf_entry  = widget_from_builder("residue_info_occ_apply_to_altconf_entry");
+   GtkWidget *apply_all_cb    = widget_from_builder("residue_info_occ_apply_all_checkbutton");
+
+   if (gtk_check_button_get_active(checkbutton)) {
+      // Uncheck the mutually exclusive "apply to all" checkbox
+      if (gtk_check_button_get_active(GTK_CHECK_BUTTON(apply_all_cb)))
+         gtk_check_button_set_active(GTK_CHECK_BUTTON(apply_all_cb), FALSE);
+      gtk_widget_set_sensitive(occ_entry,      TRUE);
+      gtk_widget_set_sensitive(alt_conf_entry, TRUE);
+   } else {
+      gtk_widget_set_sensitive(alt_conf_entry, FALSE);
+      if (! gtk_check_button_get_active(GTK_CHECK_BUTTON(apply_all_cb)))
+         gtk_widget_set_sensitive(occ_entry, FALSE);
    }
 }
 
@@ -6520,6 +6562,20 @@ on_show_symmetry_yes_radiobutton_toggled(GtkCheckButton *checkbutton,
 
 extern "C" G_MODULE_EXPORT
 void
+on_symmetry_as_calphas_checkbutton_toggled(GtkCheckButton *checkbutton,
+                                           gpointer        user_data) {
+
+   short int state = gtk_check_button_get_active(checkbutton) ? 1 : 0;
+   int n_mol = graphics_n_molecules();
+   for (int imol=0; imol<n_mol; imol++) {
+      if (is_valid_model_molecule(imol)) {
+         symmetry_as_calphas(imol, state);
+      }
+   }
+}
+
+extern "C" G_MODULE_EXPORT
+void
 on_symmetry_radius_entry_activate(GtkEntry* self,
                                   gpointer user_data) {
 
@@ -6848,7 +6904,7 @@ on_ramachandran_plot_molecule_chooser_ok_button_clicked(GtkButton       *button,
    GtkWidget *combobox        = widget_from_builder("ramachandran_plot_molecule_chooser_model_combobox");
    GtkWidget *selection_entry = widget_from_builder("ramachandran_plot_molecule_chooser_residue_selection_entry");
    GtkWidget *scrolled        = widget_from_builder("ramachandran_plots_scrolled_window");
-   GtkWidget *pane            = widget_from_builder("main_window_ramchandran_and_validation_pane");
+   GtkWidget *pane            = widget_from_builder("main_window_ramachandran_and_validation_pane");
 
    std::string residue_selection_string = gtk_editable_get_text(GTK_EDITABLE(selection_entry));
 
@@ -7118,6 +7174,8 @@ on_material_lighting_ambient_colorbutton_color_set(GtkColorButton *colorbutton,
       glm::vec4 ambient(rgba.red, rgba.green, rgba.blue, 1.0f);
       g.molecules[imol].material_for_models.ambient = ambient;
       g.molecules[imol].model_molecule_meshes.set_material_ambient(ambient);
+      for (auto &mesh : g.molecules[imol].meshes)
+         mesh.set_material_ambient(ambient);
       g.graphics_draw();
    }
 }
@@ -7134,8 +7192,10 @@ on_material_lighting_diffuse_colorbutton_color_set(GtkColorButton *colorbutton,
    graphics_info_t g;
    if (g.is_valid_model_molecule(imol)) {
       glm::vec4 diffuse(rgba.red, rgba.green, rgba.blue, 1.0f);
-      g.molecules[imol].material_for_models.ambient = diffuse;
+      g.molecules[imol].material_for_models.diffuse = diffuse;
       g.molecules[imol].model_molecule_meshes.set_material_diffuse(diffuse);
+      for (auto &mesh : g.molecules[imol].meshes)
+         mesh.set_material_diffuse(diffuse);
       g.graphics_draw();
    }
 }

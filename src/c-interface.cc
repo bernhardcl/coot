@@ -151,6 +151,9 @@
 #include "widget-from-builder.hh"
 #include "gtk-manual.hh"
 #include "glarea_tick_function.hh"
+// #include "git-revision.hh"
+//  extern "C" int git_revision_count();
+int git_revision_count();
 
 #include "validation-graphs/sequence-view-widget.hh"
 
@@ -3956,6 +3959,7 @@ std::pair<short int, float> float_from_entry(GtkWidget *entry) {
 
    std::pair<short int, float> p(0,0);
    const gchar *txt = gtk_editable_get_text(GTK_EDITABLE(entry));
+   std::cout << "DEBUG:: float_from_entry()::::::::::::::: " << txt << std::endl;
    if (txt) {
       float f = atof(txt);
       p.second = f;
@@ -7842,12 +7846,6 @@ run_command_line_scripts() {
       else
          safe_scheme_command(graphics_info_t::command_line_commands.commands[i].c_str());
 
-    for (unsigned int i=0; i<graphics_info_t::command_line_commands.commands.size(); i++)
-       if (graphics_info_t::command_line_commands.is_python)
-	  safe_python_command(graphics_info_t::command_line_commands.commands[i].c_str());
-       else
-	  safe_scheme_command(graphics_info_t::command_line_commands.commands[i].c_str());
-
    graphics_info_t g;
    for (unsigned int i=0; i<graphics_info_t::command_line_accession_codes.size(); i++) {
       const std::string &code = g.command_line_accession_codes[i];
@@ -7855,6 +7853,11 @@ run_command_line_scripts() {
       network_get_accession_code_entity(code, 0); // mode 0 means "not mtz"
       network_get_accession_code_entity(code, 1); // mtz mode
    }
+
+   // clear so that a second call (e.g. from a second realize) does not re-run
+   graphics_info_t::command_line_scripts.clear();
+   graphics_info_t::command_line_commands.commands.clear();
+   graphics_info_t::command_line_accession_codes.clear();
 }
 
 void run_update_self_maybe() { // called when --update-self given at command line
@@ -8398,6 +8401,8 @@ void sequence_view(int imol) {
       gtk_widget_set_visible(vbox, TRUE);
       g_object_set_data(G_OBJECT(button), "sequence_view_box", vbox);
       g_object_set_data(G_OBJECT(overlay), "imol", GINT_TO_POINTER(imol));
+      // Let update_validation() find this sequence view by imol and redraw it after model edits.
+      g_object_set_data(G_OBJECT(overlay), "coot-sequence-view", sv);
       // GTK_ALIGN_END works OK/as intended, except the main graphics widget (or window) is too narrow to see it.
       // Make the window wider and change this to GTK_ALIGN_END.
       // gtk_widget_set_halign(GTK_WIDGET(button), GTK_ALIGN_START);

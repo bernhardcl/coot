@@ -256,7 +256,10 @@ namespace coot {
          const double &b = abcd[1];
          const double &c = abcd[2];
          const double &d = abcd[3];
-         double top = a * pt.x() + b * pt.y() + c * pt.z() + d;
+         // plane equation is a*x + b*y + c*z - d = 0 (see the constructor and
+         // plane_deviation() - so the signed distance from pt to the plane is
+         // (a*px + b*py + c*pz - d) / sqrt(a^2 + b^2 + c^2).
+         double top = a * pt.x() + b * pt.y() + c * pt.z() - d;
          double bot = a * a + b * b + c * c;
          double f = top / bot;
          double x_p = pt.x() - a * f;
@@ -1519,6 +1522,11 @@ namespace coot {
 
    std::vector<clipper::RTop_orth> mtrix_info(const std::string &file_name);
 
+   //! Convert AlphaFold pLDDT values (stored in the B-factor column) to
+   //! crystallographic B-factors using the Hiranuma et al. (2021) formula:
+   //!   RMSD = 1.5 * exp(4 * (0.7 - pLDDT/100))
+   //!   B = (8 * pi^2 / 3) * RMSD^2
+   void hiranuma_inversion(mmdb::Manager *mol);
 
 } // namespace coot
 

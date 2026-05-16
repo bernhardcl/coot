@@ -868,9 +868,8 @@ graphics_info_t::draw_map_molecules(stereo_eye_t eye, bool draw_transparent_maps
       err = glGetError();
       if (err) std::cout << "gtk3_draw_map_molecules() glLineWidth " << err << std::endl;
 
-
       Shader &shader = shader_for_meshes;
-      shader.Use(); // needed? I think not.
+      // shader.Use(); // needed? I think not.
 
       glm::mat4 mvp = get_molecule_mvp(eye);
       glm::mat4 model_rotation = get_model_rotation();
@@ -1521,6 +1520,7 @@ graphics_info_t::draw_intermediate_atoms_pull_restraint_neighbour_displacement_m
          glm::mat4 mvp = proj * view * trans;
          glm::mat4 model_rotation = get_model_rotation();
          bool use_model_rotation = false;
+         // std::cout << "DEBUG:: calling lines_mesh_for_pull_restraint_neighbhour_displacement_max_radius_ring draw()" << std::endl;
          lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring.draw(&shader_for_lines,
                                                                                    rc, mvp,
                                                                                    model_rotation,
@@ -2321,6 +2321,7 @@ graphics_info_t::draw_meshed_generic_display_object_meshes(stereo_eye_t eye, uns
          glm::vec4 bg_col(background_colour, 1.0);
          bool wireframe_mode = false;
          float opacity = 0.5;
+         bool do_depth_fog = true;
          auto ccrc = RotationCentre();
          glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
          for (unsigned int i=0; i<generic_display_objects.size(); i++) {
@@ -2328,7 +2329,7 @@ graphics_info_t::draw_meshed_generic_display_object_meshes(stereo_eye_t eye, uns
                std::cout << "drawing i " << i << std::endl;
             generic_display_objects[i].mesh.draw(&shader_for_moleculestotriangles,
                                                  eye, mvp, model_rotation, lights, eye_position, rc, opacity,
-                                                 bg_col, wireframe_mode, false, show_just_shadows);
+                                                 bg_col, wireframe_mode, do_depth_fog, show_just_shadows);
          }
       }
    }
@@ -2391,7 +2392,7 @@ graphics_info_t::draw_meshed_generic_display_object_meshes(stereo_eye_t eye, uns
          glm::vec3 rc(ccrc.x(), ccrc.y(), ccrc.z());
          glm::vec3 eye_position;
          float opacity = 1.0;
-         bool do_depth_fog = false;
+         bool do_depth_fog = true;
          int light_index =  0;
          glm::mat4 light_view_mvp = get_light_space_mvp(light_index);
          bool show_just_shadows = false;
@@ -2412,7 +2413,7 @@ graphics_info_t::draw_meshed_generic_display_object_meshes(stereo_eye_t eye, uns
 void
 graphics_info_t::draw_molecules_other_meshes(stereo_eye_t eye, unsigned int pass_type) {
 
-   // std::cout << "debug:: draw_molecules_other_meshes() ---start--- " << pass_type << std::endl;
+   // std::cout << "debug:: draw_molecules_other_meshes() ---start--- pass-type: " << pass_type << std::endl;
 
    // This function doesn't draw these
    // graphics_info_t::draw_instanced_meshes() A Molecule 2: Ligand Contact Dots H-bond
@@ -2456,7 +2457,9 @@ graphics_info_t::draw_molecules_other_meshes(stereo_eye_t eye, unsigned int pass
          }
       }
 
-      // std::cout << "in draw_meshed_generic_display_object_meshes() with have_meshes_to_draw " << have_meshes_to_draw << std::endl;
+      if (false)
+         std::cout << "in draw_meshed_generic_display_object_meshes() with have_meshes_to_draw "
+                   << have_meshes_to_draw << std::endl;
 
       if (have_meshes_to_draw) {
 
@@ -2464,7 +2467,10 @@ graphics_info_t::draw_molecules_other_meshes(stereo_eye_t eye, unsigned int pass
          for (int ii=n_molecules()-1; ii>=0; ii--) {
 
             molecule_class_info_t &m = molecules[ii]; // not const because the shader changes
-            if (! is_valid_model_molecule(ii)) continue;
+
+            // 20260414-PE why was this test here? Maps can have map cap objects
+            // if (! is_valid_model_molecule(ii)) continue;
+
             for (unsigned int jj=0; jj<m.meshes.size(); jj++) {
 
                Mesh &mesh = m.meshes[jj];
@@ -4722,7 +4728,7 @@ graphics_info_t::render(bool to_screendump_framebuffer_flag, const std::string &
       gtk_widget_get_allocation(GTK_WIDGET(gl_area), &allocation);
       int w = allocation.width;
       int h = allocation.height;
-      unsigned int sf = 2; // hardcoded 2x for high-res screenshots
+      unsigned int sf = framebuffer_scale;
 
       bool show_basic_scene_state = (displayed_image_type == SHOW_BASIC_SCENE);
 
@@ -6631,26 +6637,31 @@ graphics_info_t::draw_extra_distance_restraints(stereo_eye_t eye, int pass_type)
 
 // called from gl widget realize function
 // static
- void
-    graphics_info_t::setup_lines_mesh_for_proportional_editing() {
+void graphics_info_t::setup_lines_mesh_for_proportional_editing() {
 
+    unsigned int n_thin_rings = 10;
     unsigned int n_points = 100;
-    std::vector<s_generic_vertex> vertices(n_points);
+    std::vector<s_generic_vertex> vertices(n_thin_rings * n_points);
     glm::vec3 n(0,0,1);
     glm::vec4 c(0.7,0.7,0.7,1.0);
-    double r = 0.001;
-    for (unsigned int i=0; i<n_points; i++) {
-       double theta = 2.0 * M_PI * static_cast<double>(i) / 100.0;
-       glm::vec3 pt(r * cos(theta), r * sin(theta), 0.0);
-       vertices[i] = s_generic_vertex(pt, n, c);
+    for (unsigned int i_thin=0; i_thin<n_thin_rings; i_thin++) {
+       double r = 0.001 + 0.001 * static_cast<float>(i_thin);
+       for (unsigned int i=0; i<n_points; i++) {
+          double theta = 2.0 * M_PI * static_cast<double>(i) / 100.0;
+          glm::vec3 pt(r * cos(theta), r * sin(theta), 0.0);
+          vertices[i+i_thin*n_points] = s_generic_vertex(pt, n, c);
+       }
     }
 
     std::vector<unsigned int> indices;
-    for (unsigned int i=0; i<n_points; i++) {
-       unsigned int i_next = i+1;
-       if (i_next == n_points) i_next = 0;
-       indices.push_back(i);
-       indices.push_back(i_next);
+    for (unsigned int i_thin=0; i_thin<n_thin_rings; i_thin++) {
+       unsigned int offset = i_thin * n_points;
+       for (unsigned int i=0; i<n_points; i++) {
+          unsigned int i_next = i+1;
+          if (i_next == n_points) i_next = 0;
+          indices.push_back(offset + i);
+          indices.push_back(offset + i_next);
+       }
     }
 
     lines_mesh_for_pull_restraint_neighbour_displacement_max_radius_ring = LinesMesh(vertices, indices);

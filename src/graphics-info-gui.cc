@@ -445,7 +445,7 @@ graphics_info_t::set_file_for_save_filechooser(GtkWidget *filechooser) const {
 	}
       }
 
-      if (true)
+      if (false)
 	 std::cout << "DEBUG:: Setting filechooser with file: " << full_name
 		   << std::endl;
 
@@ -1594,19 +1594,29 @@ graphics_info_t::residue_info_edit_occ_apply_to_other_entries_maybe(GtkWidget *m
 
    GtkWidget *occ_checkbutton = widget_from_builder("residue_info_occ_apply_all_checkbutton");
    GtkWidget *alt_checkbutton = widget_from_builder("residue_info_occ_apply_to_altconf_checkbutton");
-   GtkWidget *alt_entry       = widget_from_builder("residue_info_occ_apply_to_alt_conf_entry");
+   GtkWidget *alt_entry       = widget_from_builder("residue_info_occ_apply_to_altconf_entry");
    GtkWidget *grid            = widget_from_builder("residue_info_atom_grid");
 
-   if (gtk_check_button_get_active(GTK_CHECK_BUTTON(occ_checkbutton))) {
-      const char *txt = gtk_editable_get_text(GTK_EDITABLE(master_occ_entry));
-      // the first line is labels
+   bool apply_all     = gtk_check_button_get_active(GTK_CHECK_BUTTON(occ_checkbutton));
+   bool apply_altconf = gtk_check_button_get_active(GTK_CHECK_BUTTON(alt_checkbutton));
+
+   const char *master_occ = gtk_editable_get_text(GTK_EDITABLE(master_occ_entry));
+   if (apply_all) {
       for (int iat=1; iat<10000; iat++) {
          GtkWidget *w = gtk_grid_get_child_at(GTK_GRID(grid), 1, iat);
-         if (!w) {
-            // std::cout << "null editable at iat " << iat << std::endl;
-            break;
-         } else {
-            gtk_editable_set_text(GTK_EDITABLE(w), txt);
+         if (!w) break;
+         gtk_editable_set_text(GTK_EDITABLE(w), master_occ);
+      }
+   } else if (apply_altconf) {
+      const char *target_altconf = gtk_editable_get_text(GTK_EDITABLE(alt_entry));
+      for (int iat=1; iat<10000; iat++) {
+         GtkWidget *occ_w = gtk_grid_get_child_at(GTK_GRID(grid), 1, iat);
+         GtkWidget *altconf_w  = gtk_grid_get_child_at(GTK_GRID(grid), 4, iat);
+         if (!occ_w) break;
+         if (altconf_w) {
+            const char *atom_altconf = gtk_editable_get_text(GTK_EDITABLE(altconf_w));
+            if(g_strcmp0(atom_altconf, target_altconf) == 0)
+               gtk_editable_set_text(GTK_EDITABLE(occ_w), master_occ);
          }
       }
    }
@@ -1817,13 +1827,7 @@ graphics_info_t::new_fill_combobox_with_coordinates_options(GtkWidget *combobox_
       if (imol == imol_active) {
          // 20220415-PE this doesn't work (for renumber residues - annoying)
 
-         std::cout << "!!!!!!!!!!! setting active on a gtk combobox " << imol_active << std::endl;
          gtk_combo_box_set_active(GTK_COMBO_BOX(combobox_molecule), imol_active);
-         std::cout << "!!!!!!!!!!! combobox get_active() returns " <<  gtk_combo_box_get_active(GTK_COMBO_BOX(combobox_molecule)) << std::endl;
-         if (GTK_IS_COMBO_BOX(combobox_molecule))
-            std::cout << "!!!!!!!!!!! " << "combobox is a combobox" << std::endl;
-         if (GTK_IS_COMBO_BOX_TEXT(combobox_molecule))
-            std::cout << "!!!!!!!!!!! " << "combobox is a comboboxtext" << std::endl;
       }
    }
 
@@ -4324,7 +4328,7 @@ graphics_info_t::fill_difference_map_peaks_button_box() {
    };
 
 
-   GtkWidget *pane_to_show  = widget_from_builder("main_window_ramchandran_and_validation_pane");
+   GtkWidget *pane_to_show  = widget_from_builder("main_window_ramachandran_and_validation_pane");
    gtk_widget_set_visible(pane_to_show,  TRUE);
 
    GtkWidget *pane = widget_from_builder("main_window_graphics_rama_vs_graphics_pane");
@@ -4876,7 +4880,7 @@ graphics_info_t::fill_atoms_with_zero_occupancy_box_of_buttons(const std::vector
        GtkWidget *validation_graph_vbx = widget_from_builder("main_window_validation_graph_vbox");
        gtk_widget_set_visible(validation_graph_vbx, TRUE);
 
-       GtkWidget *pane_to_show  = widget_from_builder("main_window_ramchandran_and_validation_pane");
+       GtkWidget *pane_to_show  = widget_from_builder("main_window_ramachandran_and_validation_pane");
        gtk_widget_set_visible(pane_to_show,  TRUE);
 
        GtkWidget *pane = widget_from_builder("main_window_graphics_rama_vs_graphics_pane");

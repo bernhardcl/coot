@@ -300,6 +300,7 @@ AM_CPPFLAGS = \
 	$(SQLITE3_CFLAGS)               \
 	$(GEMMI_CXXFLAGS)               \
 	$(BACKWARD_FLAGS)               \
+	$(VTE_CFLAGS)                   \
         $(CURL_CFLAGS)
 
 #	$(WITH_SCRIPT_CFLAGS)
@@ -353,27 +354,30 @@ check_PROGRAMS = test-coot-align test-cholesky test-tubular-spline
 if OS_WIN32
 WinCoot_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc \
         glade-callbacks-preferences.cc glade-callbacks-shader-settings.cc \
-        new-startup.cc \
+        startup.cc \
         setup-gui-components.cc \
         setup-gui-components.hh \
+	vte.cc vte.hh \
 	create-menu-item-actions.cc \
 	create-menu-item-actions.hh
 else
 if OS_DARWIN
 MacCoot_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc \
         glade-callbacks-preferences.cc glade-callbacks-shader-settings.cc \
-        new-startup.cc \
+        startup.cc \
         setup-gui-components.cc \
         setup-gui-components.hh \
+	vte.cc vte.hh \
 	create-menu-item-actions.cc \
 	create-menu-item-actions.hh
 
 else
 coot_1_SOURCES = main.cc glade-callbacks.cc glade-callbacks-main-window.cc \
         glade-callbacks-preferences.cc glade-callbacks-shader-settings.cc \
-        new-startup.cc \
+        startup.cc \
         setup-gui-components.cc \
         setup-gui-components.hh \
+	vte.cc vte.hh \
 	create-menu-item-actions.cc \
 	create-menu-item-actions.hh
 endif
@@ -394,7 +398,7 @@ WinCoot_LDADD =  \
 	$(top_builddir)/lidia-core/libcoot-lidia-core.la   \
 	$(top_builddir)/geometry/libcoot-geometry.la       \
 	$(top_builddir)/utils/libcoot-utils.la             \
-	$(CLIPPER_LIBS) $(CURL_LIBS) $(GUILE_LDFLAGS) $(GTK_LIBS) $(EPOXY_LIBS) $(EMBEDDED_PYTHON_LIBS)
+	$(CLIPPER_LIBS) $(CURL_LIBS) $(GUILE_LDFLAGS) $(GTK_LIBS) $(EPOXY_LIBS) $(VTE_LIBS) $(EMBEDDED_PYTHON_LIBS)
 else
 if OS_DARWIN
 MacCoot_LDADD =  \
@@ -409,7 +413,7 @@ MacCoot_LDADD =  \
 	$(top_builddir)/lidia-core/libcoot-lidia-core.la   \
 	$(top_builddir)/geometry/libcoot-geometry.la       \
 	$(top_builddir)/utils/libcoot-utils.la             \
-	$(CLIPPER_LIBS) $(CURL_LIBS) $(GUILE_LDFLAGS) $(GTK_LIBS) $(EPOXY_LIBS) $(EMBEDDED_PYTHON_LIBS)
+	$(CLIPPER_LIBS) $(CURL_LIBS) $(GUILE_LDFLAGS) $(GTK_LIBS) $(EPOXY_LIBS) $(VTE_LIBS) $(EMBEDDED_PYTHON_LIBS)
 else
 coot_1_LDADD =  \
 	libcootsumo.la                                     \
@@ -423,7 +427,7 @@ coot_1_LDADD =  \
 	$(top_builddir)/lidia-core/libcoot-lidia-core.la   \
 	$(top_builddir)/geometry/libcoot-geometry.la       \
 	$(top_builddir)/utils/libcoot-utils.la             \
-	$(CLIPPER_LIBS) $(CURL_LIBS) $(GUILE_LDFLAGS) $(GTK_LIBS) $(EPOXY_LIBS) $(EMBEDDED_PYTHON_LIBS)
+	$(CLIPPER_LIBS) $(CURL_LIBS) $(GUILE_LDFLAGS) $(GTK_LIBS) $(EPOXY_LIBS) $(VTE_LIBS) $(EMBEDDED_PYTHON_LIBS)
 endif
 endif
 
@@ -790,7 +794,7 @@ libcootsumo_la_SOURCES = \
 	rail-points.hh           \
         read-molecule.hh         \
 	read-phs.h		 \
-	read-phs.c		 \
+	read-phs.cc		 \
 	read-cif.h		 \
 	read-cif.cc		 \
 	rama_mousey.cc		 \
@@ -938,6 +942,9 @@ endif
 # the -lblas here is a bandaid - the GSL usage of BLAS needs to be
 # fixed in configure.
 #
+# 20260417-PE the band-aid probably did nothing. I needed -lcblas
+# now that is fixed in GSL configure
+#
 libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
                 $(COOT_EXTRA_LIBS)      \
 		$(VORBISFILE_LIBS)      \
@@ -951,7 +958,7 @@ libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
 		$(GUILE_LDFLAGS)      \
 		$(GLOB_LIBS)	      \
 		$(EPOXY_LIBS)         \
-		$(gsl_LIBS) -lblas    \
+		$(gsl_LIBS)           \
 		$(MYSQL_LIBS)	      \
 		$(CURL_LIBS)	      \
 		$(RSVG_LIBS)	      \

@@ -79,21 +79,6 @@ void reset_all_preferences();
 #endif // PYTHON
 #endif
 
-// This is old and for the gtk interface
-
-#ifndef BEGIN_C_DECLS
-#ifdef __cplusplus
-#define BEGIN_C_DECLS extern "C" {
-#define END_C_DECLS }
-
-#else
-#define BEGIN_C_DECLS
-#define END_C_DECLS     
-#endif
-#endif /* BEGIN_C_DECLS */
-
-BEGIN_C_DECLS
-
 /*  ----------------------------------------------------------------------- */
 /*                  Preferences Notebook                                    */
 /*  ----------------------------------------------------------------------- */
@@ -115,7 +100,6 @@ void show_hide_preferences_tabs(GtkToggleToolButton *toggletoolbutton, int prefe
 void update_preference_gui();
 void save_preferences();
 
-END_C_DECLS
 
 #endif /* C_INTERFACE_PREFERENCES_H */
 

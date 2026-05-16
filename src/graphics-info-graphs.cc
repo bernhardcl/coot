@@ -151,12 +151,7 @@ void graphics_info_t::refresh_ramachandran_plot_model_list() {
    // noise
    // std::cout << "----------------------- refresh_ramachandran_plot_model_list --------- " << std::endl;
 
-   auto fn = +[] (GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data) {
-      GtkListStore* list = GTK_LIST_STORE(model);
-      return gboolean(!gtk_list_store_remove(list,iter));
-   };
-
-   gtk_tree_model_foreach(GTK_TREE_MODEL(ramachandran_plot_model_list), fn, NULL);
+   gtk_list_store_clear(ramachandran_plot_model_list);
 
    for(int i=0; i<graphics_info_t::n_molecules(); i++) {
       if (graphics_info_t::molecules[i].has_model()) {
@@ -608,6 +603,52 @@ graphics_info_t::get_validation_data_for_geometry_analysis(int imol) {
 }
 
 coot::validation_information_t
+get_validation_data_for_ncs_analysis(int imol) {
+
+   coot::validation_information_t vi;
+   vi.name = "NCS Differences";
+   vi.type = coot::graph_data_type::UNSET;
+
+   graphics_info_t g;
+   if (! g.is_valid_model_molecule(imol)) return vi;
+
+   std::pair<bool, std::string> master_info = g.molecules[imol].first_ncs_master_chain_id();
+   if (! master_info.first) return vi;
+
+   std::string master_chain_id = master_info.second;
+   float main_chain_weight = 1.0;
+   coot::ncs_differences_t diff = g.molecules[imol].ncs_chain_differences(master_chain_id, main_chain_weight);
+
+   for (unsigned int i=0; i<diff.diffs.size(); i++) {
+      const coot::ncs_chain_difference_t &chain_diff = diff.diffs[i];
+      coot::chain_validation_information_t cvi(chain_diff.peer_chain_id);
+      cvi.name = chain_diff.peer_chain_id + " vs " + master_chain_id;
+      for (unsigned int j=0; j<chain_diff.residue_info.size(); j++) {
+         const coot::ncs_residue_info_t &ri = chain_diff.residue_info[j];
+         if (ri.filled) {
+            coot::residue_spec_t res_spec(chain_diff.peer_chain_id, ri.resno, ri.inscode);
+            res_spec.int_user_data = imol;
+            mmdb::Atom *at = g.molecules[imol].atom_intelligent(chain_diff.peer_chain_id, ri.resno, ri.inscode);
+            std::string atom_name = " CA ";
+            std::string altconf = "";
+            if (at) {
+               atom_name = at->name;
+               altconf = at->altLoc;
+            }
+            coot::atom_spec_t atom_spec(chain_diff.peer_chain_id, ri.resno, ri.inscode, atom_name, altconf);
+            std::string res_label = std::to_string(ri.resno) + chain_diff.peer_chain_id;
+            coot::residue_validation_information_t rvi(res_spec, atom_spec, ri.mean_diff, res_label);
+            cvi.add_residue_validation_information(rvi);
+         }
+      }
+      vi.cviv.push_back(cvi);
+   }
+
+   vi.set_min_max();
+   return vi;
+}
+
+coot::validation_information_t
 get_validation_data(int imol, coot::validation_graph_type type) {
 
    graphics_info_t g;
@@ -629,6 +670,8 @@ get_validation_data(int imol, coot::validation_graph_type type) {
       vi = get_validation_data_for_peptide_omega_analysis(imol);
    if (type == coot::validation_graph_type::geometry)
       vi = g.get_validation_data_for_geometry_analysis(imol);
+   if (type == coot::validation_graph_type::ncs)
+      vi = get_validation_data_for_ncs_analysis(imol);
 
    return vi;
 
@@ -996,6 +1039,20 @@ graphics_info_t::update_validation(int imol_changed_model) {
    if (coot_all_atom_contact_dots_are_begin_displayed_for(imol_changed_model)) {
       mmdb::Manager *mol = molecules[imol_changed_model].atom_sel.mol;
       coot_all_atom_contact_dots_instanced(mol, imol_changed_model);
+   }
+
+   // redraw the sequence view (CootSequenceView reads mmdb::Manager live in snapshot())
+   GtkWidget *seq_view_box = widget_from_builder("main_window_sequence_view_box");
+   if (seq_view_box) {
+      GtkWidget *item = gtk_widget_get_first_child(seq_view_box);
+      while (item) {
+         int imol_overlay = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item), "imol"));
+         if (imol_overlay == imol_changed_model) {
+            GtkWidget *sv = GTK_WIDGET(g_object_get_data(G_OBJECT(item), "coot-sequence-view"));
+            if (sv) gtk_widget_queue_draw(sv);
+         }
+         item = gtk_widget_get_next_sibling(item);
+      }
    }
 }
 

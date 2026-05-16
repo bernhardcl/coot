@@ -196,6 +196,10 @@
           <attribute name="action">app.edit_restraints_action</attribute>
         </item>
         <item>
+          <attribute name="label" translatable="no">Sort Chains...</attribute>
+          <attribute name="action">app.edit_sort_chains_action</attribute>
+        </item>
+        <item>
           <attribute name="label">Undo Molecule Chooser...</attribute>
           <attribute name="action">app.undo_molecule_chooser_action</attribute>
         </item>
@@ -472,6 +476,10 @@
             <attribute name="label">Copy NCS Chain...</attribute>
             <attribute name="action">app.copy_ncs_chain_action</attribute>
           </item>
+          <item>
+            <attribute name="label">Find NCS Ligands...</attribute>
+            <attribute name="action">app.ncs_ligands_action</attribute>
+          </item>
           <!-- <item> -->
           <!--   <attribute name="label">Copy NCS Ghosts by Residue Range...</attribute> -->
           <!--   <attribute name="action">app.copy_ncs_ghosts_by_residue_range_action</attribute> -->
@@ -729,6 +737,21 @@
             <attribute name="action">app.go_to_atom_action</attribute>
           </item>
           <item>
+            <attribute name="label">Map Parameters...</attribute>
+            <attribute name="action">app.map_parameters_action</attribute>
+          </item>
+          <item>
+            <attribute name="label">Molecular Surface</attribute>
+            <attribute name="action">app.molecular_surface_action</attribute>
+          </item>
+          <item>
+            <attribute name="label">NCS Ghost Control...</attribute>
+            <attribute name="action">app.ghost_control_action</attribute>
+          </item>
+        </section>
+
+        <section>
+          <item>
             <attribute name="label">Label Atoms in Residue</attribute>
             <attribute name="action">app.label_atoms_in_residue_action</attribute>
           </item>
@@ -741,16 +764,8 @@
             <attribute name="action">app.label_neighbours_action</attribute>
           </item>
           <item>
-            <attribute name="label">Map Parameters...</attribute>
-            <attribute name="action">app.map_parameters_action</attribute>
-          </item>
-          <item>
-            <attribute name="label">Molecular Surface</attribute>
-            <attribute name="action">app.molecular_surface_action</attribute>
-          </item>
-          <item>
-            <attribute name="label">NCS Ghost Control...</attribute>
-            <attribute name="action">app.ghost_control_action</attribute>
+            <attribute name="label">Clear Atom Labels</attribute>
+            <attribute name="action">app.clear_atom_labels_action</attribute>
           </item>
         </section>
 
@@ -820,10 +835,6 @@
     <submenu>
       <attribute name="label">Measures</attribute>
       <section>
-        <item>
-          <attribute name="label">Clear Atom Labels</attribute>
-          <attribute name="action">app.clear_atom_labels_action</attribute>
-        </item>
         <item>
           <attribute name="label">Distances &amp; Angles...</attribute>
           <attribute name="action">app.distances_and_angles_action</attribute>
@@ -1285,6 +1296,10 @@
             <attribute name="label">Jiggle-Fit Molecule with Fourier Filtering</attribute>
             <attribute name="action">app.jiggle_fit_molecule_with_fourier_filtering_action</attribute>
           </item>
+          <item>
+            <attribute name="label">Patmos Jiggle</attribute>
+            <attribute name="action">app.patmos_jiggle_fit_molecule_with_fourier_filtering_action</attribute>
+          </item>
         </submenu>
       </section>
       <item>
@@ -1511,7 +1526,7 @@ Copyright 2023, 2024, 2025, 2026 Global Phasing Ltd.</property>
     <property name="license-type">lgpl-3-0</property>
     <property name="logo-icon-name">coot</property>
     <property name="program-name">Coot</property>
-    <property name="version">1.2</property>
+    <property name="version">1.2.x-pre</property>
     <property name="website">https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot</property>
     <property name="website-label">The Coot Website</property>
     <signal name="close-request" handler="on_about_dialog_close_request"/>
@@ -4874,7 +4889,7 @@ that you wish to delete.               </property>
     </child>
   </object>
 
-  <object class="GtkDialog" id="environment_distance_dialog">
+  <object class="GtkDialog" id="environment_distances_dialog">
     <property name="title" translatable="yes">Coot Environment Distances</property>
     <child>
       <object class="GtkBox" id="dialog-vbox11">
@@ -6735,7 +6750,7 @@ Do you want to continue?
                       </child>
                     </object>
                   </child>
-                  <signal name="clicked" handler="reset_view" swapped="no"/>
+                  <signal name="clicked" handler="on_reset_view_clicked" swapped="no"/>
                   <!-- <child> -->
                   <!--   <object class="GtkImage"> -->
                   <!--     <property name="icon-name">"reset-view.png"</property> -->
@@ -6961,7 +6976,7 @@ Do you want to continue?
                 <property name="orientation">horizontal</property>
 
                 <child>
-                  <object class="GtkPaned" id="main_window_ramchandran_and_validation_pane">
+                  <object class="GtkPaned" id="main_window_ramachandran_and_validation_pane">
                     <property name="position">111</property>
                     <property name="visible">False</property>
                     <property name="orientation">vertical</property>
@@ -7482,6 +7497,163 @@ Do you want to continue?
                             <property name="margin-end">10</property>
                             <property name="margin-top">4</property>
                             <property name="margin-bottom">10</property>
+                            <style>
+                              <class name="suggested-action"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="ncs-ligand-frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox" id="ncs_ligand_vbox">
+                    <property name="orientation">vertical</property>
+
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Protein with NCS</property>
+                        <property name="margin-end">6</property>
+                        <property name="margin-start">6</property>
+                        <property name="halign">start</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkComboBoxText" id="ncs-ligand-protein-comboboxtext">
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox" id="ncs-ligand-master-chain-vbox">
+                        <property name="orientation">horizontal</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">NCS Master Chain ID: </property>
+                            <property name="justify">center</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="ncs-ligand-master-chain-id-entry">
+                            <property name="width-request">5</property>
+                            <property name="can-focus">1</property>
+                            <!-- I looked to see if the master chain id could be set programatically, -->
+                            <!-- but it looked more tricky to do so that I had hoped. -->
+                            <property name="text">A</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Molecule Containing Ligand</property>
+                        <property name="halign">start</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkComboBoxText" id="ncs-ligand-ligand-mol-comboboxtext">
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox" id="vbox_ligand-specs">
+                        <property name="orientation">horizontal</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Chain ID: </property>
+                            <property name="justify">center</property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkEntry" id="ncs-ligand-chain-id-entry">
+                            <property name="width-request">3</property>
+                            <property name="can-focus">1</property>
+                            <property name="text">A</property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Residue Number </property>
+                            <property name="justify">center</property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkEntry" id="ncs-ligand-resno-start-entry">
+                            <property name="width-request">4</property>
+                            <property name="can-focus">1</property>
+                            <property name="text">1</property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes"> to </property>
+                            <property name="justify">center</property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="GtkEntry" id="ncs-ligand-resno-end-entry">
+                            <property name="width-request">4</property>
+                            <property name="can-focus">1</property>
+                            <property name="text">1</property>
+                          </object>
+                        </child>
+
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="margin-top">10</property>
+                        <property name="margin-bottom">10</property>
+                        <property name="margin-start">6</property>
+                        <property name="margin-end">6</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="ncs-ligand-buttons-vbox">
+                        <property name="orientation">horizontal</property>
+                        <property name="halign">end</property>
+                        <child>
+                          <object class="GtkButton" id="ncs-ligand-cancel-button">
+                            <property name="label">Cancel</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-end">4</property>
+                            <signal name="clicked" handler="on_find_ncs_ligands_cancel_button_clicked" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="ncs-ligand-go-button">
+                            <property name="label">Find Candidates</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-end">4</property>
+                            <signal name="clicked" handler="on_find_ncs_ligands_ok_button_clicked" swapped="no"/>
                             <style>
                               <class name="suggested-action"/>
                             </style>
@@ -9545,6 +9717,128 @@ Do you want to continue?
                             <property name="can-focus">1</property>
                             <property name="receives-default">1</property>
                             <signal name="clicked" handler="on_emdb_map_code_get_it_button_clicked" swapped="no"/>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="download-emdb-map-frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">10</property>
+                    <property name="margin-bottom">10</property>
+                    <property name="margin-top">10</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <child>
+                      <object class="GtkLabel" id="download-emdb-map-label">
+                        <property name="label">Downloading...</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkProgressBar" id="download-emdb-map-progressbar">
+                        <property name="show-text">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="download-emdb-map-cancel-button">
+                        <property name="label">Cancel</property>
+                        <property name="halign">center</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="sort_chains_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="can_focus">True</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">5</property>
+
+                    <child>
+                      <object class="GtkLabel" id="sort_chains_label">
+                        <property name="label" translatable="yes">Sort Molecule</property>
+                        <property name="justify">left</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkComboBoxText" id="sort_chains_comboboxtext">
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">2</property>
+                        <property name="margin-start">6</property>
+                        <property name="margin-end">6</property>
+                      </object>
+                    </child>
+ 
+                    <child>
+                      <object class="GtkBox">
+                        <property name="homogeneous">True</property>
+                        <property name="spacing">2</property>
+                        <property name="margin-start">6</property>
+                        <property name="margin-end">6</property>
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">2</property>
+                        <child>
+                          <object class="GtkButton" id="sort_chains_cancel_button">
+                            <property name="label" translatable="yes">Cancel</property>
+                            <property name="can-focus">1</property>
+                            <property name="receives-default">1</property>
+                            <property name="margin-bottom">4</property>
+                            <property name="margin-end">4</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-top">4</property>
+                            <signal name="clicked" handler="on_sort_chains_cancel_button_clicked" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="sort_chains_ok_button">
+                            <property name="label" translatable="yes">OK</property>
+                            <property name="can-focus">1</property>
+                            <property name="receives-default">1</property>
+                            <property name="margin-bottom">4</property>
+                            <property name="margin-end">4</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-top">4</property>
+                            <signal name="clicked" handler="on_sort_chains_ok_button_clicked" swapped="no"/>
+                            <style>
+                              <class name="suggested-action"/>
+                            </style>
                           </object>
                         </child>
                       </object>
@@ -15099,6 +15393,25 @@ just the cell and symmetry)
                       </object>
                     </child>
                     <child>
+                      <object class="GtkBox" id="residue_info_occ_apply_to_altconf_hbox">
+                        <child>
+                          <object class="GtkCheckButton" id="residue_info_occ_apply_to_altconf_checkbutton">
+                            <property name="label" translatable="yes">Apply Occupancy to atoms with alt. conf.:</property>
+                            <property name="can-focus">1</property>
+                            <signal name="toggled" handler="on_residue_info_occ_apply_to_altconf_checkbutton_toggled" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="residue_info_occ_apply_to_altconf_entry">
+                            <property name="sensitive">0</property>
+                            <property name="can-focus">1</property>
+                            <property name="max-length">4</property>
+                            <property name="width-chars">4</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkCheckButton" id="residue_info_b_factor_apply_all_checkbutton">
                         <property name="label" translatable="yes">Apply Temperature Factor to all atoms in residue?</property>
                         <property name="can-focus">1</property>
@@ -16757,6 +17070,25 @@ Then use &quot;Run Refmac...&quot; from the &quot;Model/Fit/Refine&quot; dialog.
                             </child>
                           </object>
                         </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame" id="frame_symmetry_as_calphas">
+                    <property name="margin-start">6</property>
+                    <property name="margin-end">6</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child>
+                      <object class="GtkCheckButton" id="symmetry_as_calphas_checkbutton">
+                        <property name="label" translatable="yes"> Symmetry as C-Alphas</property>
+                        <property name="can-focus">1</property>
+                        <property name="margin-top">6</property>
+                        <property name="margin-bottom">6</property>
+                        <property name="margin-start">6</property>
+                        <property name="margin-end">6</property>
+                        <signal name="toggled" handler="on_symmetry_as_calphas_checkbutton_toggled" swapped="no"/>
                       </object>
                     </child>
                   </object>

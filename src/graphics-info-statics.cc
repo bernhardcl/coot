@@ -24,6 +24,7 @@
  *
  */
 
+#include "Material.hh"
 #ifdef USE_PYTHON
 #include "Python.h"
 #endif
@@ -1481,7 +1482,7 @@ framebuffer graphics_info_t::blur_x_framebuffer;
 framebuffer graphics_info_t::blur_y_framebuffer;
 framebuffer graphics_info_t::combine_textures_using_depth_framebuffer;
 framebuffer graphics_info_t::blur_framebuffer; // 2020
-unsigned int graphics_info_t::framebuffer_scale = 1; // on supersampling by default.
+unsigned int graphics_info_t::framebuffer_scale = 1; // no supersampling by default.
 GLuint graphics_info_t::screendump_target_framebuffer = 0;
 
 bool graphics_info_t::perspective_projection_flag = false;
@@ -1874,3 +1875,6 @@ std::pair<bool, std::string> graphics_info_t::servalcat_fofc    = std::pair<bool
 std::pair<bool, std::string> graphics_info_t::servalcat_refine  = std::pair<bool, std::string> (false, "");
 
 std::string graphics_info_t::current_alt_conf = "";
+
+Material graphics_info_t::default_material_for_maps;
+

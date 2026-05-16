@@ -402,9 +402,9 @@ void CootLigandEditorCanvas::redo() noexcept {
     coot_ligand_editor_canvas_redo_edition(this);
 }
 
-// const RDKit::ROMol& CanvasMolecule::get_rdkit_molecule(unsigned int index) noexcept {
-//     RDKit::ROMol* coot_ligand_editor_canvas_get_rdkit_molecule(CootLigandEditorCanvas* self, unsigned int index) noexcept;
-// }
+const RDKit::ROMol& CootLigandEditorCanvas::get_rdkit_molecule(unsigned int index) noexcept {
+    return *coot_ligand_editor_canvas_get_rdkit_molecule(this, index);
+}
 
 unsigned int CootLigandEditorCanvas::get_molecule_count() noexcept {
     return coot_ligand_editor_canvas_get_molecule_count(this);
@@ -424,6 +424,14 @@ void CootLigandEditorCanvas::set_allow_invalid_molecules(bool value) noexcept {
 
 bool CootLigandEditorCanvas::get_allow_invalid_molecules() noexcept {
     return coot_ligand_editor_canvas_get_allow_invalid_molecules(this);
+}
+
+void CootLigandEditorCanvas::set_coordgen_mode_enabled(bool value) noexcept {
+    coot_ligand_editor_canvas_set_coordgen_mode_enabled(this, value);
+}
+
+bool CootLigandEditorCanvas::get_coordgen_mode_enabled() noexcept {
+    return coot_ligand_editor_canvas_get_coordgen_mode_enabled(this);
 }
 
 coot::ligand_editor_canvas::DisplayMode CootLigandEditorCanvas::get_display_mode() noexcept {

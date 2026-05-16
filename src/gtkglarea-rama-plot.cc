@@ -38,7 +38,7 @@ gtkgl_rama_realize(GtkWidget *gtk_gl_area) {
 
    if (false) { // debugging failure to view on macOS
       // fix these names at some stage
-      GtkWidget *pane_1 = widget_from_builder("main_window_ramchandran_and_validation_pane");
+      GtkWidget *pane_1 = widget_from_builder("main_window_ramachandran_and_validation_pane");
       GtkWidget *pane_2 = widget_from_builder("main_window_graphics_rama_vs_graphics_pane");
       GtkWidget *sw = widget_from_builder("ramachandran_plots_scrolled_window");
       GtkWidget *plots_vbox = widget_from_builder("ramachandran_plots_vbox");
@@ -50,7 +50,7 @@ gtkgl_rama_realize(GtkWidget *gtk_gl_area) {
 
    graphics_info_t g;
    if (!g.rama_plot_boxes.empty()) {
-      GtkWidget *pane_to_show = widget_from_builder("main_window_ramchandran_and_validation_pane");
+      GtkWidget *pane_to_show = widget_from_builder("main_window_ramachandran_and_validation_pane");
       gtk_widget_set_visible(pane_to_show, TRUE);
       GtkWidget *paned = widget_from_builder("main_window_graphics_rama_vs_graphics_pane");
       int position = gtk_paned_get_position(GTK_PANED(paned));
@@ -218,7 +218,7 @@ void show_opengl_ramachandran_plot(int imol, const std::string &residue_selectio
       GtkWidget *scrolled = widget_from_builder("ramachandran_plots_scrolled_window");
       gtk_widget_set_visible(scrolled, TRUE);
 
-      GtkWidget *pane_to_show  = widget_from_builder("main_window_ramchandran_and_validation_pane");
+      GtkWidget *pane_to_show  = widget_from_builder("main_window_ramachandran_and_validation_pane");
       gtk_widget_set_visible(pane_to_show,  TRUE);
 
       GtkWidget *box_for_all_plots = widget_from_builder("ramachandran_plots_vbox");
@@ -337,14 +337,26 @@ graphics_info_t::remove_plot_from_rama_plots(GtkWidget *plot_box) {
 void
 graphics_info_t::rama_plot_boxes_handle_close_molecule(int imol) {
 
-   // date this needs to be called by close_molecule/close_yourself().
-
-   std::vector<widgeted_rama_plot_t>::const_iterator it;
-   for (it=rama_plot_boxes.begin(); it!=rama_plot_boxes.end(); ++it) {
-      auto &rama_plot_box = *it;
-      if (rama_plot_box.imol == imol) {
-         remove_plot_from_rama_plots(rama_plot_box.box);
+   GtkWidget *box_for_all_plots = widget_from_builder("ramachandran_plots_vbox");
+   bool removed_any = false;
+   auto it = rama_plot_boxes.begin();
+   while (it != rama_plot_boxes.end()) {
+      if (it->imol == imol) {
+         if (box_for_all_plots)
+            gtk_box_remove(GTK_BOX(box_for_all_plots), it->box);
+         it = rama_plot_boxes.erase(it);
+         removed_any = true;
+      } else {
+         ++it;
       }
+   }
+   if (removed_any) {
+      if (rama_plot_boxes.empty()) {
+         GtkWidget *scrolled = widget_from_builder("ramachandran_plots_scrolled_window");
+         if (scrolled)
+            gtk_widget_set_visible(scrolled, FALSE);
+      }
+      hide_vertical_validation_frame_if_appropriate();
    }
 }
 

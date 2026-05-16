@@ -737,6 +737,24 @@ void add_an_atom(const std::string &element);
 #ifdef USE_PYTHON
 void nudge_the_temperature_factors_py(int imol, PyObject *residue_spec_py, float amount);
 #endif
+
+//! \brief convert AlphaFold pLDDT to crystallographic B-factors
+//!
+//! AlphaFold models store pLDDT confidence scores (0-100) in the
+//! B-factor column. This function converts them to crystallographic
+//! B-factors using the Hiranuma et al. (2021) formula:
+//!
+//!   RMSD = 1.5 * exp(4 * (0.7 - pLDDT/100))
+//!
+//!   B = (8 * pi^2 / 3) * RMSD^2
+//!
+//! After conversion, high-confidence regions (pLDDT ~90) get
+//! B-factors of ~8 A^2, while low-confidence regions (pLDDT ~50)
+//! get B-factors of ~440 A^2.
+//!
+//! @param imol is the molecule index of the AlphaFold model
+void hiranuma_inversion(int imol);
+
 //! \}
 
 
@@ -2342,6 +2360,18 @@ void set_draw_mesh(int imol, int mesh_index, short int state);
 //! \brief return -1 on unable to lookup mesh
 int draw_mesh_state(int imol, int mesh_index);
 
+//! \brief set the default map material ambient
+void set_default_map_material_ambient(float r, float g, float b, float alpha);
+
+//! \brief set the default map material diffuse
+void set_default_map_material_diffuse(float r, float g, float b, float alpha);
+
+//! \brief set the default map material ambient
+void set_map_material_ambient(int imol, float r, float g, float b, float alpha);
+
+//! \brief set the default map material diffuse
+void set_map_material_diffuse(int imol, float r, float g, float b, float alpha);
+
 //! \brief
 void set_map_material_specular(int imol, float specular_strength, float shininess);
 
@@ -2751,11 +2781,23 @@ void make_link_scm(int imol, SCM spec_1, SCM spec_2, const std::string&link_name
 SCM link_info_scm(int imol);
 #endif
 #ifdef USE_PYTHON
+
+//! make a link
 void make_link_py(int imol, PyObject *spec_1, PyObject *spec_2, const std::string&link_name, float length);
-// return a list of the links in the given molecule.
-// will return an empty list for non-valid (i.e. non-model) molecules
-//
+
+//! return a list of the links in the given molecule.
+//!
+//! @param imol the molecule index
+//! @return an empty list for non-valid (i.e. non-model) molecules
+//!
 PyObject *link_info_py(int imol);
+
+//! delete links
+//!
+//! @param imol the molecule index
+//! @param residue_spec_py the residue spec as 3 member list
+void delete_links_containing_residue_py(int imol, PyObject *residue_spec_py);
+
 #endif
 
 void show_acedrg_link_interface_overlay();

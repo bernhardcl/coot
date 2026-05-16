@@ -28,6 +28,7 @@
 #ifndef GRAPHICS_INFO_H
 #define GRAPHICS_INFO_H
 
+#include "Material.hh"
 #include "compat/coot-sysdep.h"
 #include "geometry/residue-and-atom-specs.hh"
 #include "validation-graphs/validation-information.hh"
@@ -1143,6 +1144,8 @@ public:
    static coot::Cartesian smooth_scroll_start_point;
    static coot::Cartesian smooth_scroll_target_point;
 
+   static Material default_material_for_maps;
+
    // possibly for multi-threading, public access.
    void update_maps();
 
@@ -1429,6 +1432,10 @@ public:
 							     bool set_last_active_flag);
 
    int combobox_get_imol(GtkComboBox *combobox) const;
+
+   static std::vector<int> get_model_molecule_vector();
+
+   static std::vector<int> get_map_molecule_vector();
 
    static void go_to_atom_mol_combobox_changed(GtkWidget *combobox, gpointer data);
 
