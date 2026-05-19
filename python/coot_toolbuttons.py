@@ -580,9 +580,10 @@ if True:  # test for python
         # remove this for now.
         # coot_main_toolbar.connect("button-press-event", show_pop_up_menu)
 
-
-# save a toolbar button to preferences subdir
+# save a toolbar button to ~/.coot-preferences/coot_toolbuttons.py
 #
+
+
 def save_toolbar_to_init_file(button_label, callback_function,
                               icon=None, tooltip=None,
                               toggle_button=False, use_button=False):

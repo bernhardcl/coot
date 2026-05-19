@@ -1082,7 +1082,6 @@ public:
    //
    int lookup_molecule_name(const std::string &molecule_name) const;
 
-
    void SetMouseBegin(double x, double y);
    void SetMouseClicked(double x, double y);
 
