@@ -724,25 +724,12 @@
           <!--   <attribute name="action">app.draw_central_atom_label_action</attribute> -->
           <!-- </item> -->
           <item>
-            <!-- this needs an atom selection overlay -->
-            <attribute name="label">Electrostatic Surface</attribute>
-            <attribute name="action">app.electrostatic_surface_action</attribute>
-          </item>
-          <item>
-            <attribute name="label">Gaussian Surface...</attribute>
-            <attribute name="action">app.gaussian_surface_action</attribute>
-          </item>
-          <item>
             <attribute name="label">Go To Atom...</attribute>
             <attribute name="action">app.go_to_atom_action</attribute>
           </item>
           <item>
             <attribute name="label">Map Parameters...</attribute>
             <attribute name="action">app.map_parameters_action</attribute>
-          </item>
-          <item>
-            <attribute name="label">Molecular Surface</attribute>
-            <attribute name="action">app.molecular_surface_action</attribute>
           </item>
           <item>
             <attribute name="label">NCS Ghost Control...</attribute>
@@ -788,6 +775,23 @@
           </item>
         </section>
         <section>
+          <item>
+            <attribute name="label">Gaussian Surface...</attribute>
+            <attribute name="action">app.gaussian_surface_action</attribute>
+          </item>
+          <item>
+            <attribute name="label">Molecular Surface</attribute>
+            <attribute name="action">app.molecular_surface_action</attribute>
+          </item>
+          <item>
+            <attribute name="label">Map Caps</attribute>
+            <attribute name="action">app.map_caps_action</attribute>
+          </item>
+          <item>
+            <!-- this needs an atom selection overlay -->
+            <attribute name="label">Electrostatic Surface</attribute>
+            <attribute name="action">app.electrostatic_surface_action</attribute>
+          </item>
           <item>
             <attribute name="label">Ribbons: By Chain</attribute>
             <attribute name="action">app.ribbons_colour_by_chain_action</attribute>
@@ -1277,6 +1281,10 @@
         <attribute name="label" translatable="no">Assign Sequence to Fragment</attribute>
         <attribute name="action">app.cryo_em_assign_sequence_to_active_fragment_action</attribute>
       </item>
+      <item>
+        <attribute name="label" translatable="no">Hiranuma Inversion</attribute>
+        <attribute name="action">app.cryo_em_hiranuma_inversion_action</attribute>
+      </item>
       <section>
         <submenu>
           <attribute name="label">Jiggle-Fit...</attribute>
@@ -1526,7 +1534,7 @@ Copyright 2023, 2024, 2025, 2026 Global Phasing Ltd.</property>
     <property name="license-type">lgpl-3-0</property>
     <property name="logo-icon-name">coot</property>
     <property name="program-name">Coot</property>
-    <property name="version">1.2.x-pre</property>
+    <property name="version">1.3.1</property>
     <property name="website">https://www2.mrc-lmb.cam.ac.uk/personal/pemsley/coot</property>
     <property name="website-label">The Coot Website</property>
     <signal name="close-request" handler="on_about_dialog_close_request"/>
@@ -1676,7 +1684,7 @@ Copyright 2023, 2024, 2025, 2026 Global Phasing Ltd.</property>
         </child>
         <child type="action">
           <object class="GtkBox" id="hbox99">
-            <property name="homogeneous">1</property>
+            <property name="halign">end</property>
             <property name="spacing">4</property>
             <child>
               <object class="GtkButton" id="add_OXT_cancel_button">
@@ -2577,7 +2585,7 @@ Calculate a skeleton now?
   </object>
 
   <object class="GtkDialog" id="bond_parameters_dialog">
-    <property name="title" translatable="yes">Coot Bond Parameters</property>
+    <property name="title" translatable="yes">Coot: Bond Parameters</property>
     <child>
       <object class="GtkBox" id="dialog-vbox59">
         <property name="orientation">vertical</property>
@@ -2848,6 +2856,7 @@ Calculate a skeleton now?
                 <property name="margin-bottom">6</property>
                 <property name="margin-start">6</property>
                 <property name="margin-end">6</property>
+                <property name="halign">end</property>
 
                 <!-- this dialog is dynamic now (or should be) - no need for "Apply" buton -->
                 <!-- <child> -->
@@ -2878,7 +2887,7 @@ Calculate a skeleton now?
                   </object>
                 </child>
               </object>
-        </child>
+            </child>
           </object>
         </child>
       </object>
@@ -15789,7 +15798,7 @@ Sorry.
             <child>
               <object class="GtkFrame" id="new_alt_conf_occ_frame">
                 <child>
-                  <object class="GtkScale">
+                  <object class="GtkScale" id="new_alt_conf_occ_hscale">
                     <property name="can-focus">1</property>
                   </object>
                 </child>
@@ -18790,23 +18799,11 @@ Move a copy?</property>
           <object class="GtkBox">
             <property name="orientation">horizontal</property>
             <property name="spacing">6</property>
+            <property name="halign">end</property>
             <property name="margin-end">6</property>
             <property name="margin-start">4</property>
             <property name="margin-top">6</property>
             <property name="margin-bottom">6</property>
-            <child>
-              <object class="GtkCheckButton" id="first_startup_dontshow_checkbutton">
-                <property name="label" translatable="yes">Don't show this again (revisit in Preferences)</property>
-                <property name="use-underline">1</property>
-                <property name="active">0</property>
-                <property name="halign">start</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkBox">
-                <property name="hexpand">true</property>
-              </object>
-            </child>
             <child>
               <object class="GtkButton" id="first_startup_cancel_button">
                 <property name="label" translatable="yes">Cancel</property>

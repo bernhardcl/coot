@@ -474,10 +474,17 @@ on_glarea_click(GtkGestureClick* click_gesture,
    graphics_info_t g;
    g.on_glarea_click(click_gesture, n_press, x, y, user_data);
 
-   // Not in Gtk4.
-   // GtkWidget *w;
-   // GtkWindow *window = gtk_widget_get_window(w);
-   // GtkWidget *focused_widget = gtk_window_get_focus(window);
+}
+
+void
+on_glarea_click_released(GtkGestureClick* click_gesture,
+                         gint n_press,
+                         gdouble x,
+                         gdouble y,
+                         gpointer user_data) {
+
+   graphics_info_t g;
+   g.on_glarea_click_released(click_gesture, n_press, x, y, user_data);
 
 }
 
@@ -585,6 +592,7 @@ void setup_gestures_for_opengl_widget_in_main_window(GtkWidget *glarea) {
 
    gtk_widget_add_controller(GTK_WIDGET(glarea), GTK_EVENT_CONTROLLER(click_controller));
    g_signal_connect(click_controller, "pressed",  G_CALLBACK(on_glarea_click),  glarea);
+   g_signal_connect(click_controller, "released", G_CALLBACK(on_glarea_click_released), glarea);
 
    gtk_widget_add_controller(GTK_WIDGET(glarea), GTK_EVENT_CONTROLLER(scroll_controller));
    g_signal_connect(scroll_controller, "scroll",  G_CALLBACK(on_glarea_scrolled),  glarea);
@@ -803,7 +811,7 @@ startup_create_splash_screen_window() {
    GtkWidget *splash_screen_window = gtk_window_new();
    gtk_window_set_title(GTK_WINDOW(splash_screen_window), "Coot-Splash");
    gtk_window_set_decorated(GTK_WINDOW(splash_screen_window), FALSE);
-   GtkWidget *picture = create_local_picture("coot-1.2.png");
+   GtkWidget *picture = create_local_picture("coot-1.3.1.png");
 
    gtk_widget_set_hexpand(GTK_WIDGET(picture),TRUE);
    gtk_widget_set_vexpand(GTK_WIDGET(picture),TRUE);

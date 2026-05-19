@@ -26,7 +26,7 @@ dnl
 dnl Process this file with autoconf to produce a configure script.
 
 
-AC_INIT([coot],[1.2.x-pre])
+AC_INIT([coot],[1.3.1])
 AC_CONFIG_SRCDIR(src/main.cc)
 AM_INIT_AUTOMAKE
 
@@ -200,13 +200,6 @@ AM_WITH_SSM
 # AM_WITH_CCP4SRS
 
 AM_SINGLE_FFTW2
-
-echo PKG_CONFIG_PATH is $PKG_CONFIG_PATH
-echo debug clipper:
-echo pkg-config --modversion clipper
-pkg-config --modversion clipper
-echo pkg-config --libs clipper
-pkg-config --libs clipper
 
 echo PKG_CONFIG_PATH is $PKG_CONFIG_PATH
 echo debug clipper:

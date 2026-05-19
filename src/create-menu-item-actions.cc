@@ -2001,21 +2001,29 @@ void HOLE_action(GSimpleAction *simple_action,
    graphics_info_t::graphics_grab_focus();
 }
 
+static GtkWidget *local_b_factors_toggle_button = nullptr;
+
 void local_b_factor_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                            G_GNUC_UNUSED GVariant *parameter,
                            G_GNUC_UNUSED gpointer user_data) {
 
-   std::cout << "local b-factor action" << std::endl;
+   set_show_local_b_factors(1);
 
-   GtkWidget *toolbar_hbox = widget_from_builder("main_window_toolbar_hbox");
-   GtkWidget *toggle_button = gtk_toggle_button_new_with_label("Local B-factors");
-   auto callback = +[] (GtkToggleButton *toggle_button, gpointer data) {
-      short int state = 0;
-      if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(toggle_button))) state = 1;
-      set_show_local_b_factors(state);
-   };
-   g_signal_connect(G_OBJECT(toggle_button), "toggled", G_CALLBACK(callback), nullptr);
-   gtk_box_append(GTK_BOX(toolbar_hbox), toggle_button);
+   if (!local_b_factors_toggle_button) {
+      GtkWidget *toolbar_hbox = widget_from_builder("main_window_toolbar_hbox");
+      GtkWidget *toggle_button = gtk_toggle_button_new_with_label("Local B-factors");
+      auto callback = +[] (GtkToggleButton *toggle_button, gpointer data) {
+         short int state = 0;
+         if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(toggle_button))) state = 1;
+         set_show_local_b_factors(state);
+      };
+      g_signal_connect(G_OBJECT(toggle_button), "toggled", G_CALLBACK(callback), nullptr);
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle_button), TRUE);
+      gtk_box_append(GTK_BOX(toolbar_hbox), toggle_button);
+      local_b_factors_toggle_button = toggle_button;
+   } else {
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(local_b_factors_toggle_button), TRUE);
+   }
 }
 
 
@@ -2164,6 +2172,17 @@ void cryo_em_add_molecular_symmetry_mtrix_action(G_GNUC_UNUSED GSimpleAction *si
    if (pp.first) {
       int imol = pp.second.first;
       add_molecular_symmetry_from_mtrix_from_self_file(imol);
+   }
+}
+
+void cryo_em_hiranuma_inversion_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                                       G_GNUC_UNUSED GVariant *parameter,
+                                       G_GNUC_UNUSED gpointer user_data) {
+
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+   if (pp.first) {
+      int imol = pp.second.first;
+      hiranuma_inversion(imol);
    }
 }
 
@@ -3986,6 +4005,15 @@ molecular_surface_action(G_GNUC_UNUSED GSimpleAction *simple_action,
 }
 
 void
+map_caps_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                G_GNUC_UNUSED GVariant *parameter,
+                G_GNUC_UNUSED gpointer user_data) {
+
+   add_density_map_cap();
+   graphics_info_t::graphics_grab_focus();
+}
+
+void
 electrostatic_surface_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                              G_GNUC_UNUSED GVariant *parameter,
                              G_GNUC_UNUSED gpointer user_data) {
@@ -4509,9 +4537,25 @@ void atoms_overlaps_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec_simple();
    if (pp.first) {
       int imol = pp.second.first;
+      graphics_info_t::show_atom_overlaps_flag = true;
       coot_all_atom_contact_dots(imol);
-   }
 
+      if (!graphics_info_t::atom_overlaps_toggle_button) {
+         GtkWidget *toolbar_hbox = widget_from_builder("main_window_toolbar_hbox");
+         GtkWidget *toggle_button = gtk_toggle_button_new_with_label("Atom Overlaps");
+         auto callback = +[] (GtkToggleButton *toggle_button, gpointer data) {
+            graphics_info_t g;
+            bool state = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(toggle_button));
+            g.set_show_atom_overlaps(state);
+         };
+         g_signal_connect(G_OBJECT(toggle_button), "toggled", G_CALLBACK(callback), nullptr);
+         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(toggle_button), TRUE);
+         gtk_box_append(GTK_BOX(toolbar_hbox), toggle_button);
+         graphics_info_t::atom_overlaps_toggle_button = toggle_button;
+      } else {
+         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(graphics_info_t::atom_overlaps_toggle_button), TRUE);
+      }
+   }
 }
 
 void all_atom_contact_dots_molprobity_action(G_GNUC_UNUSED GSimpleAction *simple_action,
@@ -6274,6 +6318,7 @@ create_actions(GtkApplication *application) {
    add_action(        "bond_parameters_action",         bond_parameters_action);
    add_action(           "bond_colours_action",            bond_colours_action);
    add_action(             "fullscreen_action",              fullscreen_action);
+   add_action(               "map_caps_action",                map_caps_action);
    add_action(             "go_to_atom_action",              go_to_atom_action);
    add_action(         "label_CA_atoms_action",          label_CA_atoms_action);
    add_action(         "map_parameters_action",          map_parameters_action);
@@ -6415,7 +6460,7 @@ create_actions(GtkApplication *application) {
    add_action("mutate_base_to_type_G", mutate_base_to_type_G);
    add_action("mutate_base_to_type_T", mutate_base_to_type_T);
    add_action("mutate_base_to_type_C", mutate_base_to_type_C);
-   add_action("mutate_base_to_type_C", mutate_base_to_type_U);
+   add_action("mutate_base_to_type_U", mutate_base_to_type_U);
 
    // Draw menu
    add_action_with_param("bond_smoothness_action", bond_smoothness_action);
@@ -6467,6 +6512,7 @@ create_actions(GtkApplication *application) {
    add_action("cryo_em_make_partitioned_maps_action",        cryo_em_make_partitioned_maps_action);
    add_action("cryo_em_sharpen_blur_map_action",             cryo_em_sharpen_blur_map_action);
    add_action("cryo_em_assign_sequence_to_active_fragment_action", cryo_em_assign_sequence_to_active_fragment_action);
+   add_action("cryo_em_hiranuma_inversion_action",                cryo_em_hiranuma_inversion_action);
 
    add_action("jiggle_fit_chain_simple_action",                    jiggle_fit_chain_simple_action);
    add_action("jiggle_fit_molecule_simple_action",                 jiggle_fit_molecule_simple_action);

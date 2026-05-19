@@ -49,6 +49,7 @@ typedef const char entry_char_type;
 #include "graphics-info.h"
 
 #include "cc-interface.hh" // for read_ccp4_map()
+#include "c-interface-generic-objects.h"
 
 #include "utils/logging.hh"
 extern logging logger;
@@ -224,6 +225,7 @@ on_model_toolbar_flip_peptide_button_clicked(GtkButton *button,
          auto &m = g.molecules[imol];
          coot::atom_spec_t atom_spec(aa.second.second);
          m.pepflip(atom_spec);
+         g.update_validation(imol);
          g.graphics_draw();
       }
    }
@@ -251,6 +253,7 @@ on_model_toolbar_side_chain_180_button_clicked(GtkButton *button,
       // change this signature to use a residue spec and an alt_conf.
       int istatus = m.do_180_degree_side_chain_flip(spec.chain_id, spec.res_no,
 						    spec.ins_code, alt_conf, g.Geom_p());
+      g.update_validation(imol);
       g.graphics_draw();
    }
 
@@ -2195,10 +2198,12 @@ void
 on_emplacement_cancel_button_clicked(G_GNUC_UNUSED GtkButton       *button,
                                      G_GNUC_UNUSED gpointer         user_data) {
 
-   GtkWidget *frame = widget_from_builder("emplacement_frame");
+   GtkWidget *dialog = widget_from_builder("emplacement_dialog");
+   gtk_widget_set_visible(dialog, FALSE);
 
-   gtk_widget_set_visible(frame, FALSE);
-
+   int obj = generic_object_index("Emplacement Sphere");
+   if (obj >= 0)
+      close_generic_object(obj);
 }
 
 extern "C" G_MODULE_EXPORT
