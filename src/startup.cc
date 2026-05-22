@@ -33,6 +33,7 @@
 #include <clipper/core/test_core.h>
 #include <clipper/contrib/test_contrib.h>
 
+#include "gdk/gdkkeysyms.h"
 #include "glib-object.h"
 #include "glib.h"
 #include "glibconfig.h"
@@ -668,7 +669,11 @@ on_go_to_residue_keyboarding_mode_entry_key_controller_key_released(GtkEventCont
              << keycode << std::endl;
    GtkWidget *window = widget_from_builder("keyboard_go_to_residue_window");
 
+#ifdef WINDOWS_MINGW
+   if (keyval == GDK_KEY_Return || keyval == GDK_KEY_KP_Enter) {
+#else
    if (keycode == 36) {
+#endif
       std::string s = gtk_editable_get_text(GTK_EDITABLE(entry));
       graphics_info_t g;
       g.apply_go_to_residue_keyboading_string(s);
@@ -676,7 +681,11 @@ on_go_to_residue_keyboarding_mode_entry_key_controller_key_released(GtkEventCont
       gtk_widget_set_visible(GTK_WIDGET(window), FALSE);
    }
 
+#ifdef WINDOWS_MINGW
+   if (keyval == GDK_KEY_Escape) {
+#else
    if (keycode == 53) {
+#endif
       gtk_widget_set_visible(GTK_WIDGET(window), FALSE);
       gtk_editable_set_text(GTK_EDITABLE(entry), "");
    }
