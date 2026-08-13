@@ -206,6 +206,7 @@ namespace coot {
 
       modification_info_t modification_info;
 
+
       bool use_gemmi; // true now
       int imol_no; // this molecule's index in the container vector
       bool is_closed_flag;
@@ -854,6 +855,8 @@ namespace coot {
 
       void clear_residue_properties();
 
+      std::vector<simple_mesh_t> get_cavities(const protein_geometry *geom_p) const;
+
       simple_mesh_t get_gaussian_surface(float sigma, float contour_level,
                                          float box_radius, float grid_scale, float fft_b_factor) const;
 
@@ -930,8 +933,10 @@ namespace coot {
                                                unsigned int num_subdivisions) const;
 
       //! @return the instanced mesh for the specified molecule
-      instanced_mesh_t all_molecule_contact_dots(const coot::protein_geometry &geom,
-                                                 unsigned int num_subdivisions) const;
+      //!
+      //! This can modify the geom by loading dictionaries.
+      instanced_mesh_t all_molecule_contact_dots(coot::protein_geometry &geom,
+                                                 unsigned int num_subdivisions);
 
       generic_3d_lines_bonds_box_t
       make_exportable_environment_bond_box(coot::residue_spec_t &spec, float max_dist, coot::protein_geometry &geom) const;
@@ -1065,6 +1070,22 @@ namespace coot {
       int delete_residue_atoms_with_alt_conf(coot::residue_spec_t &residue_spec, const std::string &alt_conf);
       int delete_chain_using_atom_cid(const std::string &cid);
       int delete_literal_using_cid(const std::string &cid); // cid is an atom selection, e.g. containing a residue range
+
+      //! delete all waters
+      //!
+      //! @param imol is the model molecule index
+      //!
+      //! @return the number of water molecule deleted
+      int delete_all_waters();
+
+      //! delete all hetgroups
+      //!
+      //! Hetgroups do not include waters
+      //!
+      //! @param imol is the model molecule index
+      //!
+      //! @return the number of water molecule deleted
+      int delete_all_hetgroups();
 
       int change_alt_locs(const std::string &cid, const std::string &change_mode);
 
@@ -1278,6 +1299,11 @@ namespace coot {
       // merge molecules helper functions
 
       bool is_het_residue(mmdb::Residue *residue_p) const;
+
+      // get hetgroups - don't include waters.
+      // the res-name is in the user-defined string
+      std::vector<coot::residue_spec_t> get_hetgroups() const;
+
       // return state, max_resno + 1, or 0, 1 of no residues in chain.
       //
       std::pair<short int, int> next_residue_number_in_chain(mmdb::Chain *w,
@@ -1569,6 +1595,9 @@ namespace coot {
       int get_number_of_map_sections(int axis_id) const;
 
       // ---------------------------------- blender --------------------------------------
+
+      simple_mesh_t get_test_function_on_surface_mesh(const std::string &cid,
+                                                      const ramachandrans_container_t &rc);
 
       blender_mesh_t blender_mesh;
       std::vector<float> get_vertices_for_blender() const;

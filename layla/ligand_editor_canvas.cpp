@@ -29,6 +29,8 @@
 #include <utility>
 #include <algorithm>
 #include <vector>
+#include <set>
+#include <string>
 #include <memory>
 
 #include "../utils/base64-encode-decode.hh"
@@ -645,6 +647,36 @@ void coot_ligand_editor_canvas_update_molecule_from_smiles(CootLigandEditorCanva
     }
 }
 
+void coot_ligand_editor_canvas_set_atom_names(CootLigandEditorCanvas* self, unsigned int molecule_idx,
+                                              const std::vector<std::string>& names,
+                                              const std::vector<std::string>& hydrogen_names) {
+    if(molecule_idx >= self->rdkit_molecules->size()) {
+        return;
+    }
+    auto& target_mol_opt = (*self->rdkit_molecules)[molecule_idx];
+    if(!target_mol_opt.has_value()) {
+        return;
+    }
+    RDKit::RWMol* mol = target_mol_opt->get();
+    self->begin_edition();
+    unsigned int n_atoms = mol->getNumAtoms();
+    for(unsigned int i = 0; i < n_atoms; i++) {
+        RDKit::Atom* at = mol->getAtomWithIdx(i);
+        // The visible heavy-atom name.
+        if(i < names.size() && !names[i].empty())
+            at->setProp("name", names[i]);
+        // The names of this atom's (implicit) hydrogens, stashed for later use
+        // by acedrg. These are not displayed - the molecule has no H atoms.
+        if(i < hydrogen_names.size() && !hydrogen_names[i].empty())
+            at->setProp("hydrogen_names", hydrogen_names[i]);
+    }
+    auto& widget_mol = (*self->molecules)[molecule_idx];
+    // This is a names-only change, so keep the existing 2D layout - do not
+    // clear the cached atom coordinate map (unlike update_molecule_from_smiles).
+    widget_mol->lower_from_rdkit(!self->allow_invalid_molecules, self->use_coordgen);
+    self->finalize_edition();
+}
+
 void coot_ligand_editor_canvas_undo_edition(CootLigandEditorCanvas* self) noexcept {
     self->undo_edition();
     self->queue_resize();
@@ -697,6 +729,59 @@ void coot_ligand_editor_canvas_set_coordgen_mode_enabled(CootLigandEditorCanvas*
 }
 bool coot_ligand_editor_canvas_get_coordgen_mode_enabled(CootLigandEditorCanvas* self) noexcept {
     return self->use_coordgen;
+}
+
+void coot_ligand_editor_canvas_set_show_alerts(CootLigandEditorCanvas* self, bool value) noexcept {
+    g_debug("Show alerts set to %s", value ? "true" : "false");
+    self->show_alerts = value;
+    for(auto& mol_opt : *self->molecules) {
+        if(mol_opt.has_value()) {
+            mol_opt->set_draw_alerts(value);
+            // Display-only change: re-lower so the alert highlights are
+            // (re)computed or cleared, while keeping the existing 2D layout and
+            // leaving the Undo/Redo edition stack untouched.
+            try {
+                mol_opt->lower_from_rdkit(!self->allow_invalid_molecules, self->use_coordgen);
+            } catch (const std::exception& e) {
+                g_warning("coot_ligand_editor_canvas_set_show_alerts: lowering failed: %s", e.what());
+            }
+        }
+    }
+    self->queue_redraw();
+    // Tell the user which alerts were found (the highlights show where).
+    if(value) {
+        std::string summary = coot_ligand_editor_canvas_get_alert_summary(self);
+        if(summary.empty()) {
+            self->update_status("Show Alerts: no structural alerts found.");
+        } else {
+            std::string msg = "Structural alerts: " + summary;
+            self->update_status(msg.c_str());
+        }
+    } else {
+        self->update_status("");
+    }
+}
+
+bool coot_ligand_editor_canvas_get_show_alerts(CootLigandEditorCanvas* self) noexcept {
+    return self->show_alerts;
+}
+
+std::string coot_ligand_editor_canvas_get_alert_summary(CootLigandEditorCanvas* self) noexcept {
+    std::set<std::string> names;
+    for(const auto& mol_opt : *self->molecules) {
+        if(mol_opt.has_value()) {
+            const auto& mol_names = mol_opt->get_matched_alert_names();
+            names.insert(mol_names.begin(), mol_names.end());
+        }
+    }
+    std::string out;
+    for(const auto& n : names) {
+        if(!out.empty()) {
+            out += ", ";
+        }
+        out += n;
+    }
+    return out;
 }
 
 DisplayMode coot_ligand_editor_canvas_get_display_mode(CootLigandEditorCanvas* self) noexcept {

@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.13)
+
+# Build-variant dispatch: configure with -DCOOT_GEMMI=ON to use CMakeLists-gemmi.txt
+# (the mmdb->gemmi migration build) instead of this full build. Both build dirs coexist.
+if(COOT_GEMMI)
+   include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists-gemmi.txt)
+   return()
+endif()
+
 cmake_policy(SET CMP0048 NEW)
 project(coot)
 find_package(PkgConfig)
@@ -26,6 +34,7 @@ find_package(GEMMI REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Boost COMPONENTS iostreams regex thread serialization REQUIRED)
 find_package(glm REQUIRED)
+find_package(Doxygen REQUIRED)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
@@ -33,13 +42,19 @@ find_package(Python 3
   REQUIRED COMPONENTS Interpreter Development.Module
   OPTIONAL_COMPONENTS Development.SABIModule)
 
-# Prefer nanobind's own cmake directory inside its Python package so that
-# NB_DIR resolves correctly and the bundled robin_map is found.
-# The system /usr/lib/cmake/nanobind/ breaks NB_DIR's relative path logic.
+# Ask the installed nanobind for its own cmake directory. nanobind is noarch, so
+# deriving the path from Python_STDLIB breaks where distros split arch/noarch dirs
+# (e.g. Fedora: stdlib in /usr/lib64, but nanobind lands in /usr/lib). Querying the
+# module returns the real location and keeps NB_DIR's relative layout (robin_map) intact.
 if(NOT nanobind_DIR)
-  # Use Python_STDLIB (not Python_SITELIB) so this works inside venvs too,
-  # since venvs share the system stdlib but have their own site-packages.
-  set(nanobind_DIR "${Python_STDLIB}/site-packages/nanobind/cmake")
+  execute_process(
+    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+    RESULT_VARIABLE _nanobind_query_result
+    OUTPUT_VARIABLE _nanobind_cmake_dir
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(_nanobind_query_result EQUAL 0 AND IS_DIRECTORY "${_nanobind_cmake_dir}")
+    set(nanobind_DIR "${_nanobind_cmake_dir}")
+  endif()
 endif()
 find_package(nanobind CONFIG REQUIRED)
 
@@ -69,7 +84,7 @@ endif()
 
 set(coot_src ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1.3.1"
+add_definitions(-DANALYSE_REFINEMENT_TIMING -DPACKAGE_VERSION="1.3.3"
   -DHAVE_CXX_THREAD -DHAVE_SSMLIB -DHAVE_BOOST -DUSE_LIBPNG=1 -DCLIPPER_HAS_TOP8000 -DUSE_GEMMI
   -DHAVE_BOOST_THREAD -DHAVE_GSL -DLIBCOOTAPI_BUILD
   -DPKGDATADIR="${CMAKE_INSTALL_PREFIX}/share/coot" -DXDATADIR="${CMAKE_INSTALL_PREFIX}/share")
@@ -182,6 +197,8 @@ add_library(cootapi SHARED
             ${coot_src}/lidia-core/svg-molecule.cc
             ${coot_src}/lidia-core/cod-types.cc
             ${coot_src}/lidia-core/cod-atom-types.cc
+            ${coot_src}/lidia-core/cod-atom-types-acedrg.cc
+            ${coot_src}/lidia-core/cod-types-similarity.cc
             ${coot_src}/lidia-core/chemical-feature-clusters.cc
             ${coot_src}/lidia-core/bond-record-container-t.cc
             ${coot_src}/lidia-core/atom-types.cc
@@ -212,11 +229,18 @@ add_library(cootapi SHARED
             ${coot_src}/api/ghost-molecule-display.cc
             ${coot_src}/api/model-analysis.cc
             ${coot_src}/api/molecules-container.cc
+            ${coot_src}/api/molecules-container-refine.cc
+            ${coot_src}/api/molecules-container-analysis.cc
             ${coot_src}/api/molecules-container-blender.cc
             ${coot_src}/api/molecules-container-bucca-ml-growing.cc
             ${coot_src}/api/molecules-container-gltf.cc
             ${coot_src}/api/molecules-container-raytrace.cc
             ${coot_src}/api/molecules-container-ligand-fitting.cc
+            ${coot_src}/api/molecules-container-pdbqt.cc
+            ${coot_src}/coot-utils/pdbqt.cc
+            ${coot_src}/coot-utils/pdbqt-charges.cc
+            ${coot_src}/lidia-core/pdbqt-common.cc
+            ${coot_src}/lidia-core/pdbqt-ligand.cc
             ${coot_src}/api/molecules-container-maps.cc
             ${coot_src}/api/molecules-container-mmrrcc.cc
             ${coot_src}/api/molecules-container-molecular-placement.cc
@@ -253,6 +277,8 @@ add_library(cootapi SHARED
             ${coot_src}/ideal/pepflip.cc
             ${coot_src}/ideal/parallel-planes.cc
             ${coot_src}/ideal/simple-restraint.cc
+            ${coot_src}/ideal/simple-restraint-nbc.cc
+            ${coot_src}/ideal/simple-restraint-density.cc
             ${coot_src}/ideal/ng.cc
             ${coot_src}/ideal/torsion-bonds.cc
             ${coot_src}/ideal/chi-squareds.cc
@@ -328,6 +354,7 @@ add_library(cootapi SHARED
             ${coot_src}/coot-utils/coot-least-squares.cc
             ${coot_src}/coot-utils/diff-diff-map-peaks.cc
             ${coot_src}/coot-utils/gltf-export.cc
+            ${coot_src}/coot-utils/grid-balls.cc
             ${coot_src}/coot-utils/shiftfield.cpp
             ${coot_src}/coot-utils/gaussian-atom-map-for-mask.cc
             ${coot_src}/coot-utils/stack-and-pair.cc
@@ -343,6 +370,7 @@ add_library(cootapi SHARED
             ${coot_src}/coot-utils/blob-line.cc
             ${coot_src}/coot-utils/coot-coord-utils-glyco.cc
             ${coot_src}/coot-utils/coot-coord-utils.cc
+            ${coot_src}/coot-utils/coot-coord-utils-mmdb-free.cc
             ${coot_src}/coot-utils/merge-molecules.cc
             ${coot_src}/coot-utils/texture-as-floats.cc
             ${coot_src}/coot-utils/coot-coord-extras.cc
@@ -351,6 +379,7 @@ add_library(cootapi SHARED
             ${coot_src}/coot-utils/c-beta-deviations.cc
             ${coot_src}/coot-utils/atom-tools.cc
             ${coot_src}/coot-utils/coot-rama.cc
+            ${coot_src}/coot-utils/cremer-pople.cc
             ${coot_src}/coot-utils/secondary-structure-headers.cc
             ${coot_src}/coot-utils/helix-like.cc
             ${coot_src}/coot-utils/polar-atoms.cc
@@ -401,6 +430,7 @@ add_library(cootapi SHARED
             ${coot_src}/coot-utils/oct.cc
             ${coot_src}/coot-utils/read-amber-trajectory.cc
             ${coot_src}/coot-utils/shapes.cc
+            ${coot_src}/coot-utils/surface-on-torus.cc
             ${coot_src}/coot-utils/simple-mesh.cc
             ${coot_src}/coot-utils/gl-matrix.cc
             ${coot_src}/coot-utils/gl-matrix-eigensystem.cc
@@ -455,6 +485,7 @@ add_library(cootapi SHARED
             ${coot_src}/lidia-core/lbg-shared.cc
             ${coot_src}/lidia-core/cod-types.cc
             ${coot_src}/lidia-core/cod-atom-types.cc
+            ${coot_src}/lidia-core/cod-types-similarity.cc
             ${coot_src}/lidia-core/chemical-feature-clusters.cc
             ${coot_src}/lidia-core/bond-record-container-t.cc
             ${coot_src}/lidia-core/atom-types.cc
@@ -514,6 +545,12 @@ add_library(cootapi SHARED
             ${coot_src}/docking/rigid-body-dock.cc
             ${coot_src}/docking/semiflex-refine.cc
             ${coot_src}/docking/haddock-utils.cc
+            # Cremer-Pople
+            ${coot_src}/cremer-pople-sphere/data_sphere.cc
+            ${coot_src}/cremer-pople-sphere/density_map.cc
+            ${coot_src}/cremer-pople-sphere/primitives.cc
+            ${coot_src}/cremer-pople-sphere/ring.cc
+            ${coot_src}/cremer-pople-sphere/scene.cc
             )
 
 # wretched mae - 20 Sept 2025
@@ -528,8 +565,70 @@ if(MAEPARSER_LIBS)
     target_link_libraries(cootapi PUBLIC ${MAEPARSER_LIBS})
 endif()
 
+# --- Embedded API docstrings -------------------------------------------------
+# Chain: doxygen (curated .cfg) -> XML -> coot-make-docstrings -> generated .cc,
+# which is compiled into the coot_headless_api module so the docstrings are
+# available at runtime even when the source tree has been removed. Everything
+# lives in the build tree; the source-code build only needs the XML, not
+# sphinx/breathe/HTML.
+set(COOT_DOCSTRINGS_GENERATED ${CMAKE_CURRENT_BINARY_DIR}/coot-docstrings-generated.cc)
+
+add_executable(coot-make-docstrings ${coot_src}/api/make-docstrings-source.cc
+                                    ${coot_src}/api/coot-docstring-extract.cc
+                                    ${coot_src}/coot-utils/pugixml.cpp)
+target_include_directories(coot-make-docstrings PRIVATE ${coot_src} ${coot_src}/api ${coot_src}/coot-utils)
+target_compile_features(coot-make-docstrings PRIVATE cxx_std_17)
+
+# Expand the @CMAKE_CURRENT_SOURCE_DIR@ / @CMAKE_CURRENT_BINARY_DIR@ tokens in the
+# curated doxygen config into <build>/Doxyfile (this is the only place they are
+# expanded). OUTPUT_DIRECTORY in the .cfg points at ${CMAKE_CURRENT_BINARY_DIR}/doxygen.
+configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/api/doxy-sphinx/coot-api-dox.cfg
+        ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        @ONLY
+)
+
+# The molecules_container_t XML is the file the docstring extractor reads; it
+# stands in for the whole xml/ tree as this command's output. Listing the parsed
+# headers as DEPENDS means editing any of them re-runs doxygen. NB: doxygen_add_docs()
+# is deliberately NOT used - it writes its own Doxyfile and ignores the curated
+# INPUT/PREDEFINED in the .cfg.
+set(COOT_DOCSTRING_XML ${CMAKE_CURRENT_BINARY_DIR}/doxygen/xml/classmolecules__container__t.xml)
+set(COOT_DOXYGEN_INPUTS
+    ${coot_src}/api/molecules-container.hh   ${coot_src}/api/coot-molecule.hh
+    ${coot_src}/coot-utils/simple-mesh.hh    ${coot_src}/api/instancing.hh
+    ${coot_src}/api/superpose-results.hh     ${coot_src}/api/validation-information.hh
+    ${coot_src}/coot-utils/vertex.hh         ${coot_src}/geometry/residue-and-atom-specs.hh
+    ${coot_src}/coot-utils/sfcalc-genmap.hh  ${coot_src}/coot-utils/coot-density-stats.hh
+    ${coot_src}/coot-utils/coot-map-utils.hh ${coot_src}/coords/mmdb-crystal.hh
+    ${coot_src}/coords/Cartesian.hh          ${coot_src}/api/generic-3d-lines.hh
+    ${coot_src}/analysis/stats.hh            ${coot_src}/api/moorhen-h-bonds.hh
+    ${coot_src}/api/coot-colour.hh           ${coot_src}/api/api-cell.hh
+    ${coot_src}/coot-utils/g_triangle.hh     ${coot_src}/api/residue-validation-information.hh)
+
+add_custom_command(
+  OUTPUT ${COOT_DOCSTRING_XML}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/doxygen
+  COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile ${COOT_DOXYGEN_INPUTS}
+  COMMENT "Generating API documentation XML with Doxygen"
+  VERBATIM)
+
+# Convenience target: `make docs` (re)generates just the XML.
+add_custom_target(docs DEPENDS ${COOT_DOCSTRING_XML})
+
+add_custom_command(
+  OUTPUT ${COOT_DOCSTRINGS_GENERATED}
+  COMMAND coot-make-docstrings ${COOT_DOCSTRING_XML} ${COOT_DOCSTRINGS_GENERATED}
+  DEPENDS coot-make-docstrings ${COOT_DOCSTRING_XML}
+  COMMENT "Generating embedded API docstrings from doxygen XML"
+  VERBATIM)
+# -----------------------------------------------------------------------------
+
 nanobind_add_module(coot_headless_api ${coot_src}/api/molecules-container-nanobind.cc
-                                      ${coot_src}/api/molecules-container-nanobind-functions.cc)
+                                      ${coot_src}/api/molecules-container-nanobind-functions.cc
+                                      ${coot_src}/api/coot-docstring-extract.cc
+                                      ${COOT_DOCSTRINGS_GENERATED})
 
 # on macOS only?
 # target_compile_options(cootapi PRIVATE -fsanitize=address -fno-omit-frame-pointer)
@@ -592,7 +691,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 target_include_directories(coot_headless_api PRIVATE ${coot_src} ${coot_src}/coords ${coot_src}/utils ${coot_src}/ccp4mg-utils
-                                                     ${coot_src}/ccp4mg-utils/util ${coot_src}/ccp4mg-utils/pygl
+                                                     ${coot_src}/ccp4mg-utils/util ${coot_src}/ccp4mg-utils/pygl ${coot_src}/api
                                                      ${MMDB2_INCLUDE_DIR} ${SSM_INCLUDE_DIR} ${CLIPPER-CORE_INCLUDE_DIR}
                                                      ${CLIPPER-MMDB_INCLUDE_DIR} ${CLIPPER-CCP4_INCLUDE_DIR}
                                                      ${FFTW2_INCLUDE_DIRS}
@@ -662,6 +761,8 @@ install(TARGETS cootmoleculestotriangles cootapi)
 
 install(FILES standard-residues.pdb  DESTINATION share/coot)
 
+install(FILES cod-types-db-normalized.bin DESTINATION share/coot)
+
 install(FILES data/syminfo.lib       DESTINATION share/coot/data)
 
 install(DIRECTORY rama-data          DESTINATION share/coot)
@@ -709,6 +810,13 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/monomers DESTINATION share/coot/lib/data
 install(TARGETS coot_headless_api DESTINATION ${Python_SITELIB_REL})
 
 install(TARGETS coot_headless_api DESTINATION lib)
+
+# The chapi Python package: on import it points coot_headless_api at the
+# installed data dir. Installs as <site-packages>/chapi/__init__.py.
+# .... 2026-07-14 - I don't think this is the right thing to do.
+#   AFAICS, this works when Coot and Python share a (run-time) prefix.
+#   Is that the problem that I want to solve?
+# install(FILES ${coot_src}/chapi/__init__.py DESTINATION ${Python_SITELIB_REL}/chapi)
 
 # thanks merkys
 set_target_properties(cootapi PROPERTIES SOVERSION 1.2)

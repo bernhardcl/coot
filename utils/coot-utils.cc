@@ -25,13 +25,14 @@
 //
 
 #include <iostream>
-#include <algorithm>
 #include <cstring>
+#include <filesystem>
 
 #include <stdexcept> // for string_to_int.
 #include <sstream>   // ditto.
 #include <cstdio>    // 20090806 Justin Lecher says we need this on Gentoo
 #include <iomanip>
+#include <filesystem>
 
 #include <math.h>  // for fabs
 
@@ -997,7 +998,15 @@ coot::get_home_dir() {
    return ""; //empty
 }
 
-#include <filesystem>
+
+// Override for package_data_dir(), set by libcootapi/chapi at startup (empty by
+// default). File-local: only the two accessors below touch it, so it is a single
+// instance private to this translation unit.
+namespace { std::string s_package_data_dir; }
+
+void coot::set_package_data_dir(const std::string &pdd) {
+   s_package_data_dir = pdd; // used in package_data_dir().
+}
 
 // The user can set COOT_DATA_DIR (in fact this is the usual case
 // when using binaries) and that should over-ride the built-in
@@ -1006,6 +1015,10 @@ coot::get_home_dir() {
 // Use this to find things in $prefix/share/coot
 std::string
 coot::package_data_dir() {
+
+   if (!s_package_data_dir.empty()) {
+      return s_package_data_dir;
+   }
 
    // std::string xdatadir = XDATADIR; CMake
    std::string pkgdatadir = PKGDATADIR; // CMake does this too, it seems.

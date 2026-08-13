@@ -326,11 +326,13 @@ Bond_lines_container::Bond_lines_container(atom_selection_container_t asc,
 Bond_lines_container::Bond_lines_container(const atom_selection_container_t &SelAtom,
                                            int imol,
                                            const coot::protein_geometry *protein_geom,
-                                           Bond_lines_container::bond_representation_type br_type) {
+                                           Bond_lines_container::bond_representation_type br_type,
+                                           const std::set<int> &no_bonds_to_these_atoms_in) {
 
    // std::cout << "*************************** Bond_lines_container() constructor with geom and type " << br_type << std::endl;
 
    init(); // sets geom to null pointer
+   no_bonds_to_these_atoms = no_bonds_to_these_atoms_in; // honour non-drawn bonds in these representations
    verbose_reporting = 0;
    do_disulfide_bonds_flag = 1;
    udd_has_ca_handle = -1;
@@ -5670,7 +5672,7 @@ Bond_lines_container::atom_colour(mmdb::Atom *at, int bond_colour_type,
                                  return ORANGE_BOND;
                               } else {
                                  if (element == " F") {
-                                    return GREEN_BOND;
+                                    return GREEN_BUT_SLIGHTLY_BLUE_BOND;
                                  } else {
                                     if (element == "CL" || element == "Cl") {
                                        return GREEN_BOND;
@@ -5742,7 +5744,7 @@ Bond_lines_container::atom_colour(mmdb::Atom *at, int bond_colour_type,
                                        return HYDROGEN_GREY_BOND;
                                  } else {
                                     if (element == " F") {
-                                       return GREEN_BOND;
+                                       return GREEN_BUT_SLIGHTLY_BLUE_BOND;
                                     } else {
                                        if (element == "CL" || element == "Cl") {
                                           return GREEN_BOND;
@@ -6766,6 +6768,8 @@ Bond_lines_container::add_residue_monomer_bonds(const std::map<std::string, std:
                            int ierr = 0;
                            int atom_idx_1 = -1;  // atom index in the asc atom selection
                            int atom_idx_2 = -1;
+
+#if 0
                            ierr = residue_atoms[iat]->GetUDData(udd_atom_index_handle, atom_idx_1);
                            if (ierr != mmdb::UDDATA_Ok)
                               std::cout << "ERROR:: add_residue_monomer_bonds() UDD Index error A " << udd_atom_index_handle << " "
@@ -6778,6 +6782,7 @@ Bond_lines_container::add_residue_monomer_bonds(const std::map<std::string, std:
                               if (ierr != mmdb::UDDATA_Ok) {
                               }
                            }
+#endif
 
                            mmdb::Atom *atom_p_1 = bond_atom_1;
                            mmdb::Atom *atom_p_2 = bond_atom_2;

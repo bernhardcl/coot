@@ -48,7 +48,8 @@ pkginclude_HEADERS = peak-search.hh coot-trim.hh \
 	stb_image.h stb_image_write.h glyco-tree.hh positron.hh mini-texture.hh texture-as-floats.hh pae.hh q-score.hh \
 	acedrg-types-for-residue.hh gl-matrix.h ortep.hh coot-align.hh grid-balls.hh dict-link-info.hh \
         dirichlet-process.hh cfc.hh cremer-pople.hh born.hh inchikey-store.hh cylinder-utils.hh gmm.hh nef-utils.hh ptm-database.hh \
-	read-amber-trajectory.hh rebox-map.hh coot-coord-utils-gemmi.hh map-cap.hh edcalc.hh crowther.hh patterson.hh
+	read-amber-trajectory.hh rebox-map.hh coot-coord-utils-gemmi.hh map-cap.hh edcalc.hh crowther.hh patterson.hh surface-on-torus.hh \
+	pdbqt.hh pdbqt-charges.hh
 
 
 pkgincludedir = $(includedir)/coot/coot-utils
@@ -78,7 +79,7 @@ endif
 # for pure coordinates (mmdb) things
 # - note to self: don't some of these include usage of clipper::Coord_orth - which
 # means that we should add $CLIPPER_LIBS to libcoot_coord_utils_la_LDADD
-libcoot_coord_utils_la_SOURCES = coot-coord-utils.cc coot-coord-utils-gemmi.cc \
+libcoot_coord_utils_la_SOURCES = coot-coord-utils.cc coot-coord-utils-mmdb-free.cc coot-coord-utils-gemmi.cc \
 	coot-coord-utils-nucleotides.cc coot-rama.cc coot-h-bonds.cc hole.cc read-sm-cif.cc \
 	bonded-pairs.cc helix-analysis.cc elastic.cc glyco-torsions.cc coot-least-squares.cc \
 	atom-overlaps.cc reduce.cc atom-selection-container.cc contact-info.cc coot-shelx-ins.cc \
@@ -91,7 +92,7 @@ libcoot_coord_utils_la_SOURCES = coot-coord-utils.cc coot-coord-utils-gemmi.cc \
 	shapes.cc cmtz-interface.cc pugixml.cpp parse-pisa.cc gltf-export.cc pae.cc \
 	gl-matrix.cc gl-matrix-eigensystem.cc coot-align.cc grid-balls.cc dict-link-info.cc \
 	cremer-pople.cc inchikey-store.cc cylinder-utils.cc nef-utils.cc gaussian-atom-map-for-mask.cc \
-	read-amber-trajectory.cc
+	read-amber-trajectory.cc surface-on-torus.cc pdbqt.cc pdbqt-charges.cc
 
 #    $(top_builddir)/mini-mol/libcoot-mini-mol.la
 #    $(top_builddir)/utils/libcoot-utils.la

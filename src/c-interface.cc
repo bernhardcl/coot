@@ -35,6 +35,7 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <gtk/gtkshortcut.h>
+#include "glibconfig.h"
 #include "mmdb2/mmdb_selmngr.h"
 #include "pytypedefs.h"
 #ifdef USE_PYTHON
@@ -117,6 +118,7 @@
 #include "utils/coot-utils.hh"
 #include "coot-utils/coot-map-utils.hh"
 #include "coot-utils/read-amber-trajectory.hh"
+#include "coot-utils/pdbqt.hh"
 #include "coot-database.hh"
 #include "coot-fileselections.h"
 
@@ -979,6 +981,35 @@ int read_pdb(const std::string &filename) {
 /*! \brief read coordinates from filename */
 int read_coordinates(const std::string &filename) {
    return handle_read_draw_molecule(filename);
+}
+
+/*! \brief read a PDBQT file (e.g. an AutoDock/Vina docking result) */
+int read_pdbqt(const std::string &filename) {
+
+   graphics_info_t g;
+   std::string cmd = "read-pdbqt";
+   std::vector<coot::command_arg_t> args;
+   args.push_back(single_quote(filename));
+   add_to_history_typed(cmd, args);
+
+   int imol = -1;
+   mmdb::Manager *mol = coot::pdbqt::read(filename); // shared reader in coot-utils
+   if (mol) {
+      imol = g.create_molecule();
+      g.molecules[imol].install_model(imol, mol, g.Geom_p(), filename, 1);
+      if (g.recentre_on_read_pdb || imol == 0)
+         g.setRotationCentre(g.molecules[imol].centre_of_molecule());
+      g.update_go_to_atom_window_on_new_mol();
+      graphics_draw();
+      std::string s = "Read PDBQT file " + filename + " as molecule " +
+                      coot::util::int_to_string(imol);
+      g.add_status_bar_text(s);
+   } else {
+      std::string s = "Failed to read PDBQT file " + filename;
+      g.add_status_bar_text(s);
+      logger.log(log_t::WARNING, "Failed to read PDBQT file", filename);
+   }
+   return imol;
 }
 
 int read_coordinates_as_string(const std::string &file_contents, const std::string &molecule_name) {
@@ -3143,18 +3174,26 @@ set_symmetry_colour_merge(float v) {
 }
 
 /*! \brief set the symmetry colour base */
-void set_symmetry_colour(float r, float g, float b) {
+void
+set_symmetry_colour(float r, float g, float b) {
 
    graphics_info_t::symmetry_colour[0] = r;
    graphics_info_t::symmetry_colour[1] = g;
    graphics_info_t::symmetry_colour[2] = b;
+
+   // The symmetry colour is baked into the symmetry-bonds mesh when it is built
+   // (make_glsl_symmetry_bonds() reads graphics_info_t::symmetry_colour), so the
+   // mesh must be regenerated for the molecules that are showing symmetry.
+   graphics_info_t::update_symmetry();
+   graphics_draw();
 
    std::string cmd = "set-symmetry-colour";
    std::vector<coot::command_arg_t> args;
    args.push_back(r);
    args.push_back(g);
    args.push_back(b);
-   add_to_history_typed(cmd, args);}
+   add_to_history_typed(cmd, args);
+}
 
 
 void set_colour_map_rotation_on_read_pdb(float f) {
@@ -7130,6 +7169,17 @@ execute_python_results_container_t execute_python_code_with_result_internal(cons
    // capture stdout - end
 
    PyObject *exec_result = PyRun_String(code.c_str(), Py_eval_input, global_dict, global_dict);
+
+   // Py_eval_input only accepts a single expression. Statements such as
+   // "import coot_utils" or "x = 5" fail to compile in this mode with a
+   // SyntaxError. In that case retry in statement (exec) mode. We restrict
+   // the fallback to SyntaxError so that a genuine runtime error (from an
+   // expression that already executed) is not run a second time.
+   if (!exec_result && PyErr_ExceptionMatches(PyExc_SyntaxError)) {
+      PyErr_Clear();
+      exec_result = PyRun_String(code.c_str(), Py_file_input, global_dict, global_dict);
+   }
+
    rc.result = exec_result;
    if (exec_result) {
       // get captured output
@@ -7222,7 +7272,6 @@ execute_python_results_container_t execute_python_multiline_code_with_result_int
    // capture stdout - end
 
    PyObject *exec_result = PyRun_String(code.c_str(), Py_file_input, global_dict, global_dict);
-   std::cout << "DEBUG:: ------------ exec_result " << exec_result << std::endl;
    if (exec_result) {
       rc.result = exec_result;
       // get captured output
@@ -7358,38 +7407,36 @@ PyObject *safe_python_command_with_return(const std::string &python_cmd) {
       const char *modulename = "coot";
       PyObject *pName = myPyString_FromString(modulename);
       PyObject *pModule_coot = PyImport_Import(pName);
+      Py_XDECREF(pName);
+      Py_XDECREF(pModule_coot);
 
       std::cout << "running command: " << command << std::endl;
-      PyObject* source_code = Py_CompileString(command.c_str(), "adhoc", Py_eval_input);
-      if (source_code) {
-         PyObject* func = PyFunction_New(source_code, d);
-         result = PyObject_CallObject(func, PyTuple_New(0));
-         std::cout << "--------------- in safe_python_command_with_return() result at: " << result << std::endl;
-         if (result) {
-            if(!PyUnicode_Check(result)) {
-                std::cout << "--------------- in safe_python_command_with_return() result is probably not a string." << std::endl;
-            }
-            PyObject* displayed = display_python(result);
-            PyObject* as_string = PyUnicode_AsUTF8String(displayed);
-            std::cout << "--------------- in safe_python_command_with_return() result: "
-                      << PyBytes_AS_STRING(as_string) << std::endl;
-            Py_XDECREF(displayed);
-            Py_XDECREF(as_string);
-         }
-         else {
-            std::cout << "--------------- in safe_python_command_with_return() result was null" << std::endl;
-            if(PyErr_Occurred()) {
-               std::cout << "--------------- in safe_python_command_with_return() Printing Python exception:" << std::endl;
-               PyErr_Print();
-            }
-         }
 
-         // debugging
-         // PyRun_String("import coot; print(dir(coot))", Py_file_input, d, d);
-         Py_XDECREF(func);
-         Py_XDECREF(source_code);
+      // Run in the __main__ dict (as both globals and locals) so that imports
+      // and assignments persist for subsequent calls. Try eval mode first so
+      // that an expression returns its value; if the command is a statement
+      // (e.g. "import coot_generator_3d_import") eval mode fails to compile
+      // with a SyntaxError, so fall back to statement (exec) mode.
+      result = PyRun_String(command.c_str(), Py_eval_input, d, d);
+      if (!result && PyErr_ExceptionMatches(PyExc_SyntaxError)) {
+         PyErr_Clear();
+         result = PyRun_String(command.c_str(), Py_file_input, d, d);
+      }
+
+      if (result) {
+         PyObject* displayed = display_python(result);
+         if (displayed) {
+            PyObject* as_string = PyUnicode_AsUTF8String(displayed);
+            if (as_string) {
+               std::cout << "--------------- in safe_python_command_with_return() result: "
+                         << PyBytes_AS_STRING(as_string) << std::endl;
+               Py_XDECREF(as_string);
+            }
+            Py_XDECREF(displayed);
+         }
       } else {
-         std::cout << "DEBUG:: in safe_python_command_with_return, null source_code" << std::endl;
+         if (PyErr_Occurred())
+            PyErr_Print();  // this also clears the error indicator
       }
    } else {
       std::cout << "ERROR:: Hopeless failure: module for __main__ is null" << std::endl;
@@ -8339,7 +8386,6 @@ void sequence_view(int imol) {
       gtk_widget_set_hexpand(scrolled_window, TRUE);
       gtk_widget_set_vexpand(scrolled_window, TRUE);
       gtk_widget_set_hexpand(frame, TRUE);
-      gtk_widget_set_vexpand(frame, TRUE);
 
       // The sequence-view is in the frame, the frame is in the scrolled window.
       // The scrolled window is in the overlay.
@@ -8412,17 +8458,23 @@ void sequence_view(int imol) {
 
       gtk_box_append(GTK_BOX(vbox), overlay);
 
-      // int new_height;
-      // gtk_widget_measure(GTK_WIDGET(sv), GTK_ORIENTATION_VERTICAL, 0, &new_height, nullptr, nullptr, nullptr);
-      // gtk_widget_set_size_request(vbox, -1, new_height);
+      // Set max height on the scrolled window so that vertical scrolling
+      // kicks in for molecules with many chains.
+      int max_seq_view_height = 250;
+      gtk_scrolled_window_set_max_content_height(GTK_SCROLLED_WINDOW(scrolled_window), max_seq_view_height);
+      gtk_scrolled_window_set_propagate_natural_height(GTK_SCROLLED_WINDOW(scrolled_window), TRUE);
 
-      int minimum_size;
-      int natural_size;
-      gtk_widget_measure(GTK_WIDGET(sv), GTK_ORIENTATION_VERTICAL, 0, &minimum_size, &natural_size, nullptr, nullptr);
-      int current_height = gtk_widget_get_height(vbox);
-      if (current_height < natural_size) {
-         gtk_widget_set_size_request(vbox, -1, natural_size);
-      }
+      // The sequence view box is the first child of a GtkPaned. Set the paned
+      // position so the sequence view gets a reasonable initial height rather
+      // than being squeezed to a sliver by the graphics area.
+      int sv_min_height = 0;
+      int sv_nat_height = 0;
+      gtk_widget_measure(GTK_WIDGET(sv), GTK_ORIENTATION_VERTICAL, -1,
+                         &sv_min_height, &sv_nat_height, nullptr, nullptr);
+      int pane_height = std::min(sv_nat_height, max_seq_view_height);
+      GtkWidget *paned = widget_from_builder("main_window_sequence_view_vs_graphics_pane");
+      if (paned)
+         gtk_paned_set_position(GTK_PANED(paned), pane_height);
    }
 }
 

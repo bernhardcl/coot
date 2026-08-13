@@ -1,4 +1,5 @@
 
+#include <dlfcn.h>
 #include <filesystem>
 #include <unordered_map>
 #include <sstream>
@@ -17,13 +18,11 @@
 #include <clipper/core/ramachandran.h>
 #include <clipper/clipper-ccp4.h>
 
-#include "coot-utils/pugixml.hpp"
-#include "coords/mmdb-crystal.hh"
-#include "coot-utils/acedrg-types-for-residue.hh"
-#include "coot-utils/g_triangle.hh"
-#include "ideal/simple-restraint.hh"
-#include "mini-mol/mini-mol-utils.hh"
+// #include "coot-docstring-extract.hh"
+
 #include "utils/coot-utils.hh"
+
+#include "mini-mol/mini-mol-utils.hh"
 
 #if NB_VERSION_MAJOR // for flychecking
 #include <nanobind/nanobind.h>
@@ -32,8 +31,10 @@
 #include <nanobind/stl/vector.h>        // Typically useful for RDKit
 #endif
 
-
 #include "molecules-container.hh"
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+#include "lidia-core/cod-atom-type-t.hh" // cod::atom_type_t (bound below)
+#endif
 
 namespace nb = nanobind;
 
@@ -56,210 +57,61 @@ struct ResiduePropertyInfo {
     double property;
 };
 
-class molecules_container_js : public molecules_container_t {
-    public:
-        explicit molecules_container_js(bool verbose=true) : molecules_container_t(verbose) {
-        }
-
-        int writePDBASCII(int imol, const std::string &file_name) {
-            const char *fname_cp = file_name.c_str();
-            return get_mol(imol)->WritePDBASCII(fname_cp);
-        }
-        int writeCIFASCII(int imol, const std::string &file_name) {
-            const char *fname_cp = file_name.c_str();
-            return get_mol(imol)->WriteCIFASCII(fname_cp);
-        }
-        int writeCCP4Map(int imol, const std::string &file_name) {
-            auto xMap = (*this)[imol].xmap;
-            auto clipperMap = clipper::CCP4MAPfile();
-            clipperMap.open_write(file_name);
-            clipperMap.export_xmap(xMap);
-            return 0;
-        }
-};
-
 // Helper to cache and retrieve docstrings from XML
 std::unordered_map<std::string, std::string> docstring_cache;
 
+#include "coot-docstring-extract.hh"
+
 std::string get_docstring_from_xml(const std::string& func_name) {
 
-   // FYI: this runs at compile time after linking:
-   // python3.14 /opt/homebrew/share/nanobind/stubgen.py -q -i --
-   // coot-main/build-chapi-with-homebrew-deps -m coot_headless_api -o coot_headless_api.pyi
-   //
-   // this is the relative path for standard out-of-tree build
-   std::string pkg_data_dir = coot::package_data_dir();
-   const std::string csd = COOT_SOURCE_DIR;
-   std::filesystem::path csd_path(csd);
-   std::string fn = "classmolecules__container__t.xml";
-   std::filesystem::path doxy_sphinx_path = csd_path / "api" / "doxy-sphinx" / "xml" / fn;
-   std::string api_doxygen_xml_file_name = doxy_sphinx_path.string();
-   // std::cout << "DEBUG:: api_doxygen_xml_file_name " << api_doxygen_xml_file_name << std::endl;
-
-#if 0 // the xml file is not installed.
-   const char *e = getenv("CONDA_PREFIX");
-   if (e) {
-      std::filesystem::path conda_prefix(e);
-      std::filesystem::path xml_dir = conda_prefix / "share" / "doxy-sphinx" / "xml";
-      std::filesystem::path full_path = xml_dir / "classmolecules__container__t.xml";
-      if (std::filesystem::exists(full_path))
-         api_doxygen_xml_file_name = full_path.string();
-   }
-#endif
-
-   auto convert_type = [] (const std::string &s_in) {
-      std::string s = s_in;
-      if (s_in == "const std::string &") s = "str";
-      if (s_in == "std::string")         s = "str";
-      if (s_in == "void")                s = "None";
-      if (s_in == "std::vector<")        s = "list";
-      if (s_in == "std::vector< std::pair< double, double > >") s = "list";
-      if (s_in == "std::vector< std::pair< std::string, std::string > >") s = "list";
-      if (s_in.find("std::vector<") != std::string::npos) s = "list";
-      if (s_in.compare(0,10, "std::pair<") == 0) s= "tuple"; // needs checking. Use starts_with() in C++20
-      return s;
-   };
-
-   class arg_info_t {
-   public:
-      arg_info_t(const std::string &n, const std::string &t) : name(n), type(t) {}
-      std::string name;
-      std::string type;
-      std::string description;
-   };
-
-   auto update_arg_in_args = [] (const std::string &arg_name, const std::string &descr,
-                                 std::vector<arg_info_t> &args) {
-
-      for(auto &arg : args) {
-         if (arg.name == arg_name) {
-            arg.description = descr;
-         }
-      }
-   };
-
    if (docstring_cache.empty()) {
-      pugi::xml_document doc;
-      if (!doc.load_file(api_doxygen_xml_file_name.c_str())) {
-         std::cout << "WARNING:: doxygen file " << api_doxygen_xml_file_name
-                   << " not found - nanobind API docummentation will not be generated"
-                   << std::endl;
-         return "";
-      }
-      auto compounddef = doc.child("doxygen").child("compounddef");
-      for (auto sectiondef : compounddef.children("sectiondef")) {
-         for (auto member : sectiondef.children("memberdef")) {
-            auto name_elem = member.child("name");
-            if (!name_elem) continue;
-            std::string name = name_elem.child_value();
-            std::ostringstream oss;
-            std::vector<arg_info_t> args;
-
-            // Collect all <para> from <briefdescription>
-            auto brief = member.child("briefdescription");
-            if (brief) {
-               for (auto para : brief.children("para")) {
-                  std::string para_text = para.text().get();
-                  if (!para_text.empty())
-                     oss << para_text << "\n";
-               }
-            }
-
-            auto type = member.child("type");
-            std::string type_string;
-            if (type)
-               type_string = convert_type(type.text().get());
-
-            // can be many params
-            for (auto param : member.children("param")) {
-               auto p_type = param.child("type");
-               auto p_declname = param.child("declname");
-               if (p_type) {
-                  if (p_declname) {
-                     std::string tt = convert_type(p_type.text().get());
-                     arg_info_t ai(p_declname.text().get(), tt);
-                     args.push_back(ai);
-                  }
-               }
-            }
-
-	    std::string return_type_docs;
-
-            // Collect all <para> from <detaileddescription>
-            auto detailed = member.child("detaileddescription");
-            if (detailed) {
-               unsigned int n_para = 0;
-               for (auto para : detailed.children("para")) {
-                  n_para++;
-                  std::string para_text = para.text().get();
-                  if (!para_text.empty()) {
-		     if (n_para > 1)
-			oss << "\n    ";
-		     if (para_text[0] == '\n')
-			para_text.erase(0,1); // remove first char
-                     oss << para_text << "\n";
-                  }
-                  for (auto parameterlist : para.children("parameterlist")) {
-                     for (auto parameteritem : parameterlist.children("parameteritem")) {
-                        std::string parameter_name_text;
-                        for (auto parameternamelist : parameteritem.children("parameternamelist")) {
-                           for (auto parametername : parameternamelist.children("parametername")) {
-                              parameter_name_text = parametername.text().get();
-                           }
-                        }
-                        for (auto parameterdescription : parameteritem.children("parameterdescription")) {
-                           for (auto d_para : parameterdescription.children("para")) {
-                              std::string t =  d_para.text().get();
-                              if (! parameter_name_text.empty()) {
-                                 if (! t.empty()) {
-                                    update_arg_in_args(parameter_name_text, t, args); // modify an arg in args
-                                 }
-                              }
-                           }
-                        }
-                     }
-                  }
-                  for (auto simplesect : para.children("simplesect")) {
-		     if (std::string(simplesect.attribute("kind").value()) == "return") {
-			for(auto ss_para : simplesect.children("para")) {
-			   std::string return_type_doc = ss_para.text().get();
-			   return_type_docs += return_type_doc;
-			}
-		     }
-		  }
-               }
-               if (! args.empty()) {
-                  oss << "\n";
-                  oss << "    Args:\n";
-                  for (const auto &arg : args) {
-                     oss << "        " << arg.name << " (" << arg.type << "): " << arg.description << "\n";
-                  }
-               }
-               if (! type_string.empty()) {
-                  oss << "\n";
-                  oss << "    Returns:\n";
-		  if (return_type_docs.empty())
-		     oss << "        " << type_string << "\n";
-		  else
-		     oss << "        " << type_string << ": " << return_type_docs << "\n";
-               }
-            }
-            docstring_cache[name] = oss.str();
-         }
+      // Prefer the docstrings that were embedded into the binary at build time
+      // (generated into coot-docstrings-generated.cc by coot-make-docstrings).
+      // These are available at runtime even when the source tree (and the
+      // doxygen XML) has been removed.
+      const auto &builtin = coot::builtin_docstrings();
+      if (! builtin.empty()) {
+         docstring_cache = builtin;
+      } else {
+         // Development fallback: parse the doxygen XML straight from the source
+         // tree (e.g. when doxygen has been re-run since the binary was built).
+         const std::string csd = COOT_SOURCE_DIR;
+         std::filesystem::path csd_path(csd);
+         std::string fn = "classmolecules__container__t.xml";
+         std::filesystem::path doxy_sphinx_path = csd_path / "api" / "doxy-sphinx" / "xml" / fn;
+         docstring_cache = coot::parse_docstrings_from_doxygen_xml(doxy_sphinx_path.string());
       }
    }
+
    auto it = docstring_cache.find(func_name);
    if (it != docstring_cache.end()) {
-      if (false) { // debugging - this can be quiet now
-	 std::cout << "function:" << func_name << "()" << std::endl;
-	 std::cout << it->second << std::endl;
-      }
       return it->second;
    } else {
       std::cout << "::function " << func_name << " not found"
 		<< " - out of " << docstring_cache.size() << " docstrings" << std::endl;
    }
    return "";
+}
+
+std::filesystem::path this_library_dir() {
+
+   Dl_info info;
+   void *ll = reinterpret_cast<void *>(&this_library_dir);
+   if (dladdr(ll, &info) && info.dli_fname) {
+      // std::cout << "DEBUG:: this_library_dir(): PATH A" << std::endl;
+      return std::filesystem::canonical(info.dli_fname).parent_path();
+   }
+
+   std::cout << "DEBUG:: PATH this_library_dir(): B" << std::endl;
+   return {};
+}
+
+void other_setup_code() {
+
+   // std::filesystem::path lib_dir = this_library_dir();
+   // std::cout << "DEBUG:: in other_setup_code(): lib_dir is " << lib_dir.string() << std::endl;
+   // coot::set_package_data_dir(lib_dir.string());
+
 }
 
 NB_MODULE(coot_headless_api, m) {
@@ -334,6 +186,8 @@ NB_MODULE(coot_headless_api, m) {
     .def("close_read",&clipper::CCP4MAPfile::close_read)
     .def("close_write",&clipper::CCP4MAPfile::close_write)
     ;
+#if COOT_GEMMI
+# else
     nb::class_<mmdb::Atom>(m,"Atom")
     .def(nb::init<>())
     .def_prop_rw("x",[](mmdb::Atom &t) { return t.x ; },[](mmdb::Atom &t, float value) { t.x = value; })
@@ -407,6 +261,7 @@ NB_MODULE(coot_headless_api, m) {
     .def("GetNumberOfAtoms", nb::overload_cast<>(&mmdb::Residue::GetNumberOfAtoms))
     .def("GetNumberOfAtoms_countTers", nb::overload_cast<bool>(&mmdb::Residue::GetNumberOfAtoms))
     ;
+#endif
     nb::class_<molecules_container_t>(m,"molecules_container_t")
     .def(nb::init<bool>(), nb::arg("be_verbose_when_reading_dictionary"), "molecules container Documentation")
     .def("M2T_updateFloatParameter",
@@ -695,10 +550,12 @@ NB_MODULE(coot_headless_api, m) {
     .def("fit_ligand",
          &molecules_container_t::fit_ligand,
          nb::arg("imol_protein"), nb::arg("imol_map"), nb::arg("imol_ligand"), nb::arg("n_rmsd"), nb::arg("use_conformers"), nb::arg("n_conformers"),
+         nb::arg("eigen_orientation_search_mode") = 0,
          get_docstring_from_xml("fit_ligand").c_str())
     .def("fit_ligand_right_here",
          &molecules_container_t::fit_ligand_right_here,
          nb::arg("imol_protein"), nb::arg("imol_map"), nb::arg("imol_ligand"), nb::arg("x"), nb::arg("y"), nb::arg("z"), nb::arg("n_rmsd"), nb::arg("use_conformers"), nb::arg("n_conformers"),
+         nb::arg("eigen_orientation_search_mode") = 0,
          get_docstring_from_xml("fit_ligand_right_here").c_str())
     .def("fit_to_map_by_random_jiggle",
          &molecules_container_t::fit_to_map_by_random_jiggle,
@@ -712,6 +569,11 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::fit_to_map_by_random_jiggle_using_cid,
          nb::arg("imol"), nb::arg("cid"), nb::arg("n_trials"), nb::arg("translation_scale_factor"),
          get_docstring_from_xml("fit_to_map_by_random_jiggle_using_cid").c_str())
+    .def("fit_to_map_by_random_jiggle_with_blur_using_cid",
+         &molecules_container_t::fit_to_map_by_random_jiggle_with_blur_using_cid,
+         nb::arg("imol"), nb::arg("imol_map"), nb::arg("cid"), nb::arg("b_factor"),
+         nb::arg("n_trials"), nb::arg("translation_scale_factor"),
+         get_docstring_from_xml("fit_to_map_by_random_jiggle_with_blur_using_cid").c_str())
     .def("flip_peptide_using_cid",
          nb::overload_cast<int, const std::string&, const std::string&>(&molecules_container_t::flip_peptide_using_cid),
          get_docstring_from_xml("flip_peptide_using_cid").c_str())
@@ -747,11 +609,27 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::get_acedrg_atom_types,
          nb::arg("compound_id"), nb::arg("imol_enc"),
          get_docstring_from_xml("get_acedrg_atom_types").c_str())
+    .def("get_cavities",
+         &molecules_container_t::get_cavities,
+         nb::arg("imol"),
+         get_docstring_from_xml("get_cavities").c_str())
     .def("get_computed_acedrg_atom_types",
          &molecules_container_t::get_computed_acedrg_atom_types,
          nb::arg("compound_id"), nb::arg("imol_enc"),
          "Compute AceDRG/COD atom types from dictionary restraints via RDKit. "
          "Unlike get_acedrg_atom_types() which reads pre-stored types, this computes them.")
+    .def("get_cremer_pople",
+         &molecules_container_t::get_cremer_pople,
+         nb::arg("imol"), nb::arg("residue_cid"), nb::arg("ordered_atom_names"),
+         nb::arg("up_reference_atom_name"), nb::arg("alt_conf"),
+         "Cremer-Pople puckering parameters for a 5- or 6-ring, atoms given in "
+         "ring order. Angles in degrees. An odd rotation of the start atom flips "
+         "theta to 180-theta, so the ordering is significant.")
+    .def("get_monomer_restraints_as_json",
+         &molecules_container_t::get_monomer_restraints_as_json,
+         nb::arg("compound_id"), nb::arg("imol_enc"),
+         "Get the monomer restraints for the given compound as a JSON string "
+         "(the JSON equivalent of the Python monomer_restraints_for_molecule_py()).")
     .def("get_acedrg_atom_types_for_ligand",
          &molecules_container_t::get_acedrg_atom_types_for_ligand,
          nb::arg("imol"), nb::arg("residue_cid"),
@@ -812,6 +690,11 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::get_dictionary_conformers,
          nb::arg("comp_id"), nb::arg("imol_enc"), nb::arg("remove_internal_clash_conformers"),
          get_docstring_from_xml("get_dictionary_conformers").c_str())
+    .def("get_dictionary_conformers_by_random_sampling",
+         &molecules_container_t::get_dictionary_conformers_by_random_sampling,
+         nb::arg("comp_id"), nb::arg("imol_enc"), nb::arg("n_conformers"),
+         nb::arg("esd_scale_factor"), nb::arg("remove_internal_clash_conformers"),
+         get_docstring_from_xml("get_dictionary_conformers_by_random_sampling").c_str())
     .def("get_distances_between_atoms_of_residues",
          &molecules_container_t::get_distances_between_atoms_of_residues,
          nb::arg("imol"), nb::arg("cid_res_1"), nb::arg("cid_res_2"), nb::arg("dist_max"),
@@ -856,6 +739,10 @@ NB_MODULE(coot_headless_api, m) {
          get_docstring_from_xml("get_header_info").c_str())
     .def("get_h_bonds",&molecules_container_t::get_h_bonds,
          nb::arg("imol"), nb::arg("cid_str"), nb::arg("mcdonald_and_thornton_mode"))
+    .def("get_hetgroups",
+         &molecules_container_t::get_hetgroups,
+         nb::arg("imol"),
+         get_docstring_from_xml("get_hetgroups").c_str())
     .def("get_HOLE",
          &molecules_container_t::get_HOLE,
          nb::arg("imol"), nb::arg("start_pos_x"), nb::arg("start_pos_y"), nb::arg("start_pos_z"), nb::arg("end_pos_x"), nb::arg("end_pos_y"), nb::arg("end_pos_z"),
@@ -863,6 +750,10 @@ NB_MODULE(coot_headless_api, m) {
     .def("get_imol_enc_any",
          &molecules_container_t::get_imol_enc_any,
          get_docstring_from_xml("get_imol_enc_any").c_str())
+    .def("get_InChI_for_residue_type",
+            &molecules_container_t::get_InChI_for_residue_type,
+            nb::arg("residue_name"), nb::arg("imol_enc"),
+            get_docstring_from_xml("get_InChI_for_residue_type").c_str())
     .def("get_ligand_validation_vs_dictionary",
          &molecules_container_t::get_ligand_validation_vs_dictionary,
          nb::arg("imol"), nb::arg("ligand_cid"), nb::arg("include_non_bonded_contacts"),
@@ -942,6 +833,10 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::get_monomer_from_dictionary,
          nb::arg("comp_id"), nb::arg("imol"), nb::arg("idealised_flag"),
          get_docstring_from_xml("get_monomer_from_dictionary").c_str())
+    .def("get_monomer_name",
+         &molecules_container_t::get_monomer_name,
+         nb::arg("comp_id"), nb::arg("imol"),
+         get_docstring_from_xml("get_monomer_name").c_str())
     .def("get_number_of_atoms",
          &molecules_container_t::get_number_of_atoms,
          nb::arg("imol"),
@@ -1028,10 +923,6 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::get_residue_sidechain_average_position,
          nb::arg("imol"), nb::arg("cid"),
          get_docstring_from_xml("get_residue_sidechain_average_position").c_str())
-    .def("get_residue_using_cid",
-         &molecules_container_t::get_residue_using_cid,
-         nb::arg("imol"), nb::arg("cid"),
-         get_docstring_from_xml("get_residue_using_cid").c_str())
     .def("get_residues_near_residue",
          &molecules_container_t::get_residues_near_residue,
          nb::arg("imol"), nb::arg("residue_cid"), nb::arg("dist"),
@@ -1044,10 +935,18 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::get_rotamer_dodecs_instanced,
          nb::arg("imol"),
          get_docstring_from_xml("get_rotamer_dodecs_instanced").c_str())
+    .def("get_sequence_info",
+         &molecules_container_t::get_sequence_info,
+         nb::arg("imol"),
+         get_docstring_from_xml("get_sequence_info").c_str())
     .def("get_single_letter_codes_for_chain",
          &molecules_container_t::get_single_letter_codes_for_chain,
          nb::arg("imol"), nb::arg("chain_id"),
          get_docstring_from_xml("get_single_letter_codes_for_chain").c_str())
+    .def("get_SMILES_for_residue_type",
+            &molecules_container_t::get_SMILES_for_residue_type,
+            nb::arg("residue_name"), nb::arg("imol_enc"),
+            get_docstring_from_xml("get_SMILES_for_residue_type").c_str())
     .def("get_spherical_variance",
          &molecules_container_t::get_spherical_variance,
          nb::arg("imol_map"), nb::arg("imol_model"),
@@ -1275,6 +1174,11 @@ NB_MODULE(coot_headless_api, m) {
     .def("ray_trace_shutdown",
          &molecules_container_t::ray_trace_shutdown,
          get_docstring_from_xml("ray_trace_shutdown").c_str())
+    .def("rdkit_mol_pickle_base64_to_molecule",
+         &molecules_container_t::rdkit_mol_pickle_base64_to_molecule,
+         nb::arg("encoded_pickle_string_for_mol"),
+         nb::arg("conformer_id"),
+         get_docstring_from_xml("rdkit_mol_pickle_base64_to_molecule").c_str())
     .def("read_coordinates",
          &molecules_container_t::read_coordinates,
          nb::arg("file_name"),
@@ -1544,6 +1448,9 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::test_function,
          nb::arg("s"),
          get_docstring_from_xml("test_function").c_str())
+    .def("test_function_on_torus",
+         &molecules_container_t::test_function_on_torus,
+         nb::arg("imol"), nb::arg("cid"))
     .def("test_origin_cube",
          &molecules_container_t::test_origin_cube,
          get_docstring_from_xml("test_origin_cube").c_str())
@@ -1567,6 +1474,22 @@ NB_MODULE(coot_headless_api, m) {
          &molecules_container_t::write_coordinates,
          nb::arg("imol"), nb::arg("file_name"),
          get_docstring_from_xml("write_coordinates").c_str())
+    .def("export_molecule_as_pdbqt",
+         &molecules_container_t::export_molecule_as_pdbqt,
+         nb::arg("imol"), nb::arg("file_name"),
+         get_docstring_from_xml("export_molecule_as_pdbqt").c_str())
+    .def("read_pdbqt",
+         &molecules_container_t::read_pdbqt,
+         nb::arg("file_name"),
+         get_docstring_from_xml("read_pdbqt").c_str())
+    .def("get_vina_scores",
+         &molecules_container_t::get_vina_scores,
+         nb::arg("imol"),
+         get_docstring_from_xml("get_vina_scores").c_str())
+    .def("export_ligand_as_pdbqt",
+         &molecules_container_t::export_ligand_as_pdbqt,
+         nb::arg("imol"), nb::arg("cid"), nb::arg("file_name"),
+         get_docstring_from_xml("export_ligand_as_pdbqt").c_str())
     .def("write_map",
          &molecules_container_t::write_map,
          nb::arg("imol"), nb::arg("file_name"),
@@ -1588,11 +1511,14 @@ NB_MODULE(coot_headless_api, m) {
       .def_ro("deletions",        &coot::chain_mutation_info_container_t::deletions)
       .def_ro("mutations",        &coot::chain_mutation_info_container_t::mutations)
       ;
-    nb::class_<molecules_container_js, molecules_container_t>(m,"molecules_container_py")
-    .def(nb::init<bool>())
-    .def("writePDBASCII",&molecules_container_js::writePDBASCII)
-    .def("writeCIFASCII",&molecules_container_js::writeCIFASCII)
-    .def("writeCCP4Map",&molecules_container_js::writeCCP4Map)
+    nb::class_<coot::cremer_pople_info_t>(m,"cremer_pople_info_t")
+    .def_ro("filled",    &coot::cremer_pople_info_t::filled)
+    .def_ro("ring_size", &coot::cremer_pople_info_t::ring_size)
+    .def_ro("Q",         &coot::cremer_pople_info_t::Q)
+    .def_ro("theta",     &coot::cremer_pople_info_t::theta)
+    .def_ro("phi",       &coot::cremer_pople_info_t::phi)
+    .def_ro("q2",        &coot::cremer_pople_info_t::q2)
+    .def_ro("q3",        &coot::cremer_pople_info_t::q3)
     ;
     nb::class_<coot::simple_rotamer>(m,"simple_rotamer")
     .def("P_r1234",&coot::simple_rotamer::P_r1234)
@@ -1682,6 +1608,8 @@ NB_MODULE(coot_headless_api, m) {
     .def_rw("res_no",&coot::residue_spec_t::res_no)
     .def_rw("ins_code",&coot::residue_spec_t::ins_code)
     .def_rw("int_user_data",&coot::residue_spec_t::int_user_data)
+    .def_rw("float_user_data",&coot::residue_spec_t::float_user_data)
+    .def_rw("string_user_data",&coot::residue_spec_t::string_user_data)
     .def("format", &coot::residue_spec_t::format)
     ;
     nb::class_<coot::atom_spec_t>(m,"atom_spec_t")
@@ -1697,6 +1625,16 @@ NB_MODULE(coot_headless_api, m) {
     .def_rw("model_number",&coot::atom_spec_t::model_number)
     .def("format", &coot::atom_spec_t::format)
     ;
+    nb::class_<coot::pdbqt::pose_score_t>(m,"pose_score_t")
+    .def(nb::init<>())
+       .def_ro("model_no", &coot::pdbqt::pose_score_t::model_no)
+       .def_ro("affinity", &coot::pdbqt::pose_score_t::affinity)
+       .def_ro("rmsd_lb",  &coot::pdbqt::pose_score_t::rmsd_lb)
+       .def_ro("rmsd_ub",  &coot::pdbqt::pose_score_t::rmsd_ub)
+       .def_ro("inter",    &coot::pdbqt::pose_score_t::inter)
+       .def_ro("intra",    &coot::pdbqt::pose_score_t::intra)
+       .def_ro("unbound",  &coot::pdbqt::pose_score_t::unbound)
+    ;
     nb::class_<coot::plain_atom_overlap_t>(m,"plain_atom_overlap_t")
     .def(nb::init<>())
        .def_rw("ligand_atom_index", &coot::plain_atom_overlap_t::ligand_atom_index)
@@ -1707,6 +1645,19 @@ NB_MODULE(coot_headless_api, m) {
        .def_rw("r_2", &coot::plain_atom_overlap_t::r_2)
        .def_rw("is_h_bond", &coot::plain_atom_overlap_t::is_h_bond)
     ;
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+    nb::class_<cod::atom_type_t>(m,"cod_atom_type_t")
+    .def(nb::init<>())
+       .def_ro("full_type",  &cod::atom_type_t::full_type)
+       .def_ro("main_type", &cod::atom_type_t::main_type)
+       .def_prop_ro("nb1nb2", [] (const cod::atom_type_t &t) { return t.nb1nb2.string(); })
+       .def_ro("sp",      &cod::atom_type_t::sp)
+       .def_ro("element", &cod::atom_type_t::element)
+       .def_ro("hash_value", &cod::atom_type_t::hash_value)
+       .def_ro("nb2_extra_els", &cod::atom_type_t::nb2_extra_els)
+       .def("nb2_extra_els_str", [] (cod::atom_type_t &t) { return t.nb2_extra_els_str(); })
+    ;
+#endif // MAKE_ENHANCED_LIGAND_TOOLS
     nb::class_<positioned_atom_spec_t>(m,"positioned_atom_spec_t")
     .def(nb::init<>())
     .def_ro("atom_spec", &positioned_atom_spec_t::atom_spec)
@@ -2050,4 +2001,5 @@ NB_MODULE(coot_headless_api, m) {
     .def_ro("moved_atoms", &coot::api::moved_residue_t::moved_atoms)
     .def("add_atom",&coot::api::moved_residue_t::add_atom)
     ;
+    other_setup_code();
 }

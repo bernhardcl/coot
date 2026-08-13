@@ -27,6 +27,7 @@
 #include <map>
 #include <algorithm>  // needed for sort? Yes.
 #include <stdexcept>  // Thow execption.
+#include <string>
 
 #include "mini-mol/atom-quads.hh"
 #include "geometry/protein-geometry.hh"
@@ -160,6 +161,14 @@ coot::protein_geometry::init_refmac_mon_lib(std::string ciffilename, int read_nu
 
    } else {
 
+      // return the size of the file in bytes, or -1 if it could not be opened.
+      auto length_of_file = [] (const std::string &file_name) -> int {
+         std::ifstream f(file_name.c_str(), std::ios::binary | std::ios::ate);
+         if (! f)
+            return -1;
+         return static_cast<int>(f.tellg());
+      };
+
       int ierr = ciffile.ReadMMCIFFile(ciffilename.c_str());
       std::string comp_id_1;
       std::string comp_id_2;  // initially unset
@@ -184,9 +193,18 @@ coot::protein_geometry::init_refmac_mon_lib(std::string ciffilename, int read_nu
          s = mmdb::GetErrorDescription(mmdb::ERROR_CODE(ierr));
          rmit.error_messages.push_back(s);
          clipper::String cs = "CIF error rc=";
-         cs += ierr;
-         cs += " reason:";
+         cs += std::to_string(ierr);
+         cs += "\nreason:";
          cs += mmdb::mmcif::GetCIFMessage (err_buff, ierr);
+         // was it a failed download?
+         int ll = length_of_file(ciffilename);
+         if (ll < 0) {
+            cs += "\nFile could not be opened.";
+         } else {
+            if (ll < 100) {
+               cs += "\nFile consists of only " + std::to_string(ll) + " bytes.";
+            }
+         }
          rmit.error_messages.push_back(cs);
 
       } else {
@@ -270,6 +288,11 @@ coot::protein_geometry::init_refmac_mon_lib(std::string ciffilename, int read_nu
                      if (structure) {
                         chem_comp_chir_structure(structure, imol_enc);
                      }
+                  }
+
+                  if (cat_name == "_pdbx_chem_comp_synonyms") {
+                     pdbx_chem_comp_synonyms(mmCIFLoop, imol_enc);
+                     handled = 1; // 20260622-PE not really. I just want the wraning messaage to go away
                   }
 
                   if (cat_name == "_chem_comp_tor") {
@@ -1008,6 +1031,16 @@ coot::protein_geometry::pdbe_chem_comp_atom_depiction(mmdb::mmcif::PLoop mmCIFLo
       }
    }
 }
+
+void
+coot::protein_geometry::pdbx_chem_comp_synonyms(mmdb::mmcif::PLoop mmCIFLoop, int imol_enc) {
+
+   // 20260622-PE don't do anything at the moment
+
+   // c.f. add_synonyms(mmCIFLoop);
+
+}
+
 
 void
 coot::protein_geometry::pdbx_chem_comp_description_generator(mmdb::mmcif::PLoop mmCIFLoop, int imol_enc) {
@@ -2001,20 +2034,19 @@ coot::protein_geometry::add_chem_mods(mmdb::mmcif::PData data) {
 }
 
 
-// 
+//
 void
 coot::protein_geometry::add_synonyms(mmdb::mmcif::PData data) {
 
-   for (int icat=0; icat<data->GetNumberOfCategories(); icat++) { 
-      
+   for (int icat=0; icat<data->GetNumberOfCategories(); icat++) {
+
       mmdb::mmcif::PCategory cat = data->GetCategory(icat);
       std::string cat_name(cat->GetCategoryName());
       mmdb::mmcif::PLoop mmCIFLoop = data->GetLoop(cat_name.c_str() );
-            
-      if (mmCIFLoop == NULL) { 
-	 std::cout << "null loop" << std::endl; 
+
+      if (mmCIFLoop == NULL) {
+	 std::cout << "null loop" << std::endl;
       } else {
-	 int n_chiral = 0;
 	 if (cat_name == "_chem_comp_synonym") {
 	    add_chem_comp_synonym(mmCIFLoop);
 	 }
@@ -2022,7 +2054,7 @@ coot::protein_geometry::add_synonyms(mmdb::mmcif::PData data) {
    }
 }
 
-void 
+void
 coot::protein_geometry::add_chem_comp_synonym(mmdb::mmcif::PLoop mmCIFLoop) {
 
    int ierr = 0;
@@ -2050,9 +2082,9 @@ coot::protein_geometry::add_chem_comp_synonym(mmdb::mmcif::PLoop mmCIFLoop) {
 							  comp_alternative_id,
 							  mod_id);
 	 residue_name_synonyms.push_back(rns);
-      } 
+      }
    }
-} 
+}
 
 
 

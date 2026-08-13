@@ -3,6 +3,7 @@
 #define MOLECULES_CONTAINER_HH
 
 #include <memory>
+#include "geometry/residue-and-atom-specs.hh"
 #ifdef SWIG
 #include "Python.h"
 #endif
@@ -25,6 +26,7 @@
 #include "coot-utils/coot-rama.hh"
 #include "coot-utils/coot-coord-extras.hh" // the missing atoms type
 #include "coot-utils/coot-map-utils.hh"
+#include "coot-utils/pdbqt.hh"             // pdbqt::pose_score_t
 #include "utils/coot-utils.hh"
 #include "utils/setup-syminfo.hh"
 #include "ideal/simple-restraint.hh" // needed?
@@ -44,6 +46,25 @@
 #include "header-info.hh"
 #include "positioned-atom-spec.hh"
 #include "user-defined-colour-table.hh"
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+#include "lidia-core/cod-atom-type-t.hh" // cod::atom_type_t, returned by get_computed_acedrg_atom_types()
+#endif
+
+namespace coot {
+   //! Cremer-Pople puckering parameters for one ring. Angles are DEGREES.
+   class cremer_pople_info_t {
+   public:
+      cremer_pople_info_t() : filled(false), ring_size(0), Q(0), theta(0),
+                              phi(0), q2(0), q3(0) {}
+      bool filled;
+      int ring_size;     //!< 5 or 6
+      double Q;          //!< total puckering amplitude (A)
+      double theta;      //!< degrees; meaningless (0) when ring_size == 5
+      double phi;        //!< degrees
+      double q2;
+      double q3;
+   };
+}
 
 //! the container of molecules. The class for all **libcootapi** functions.
 class molecules_container_t {
@@ -410,6 +431,9 @@ public:
    // -------------------------------- Basic Utilities -----------------------------------
    //! \name Basic Utilities
 
+   //! undocumented internal function
+   void set_package_data_dir(const std::string &pdd);
+
    //! Get the package version
    //!
    //! @return the package version, e.g. "1.1.11" - if this is a not yet a release version
@@ -674,8 +698,8 @@ public:
    std::vector<std::string> non_standard_residue_types_in_model(int imol) const;
 
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS
-   //! Extract ligand restraints from the dictionary store and make an rdkit molecule
-   //! Result to be eaten by C++ only.
+
+   //! Extract ligand restraints from the dictionary store and make an encoded pickled rdkit molecule
    //!
    //! @param residue_name the residue name
    //! @param imol_enc the molecule for the ligand (typically is imol_enc_any)
@@ -690,6 +714,38 @@ public:
    //! @param imol_enc the molecule for the ligand (typically is imol_enc_any)
    //! @return a pickle string, return an empty string on failure.
    std::string get_rdkit_mol_pickle_base64(const std::string &residue_name, int imol_enc);
+   //! given an rdkit molecule, create a new molecule and posssibly create a (minimal) dictionary
+   //! if the compound_id is sane
+   //!
+   //! @param encoded_picked_string the base64 encoded pickle string
+   //! @param conformer_id the id of the conformer (typically 0)
+   //! @return the new molecule number. Return -1 on failure
+   int rdkit_mol_pickle_base64_to_molecule(const std::string &encoded_picked_string, int conformer_id);
+
+   //! Write a rigid PDBQT (AutoDock/Vina) file for a whole molecule, e.g. a receptor.
+   //!
+   //! Partial charges are computed per-residue with the Gasteiger method (RDKit) where a
+   //! dictionary is available; AutoDock atom types are assigned from element, aromaticity
+   //! and hydrogen-bonding character. Non-polar hydrogens are merged into their parent
+   //! atoms. No torsion tree is written (the molecule is rigid).
+   //!
+   //! @param imol the model molecule index
+   //! @param file_name the output file name
+   //! @return the number of atoms written (0 on failure)
+   int export_molecule_as_pdbqt(int imol, const std::string &file_name);
+
+   //! Write a flexible-ligand PDBQT (AutoDock/Vina) file for the residue selected by cid.
+   //!
+   //! In addition to per-atom Gasteiger charges and AutoDock atom types, a torsion tree
+   //! (ROOT/BRANCH/ENDBRANCH/TORSDOF) is written by detecting acyclic, non-amide rotatable
+   //! single bonds. If no dictionary is available the ligand is written rigidly.
+   //!
+   //! @param imol the model molecule index
+   //! @param cid an atom/residue selection string that picks the ligand residue
+   //! @param file_name the output file name
+   //! @return the number of atoms written (0 on failure)
+   int export_ligand_as_pdbqt(int imol, const std::string &cid, const std::string &file_name);
+
 #endif
 
    // -------------------------------- coordinates utils -----------------------------------
@@ -710,6 +766,23 @@ public:
    //!
    //! @return the new molecule index on success and -1 on failure
    int read_pdb(const std::string &file_name);
+
+   //! Read a PDBQT file (e.g. an AutoDock/Vina docking result) as a new molecule.
+   //!
+   //! Multi-model files (docking poses) are read as separate models. Vina scoring
+   //! information (affinity, RMSDs, energy terms) is stored as per-model UDData.
+   //!
+   //! @param file_name is the name of the PDBQT file
+   //!
+   //! @return the new molecule index on success and -1 on failure
+   int read_pdbqt(const std::string &file_name);
+
+   //! Get the AutoDock Vina scores for a molecule read from a PDBQT docking result.
+   //!
+   //! @param imol is the model molecule index
+   //!
+   //! @return one pose_score_t per model; empty if the molecule has no Vina scores
+   std::vector<coot::pdbqt::pose_score_t> get_vina_scores(int imol) const;
 
    //! Read a small molecule CIF file
    //!
@@ -830,12 +903,12 @@ public:
    //! Get a monomer for a particular molecule
    //!
    //! @param comp_id is the 3-letter code for the residue/ligand, e.g. "ALA" for alanine
-   //! @param imol is the model molecule index, use -999999 (IMOL_ENC_ANY) if no molecule-specific dictionary is needed
+   //! @param imol_enc is the model molecule index, use -999999 (IMOL_ENC_ANY) if no molecule-specific dictionary is needed
    //! @param idealised_flag means that the coordinates have been minimised with a molecular modelling minimisation algo,
    //!        usually the value is True
    //!
    //! @return the new molecule index on success and -1 on failure
-   int get_monomer_from_dictionary(const std::string &comp_id, int imol, bool idealised_flag);
+   int get_monomer_from_dictionary(const std::string &comp_id, int imol_enc, bool idealised_flag);
 
    //! Get monomer and place it at the given position for a particular molecule
    //!
@@ -861,6 +934,13 @@ public:
 
    //! get types
    std::vector<std::string> get_types_in_molecule(int imol) const;
+
+   //! get the name of the monomer (e.g. IUPAC name)
+   //!
+   //! @param comp_id the monomer name (three-letter-code)
+   //! @param imol_enc the molecule index (can be imol_enc_any)
+   //! @return the molecule name or blank string on failure.
+   std::string get_monomer_name(const std::string &comp_id, int imol_enc);
 
    // 20221030-PE nice to have one day:
    // int get_monomer_molecule_by_network_and_dict_gen(const std::string &text);
@@ -904,7 +984,11 @@ public:
    //! Get a list of atom names and their associated AceDRG atom types
    //!
    //! @param compound_id is the 3-letter code for the residue/ligand in the first model, e.g. "TYR" for tyrosine
-   //! @param imol_enc is the molecule index for the residue type/compound_id
+   //! @param imol_enc is the molecule index for the residue type/compound_id. `imol_enc` should
+   //!        match the imol_enc passed to import_cif_dictionary() for this compound; use
+   //!         IMOL_ENC_ANY (-999999) (use get_imol_enc_any()) for a dictionary imported for all
+   //!         molecules. (Do not pass the return value of import_cif_dictionary() here — that is a 1/0
+   //!         success flag.)
    //!
    //! @return a list of atom names and their associated AceDRG atom types, return an empty list
    //! on failure (e.g. when atoms types are not in the dictionary)
@@ -918,18 +1002,63 @@ public:
    //! does not contain _chem_comp_acedrg atom type annotations.
    //!
    //! @param compound_id is the 3-letter code for the residue/ligand, e.g. "TYR" for tyrosine
+   //! @param imol_enc is the molecule index for the residue type/compound_id. `imol_enc` should
+   //!        match the imol_enc passed to import_cif_dictionary() for this compound; use
+   //!         IMOL_ENC_ANY (-999999) (use get_imol_enc_any()) for a dictionary imported for all
+   //!         molecules. (Do not pass the return value of import_cif_dictionary() here — that is a 1/0
+   //!         success flag.)
+   //!
+   //! @return a list of atom names and their associated computed COD atom types
+   //! (a `cod::atom_type_t` for each atom, which holds nb1nb2/main_type/cod_type types,
+   //! the nb2-extra-electrons and the hash value), return an empty list on failure
+#ifdef MAKE_ENHANCED_LIGAND_TOOLS
+   std::vector<std::pair<std::string, cod::atom_type_t> > get_computed_acedrg_atom_types(const std::string &compound_id, int imol_enc);
+#endif
+
+   //! Cremer-Pople parameters for a ring, with the ring atoms given IN RING ORDER.
+   //! The ordering decides which chair you get: an odd rotation of the start atom
+   //! flips theta to 180-theta. up_reference_atom_name, when not empty, names an
+   //! atom (typically a ring substituent) whose side of the mean plane is "up";
+   //! empty means use the right-hand rule from the given ordering. NOTE: if
+   //! up_reference_atom_name is non-empty but does not resolve to an atom on the
+   //! residue (e.g. a typo), this silently falls back to the right-hand rule too --
+   //! indistinguishable from an intentionally empty name. There is no separate
+   //! signal for "your requested up-reference atom was not found".
+   //!
+   //! alt_conf selects which alternate conformer to read each ring/up-reference
+   //! atom from. If alt_conf is a specific (non-empty) altLoc and an atom lacks
+   //! that altLoc, the whole call returns filled == false (no fallback). If
+   //! alt_conf is empty: for each atom name, a blank-altLoc atom is preferred if
+   //! one exists; failing that, a single distinct non-blank altLoc is used
+   //! unambiguously; but if two or more distinct non-blank altLocs exist for that
+   //! atom name, get_cremer_pople() refuses to guess and returns filled == false,
+   //! rather than silently mixing atoms from different physical conformers into
+   //! one ring.
+   coot::cremer_pople_info_t get_cremer_pople(int imol,
+                                              const std::string &residue_cid,
+                                              const std::vector<std::string> &ordered_atom_names,
+                                              const std::string &up_reference_atom_name,
+                                              const std::string &alt_conf);
+
+   //! Get the monomer restraints for the given compound as a JSON string
+   //!
+   //! This is the JSON equivalent of the (Python) `monomer_restraints_for_molecule_py()`.
+   //! The returned object has the following keys, each holding an array of restraints:
+   //! "_chem_comp", "_chem_comp_atom", "_chem_comp_bond", "_chem_comp_angle",
+   //! "_chem_comp_tor", "_chem_comp_plane_atom" and "_chem_comp_chir".
+   //!
+   //! @param compound_id is the 3-letter code for the residue/ligand in the first model, e.g. "TYR" for tyrosine
    //! @param imol_enc is the molecule index for the residue type/compound_id
    //!
-   //! @return a list of atom names and their associated computed COD atom types (level 4),
-   //! return an empty list on failure
-   std::vector<std::pair<std::string, std::string> > get_computed_acedrg_atom_types(const std::string &compound_id, int imol_enc);
+   //! @return a JSON string for the restraints, or an empty string on failure (e.g. no dictionary)
+   std::string get_monomer_restraints_as_json(const std::string &compound_id, int imol_enc);
 
    //! Get AceDRG atom types for ligand bonds
    //!
    //! @param imol is the model molecule index
    //! @param residue_cid is the atom selection CID e.g "//A/15" (residue 15 of chain A)
    //!
-   //! @return a `coot::acedrg_types_for_residue_t` - which contains a vector/list of bond descriptions.
+   //! @return a coot::acedrg_types_for_residue_t - which contains a vector/list of bond descriptions.
    coot::acedrg_types_for_residue_t get_acedrg_atom_types_for_ligand(int imol, const std::string &residue_cid) const;
 
    //! Set the occupancy for the given atom selection
@@ -938,6 +1067,16 @@ public:
    //! @param cid is the atom selection CID e.g "//A/15/OH" (atom OH in residue 15 of chain A)
    //! @param occ_new is the new occupancy
    void set_occupancy(int imol, const std::string &cid, float occ_new);
+
+   //! Get the hetgroup in the given molecule.
+   //!
+   //! Excluding waters
+   //!
+   //! The residue name is returned as the `string_user_data` part of the residue spec
+   //!
+   //! @param imol is the model molecule index
+   //! @return a vector of residue specifiers
+   std::vector<coot::residue_spec_t> get_hetgroups(int imol);
 
    //! Get atom selection as json
    //!
@@ -967,7 +1106,7 @@ public:
 
    //! Write a PNG for the given compound_id.
    //!
-   //! Currently this function does nothing (drawing is done with the not-allowed cairo)
+   //! Currently this function does nothing for Moorhen (drawing is done with the not-allowed cairo)
    //!
    //! @param compound_id is the 3-letter code for the residue/ligand in the first model, e.g. "TYR" for tyrosine
    //! @param imol is the model molecule index
@@ -1080,6 +1219,7 @@ public:
    //! glTF files can be imported into Blender or other 3D graphics applications
    //!
    //! Same parameters as the `get_bonds_mesh` function.
+   //! @param mode is "COLOUR-BY-CHAIN-AND-DICTIONARY", "CA+LIGANDS" or "VDW-BALLS"
    //! `draw_hydrogen_atoms_flag` and `draw_missing_residue_loops` are typically False.
    //! This API will change - we want to specify surfaces and ribbons too.
    void export_model_molecule_as_gltf(int imol,
@@ -1345,6 +1485,12 @@ public:
                                           float sigma, float box_radius,
                                           float grid_scale, float fft_b_factor);
 
+   //! get cavities - current a testing function - has no return value
+   //!
+   //! could be a set of simple_mesh_t later
+   //!
+   std::vector<coot::simple_mesh_t> get_cavities(int imol);
+
    //! Get chemical features for the specified residue
    //!
    //! @param imol is the model molecule index
@@ -1365,6 +1511,8 @@ public:
    //! @returns either the specified atom or nullopt (None) if not found
    mmdb::Atom *get_atom_using_cid(int imol, const std::string &cid) const;
 
+#ifdef DOXYGEN_SHOULD_PARSE_THIS
+#else
    //! get an (mmdb-style) residue
    //!
    //! If more than one residue is selected by the selection cid, then the first
@@ -1377,8 +1525,6 @@ public:
    //! @returns either the specified residue or nullopt (None) if not found
    mmdb::Residue *get_residue_using_cid(int imol, const std::string &cid) const;
 
-#ifdef DOXYGEN_SHOULD_PARSE_THIS
-#else
    //! get atom - internal (C++) usage only
    //!
    //! @returns either the specified atom or null if not found - don't use this in emscript
@@ -1497,12 +1643,21 @@ public:
 
    //! Get the SMILES string for the give residue type
    //!
-   //! @param residue 3 letter-code/name of the compound-id
+   //! @param residue_name "3 letter-code"/the compound-id
    //! @param imol_enc is the molecule index for the residue type/compound_id
    //!
    //! @return the SMILES string if the residue type can be found in the dictionary store
    //! or the empty string on a failure.
    std::string get_SMILES_for_residue_type(const std::string &residue_name, int imol_enc) const;
+
+   //! Get the InChI string for the given residue type
+   //!
+   //! @param residue_name "3 letter-code"/the compound-id
+   //! @param imol_enc is the molecule index for the residue type/compound_id
+   //!
+   //! @return the InChI string if the residue type can be found in the dictionary store
+   //! or the empty string on a failure.
+   std::string get_InChI_for_residue_type(const std::string &residue_name, int imol_enc) const;
 
    //! Get residues with missing atoms
    //!
@@ -2196,6 +2351,22 @@ public:
    //! @return true on successful deletion, return false on no deletion.
    bool delete_all_carbohydrate(int imol);
 
+   //! delete all waters
+   //!
+   //! @param imol is the model molecule index
+   //!
+   //! @return the number of waters deleted
+   int delete_all_waters(int imol);
+
+   //! delete all hetgroups
+   //!
+   //! Hetgroups do not include waters
+   //!
+   //! @param imol is the model molecule index
+   //!
+   //! @return the number of hetgroups deleted
+   int delete_all_hetgroups(int imol);
+
    // (I should have) change(d) that stupid (alt) loc (I should have made you leave your key)
    //
    //! Change alternate conformation
@@ -2676,7 +2847,9 @@ public:
    //! Get the sequence information
    //!
    //! @param imol is the molecule index
-   //! @return the sequence information
+   //! @return the sequence information as pairs of chain-id,sequence where
+   //!  the sequence is in single-letter-code. If the residue type is not a typical
+   //!  polymer then the resulting code will be "-".
    std::vector<std::pair<std::string, std::string> > get_sequence_info(int imol) const;
 
    //! Get mutation information
@@ -2824,7 +2997,7 @@ public:
    //! @return the Ramachandran plot restraints weight
    float get_rama_plot_restraints_weight() const { return rama_plot_restraints_weight; }
 
-   //! Turn on or off torsion restraints
+   //! Turn on or off torsion restraints in refinement
    //!
    //! @param state is True to mean that it is enabled
    void set_use_torsion_restraints(bool state) { use_torsion_restraints = state; }
@@ -3021,11 +3194,13 @@ public:
 
    //! Contact dots for the whole molecule/model
    //!
+   //! Note that this is not const because it can dynamically modify geom by adding dictionaries.
+   //!
    //! @param imol is the model molecule index
    //! @param smoothness_factor is 1, 2 or 3 (3 is the most smooth). Recently added (20230202)
    //!
    //! @return the instanced mesh for the specified molecule.
-   coot::instanced_mesh_t all_molecule_contact_dots(int imol, unsigned int smoothness_factor) const;
+   coot::instanced_mesh_t all_molecule_contact_dots(int imol, unsigned int smoothness_factor);
 
    //! Get a simple molecule
    //!
@@ -3146,6 +3321,7 @@ public:
    coot::atom_overlaps_dots_container_t get_overlap_dots_for_ligand(int imol, const std::string &cid_ligand);
 
    //! Get Atom Overlaps
+   //!
    // not const because it can dynamically add dictionaries
    //! This function used to be called get_overlaps()
    //!
@@ -3575,10 +3751,15 @@ public:
    //! @param n_rmsd number of sd, e.g. 4.8
    //! @param use_conformers is True for flexible ligands
    //! @param n_conformers set the number of conformers
+   //! @param eigen_orientation_search_mode controls how many eigenvector orientations are tried per cluster:
+   //!        0 = sorted (identity only, fastest, the default - trusts the sorted eigenvalue axis order),
+   //!        1 = legacy (the historical helix orientation set),
+   //!        2 = full (all 24 signed axis permutations - use for near-degenerate shapes, e.g. flat rings or rods)
    //!
    //! @return a vector/list of indices of molecules for the best fitting ligands to this blob.
    std::vector<int> fit_ligand_right_here(int imol_protein, int imol_map, int imol_ligand, float x, float y, float z,
-                                          float n_rmsd, bool use_conformers, unsigned int n_conformers);
+                                          float n_rmsd, bool use_conformers, unsigned int n_conformers,
+                                          int eigen_orientation_search_mode = 0);
 
    //! Ligand Fitting
    //!
@@ -3606,10 +3787,15 @@ public:
    //! @param n_rmsd the number of sd used as a cut-off for the map level when finding clusters, e.g. 1.2
    //! @param use_conformers is True for flexible ligands
    //! @param n_conformers set the number of conformers
+   //! @param eigen_orientation_search_mode controls how many eigenvector orientations are tried per cluster:
+   //!        0 = sorted (identity only, fastest, the default - trusts the sorted eigenvalue axis order),
+   //!        1 = legacy (the historical helix orientation set),
+   //!        2 = full (all 24 signed axis permutations - use for near-degenerate shapes, e.g. flat rings or rods)
    //!
    //! @return a vector/list of interesting information about the fitted ligands
    std::vector<fit_ligand_info_t> fit_ligand(int imol_protein, int imol_map, int imol_ligand,
-                                             float n_rmsd, bool use_conformers, unsigned int n_conformers);
+                                             float n_rmsd, bool use_conformers, unsigned int n_conformers,
+                                             int eigen_orientation_search_mode = 0);
 
    //! Fit multiple ligands (place-holder)
    //!
@@ -3670,6 +3856,7 @@ public:
    //! @return the success status, 1 for good, 0 for not good.
 
    int add_compound(int imol, const std::string &tlc, int imol_dict, int imol_map, float x, float y, float z);
+
    // This is a ligand function, not really a ligand-fitting function.
    //!
    //! Get svg for residue type
@@ -3740,6 +3927,32 @@ public:
    //!
    //! @return a vector/list of indices of the new molecules
    std::vector<int> get_dictionary_conformers(const std::string &comp_id, int imol_enc, bool remove_internal_clash_conformers);
+
+   //! Get conformers with torsion angles randomly sampled from a Gaussian distribution
+   //!
+   //! Unlike get_dictionary_conformers(), which systematically enumerates the periodicity minima
+   //! of the rotatable torsions, this function makes each conformer by giving every rotatable
+   //! torsion a randomly-chosen periodicity minimum plus a Gaussian perturbation of width
+   //! esd * esd_scale_factor (the esd being that of the torsion in the dictionary).
+   //! Torsions that are marked as "const" are excluded, as are ring torsions,
+   //! peptide torsions and torsions that rotate hydrogen atoms.
+   //! Each conformer is regularized (the torsion-rotated geometry is relaxed) before
+   //! the internal-clash test is applied.
+   //!
+   //! @param comp_id is the 3-letter code for the residue/ligand, e.g. "TYR" for tyrosine
+   //! @param imol_enc is the molecule index for the residue type/compound_id
+   //! @param n_conformers is the number of conformers to generate
+   //! @param esd_scale_factor scales the Gaussian width, 1.0 means use the dictionary esd as-is
+   //! @param remove_internal_clash_conformers is the flag for removing internal clash
+   //! conformers (clashing conformers are resampled, so, usually, n_conformers conformers
+   //! are returned)
+   //!
+   //! @return a vector/list of indices of the new molecules (a single molecule if there
+   //! are no rotatable torsions)
+   std::vector<int> get_dictionary_conformers_by_random_sampling(const std::string &comp_id, int imol_enc,
+                                                                 unsigned int n_conformers,
+                                                                 float esd_scale_factor,
+                                                                 bool remove_internal_clash_conformers);
 
    //! @param imol is the map molecule index
    //! @param section_id e.g. 2
@@ -3896,6 +4109,9 @@ public:
 #endif
 
    // -------------------------------- Blender Interface ---------------------------------------
+
+   // testing function
+   void test_function_on_torus(int imol, const std::string &cid);
 
    //! \name Functions for Blender Interface
 

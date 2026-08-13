@@ -25,6 +25,7 @@
  */
 
 
+#include "geometry/protein-geometry.hh"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>  // to_string()
 #include <glm/gtx/rotate_vector.hpp>
@@ -196,6 +197,15 @@ coot::molecule_t::contact_dots_for_ligand(const std::string &cid, const coot::pr
 
       mmdb::Manager *mol = atom_sel.mol;
       std::vector<mmdb::Residue *> neighbs = coot::residues_near_residue(residue_p, mol, 5);
+      int read_number = 50;
+      int imol_enc = coot::protein_geometry::IMOL_ENC_ANY;
+      for (const auto n: neighbs) {
+         const std::string res_name = n->GetResName();
+         // make this function and geom non-const
+         // geom.check_and_try_dynamic_add(res_name, imol_enc, read_number);
+         read_number++;
+      }
+
       coot::atom_overlaps_container_t overlaps(residue_p, neighbs, mol, imol_no, &geom, 0.5, 0.25);
 
       coot::atom_overlaps_dots_container_t c = overlaps.contact_dots_for_ligand(cdd);
@@ -212,8 +222,8 @@ coot::molecule_t::contact_dots_for_ligand(const std::string &cid, const coot::pr
 
 //! @return the instanced mesh for the specified molecule
 coot::instanced_mesh_t
-coot::molecule_t::all_molecule_contact_dots(const coot::protein_geometry &geom,
-                                            unsigned int num_subdivisions) const {
+coot::molecule_t::all_molecule_contact_dots(coot::protein_geometry &geom,
+                                            unsigned int num_subdivisions) {
 
    coot::instanced_mesh_t im;
 
@@ -222,6 +232,16 @@ coot::molecule_t::all_molecule_contact_dots(const coot::protein_geometry &geom,
 
    mmdb::Manager *mol = atom_sel.mol;
    bool ignore_waters_flag = false;
+
+   int read_number = 50;
+   int imol_enc = coot::protein_geometry::IMOL_ENC_ANY;
+   std::vector<residue_spec_t> hetgroups = get_hetgroups();
+   for (const auto &hetgroup : hetgroups) {
+      const std::string res_name = hetgroup.string_user_data;
+      geom.check_and_try_dynamic_add(res_name, imol_enc, read_number);
+      read_number++;
+   }
+
    coot::atom_overlaps_container_t overlaps(mol, &geom, ignore_waters_flag, 0.5, 0.25);
 
    bool make_vdw_surface_flag = false;
@@ -395,15 +415,16 @@ coot::molecule_t::geometric_distortions_from_mol(const atom_selection_container_
                   flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
                   flags = coot::BONDS_ANGLES_AND_PLANES;
                   flags = coot::BONDS_ANGLES_PLANES_AND_CHIRALS;
+                  flags = coot::BONDS_ANGLES_TORSIONS_PLANES_AND_CHIRALS;
 
                   if (with_nbcs)
-                     flags = coot::BONDS_ANGLES_PLANES_NON_BONDED_AND_CHIRALS;
+                     flags = coot::BONDS_ANGLES_TORSIONS_PLANES_NON_BONDED_AND_CHIRALS;
 
 #ifdef HAVE_BOOST_BASED_THREAD_POOL_LIBRARY
                   unsigned int n_threads = coot::get_max_number_of_threads();
                   if (n_threads > 0)
                      restraints.thread_pool(&static_thread_pool, n_threads);
-                  short int do_residue_internal_torsions = 0;
+                  bool do_residue_internal_torsions = true;
 
                   //                if (do_torsion_restraints) {
                   //                   do_residue_internal_torsions = 1;

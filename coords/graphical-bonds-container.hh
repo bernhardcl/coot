@@ -117,17 +117,11 @@ public:
          std::string res_name = r->GetResName();
          if (res_name == "HOH")
             return 2.0f;
-         if (res_name == "CA")
-            return 4.0f;
-         if (res_name == "MG")
-            return 4.0f;
-         if (res_name == "IOD")
-            return 4.0f;
-         if (res_name == "CL")
-            return 4.0f;
-         if (res_name == "NA")
-            return 4.0f;
-         if (res_name == "K")
+         static const std::set<std::string> fat_ion_residues = {
+            "CA","MG","IOD","CL","NA","K","ZN","FE","MN","CU","NI","CO","CD","HG",
+         };
+         // use .contains() in the future
+         if (fat_ion_residues.find(res_name) != fat_ion_residues.end())
             return 4.0f;
       }
       return scale;
@@ -314,12 +308,16 @@ class graphical_bonds_container {
       symmetry_bonds_ = NULL;
       atom_centres_ = NULL;
       atom_centres_colour_ = NULL;
-      if (n_zero_occ_spots) 
+      if (n_bad_CA_CA_dist_spots)
+	 delete [] bad_CA_CA_dist_spots_ptr;
+      if (n_zero_occ_spots)
 	 delete [] zero_occ_spots_ptr;
       if (n_deuterium_spots)
 	 delete [] deuterium_spots_ptr;
       if (n_ramachandran_goodness_spots)
 	 delete [] ramachandran_goodness_spots_ptr;
+      n_bad_CA_CA_dist_spots = 0;
+      bad_CA_CA_dist_spots_ptr = NULL;
       n_zero_occ_spots = 0;
       n_deuterium_spots = 0;
       n_ramachandran_goodness_spots = 0;

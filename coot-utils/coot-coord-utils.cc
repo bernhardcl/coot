@@ -115,35 +115,7 @@ coot::util::non_standard_residue_types_in_molecule(mmdb::Manager *mol) {
    return r; 
 }
 
-std::vector<std::string>
-coot::util::standard_residue_types() {
 
-   std::vector<std::string> v;
-   v.push_back("ALA"); v.push_back("ARG"); v.push_back("ASP");
-   v.push_back("ASN"); v.push_back("CYS"); v.push_back("SER");
-   v.push_back("PRO"); v.push_back("PHE"); v.push_back("GLY");
-   v.push_back("GLU"); v.push_back("GLN"); v.push_back("ILE");
-   v.push_back("LEU"); v.push_back("TYR"); v.push_back("TRP");
-   v.push_back("HIS"); v.push_back("LYS"); v.push_back("MET");
-   v.push_back("VAL"); v.push_back("THR"); v.push_back("MSE"); 
-   return v;
-}
-
-std::vector<std::string>
-coot::util::PDB_standard_residue_types() {
-
-   std::vector<std::string> v = coot::util::standard_residue_types();
-   v.push_back("Td"); v.push_back("Tr"); v.push_back("T");
-   v.push_back("Gd"); v.push_back("Gr"); v.push_back("G");
-   v.push_back("Ad"); v.push_back("Ar"); v.push_back("A");
-
-   v.push_back("DG"); v.push_back("DC"); v.push_back("DA");
-   v.push_back("DU"); v.push_back("DT"); v.push_back("DI");
-
-   v.push_back("UNK"); v.push_back("N");
-
-   return v;
-}
 
 
 
@@ -253,7 +225,7 @@ coot::util::shift(mmdb::Manager *mol, clipper::Coord_orth pt) {
 void
 coot::sort_chains(mmdb::Manager *mol) {
 
-   if (mol) { 
+   if (mol) {
       for (int imod=1; imod<=mol->GetNumberOfModels(); imod++) {
          mmdb::Model *model_p = mol->GetModel(imod);
          if (! model_p) continue;
@@ -263,7 +235,7 @@ coot::sort_chains(mmdb::Manager *mol) {
       mol->FinishStructEdit();
    }
 }
-      
+
 
 bool
 coot::sort_chains_util(const std::pair<mmdb::Chain *, std::string> &a,
@@ -971,362 +943,36 @@ coot::util::get_reorientation_matrix(mmdb::Residue *residue_current,
 }
 
 
-std::ostream&
-coot::operator<<(std::ostream&  s, const coot::lsq_range_match_info_t &m) {
-
-   s << "LSQ Match: (" << m.model_number_reference << ") " << m.reference_chain_id << " "
-     << m.to_reference_start_resno << "-" << m.to_reference_end_resno
-     << " to ("
-     << m.model_number_matcher << ") " << m.matcher_chain_id << " "
-     << m.from_matcher_start_resno << "-" << m.from_matcher_end_resno
-     << " type: " << m.match_type_flag;
-   return s;
-}
 
 //
-float
-coot::util::interquartile_range(const std::vector<float> &v_in) {
 
-   float iqr = 0;
-   std::vector<float> v = v_in;
 
-   std::sort(v.begin(), v.end());
-   unsigned int n = v.size();
-   int q_1 = int(0.25 * n);
-   int q_3 = int(0.75 * n);
-   float v_1 = v[q_1];
-   float v_3 = v[q_3];
-   iqr = v_3 - v_1;
-   return iqr;
-}
 
-coot::util::stats_data::stats_data(const std::vector<float> &v) {
-
-   mean = 0;
-   sd = 0;
-   iqr = 0;
-   double sum = 0;
-   double sum_sq = 0;
-   for (unsigned int i=0; i<v.size(); i++) {
-      sum += v[i];
-      sum_sq += v[i] * v[i];
-   }
-   if (v.size() > 0) {
-      mean = sum/double(v.size());
-      double var = sum_sq/double(v.size()) - mean * mean;
-      if (var < 0) var = 0;
-      sd = sqrt(var);
-      iqr = interquartile_range(v);
-   }
-}
-
-coot::util::stats_data::stats_data(const std::vector<double> &v) {
-
-   mean = 0;
-   sd = 0;
-   iqr = 0;
-   double sum = 0;
-   double sum_sq = 0;
-   for (unsigned int i=0; i<v.size(); i++) {
-      sum += v[i];
-      sum_sq += (v[i] * v[i]);
-   }
-   if (v.size() > 0) { 
-      mean = sum/double(v.size());
-      double var = sum_sq/double(v.size()) - mean * mean;
-      if (var < 0) var = 0;
-      sd = sqrt(var);
-      std::vector<float> vf(v.size());
-      for (unsigned int i=0; i<v.size(); i++) vf[i] = v[i];
-      iqr = interquartile_range(vf);
-   }
-}
-
-std::vector<std::pair<double, double> >
-coot::util::qq_plot_t::qq_norm() {
-   
-   std::vector<std::pair<double, double> > v;
-
-   std::sort(data.begin(), data.end());
-   size_t stride = 1;
-   std::vector<double> sorted_data(data.size());
-   for (unsigned int i=0; i<data.size(); i++) { 
-      sorted_data[i] = data[i];
-   }
-   stats_data sd = stats_data(data);
-
-   // debugging
-   std::vector<double> save_gs;
-   std::vector<double> save_qs;
-   
-
-   // frac goes between 0 and 1.
-   for (double frac=0.01; frac<1; frac+= 0.01) {
-
-      double g = gsl_cdf_gaussian_Pinv(frac, sd.sd);
-      double q = gsl_stats_quantile_from_sorted_data(sorted_data.data(), stride,
-                                                     data.size(), frac);
-
-      // mean correction (gs would otherwise have mean 0)
-      double g_mc = g + sd.mean;
-      if (0) 
-         std::cout << "debug:: g " << g << " from frac " << frac
-                   << " and sd " << sd.sd << std::endl;
-
-      std::pair<double, double> p(g_mc, q);
-      v.push_back(p);
-      save_gs.push_back(g_mc);
-      save_qs.push_back(q);
-   }
-
-   stats_data gs_data(save_gs);
-   stats_data qs_data(save_qs);
-   
-   std::cout << "debug:: gs: mean " << gs_data.mean << " sd " <<  gs_data.sd  << std::endl;
-   std::cout << "debug:: qs: mean " << qs_data.mean << " sd " <<  qs_data.sd  << std::endl;
-   std::cout << "debug:: sd: mean " << sd.mean << " sd " <<  sd.sd  << std::endl;
-   
-   return v;
-}
 
 
 // -------------------------------------------------------------
 //                       quaternions
 // -------------------------------------------------------------
 
-clipper::Mat33<double>
-coot::util::quaternion::matrix() const {
 
-   clipper::Mat33<double> mat;
-
-   mat(0,0) = 1.0 - 2.0 * (q1 * q1 + q2 * q2);
-   mat(0,1) = 2.0 * (q0 * q1 - q2 * q3);
-   mat(0,2) = 2.0 * (q2 * q0 + q1 * q3);
-   
-   mat(1,0) = 2.0 * (q0 * q1 + q2 * q3);
-   mat(1,1)= 1.0 - 2.0 * (q2 * q2 + q0 * q0);
-   mat(1,2) = 2.0 * (q1 * q2 - q0 * q3);
-   
-   mat(2,0) = 2.0 * (q2 * q0 - q1 * q3);
-   mat(2,1) = 2.0 * (q1 * q2 + q0 * q3);
-   mat(2,2) = 1.0 - 2.0 * (q1 * q1 + q0 * q0);
-   
-   return mat;
-}
-
-coot::util::quaternion::quaternion(const clipper::Mat33<double> &m) {
-
-   float pw = 1 + m(0,0) + m(1,1) + m(2,2);
-   float px = 1 + m(0,0) - m(1,1) - m(2,2);
-   float py = 1 - m(0,0) + m(1,1) - m(2,2); 
-   float pz = 1 - m(0,0) - m(1,1) + m(2,2);
-
-   float pr1 = sqrt( (pw>0) ? pw : 0) / 2.0;
-   float pr2 = sqrt( (px>0) ? px : 0) / 2.0;
-   float pr3 = sqrt( (py>0) ? py : 0) / 2.0;
-   float pr4 = sqrt( (pz>0) ? pz : 0) / 2.0;
-
-   q0 = convert_sign(pr2, m(2,1) - m(1,2));
-   q1 = convert_sign(pr3, m(0,2) - m(2,0));
-   q2 = convert_sign(pr4, m(1,0) - m(0,1));
-   q3 = pr1;
-   
-}
 
 // Return x with the sign of y.
-float 
-coot::util::quaternion::convert_sign(const float &x, const float &y) const {
-
-   if ((x > 0) && (y > 0)) return  x;
-   if ((x < 0) && (y > 0)) return -x; 
-   if ((x > 0) && (y < 0)) return -x; 
-   return  x; 
-}
-
-void
-coot::util::quaternion::normalize() {
-
-   double sum_sq = 0.0;
-   sum_sq += q0*q0;
-   sum_sq += q1*q1;
-   sum_sq += q2*q2;
-   sum_sq += q3*q3;
-   if (sum_sq > 0.0) {
-      double f = sqrt(1.0/sum_sq);
-      q0 *= f;
-      q1 *= f;
-      q2 *= f;
-      q3 *= f;
-   }
-} 
 
 
-coot::util::quaternion
-coot::util::quaternion::rotate(double angle, const clipper::Coord_orth &vec) const {
-
-   coot::util::quaternion q(0,0,0,1);
-
-   std::cout << "rotate() just a stub - fill me later!" << std::endl;
-
-   return q;
-}
-
-coot::util::quaternion
-coot::util::quaternion::inverse() const {
-
-   coot::util::quaternion q(q0, q1, q2, -q3);
-   return q;
-}
 
 
-clipper::RTop_orth
-coot::util::quaternion::centroid_rtop(const std::vector<std::pair<clipper::RTop_orth,float> > &rtops) {
 
-   if (rtops.size() == 0) { 
-      return clipper::RTop_orth(clipper::Mat33<double>(1,0,0,0,1,0,0,0,1), clipper::Vec3<double>(0,0,0));
-   } else {
-      clipper::Coord_orth sum_trn(0,0,0);
-      for (unsigned int i=0; i<rtops.size(); i++) { 
-         quaternion q(rtops[i].first.rot());
-         q0 += rtops[i].second * q.q0;
-         q1 += rtops[i].second * q.q1;
-         q2 += rtops[i].second * q.q2;
-         q3 += rtops[i].second * q.q3;
-         sum_trn += rtops[i].first.trn();
-      }
-      normalize();
-      clipper::Mat33<double> m = matrix();
-      double inv_n = 1.0/double(rtops.size());
-      clipper::Coord_orth t(sum_trn.x() * inv_n, sum_trn.y() * inv_n, sum_trn.z() * inv_n);
-      return clipper::RTop_orth(m, t);
-   }
-}
 
-clipper::RTop_orth
-coot::util::quaternion::centroid_rtop(const std::vector<std::pair<clipper::RTop_orth,float> > &rtops,
-                                      bool robust_filter) {
 
-   if (! robust_filter) { 
-      return centroid_rtop(rtops);
-   } else {
-      if (rtops.size() < 2) {
-         return centroid_rtop(rtops);
-      } else { 
-         clipper::Coord_orth sum_trn(0,0,0);
-         for (unsigned int i=0; i<rtops.size(); i++) { 
-            quaternion q(rtops[i].first.rot());
-            q0 += rtops[i].second * q.q0;
-            q1 += rtops[i].second * q.q1;
-            q2 += rtops[i].second * q.q2;
-            q3 += rtops[i].second * q.q3;
-            sum_trn += rtops[i].first.trn();
-         }
-         normalize();
-
-         double inv_n = 1.0/double(rtops.size());
-         clipper::Coord_orth t(sum_trn.x() * inv_n, sum_trn.y() * inv_n, sum_trn.z() * inv_n);
-
-         double sum_rotation_distance_sq = 0.0;
-         double sum_translation_distance_sq = 0.0;
-         std::vector<w_rtop_orth> deviance(rtops.size());
-         for (unsigned int i=0; i<rtops.size(); i++) {
-            // rotation
-            quaternion q(rtops[i].first.rot());
-            double d0 = q0 - rtops[i].second * q.q0;
-            double d1 = q1 - rtops[i].second * q.q1;
-            double d2 = q2 - rtops[i].second * q.q2;
-            double d3 = q3 - rtops[i].second * q.q3;
-            double d = d0*d0 + d1*d1 + d2*d2 + d3*d3;
-            sum_rotation_distance_sq += d;
-         
-            // translation
-            clipper::Coord_orth wpt(rtops[i].second * clipper::Coord_orth(rtops[i].first.trn()));
-            double dt = (t-wpt).lengthsq();
-            sum_translation_distance_sq += dt;
-            if (0)
-               std::cout << "for irtop " << i << " added rotation distance_sq " << d 
-                         << " and translation distance "<< dt << std::endl;
-            deviance[i].rtop   = rtops[i].first;
-            deviance[i].weight = rtops[i].second;
-            deviance[i].deviance = d * 1.888 + dt;
-         }
-
-         std::sort(deviance.begin(), deviance.end(), deviance_sorter);
-         for (unsigned int i=0; i<deviance.size(); i++)
-            if (0) 
-               std::cout << "        deviance " << i << " " << deviance[i].weight << " "
-                         << deviance[i].deviance << std::endl;
-         std::vector<float> iqr_data(deviance.size());
-         for (unsigned int i=0; i<deviance.size(); i++)
-            iqr_data[i] = deviance[i].deviance;
-         stats_data sd(iqr_data);
-      
-         clipper::Coord_orth sum_trn_filtered_dev(0,0,0);
-         int n = 0;
-
-         for (unsigned int i=0; i<deviance.size(); i++) {
-            if (deviance[i].deviance < sd.mean + 0.5 * sd.iqr) {
-               n++;
-               quaternion q(rtops[i].first.rot());
-               q0 += deviance[i].weight * q.q0;
-               q1 += deviance[i].weight * q.q1;
-               q2 += deviance[i].weight * q.q2;
-               q3 += deviance[i].weight * q.q3;
-               sum_trn_filtered_dev += deviance[i].weight * deviance[i].rtop.trn();
-            }
-         }
-
-         //       std::cout << "rejecting deviances more than " << sd.mean + 0.5 * sd.iqr
-         //                 << " leaves " << n << " from " << rtops.size() 
-         //                 << std::endl;
-      
-         if (n > 0) {
-
-            normalize();
-            double inv_n_local = 1.0/double(n);
-            clipper::Mat33<double> m = matrix();
-            clipper::Coord_orth td(sum_trn_filtered_dev.x() * inv_n_local,
-                                   sum_trn_filtered_dev.y() * inv_n_local,
-                                   sum_trn_filtered_dev.z() * inv_n_local);
-            return clipper::RTop_orth(m, td);
-         } else { 
-       
-            // unfiltered
-            clipper::Mat33<double> m = matrix();
-            return clipper::RTop_orth(m, t);
-         }
-      }
-   } 
-}
 
 // static
-bool
-coot::util::quaternion::deviance_sorter(const w_rtop_orth &a,
-                                        const w_rtop_orth &b) {
-   return a.deviance < a.deviance;
-}
 
 
 
 
 // static 
-void
-coot::util::quaternion::test_quaternion() {
 
-   // currently quaternions are tested in testcootutils
-} 
 
-std::ostream&  coot::util::operator<<(std::ostream& s, const coot::util::quaternion &q) {
-
-   s << "(" << q.q0 << ", " << q.q1 << ", " << q.q2 << ", " << q.q3 << ")";
-   return s;
-}
-
-std::ofstream& coot::util::operator<<(std::ofstream &s, const coot::util::quaternion &q) {
-
-   // s << "(" << q.q0 << ", " << q.q1 << ", " << q.q2 << ", " << q.q3 << ")";
-   return s;
-} 
 
 
 // -------------------------------------------------------------
@@ -1458,8 +1104,8 @@ coot::copy_segid(mmdb::Residue *provider, mmdb::Residue *receiver) {
 std::string
 coot::chain_atoms_segid(mmdb::Chain *chain_p) {
 
-   int n_residue_atoms;
-   mmdb::PPAtom residue_atoms;
+   int n_residue_atoms = 0;
+   mmdb::PPAtom residue_atoms = 0;
 
    std::vector<std::string> seg_ids;
 
@@ -1482,15 +1128,14 @@ coot::chain_atoms_segid(mmdb::Chain *chain_p) {
          }
       }
    }
-   
 
    if (seg_ids.size() == 0) {
       std::string mess = "No segids for chain ";
       mess += chain_p->GetChainID();
       throw std::runtime_error(mess);
    }
-   return seg_ids[0]; 
-} 
+   return seg_ids[0];
+}
 
 
 
@@ -2363,60 +2008,8 @@ coot::util::chains_in_atom_selection(mmdb::Manager *mol, int model_number, const
 
 //
 // On failure, return "";
-std::string
-coot::util::single_letter_to_3_letter_code(char code) {
-
-   if (code == 'G') return std::string("GLY");
-   if (code == 'A') return std::string("ALA");
-   if (code == 'V') return std::string("VAL");
-   if (code == 'S') return std::string("SER");
-   if (code == 'N') return std::string("ASN");
-   if (code == 'P') return std::string("PRO");
-   if (code == 'D') return std::string("ASP");
-   if (code == 'C') return std::string("CYS");
-   if (code == 'Q') return std::string("GLN");
-   if (code == 'E') return std::string("GLU");
-   if (code == 'H') return std::string("HIS");
-   if (code == 'I') return std::string("ILE");
-   if (code == 'L') return std::string("LEU");
-   if (code == 'K') return std::string("LYS");
-   if (code == 'M') return std::string("MET");
-   if (code == 'F') return std::string("PHE");
-   if (code == 'T') return std::string("THR");
-   if (code == 'W') return std::string("TRP");
-   if (code == 'Y') return std::string("TYR");
-   if (code == 'R') return std::string("ARG");
-
-   return std::string("");
-}
 
 
-std::string
-coot::util::single_letter_to_3_letter_code(const std::string &code) {
-
-   if (code == "G") return std::string("GLY");
-   if (code == "A") return std::string("ALA");
-   if (code == "V") return std::string("VAL");
-   if (code == "S") return std::string("SER");
-   if (code == "N") return std::string("ASN");
-   if (code == "P") return std::string("PRO");
-   if (code == "D") return std::string("ASP");
-   if (code == "C") return std::string("CYS");
-   if (code == "Q") return std::string("GLN");
-   if (code == "E") return std::string("GLU");
-   if (code == "H") return std::string("HIS");
-   if (code == "I") return std::string("ILE");
-   if (code == "L") return std::string("LEU");
-   if (code == "K") return std::string("LYS");
-   if (code == "M") return std::string("MET");
-   if (code == "F") return std::string("PHE");
-   if (code == "T") return std::string("THR");
-   if (code == "W") return std::string("TRP");
-   if (code == "Y") return std::string("TYR");
-   if (code == "R") return std::string("ARG");
-
-   return std::string("");
-}
 
 
 
@@ -2431,6 +2024,8 @@ coot::graph_match(mmdb::Residue *res_moving,
                   bool apply_rtop_flag,
                   bool match_hydrogens_also) {
 
+   std::cout << "DEBUG:: graph_match() called with match_hydrogens_also " << match_hydrogens_also << std::endl;
+
   clipper::Mat33<double> m_dum(1,0,0,0,1,0,0,0,1);
   clipper::Coord_orth pt_dum(0,0,0);
   clipper::RTop_orth rtop(m_dum, pt_dum);
@@ -2441,20 +2036,20 @@ coot::graph_match(mmdb::Residue *res_moving,
    mmdb::math::Graph graph2;
 
    // These are deleted at the end
-   // 
+   //
    mmdb::Residue *cleaned_res_moving    = NULL;
    mmdb::Residue *cleaned_res_reference = NULL;
 
-   if (! match_hydrogens_also) { 
+   if (! match_hydrogens_also) {
       cleaned_res_moving    = coot::util::copy_and_delete_hydrogens(res_moving);
       cleaned_res_reference = coot::util::copy_and_delete_hydrogens(res_reference);
    } else {
       cleaned_res_moving    = coot::util::deep_copy_this_residue(res_moving);
       cleaned_res_reference = coot::util::deep_copy_this_residue(res_reference);
-   } 
+   }
 
-   // debug 
-   if (0) {
+   // debug
+   if (true) {
       int n_residue_atoms_1;
       mmdb::PPAtom residue_atoms_1;
       cleaned_res_moving->GetAtomTable(residue_atoms_1, n_residue_atoms_1);
@@ -2478,10 +2073,10 @@ coot::graph_match(mmdb::Residue *res_moving,
       // Anyway...
       // 20161008 Now make it true - we are using SRS now.
       // This does need a test
-      // 
+      //
       // graph1.MakeSymmetryRelief ( false );
       // graph2.MakeSymmetryRelief ( false );
- 
+
       graph1.MakeSymmetryRelief(true);
       graph2.MakeSymmetryRelief(true);
    }
@@ -2493,7 +2088,7 @@ coot::graph_match(mmdb::Residue *res_moving,
 
    if (build_status1 != 0) {
       std::cout << "ERROR:: build_status1: " << build_status1 << std::endl;
-   } else { 
+   } else {
       if (build_status2 != 0) {
          std::cout << "ERROR:: build_status2: " << build_status2 << std::endl;
       } else {
@@ -2502,26 +2097,24 @@ coot::graph_match(mmdb::Residue *res_moving,
          int n_atoms_mov = cleaned_res_moving->GetNumberOfAtoms();
 
          int minMatch = 4;
-         int n_ref_frac = int(0.75*float(n_atoms_ref));
-         int n_mov_frac = int(0.75*float(n_atoms_mov));
+         float frac = 0.75;
+         frac = 0.4;
+         int n_ref_frac = int(frac*float(n_atoms_ref));
+         int n_mov_frac = int(frac*float(n_atoms_mov));
 
          int min_n = (n_ref_frac < n_mov_frac) ? n_ref_frac : n_mov_frac;
          if (min_n > minMatch)
             minMatch = min_n;
-         
+
          mmdb::math::GraphMatch match;
 
-         // std::cout << "INFO:: match.MatchGraphs must match at least "
-         //           << minMatch << " atoms."
-         //           << std::endl;
          logger.log(log_t::INFO, "match.MatchGraphs must match at least", minMatch, "atoms.");
          bool vertext_type = true;
          match.MatchGraphs(&graph1, &graph2, minMatch, vertext_type);
          int n_match = match.GetNofMatches();
-         // std::cout << "INFO:: match NumberofMatches (potentially similar graphs) "
-         //           << n_match << std::endl;
          logger.log(log_t::INFO, "match NumberofMatches (potentially similar graphs)", n_match);
-         // match.PrintMatches();
+         if (false)
+            match.PrintMatches();
 
          int best_match = -1;
          clipper::Mat33<double> m_dum(1,0,0,0,1,0,0,0,1);
@@ -2533,9 +2126,10 @@ coot::graph_match(mmdb::Residue *res_moving,
             mmdb::realtype p1, p2;
             mmdb::ivector FV1, FV2;
             match.GetMatch(imatch, FV1, FV2, n, p1, p2); // n p1 p2 set
-//             For understanding only.  
-//             std::cout << "Match number: " << imatch << "  " << p1*100 << "% "
-//                       << p2*100 << "% "<< std::endl;
+//             For understanding only:
+//          if (true)
+               std::cout << "Match number: " << imatch << "  " << p1*100 << "% "
+                         << p2*100 << "% "<< std::endl;
             std::vector<clipper::Coord_orth> coords_1_local;
             std::vector<clipper::Coord_orth> coords_2_local;
             for (int ipair=1; ipair<=n; ipair++) {
@@ -2545,8 +2139,8 @@ coot::graph_match(mmdb::Residue *res_moving,
                   std::cout << "Can't get vertices for match "
                             << ipair << std::endl;
                } else  {
-//                   printf(" %4i.  [%4s] <-> [%4s]\n",
-//                          ipair, V1->GetName(), V2->GetName());
+                  //                   printf(" %4i.  [%4s] <-> [%4s]\n",
+                  //                          ipair, V1->GetName(), V2->GetName());
                   mmdb::Atom *at1 = cleaned_res_moving->atom[V1->GetUserID()];
                   mmdb::Atom *at2 = cleaned_res_reference->atom[V2->GetUserID()];
                   coords_1_local.push_back(clipper::Coord_orth(at1->x, at1->y, at1->z));
@@ -2557,7 +2151,7 @@ coot::graph_match(mmdb::Residue *res_moving,
                   matching_atoms.push_back(atom_pair);
                }
             }
-            
+
             double dist_sum = 0.0;
             clipper::RTop_orth rtop_local(clipper::Mat33<double>(0,0,0,0,0,0,0,0,0),
                                           clipper::Coord_orth(0,0,0)); // unset
@@ -2572,17 +2166,25 @@ coot::graph_match(mmdb::Residue *res_moving,
                for (unsigned int i=0; i<coords_1_local.size(); i++) {
                   dist_sum += clipper::Coord_orth::length(coords_2_local[i], coords_1_local[i]);
                }
-            } 
-            if (dist_sum < best_match_sum) {
-               
+            }
+            // Prefer the match that covers the most atoms (the fullest atom
+            // correspondence); use the (unnormalised) distance sum only to break
+            // ties between equally-sized matches. Selecting by distance sum alone
+            // is biased towards *smaller* matches (fewer terms in the sum) and so
+            // could return a partial correspondence even for identical molecules.
+            int n_this = static_cast<int>(coords_1_local.size());
+            bool better = (n_this > best_n_match) ||
+                          (n_this == best_n_match && dist_sum < best_match_sum);
+            if (better) {
+
                // Debugging
-               // std::cout << "DEBUG:: better dist_sum: " << dist_sum << std::endl;
-               
+               // std::cout << "DEBUG:: better match: n " << n_this << " dist_sum " << dist_sum << std::endl;
+
                best_rtop = rtop_local;
                best_match_sum = dist_sum;
                best_match = imatch;
                best_matching_atoms = matching_atoms;
-               best_n_match = coords_1_local.size();
+               best_n_match = n_this;
             }
          } // imatch loop
 
@@ -2600,6 +2202,7 @@ coot::graph_match(mmdb::Residue *res_moving,
    gmi.dist_score = best_match_sum;
    gmi.matching_atom_names = best_matching_atoms;
    gmi.n_match = best_n_match;
+   std::cout << "DEBUG:: return gmi with success " << gmi.success << std::endl;
    return gmi;
 }
 
@@ -2612,7 +2215,7 @@ coot::graph_match(mmdb::Residue *res_moving,
 void
 coot::graph_match_info_t::match_names(mmdb::Residue *res_with_moving_names) {
 
-   bool debug = false;
+   bool debug = true;
    if (!success) {
       std::cout << "Can't do name remapping, graph match failed" << std::endl;
    } else { 
@@ -2636,18 +2239,19 @@ coot::graph_match_info_t::match_names(mmdb::Residue *res_with_moving_names) {
          if (std::find(residue_atom_names.begin(), residue_atom_names.end(), atom_name)
              == residue_atom_names.end())
             residue_atom_names.push_back(atom_name);
-         bool found_match = 0;
+         bool found_match = false;
          for (unsigned int j_pair=0; j_pair<matching_atom_names.size(); j_pair++) {
             // first is working atom spec
             if (matching_atom_names[j_pair].first.first == atom_name) {
-               found_match = 1;
+               found_match = true;
                break;
             }
          }
 
-         // std::cout << ".... atom name: " << atom_name << ": found_match "
-         // << found_match << std::endl;
-         
+         if (true)
+            std::cout << ".... atom name: " << atom_name << ": found_match "
+                      << found_match << std::endl;
+
          if (! found_match) {
             // this atom name was not in the list of working atoms that were matched.
 
@@ -2666,7 +2270,7 @@ coot::graph_match_info_t::match_names(mmdb::Residue *res_with_moving_names) {
                orig_moving_atom_names_non_mapped_non_same.push_back(atom_name);
             else
                orig_moving_atom_names_non_mapped_same.push_back(atom_name);
-            
+
          }
       }
 
@@ -2698,8 +2302,7 @@ coot::graph_match_info_t::match_names(mmdb::Residue *res_with_moving_names) {
 
          bool replace_name = 0;
          std::string new_atom_name = "";
-      
-      
+
          if (std::find(orig_moving_atom_names_non_mapped_non_same.begin(),
                        orig_moving_atom_names_non_mapped_non_same.end(),
                        this_atom_name) !=
@@ -2728,7 +2331,7 @@ coot::graph_match_info_t::match_names(mmdb::Residue *res_with_moving_names) {
 
                // no change to replace_name.
 
-            } else { 
+            } else {
 
                // std::cout << ":" << this_atom_name << ": mapped" << std::endl;
                replace_name = 1;
@@ -2742,7 +2345,7 @@ coot::graph_match_info_t::match_names(mmdb::Residue *res_with_moving_names) {
                         break;
                      } else {
                         new_atom_name = matching_atom_names[j_pair].second.first;
-                     } 
+                     }
                   }
                }
             }
@@ -2754,43 +2357,12 @@ coot::graph_match_info_t::match_names(mmdb::Residue *res_with_moving_names) {
                       << " new name :" << new_atom_name << ":" << std::endl;
          if (replace_name) {
             residue_atoms[iat]->SetAtomName(new_atom_name.c_str());
-         } 
-      
-      }
-   }
-} 
+         }
 
-std::string
-coot::graph_match_info_t::invent_new_name(const std::string &name_in,
-                                          const std::string &ele,
-                                          const std::vector<std::string> &residue_atom_name) const {
-   std::string a("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-   bool found = 0;
-   std::string new_name("XXXX");
-   for (unsigned int i=0; i<a.size(); i++) { 
-      for (unsigned int j=0; j<a.size(); j++) {
-         std::string test_atom_name = "";
-         if (ele.length() == 1) { 
-            test_atom_name = " ";
-            test_atom_name += ele;
-         } else {
-            test_atom_name = ele;
-         }
-         test_atom_name += a[i];
-         test_atom_name += a[j];
-         if (std::find(residue_atom_name.begin(), residue_atom_name.end(), test_atom_name)
-             == residue_atom_name.end()) {
-            found = 1;
-            new_name = test_atom_name;
-         }
-         if (found)
-            break;
       }
-      if (found)
-         break;
    }
-   return new_name;
-} 
+}
+
 
 
 
@@ -3484,32 +3056,36 @@ coot::util::get_atom_using_fuzzy_search(const atom_spec_t &spec, mmdb::Manager *
                               }
                            }
                         }
-                        std::vector<std::string> test_names = {
-                           std::string(" ")  + spec.atom_name,
-                           std::string(" ")  + spec.atom_name + std::string("  "),
-                           std::string("  ") + spec.atom_name,
-                           std::string(" ") + spec.atom_name + std::string(" "),
-                           std::string("  ") + spec.atom_name + std::string(" "),
-                           spec.atom_name + std::string(" "),
-                        };
-                        for (const auto &t : test_names) {
-                           for (int iat=0; iat<n_residue_atoms; iat++) {
-                              mmdb:: Atom *at = residue_atoms[iat];
-                              if (! at->isTer()) {
-                                 std::string atom_name(at->name);
-                                 if (atom_name == t) {
-                                    rat = at;
-                                    break;
+                        if (! rat) {
+                           std::vector<std::string> test_names = {
+                              std::string(" ")  + spec.atom_name,
+                              std::string(" ")  + spec.atom_name + std::string("  "),
+                              std::string("  ") + spec.atom_name,
+                              std::string(" ") + spec.atom_name + std::string(" "),
+                              std::string("  ") + spec.atom_name + std::string(" "),
+                              spec.atom_name + std::string(" "),
+                              spec.atom_name + std::string("  "), // A305 in 9pic
+                           };
+                           for (const auto &t : test_names) {
+                              for (int iat=0; iat<n_residue_atoms; iat++) {
+                                 mmdb:: Atom *at = residue_atoms[iat];
+                                 if (! at->isTer()) {
+                                    std::string atom_name(at->name);
+                                    if (atom_name == t) {
+                                       rat = at;
+                                       break;
+                                    }
                                  }
                               }
+                              if (rat) break;
                            }
-                           if (rat) break;
                         }
                      }
                   }
                   if (rat) break;
                }
             }
+            if (rat) break;
          }
       }
    }
@@ -4199,11 +3775,6 @@ coot::util::chain_id_residue_vec_helper_t::sort_residues() {
 }
 
 
-bool
-coot::util::chain_id_residue_vec_helper_t::operator<(const chain_id_residue_vec_helper_t &c) const { 
-
-   return (chain_id < c.chain_id);
-}
 
 // static 
 bool
@@ -4988,7 +4559,8 @@ mmdb::Manager *
 coot::util::create_mmdbmanager_from_inverted_atom_selection(mmdb::Manager *orig_mol,
                                                             int SelectionHandle) {
 
-   std::cout << "----------------- create_mmdbmanager_from_inverted_atom_selection() " << std::endl;
+   if (false)
+      std::cout << "----------------- create_mmdbmanager_from_inverted_atom_selection() " << std::endl;
 
    // The idea here is that we want to have a selection that is
    // logical NOT of the SelectionHandle selection.
@@ -5428,7 +5000,7 @@ coot::util::intelligent_this_residue_mmdb_atom(mmdb::Residue *res_p) {
 
    mmdb::PAtom *residue_atoms;
    int nResidueAtoms;
-   
+
    res_p->GetAtomTable(residue_atoms, nResidueAtoms);
    for (int i=0; i<nResidueAtoms; i++) {
       std::string atom_name(residue_atoms[i]->name);
@@ -5468,7 +5040,7 @@ coot::util::is_nucleotide(mmdb::Residue *residue_p) {
 
    short int nuc = 0;
 
-   if (residue_p) { 
+   if (residue_p) {
       std::string type(residue_p->name); // all spaces cut
 
       if (type == "A") {
@@ -5894,7 +5466,7 @@ coot::util::compare_residues(const std::pair<mmdb::Residue *, int> &a,
    }
 
    return 1;
-} 
+}
 
 
 // Use the results of the above to give us a sequence string:
@@ -6017,15 +5589,6 @@ coot::util::omega_torsion(mmdb::Residue *C_residue, mmdb::Residue *N_residue, co
 
 
 // in radians
-bool
-coot::util::is_cis(const double &omega_torsion) {
-
-   // -90 to +90
-   bool is_cis_flag = false;
-   if ((omega_torsion < 1.57) && (omega_torsion > -1.57))
-      is_cis_flag = true;
-   return is_cis_flag;
-}
 
 
 // This function is based on mmdb's CATom::MakePDBAtomName(), so we share
@@ -6151,101 +5714,9 @@ coot::pad_atom_name(const std::string &atom_id, const std::string &element) {
    return new_name;
 }
 
-std::pair<double, double>
-coot::lsq_plane_deviation(const std::vector<clipper::Coord_orth> &v,
-                          const clipper::Coord_orth &pt) {
-
-   coot::lsq_plane_info_t lpd(v);
-   double val = lpd.plane_deviation(pt);
-   double rms = lpd.plane_atoms_rms();
-   return std::pair<double, double> (val, rms);
-}
-
-coot::lsq_plane_info_t::lsq_plane_info_t(const std::vector<clipper::Coord_orth> &v) {
-
-   int n_atoms = v.size();
-   clipper::Coord_orth sum(0,0,0);
-   for (int i=0; i<n_atoms; i++)
-      sum += v[i];
-   double factor = 1/double(n_atoms);
-   clipper::Coord_orth midpoint(sum.x()*factor, sum.y()*factor, sum.z()*factor);
-   centre_ = midpoint;
-
-   clipper::Matrix<double> mat(3,3);
-   for (int i=0; i<n_atoms; i++) {
-      mat(0,0) += (v[i].x() - midpoint.x()) * (v[i].x() - midpoint.x());
-      mat(1,1) += (v[i].y() - midpoint.y()) * (v[i].y() - midpoint.y());
-      mat(2,2) += (v[i].z() - midpoint.z()) * (v[i].z() - midpoint.z());
-      mat(0,1) += (v[i].x() - midpoint.x()) * (v[i].y() - midpoint.y());
-      mat(0,2) += (v[i].x() - midpoint.x()) * (v[i].z() - midpoint.z());
-      mat(1,2) += (v[i].y() - midpoint.y()) * (v[i].z() - midpoint.z());
-   }
-   mat(1,0) = mat(0,1);
-   mat(2,0) = mat(0,2);
-   mat(2,1) = mat(1,2);
-
-   if (0) { 
-      std::cout << "  mat for eigens: " << std::endl;
-      std::cout << "     " << mat(0,0) << "   " << mat(0,1) << "   " << mat(0,2) << std::endl;
-      std::cout << "     " << mat(1,0) << "   " << mat(1,1) << "   " << mat(1,2) << std::endl;
-      std::cout << "     " << mat(2,0) << "   " << mat(2,1) << "   " << mat(2,2) << std::endl;
-   }
-   std::vector<double> eigens = mat.eigen(true);
-   // Let's now extract the values of a,b,c normalize them
-   abcd.resize(4);
-   
-   abcd[0] = mat(0,0);
-   abcd[1] = mat(1,0);
-   abcd[2] = mat(2,0);
-
-   if (0) 
-      std::cout << " abcd - pre-values "
-                << abcd[0] << " "
-                << abcd[1] << " "
-                << abcd[2] << " "
-                << std::endl;
-   
-   double sqsum = 1e-20;
-   
-   for (int i=0; i<3; i++)
-      sqsum += abcd[i] * abcd[i];
-   for (int i=0; i<3; i++)
-      abcd[i] /= sqsum;
-   
-   // set D, recall di = Axi+Byi+Czi-D, so when
-   // xi = x_cen, yi = y_cen, zi = z_cen, d is 0,
-   // so we can set D.
-   // 
-   abcd[3] = abcd[0]*midpoint.x() + abcd[1]*midpoint.y() + abcd[2]*midpoint.z();
-
-   if (0) 
-      std::cout << " abcd "
-                << abcd[0] << " "
-                << abcd[1] << " "
-                << abcd[2] << " "
-                << abcd[3] << std::endl;
-
-   double var = 0;
-   for (unsigned int i_plane_at=0; i_plane_at<v.size(); i_plane_at++) {
-      double d =
-         abcd[0]*v[i_plane_at].x() +
-         abcd[1]*v[i_plane_at].y() +
-         abcd[2]*v[i_plane_at].z() - abcd[3];
-      var += d*d;
-   }
-   rms = 0;
-   if (v.size() > 0)
-      rms = sqrt(var/double(v.size()));
-
-}
 
 
-bool
-coot::compare_atom_specs_user_float(const coot::atom_spec_t &a1, const coot::atom_spec_t &a2) {
 
-   return a1.float_user_data < a2.float_user_data ? 1 : 0;
-
-} 
 
 
 // For use with interesting-things-gui, make the list argument
@@ -6254,346 +5725,13 @@ coot::compare_atom_specs_user_float(const coot::atom_spec_t &a1, const coot::ato
 // use the user data in the atom spec to give us the molecule number
 // and the button label
 // 
-std::string
-coot::util::interesting_things_list(const std::vector<atom_spec_t> &v) {
-
-#ifdef USE_GUILE
-   // e.g. (list) for empty v
-   // (list (list "button label" imol-no chain-id resno atom-name)
-   //       (list "button label" imol-no chain-id resno atom-name)
-   // )
-
-   std::string r = " (list ";
-
-   for (unsigned int i=0; i<v.size(); i++) {
-
-      std::string atom_str("\"");
-      atom_str += v[i].chain_id;
-      atom_str += "\" ";
-      atom_str += int_to_string(v[i].res_no);
-      atom_str += " \"";
-      atom_str += v[i].ins_code;
-      atom_str += "\" \"";
-      atom_str += v[i].atom_name;
-      atom_str += "\" \"";
-      atom_str += v[i].alt_conf;
-      atom_str += " \"";
-
-      std::string button_label("Clash gap: ");
-      button_label += float_to_string(v[i].float_user_data);
-      button_label += " : ";
-      button_label += v[i].chain_id;
-      button_label += " ";
-      button_label += int_to_string(v[i].res_no);
-      button_label += " ";
-      if (v[i].ins_code != "") {
-         button_label += v[i].ins_code;
-          button_label += " ";
-      }
-      button_label += v[i].atom_name;
-      if (v[i].alt_conf != "") {
-         button_label += ",";
-    button_label += v[i].alt_conf;
-         button_label += " ";
-      }
-
-      std::string s = "(list ";
-      s += single_quote(button_label);
-      s += " ";
-      s += int_to_string(v[i].int_user_data);
-      s += " ";
-      s += atom_str;
-      s += ")\n";
-      
-      r += s;
-   }
-
-   r += ")";
-   return r;
-#else
-#ifdef USE_PYTHON
-// BL says:: we want to have [] lists in python, separated by commas (,)
-   // e.g. [] for empty v
-   // [["button label",imol-no,chain-id,resno,atom-name],
-   //  ["button label",imol-no,chain-id,resno,atom-name]
-   // ]
-
-   std::string r = "[";
-
-   for (unsigned int i=0; i<v.size(); i++) {
-
-      std::string atom_str("\"");
-      atom_str += v[i].chain_id;
-      atom_str += "\",";
-      atom_str += int_to_string(v[i].res_no);
-      atom_str += ",\"";
-      atom_str += v[i].ins_code;
-      atom_str += "\",\"";
-      atom_str += v[i].atom_name;
-      atom_str += "\",\"";
-      atom_str += v[i].alt_conf;
-      atom_str += " \"";
-
-      std::string button_label("Clash gap: ");
-      button_label += float_to_string(v[i].float_user_data);
-      button_label += " : ";
-      button_label += v[i].chain_id;
-      button_label += " ";
-      button_label += int_to_string(v[i].res_no);
-      button_label += " ";
-      if (v[i].ins_code != "") {
-         button_label += v[i].ins_code;
-         button_label += " ";
-      }
-      button_label += v[i].atom_name;
-      if (v[i].alt_conf != "") {
-         button_label += ",";
-         button_label += v[i].alt_conf;
-         button_label += " ";
-      }
-
-      std::string s = "[";
-      s += single_quote(button_label);
-      s += ",";
-      s += int_to_string(v[i].int_user_data);
-      s += ",";
-      s += atom_str;
-      s += "],\n";
-
-      r += s;
-   }
-
-   r += "]";
-   return r;
-#else    
-   return "";
-#endif // PYTHON
-   
-#endif // GUILE
-}
 
 // we shall have an extra python version (as well)
-std::string
-coot::util::interesting_things_list_py(const std::vector<atom_spec_t> &v) {
-
-#ifdef USE_PYTHON
-   // BL says:: we want to have [] lists in python, separated by commas (,)
-   // e.g. [] for empty v
-   // [["button label",imol-no,chain-id,resno,atom-name],
-   //  ["button label",imol-no,chain-id,resno,atom-name]
-   // ]
-
-   std::string r = "[";
-
-   for (unsigned int i=0; i<v.size(); i++) {
-
-      std::string atom_str("\"");
-      atom_str += v[i].chain_id;
-      atom_str += "\",";
-      atom_str += int_to_string(v[i].res_no);
-      atom_str += ",\"";
-      atom_str += v[i].ins_code;
-      atom_str += "\",\"";
-      atom_str += v[i].atom_name;
-      atom_str += "\",\"";
-      atom_str += v[i].alt_conf;
-      atom_str += " \"";
-
-      std::string button_label("Clash gap: ");
-      button_label += float_to_string(v[i].float_user_data);
-      button_label += " : ";
-      button_label += v[i].chain_id;
-      button_label += " ";
-      button_label += int_to_string(v[i].res_no);
-      button_label += " ";
-      if (v[i].ins_code != "") {
-         button_label += v[i].ins_code;
-         button_label += " ";
-      }
-      button_label += v[i].atom_name;
-      if (v[i].alt_conf != "") {
-         button_label += ",";
-         button_label += v[i].alt_conf;
-         button_label += " ";
-      }
-
-      std::string s = "[";
-      s += single_quote(button_label);
-      s += ",";
-      s += int_to_string(v[i].int_user_data);
-      s += ",";
-      s += atom_str;
-      s += "],\n";
-
-      r += s;
-   }
-
-   r += "]";
-   return r;
-#else
-   return "";
-#endif // PYTHON
-}
 
 // error_type is e.g. "Z score", "Clash gap"
 // 
-std::string
-coot::util::interesting_things_list_with_fix(const std::vector<coot::util::atom_spec_and_button_info_t> &v,
-                                             const std::string &error_type) {
-
-#ifdef USE_GUILE
-   // e.g. (list) for empty v
-   // (list (list "button label" imol-no chain-id resno atom-name)
-   //       (list "button label" imol-no chain-id resno atom-name)
-   // )
-   //
-   // if we have a fix, the callback function is not "" and then the
-   // returned thing becomes:
-   // 
-   // (list (list "button label" imol-no chain-id resno atom-name callback-func)
-   //       (list "button label" imol-no chain-id resno atom-name callback-func)
-   // )
-   //
-   // where callback-func is e.g. (lambda() (do-180-degree-side-chain-flip 0 "A" 45 "" ""))
-
-   std::string r = " (list ";
-
-   for (unsigned int i=0; i<v.size(); i++) {
-
-      std::string atom_str("\"");
-      atom_str += v[i].as.chain_id;
-      atom_str += "\" ";
-      atom_str += int_to_string(v[i].as.res_no);
-      atom_str += " \"";
-      atom_str += v[i].as.ins_code;
-      atom_str += "\" \"";
-      atom_str += v[i].as.atom_name;
-      atom_str += "\" \"";
-      atom_str += v[i].as.alt_conf;
-      atom_str += " \"";
-
-      std::string button_label = v[i].button_label;
-
-      std::string s = "(list ";
-      s += single_quote(button_label);
-      s += " ";
-      s += int_to_string(v[i].as.int_user_data);
-      s += " ";
-      s += atom_str;
-
-      if (v[i].callback_func != "") {
-         s += " ";
-         s +=  v[i].callback_func;
-      }
-      
-      s += ")\n";
-      
-      r += s;
-   }
-
-   r += ")";
-   return r;
-#else
-#ifdef USE_PYTHON
-// BL says:: here again we need a [] list in python 
-   std::string r = "[";
-
-   for (unsigned int i=0; i<v.size(); i++) {
-
-      std::string atom_str("\"");
-      atom_str += v[i].as.chain_id;
-      atom_str += "\",";
-      atom_str += int_to_string(v[i].as.res_no);
-      atom_str += ",\"";
-      atom_str += v[i].as.ins_code;
-      atom_str += "\",\"";
-      atom_str += v[i].as.atom_name;
-      atom_str += "\",\"";
-      atom_str += v[i].as.alt_conf;
-      atom_str += " \"";
-
-      std::string button_label = v[i].button_label;
-
-      std::string s = "[";
-      s += single_quote(button_label);
-      s += ",";
-      s += int_to_string(v[i].as.int_user_data);
-      s += ",";
-      s += atom_str;
-
-      if (v[i].callback_func != "") {
-         s += ",";
-         s +=  v[i].callback_func;
-      }
-
-      if (i<(v.size()-1)) {
-         s += "],\n";
-      } else {
-         s += "]\n";
-      }
-
-      r += s;
-   }
-
-   r += "]";
-   return r;
-#else
-   return "";
-#endif // PYTHON
-#endif // GUILE
-}
 
 // python version
-std::string
-coot::util::interesting_things_list_with_fix_py(const std::vector<coot::util::atom_spec_and_button_info_t> &v,
-                                                const std::string &error_type) {
-#ifdef USE_PYTHON
-// BL says:: here again we need a [] list in python 
-   std::string r = "[";
-
-   for (unsigned int i=0; i<v.size(); i++) {
-
-      std::string atom_str("\"");
-      atom_str += v[i].as.chain_id;
-      atom_str += "\",";
-      atom_str += int_to_string(v[i].as.res_no);
-      atom_str += ",\"";
-      atom_str += v[i].as.ins_code;
-      atom_str += "\",\"";
-      atom_str += v[i].as.atom_name;
-      atom_str += "\",\"";
-      atom_str += v[i].as.alt_conf;
-      atom_str += " \"";
-
-      std::string button_label = v[i].button_label;
-
-      std::string s = "[";
-      s += single_quote(button_label);
-      s += ",";
-      s += int_to_string(v[i].as.int_user_data);
-      s += ",";
-      s += atom_str;
-
-      if (v[i].callback_func != "") {
-         s += ",";
-         s +=  v[i].callback_func;
-      }
-
-      if (i<(v.size()-1)) {
-         s += "],\n";
-      } else {
-         s += "]\n";
-      }
-
-      r += s;
-   }
-
-   r += "]";
-   return r;
-#else
-   return "";
-#endif // PYTHON
-}
 
 
 
@@ -7051,12 +6189,6 @@ coot::util::gln_asn_b_factor_outliers(mmdb::Manager *mol) {
    return v;
 }
 
-bool
-coot::compare_atom_specs_user_float_in_pair(const std::pair<coot::atom_spec_t, std::string> &a,
-                                            const std::pair<coot::atom_spec_t, std::string> &b) {
-
-   return b.first.float_user_data < a.first.float_user_data ? 1 : 0;
-}
 
 bool
 coot::util::residue_has_hydrogens_p(mmdb::Residue *res) {
@@ -7105,39 +6237,6 @@ coot::util::residue_has_hetatms(mmdb::Residue *residue_p) {
 
 
 // angle in radians.
-clipper::Coord_orth
-coot::util::rotate_around_vector(const clipper::Coord_orth &direction,
-                                 const clipper::Coord_orth &position,
-                                 const clipper::Coord_orth &origin_shift,
-                                 double angle) {
-   
-   clipper::Coord_orth unit_vec = clipper::Coord_orth(direction.unit());
-   
-   double l = unit_vec[0];
-   double m = unit_vec[1];
-   double n = unit_vec[2];
-
-   double ll = l*l;
-   double mm = m*m;
-   double nn = n*n;
-   double cosk = cos(angle);
-   double sink = sin(angle);
-   double I_cosk = 1.0 - cosk;
-   
-   // The Rotation matrix angle w about vector with direction cosines l,m,n.
-   // 
-   // ( l**2+(m**2+n**2)cos k     lm(1-cos k)-nsin k        nl(1-cos k)+msin k   )
-   // ( lm(1-cos k)+nsin k        m**2+(l**2+n**2)cos k     mn(1-cos k)-lsin k   )
-   // ( nl(1-cos k)-msin k        mn(1-cos k)+lsin k        n*2+(l**2+m**2)cos k )
-   //
-   // (Amore documentation) Thanks for that pointer EJD :).
-   
-   clipper::Mat33<double> r( ll+(mm+nn)*cosk,    l*m*I_cosk-n*sink,  n*l*I_cosk+m*sink,
-                             l*m*I_cosk+n*sink,  mm+(ll+nn)*cosk,    m*n*I_cosk-l*sink,
-                             n*l*I_cosk-m*sink,  m*n*I_cosk+l*sink,  nn+(ll+mm)*cosk );
-   clipper::RTop_orth rtop(r, clipper::Coord_orth(0,0,0));
-   return origin_shift + (position-origin_shift).transform(rtop);
-}
 
 
 // angle in radians
@@ -7187,27 +6286,6 @@ coot::util::rotate_atom_about(const clipper::Coord_orth &direction,
 
 
 
-std::string
-coot::util::cis_peptide_info_t::string() const {
-
-   std::string s;
-   s += chain_id_1;
-   s += " ";
-   s += int_to_string(resno_1);
-   if (! ins_code_1.empty()) { 
-      s += " ";
-      s += ins_code_1;
-   }
-   s += " - ";
-   s += chain_id_2;
-   s += " ";
-   s += int_to_string(resno_2);
-   if (! ins_code_2.empty()) { 
-      s += " ";
-      s += ins_code_2;
-   }
-   return s;
-}
 
 void
 coot::util::standardize_peptide_C_N_distances(const std::vector<std::pair<mmdb::Atom *, mmdb::Atom *> > &C_N_pairs) {
@@ -8812,24 +7890,6 @@ coot::util::residue_orientation(mmdb::Residue *residue_p, const clipper::Mat33<d
 
 
 // 
-clipper::Coord_orth
-coot::util::average_position(std::vector<clipper::Coord_orth> &pts) {
-   
-   if (pts.size() > 0) {
-      double xsum = 0.0;
-      double ysum = 0.0;
-      double zsum = 0.0;
-      for (unsigned int i=0; i<pts.size(); i++) { 
-         xsum += pts[i].x();
-         ysum += pts[i].y();
-         zsum += pts[i].z();
-      }
-      double denom=1.0/double(pts.size());
-      return clipper::Coord_orth(denom*xsum, denom*ysum, denom*zsum);
-   } else {
-      return clipper::Coord_orth(0,0,0);
-   }
-}
 
 clipper::Coord_orth
 coot::util::average_position(mmdb::Residue *residue_p) {
@@ -8857,19 +7917,6 @@ coot::util::average_position(mmdb::Residue *residue_p) {
 
 // caller must check that others has some points in it.
 // 
-double
-coot::util::min_dist_to_points(const clipper::Coord_orth &pt,
-                               const std::vector<clipper::Coord_orth> &others) {
-
-   double best_dist = 9999999.9;
-   for (unsigned int i=0; i<others.size(); i++) {
-      double d = (pt - others[i]).lengthsq();
-      if (d<best_dist) {
-         best_dist = d;
-      }
-   }
-   return sqrt(best_dist);
-}
 
 
 // Return the fractional shift needed to translate the protein
@@ -8896,62 +7943,12 @@ coot::util::shift_to_origin(mmdb::Manager *mol) {
    return rf;
 }
 
-clipper::Coord_frac
-coot::util::shift_to_origin(const std::vector<clipper::Coord_orth> &protein_coords,
-                            clipper::Cell cell,
-                            clipper::Spacegroup spacegroup) {
 
-   clipper::Coord_orth median_pos = median_position(protein_coords);
-   clipper::Coord_frac mpf = median_pos.coord_frac(cell);
-   clipper::Coord_frac rf (round(-mpf.u()), round(-mpf.v()), round(-mpf.w()));
-   return rf;
-}
-
-bool
-coot::util::is_000_shift(const clipper::Coord_frac &cf_shift) {
-
-   // This is for testing the results of the above function
-
-   if (std::abs(cf_shift.u()) > 0.1) {
-      return false;
-   } else {
-      if (std::abs(cf_shift.v()) > 0.1) {
-         return false;
-      } else {
-         if (std::abs(cf_shift.w()) > 0.1) {
-            return false;
-         }
-      }
-   }
-   return true;
-}
 
 
 
 // Can throw a std::runtime_error
 // 
-clipper::Coord_orth
-coot::util::median_position(const std::vector<clipper::Coord_orth> &pts) {
-
-   if (pts.size() == 0 ) {
-      std::string message = "No atoms in molecule - no mediain position";
-      throw std::runtime_error(message);
-   }
-   
-   std::vector<float> pts_x;
-   std::vector<float> pts_y;
-   std::vector<float> pts_z;
-   for (unsigned int i=0; i<pts.size(); i++) {
-      pts_x.push_back(pts[i].x());
-      pts_y.push_back(pts[i].y());
-      pts_z.push_back(pts[i].z());
-   }
-   std::sort(pts_x.begin(), pts_x.end());
-   std::sort(pts_y.begin(), pts_y.end());
-   std::sort(pts_z.begin(), pts_z.end());
-   unsigned int mid_index = pts_x.size()/2;
-   return clipper::Coord_orth(pts_x[mid_index], pts_y[mid_index], pts_z[mid_index]);
-}
 
 
 
@@ -9010,14 +8007,6 @@ coot::util::median_position(mmdb::Manager *mol) {
 
 
 //
-clipper::Coord_orth
-coot::util::translate_close_to_origin(const clipper::Coord_orth pos,
-                                      const clipper::Cell &cell) {
-
-   clipper::Coord_frac cf = pos.coord_frac(cell);
-   clipper::Coord_frac cfi(round(-cf.u()), round(-cf.v()), round(-cf.w()));
-   return pos + cfi.coord_orth(cell);
-} 
 
 void
 coot::util::print_secondary_structure_info(mmdb::Model *model_p) {
@@ -9500,13 +8489,6 @@ coot::position_residue_by_internal_coordinates::position_residue_by_internal_coo
 // return success status (0 = fail)
 //
 // 
-bool 
-coot::position_residue_by_internal_coordinates::move_moving_residue() {
-
-   bool status = 0;
-
-   return status;
-} 
 
 // return NULL on atom not found (res_1 and res_2 are guarenteed to be non-null)
 mmdb::Atom *
@@ -10211,6 +9193,24 @@ coot::util::split_multi_model_molecule(mmdb::Manager *mol) {
 
    std::vector<mmdb::Manager *> v;
 
+   // Per-model UDData is registered on the source Manager and is not carried
+   // across by mmdb's Model::Copy() (nor by Manager::Copy(MMDBFCM_All)), and the
+   // mmdb UDData registry cannot be enumerated through its public API. So we
+   // explicitly preserve the model-level (UDR_MODEL) real UDData fields that Coot
+   // registers - currently the AutoDock Vina scores written by pdbqt::read() -
+   // using only public mmdb calls. Add to this list when new UDR_MODEL fields are
+   // introduced.
+   static const std::vector<std::string> model_udd_real_names = {
+      "vina_affinity", "vina_rmsd_lb", "vina_rmsd_ub",
+      "vina_inter", "vina_intra", "vina_unbound"
+   };
+   std::vector<std::pair<std::string, int> > src_udd; // (name, source handle)
+   for (unsigned int i=0; i<model_udd_real_names.size(); i++) {
+      int h = mol->GetUDDHandle(mmdb::UDR_MODEL, model_udd_real_names[i].c_str());
+      if (h > 0)
+         src_udd.push_back(std::make_pair(model_udd_real_names[i], h));
+   }
+
    for(int imod = 1; imod<=mol->GetNumberOfModels(); imod++) {
       mmdb::Model *model_p = mol->GetModel(imod);
       if (model_p) {
@@ -10218,6 +9218,14 @@ coot::util::split_multi_model_molecule(mmdb::Manager *mol) {
          mmdb::Manager *new_mol = new mmdb::Manager;
          new_model->Copy(model_p);
          new_mol->AddModel(new_model);
+         // carry over the registered model-level UDData for this model
+         for (unsigned int i=0; i<src_udd.size(); i++) {
+            mmdb::realtype val;
+            if (model_p->GetUDData(src_udd[i].second, val) == mmdb::UDDATA_Ok) {
+               int new_h = new_mol->RegisterUDReal(mmdb::UDR_MODEL, src_udd[i].first.c_str());
+               new_model->PutUDData(new_h, val);
+            }
+         }
          v.push_back(new_mol);
       }
    }
@@ -10302,6 +9310,7 @@ coot::util::delete_all_carbohydrate(mmdb::Manager *mol) {
          delete r;
       }
       deleted = true;
+      mol->FinishStructEdit();
    }
    return deleted;
 }

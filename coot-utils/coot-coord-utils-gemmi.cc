@@ -19,6 +19,8 @@
  * 02110-1301, USA
  */
 
+#ifdef USE_GEMMI
+
 #include <cmath>
 #include <algorithm>
 #include <stdexcept>
@@ -130,6 +132,17 @@ coot::util::is_nucleotide(const gemmi::Residue &r) {
        rn == "Ad" || rn == "Cd" || rn == "Gd" || rn == "Td")
       return 1;
    return 0;
+}
+
+// gemmi twin of the mmdb nucleotide_is_DNA: DNA has deoxyribose, i.e. no O2'.
+// NB gemmi atom names are unpadded - test "O2'"/"O2*", not mmdb's " O2'"/" O2*".
+bool
+coot::util::nucleotide_is_DNA(const gemmi::Residue &r) {
+   for (const auto &at : r.atoms) {
+      if (at.name == "O2'") return false;  // RNA (has 2'-OH)
+      if (at.name == "O2*") return false;  // old PDB nomenclature
+   }
+   return true;
 }
 
 bool
@@ -635,3 +648,5 @@ coot::util::count_cis_peptides(const gemmi::Structure &st) {
    }
    return n_cis;
 }
+
+#endif // USE_GEMMI

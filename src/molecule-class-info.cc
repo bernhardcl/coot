@@ -1096,6 +1096,9 @@ molecule_class_info_t::get_bond_colour_basic(int colour_index, bool against_a_da
       case GREEN_BOND:
          col = coot::colour_t (0.0, 0.7, 0.0);
          break;
+      case GREEN_BUT_SLIGHTLY_BLUE_BOND:
+         col = coot::colour_t (0.0, 0.7, 0.4);
+         break;
       case BLUE_BOND:
          col = coot::colour_t (0.2, 0.2, 0.8);
          break;
@@ -1217,6 +1220,9 @@ molecule_class_info_t::get_bond_colour_by_mol_no(int colour_index, bool against_
             case GREEN_BOND:
                rgb[0] = 0.2; rgb[1] =  0.9; rgb[2] =  0.2;
                break;
+            case GREEN_BUT_SLIGHTLY_BLUE_BOND:
+               rgb[0] = 0.2; rgb[1] =  0.7; rgb[2] =  0.4;
+               break;
             case GREY_BOND:
                rgb[0] = 0.6; rgb[1] =  0.6; rgb[2] =  0.6;
                break;
@@ -1285,6 +1291,9 @@ molecule_class_info_t::get_bond_colour_by_mol_no(int colour_index, bool against_
                break;
             case GREEN_BOND:
                rgb[0] = 0.05; rgb[1] =  0.6; rgb[2] =  0.05;
+               break;
+            case GREEN_BUT_SLIGHTLY_BLUE_BOND:
+               rgb[0] = 0.05; rgb[1] =  0.55; rgb[2] =  0.15;
                break;
             case GREY_BOND:
                rgb[0] = 0.5; rgb[1] =  0.5; rgb[2] =  0.5;
@@ -1539,7 +1548,7 @@ molecule_class_info_t::update_symmetry() {
    // a bit of a hack...
    int shift_search_size = g.symmetry_shift_search_size;
 
-   // std::cout << "DEBUG:: ---- update_symmetry start ----- " << std::endl;
+   // std::cout << "DEBUG:: ---- mci::update_symmetry start ----- " << std::endl;
 
    if ((graphics_info_t::show_symmetry == 1) && (show_symmetry == 1)) {
 
@@ -1555,7 +1564,7 @@ molecule_class_info_t::update_symmetry() {
          std::vector<std::pair<symm_trans_t, Cell_Translation> > symm_trans_boxes =
             extents.which_boxes(point, atom_sel, shift_search_size);
 
-         if (false)  {
+         if (false) {
             std::cout << "DEBUG:: imol_no " << imol_no << " symm_trans_boxes.size() is "
                       << symm_trans_boxes.size() << std::endl;
             std::cout << "Here are the symms we should check:" << std::endl;
@@ -1606,8 +1615,9 @@ molecule_class_info_t::update_symmetry() {
          }
 
          if (false) // come back and debug crystallographic strict NCS one day!
-            std::cout << "Here in imol " << imol_no << " with show_strict_ncs_flag " << show_strict_ncs_flag
-                      << " and  strict_ncs_matrices size " << strict_ncs_matrices.size() << std::endl;
+            std::cout << "Here in imol " << imol_no << " with show_strict_ncs_flag "
+                      << show_strict_ncs_flag << " and  strict_ncs_matrices size "
+                      << strict_ncs_matrices.size() << std::endl;
          if (show_strict_ncs_flag == 1) {
             if (! strict_ncs_matrices.empty()) {
                update_strict_ncs_symmetry(point, extents);
@@ -1879,6 +1889,11 @@ molecule_class_info_t::set_symm_bond_colour_mol(int icol) {
                     combine_colour(0.8,1),
                     combine_colour(0.1,2));
          break;
+      case GREEN_BUT_SLIGHTLY_BLUE_BOND:
+         glColor3f (combine_colour(0.1,0),
+                    combine_colour(0.7,1),
+                    combine_colour(0.2,2));
+         break;
       case BLUE_BOND:
          glColor3f (combine_colour(0.2,0),
                     combine_colour(0.2,1),
@@ -1935,6 +1950,13 @@ molecule_class_info_t::set_symm_bond_colour_mol_rotate_colour_map(int icol, int 
       t_colours[0] = combine_colour(0.1, 0);
       t_colours[1] = combine_colour(0.8, 1);
       t_colours[2] = combine_colour(0.1, 2);
+      rgb_new = rotate_rgb(t_colours, rotation_size);
+      glColor3f (rgb_new[0], rgb_new[1], rgb_new[2]);
+      break;
+   case GREEN_BUT_SLIGHTLY_BLUE_BOND:
+      t_colours[0] = combine_colour(0.1, 0);
+      t_colours[1] = combine_colour(0.7, 1);
+      t_colours[2] = combine_colour(0.2, 2);
       rgb_new = rotate_rgb(t_colours, rotation_size);
       glColor3f (rgb_new[0], rgb_new[1], rgb_new[2]);
       break;
@@ -4518,15 +4540,23 @@ molecule_class_info_t::make_glsl_symmetry_bonds() {
       return new_colour_table;
    };
 
+   auto make_symmetry_colour_table = [] (const std::vector<glm::vec4> &colour_table,
+                                         const glm::vec4 &symm_col,
+                                         double merge_weight) {
+
+      std::vector<glm::vec4> new_colour_table = colour_table;
+      double r = 1.0 - merge_weight;
+      for (unsigned int i=0; i<colour_table.size(); i++) {
+         for (unsigned int j=0; j<4; j++) {
+            new_colour_table[i][j] = colour_table[i][j] * r + symm_col[j] * merge_weight;
+         }
+      }
+      return new_colour_table;
+   };
+
    // do things with symmetry_bonds_box;
    // std::vector<std::pair<graphical_bonds_container, std::pair<symm_trans_t, Cell_Translation> > > symmetry_bonds_box;
    graphics_info_t::attach_buffers();
-
-#if 0
-   mesh_for_symmetry_atoms.make_symmetry_atoms_bond_lines(symmetry_bonds_box, // boxes
-                                                          graphics_info_t::symmetry_colour,
-                                                          graphics_info_t::symmetry_colour_merge_weight);
-#endif
 
    float atom_radius = 0.1;
    float bond_radius = 0.1;
@@ -4535,7 +4565,13 @@ molecule_class_info_t::make_glsl_symmetry_bonds() {
    int n_stacks = 2;
    std::vector<glm::vec4> colour_table = make_colour_table();
 
-   std::vector<glm::vec4> new_colour_table = pastelize_colour_table(colour_table);
+   // 20260531-PE old. Now let's use the (user-defineable) symmetry colour
+   // std::vector<glm::vec4> new_colour_table = pastelize_colour_table(colour_table);
+
+   std::vector<glm::vec4> new_colour_table =
+      make_symmetry_colour_table(colour_table,
+                                 graphics_info_t::symmetry_colour,
+                                 graphics_info_t::symmetry_colour_merge_weight);
 
    meshes_for_symmetry_atoms.make_symmetry_bonds(imol_no, symmetry_bonds_box,
                                                  atom_radius, bond_radius,
@@ -4900,19 +4936,21 @@ molecule_class_info_t::single_model_view_this_model_number() const {
 
 int
 molecule_class_info_t::single_model_view_prev_model_number() {
+   // Model number 0 is the "all models shown" state, which is part of the cycle:
+   // ... -> model 1 -> all -> model n -> model n-1 -> ...
    int model_no = 0;
    if (has_model()) {
       int n = n_models();
       if (n > 1) {
          int prev = single_model_view_current_model_number - 1;
-         if (prev >= 1) {
-            // OK
+         if (prev < 0)
+            prev = n;   // stepping back from "all" shows the last model
+         if (prev == 0) {
+            model_no = 0;   // stepping back from model 1 shows all models
          } else {
-            prev = n;
-         }
-         mmdb::Model *model = atom_sel.mol->GetModel(prev);
-         if (model) {
-            model_no = prev;
+            mmdb::Model *model = atom_sel.mol->GetModel(prev);
+            if (model)
+               model_no = prev;
          }
       }
    }
@@ -4922,19 +4960,21 @@ molecule_class_info_t::single_model_view_prev_model_number() {
 
 int
 molecule_class_info_t::single_model_view_next_model_number() {
+   // Model number 0 is the "all models shown" state, which is part of the cycle:
+   // ... -> model n-1 -> model n -> all -> model 1 -> ...
    int model_no = 0;
    if (has_model()) {
       int n = n_models();
       if (n > 1) {
          int next = single_model_view_current_model_number + 1;
-         if (next <= n) {
-            // OK
+         if (next > n)
+            next = 0;   // stepping past the last model shows all models
+         if (next == 0) {
+            model_no = 0;   // all models
          } else {
-            next = 1;
-         }
-         mmdb::Model *model = atom_sel.mol->GetModel(next);
-         if (model) {
-            model_no = next;
+            mmdb::Model *model = atom_sel.mol->GetModel(next);
+            if (model)
+               model_no = next;
          }
       }
    }
@@ -7039,8 +7079,10 @@ molecule_class_info_t::close_yourself() {
       // delete [] diff_map_draw_vectors;
       // diff_map_draw_vectors = NULL;
 
-      clipper::Xmap<float> empty;
-      xmap = empty; // clear xmap
+      std::cout << ":::::::::::::::::::::::::::: was_xmap() replacing with empty  ====================="
+                << std::endl;
+
+      xmap = clipper::Xmap<float>(); // clear xmap
    }
 
    if (was_nxmap) {
@@ -7053,8 +7095,7 @@ molecule_class_info_t::close_yourself() {
 
       // delete [] diff_map_draw_vectors;
       // diff_map_draw_vectors = NULL;
-      clipper::NXmap<float> empty;
-      nxmap = empty; // clear nxmap
+      nxmap = clipper::NXmap<float>(); // clear nxmap
    }
 
    bonds_box.clear_up();
@@ -8329,14 +8370,16 @@ molecule_class_info_t::get_save_molecule_filename(const std::string &dir) {
    graphics_info_t g;
    bool decolonify = g.decoloned_backup_file_names_flag;
    std::string t_name_1 = name_;
-   if (g.unpathed_backup_file_names_flag)
+   if (decolonify)
       t_name_1 = name_for_display_manager();
    std::string t_name_2 = replace_char(t_name_1, '/');
    std::string t_name_3 = replace_char(t_name_2, ' ');
+   std::string t_name_4 = replace_char(t_name_3, '(');
+   std::string t_name_5 = replace_char(t_name_4, ')');
 #ifdef WINDOWS_MINGW
    std::string t_name_x = replace_char(t_name_3, '\\');
    std::string t_name_y = replace_char(t_name_x, ':');
-   t_name_3 = t_name_y;
+   t_name_5 = t_name_y;
 #endif
 
    if (save_time_string.empty()) {
@@ -8355,10 +8398,10 @@ molecule_class_info_t::get_save_molecule_filename(const std::string &dir) {
          save_time_string = replace_char(save_time_string, ':');
    }
    std::string time_string = save_time_string;
-   std::string t_name_4 = t_name_3 + "_" + time_string;
+   std::string t_name_6 = t_name_5 + "_" + time_string;
 
    std::string index_string = coot::util::int_to_string(history_index);
-   std::string t_name_5 = t_name_4 + "_modification_" + index_string;
+   std::string t_name_7 = t_name_6 + "_modification_" + index_string;
 
    std::string extension = ".pdb";
    if (coot::is_mmcif_filename(name_))
@@ -8368,9 +8411,9 @@ molecule_class_info_t::get_save_molecule_filename(const std::string &dir) {
    if (g.backup_compress_files_flag)
       extension += ".gz";
 
-   std::string t_name_6 = t_name_5 + extension;
+   std::string t_name_8 = t_name_7 + extension;
 
-   std::string save_file_name = coot::util::append_dir_file(dir, t_name_6);
+   std::string save_file_name = coot::util::append_dir_file(dir, t_name_8);
    return save_file_name;
 
 }
