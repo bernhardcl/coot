@@ -25,6 +25,7 @@
  */
 
 #include <cstddef>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <gtk/gtk.h>
@@ -1285,6 +1286,12 @@ startup_application_activate(GtkApplication *application,
             std::filesystem::path state_py = state_home / "0-coot.state.py";
             if (std::filesystem::exists(state_py)) {
                show_first_startup_dialog = false;
+            } else {
+               std::filesystem::path pref_py = xdg.get_config_home() / "Preferences" / "coot_preferences.py";
+               if (std::filesystem::exists(pref_py)) {
+                  // we already have preferences, so we skip the question for mouse button
+                  show_first_startup_dialog = false;
+               }
             }
          }
          if (show_first_startup_dialog) {

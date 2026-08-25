@@ -3447,7 +3447,7 @@ on_renumber_residues_molecule_combobox_changed(GtkComboBox     *combobox,
    // This chaged signal is attached to the combobox items in new_fill_combobox_with_coordinates_options().
    // We could do it here, I suppose, attached the the combobox, but renumber_residue_range is from old code
    // and it seems to work.
-   
+
 }
 
 extern "C" G_MODULE_EXPORT
@@ -5322,7 +5322,7 @@ on_single_map_properties_contour_level_apply_button_clicked(GtkButton       *app
          std::cout << "Failed to interpret " << t << std::endl;
       }
    }
-   
+
 }
 
 extern "C" G_MODULE_EXPORT
@@ -5330,7 +5330,7 @@ void
 on_display_map_style_as_lines_radiobutton_toggled(GtkCheckButton *checkbutton,
                                                   gpointer        user_data) {
 
-   
+
    int imol = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(checkbutton), "imol"));
    std::cout << "on_display_map_style_as_lines_radiobutton_toggled() imol " << imol << std::endl;
    if (gtk_check_button_get_active(checkbutton)) {
@@ -5619,7 +5619,7 @@ on_add_reps_dialog_response(GtkDialog       *dialog,
 
 }
 
-// 
+//
 extern "C" G_MODULE_EXPORT
 void
 on_add_reps_dialog_close (GtkDialog *dialog,
@@ -5847,7 +5847,7 @@ on_map_partition_by_chain_dialog_response(GtkDialog       *dialog,
 
    // if (response_id == GTK_RESPONSE_CANCEL)
    // std::cout << "just close" << std::endl;
-      
+
    gtk_widget_set_visible(GTK_WIDGET(dialog), FALSE);
 
 }
@@ -6239,7 +6239,7 @@ on_export_map_file_chooser_dialog_response (GtkDialog       *dialog,
                                                                 gint             response_id,
                                                                 gpointer         user_data) {
 
-   if (response_id == GTK_RESPONSE_OK) { 
+   if (response_id == GTK_RESPONSE_OK) {
       int imol_map        = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(dialog), "map_molecule_number"));
       int is_map_fragment = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(dialog), "is_map_fragment"));
 
@@ -6258,13 +6258,13 @@ on_export_map_file_chooser_dialog_response (GtkDialog       *dialog,
                std::cout << "ERROR:: entry_text is null " << std::endl;
             }
             export_map_fragment_with_text_radius(imol_map, entry_text, file_name);
-            
+
          } else {
             export_map(imol_map, file_name);
          }
       }
    }
-   
+
    gtk_widget_set_visible(GTK_WIDGET(dialog), FALSE);
 }
 
@@ -7158,6 +7158,7 @@ on_first_startup_use_left_button_clicked(GtkButton       *button,
 
    coot_preferences.set_preference("use_trackpad", true);
    save_preferences(); // persist the choice immediately
+   update_preference_gui();
 }
 
 extern "C" G_MODULE_EXPORT
@@ -7170,6 +7171,7 @@ on_first_startup_use_right_button_clicked(GtkButton       *button,
 
    coot_preferences.set_preference("use_trackpad", false);
    save_preferences(); // persist the choice immediately
+   update_preference_gui();
 }
 
 extern "C" G_MODULE_EXPORT
