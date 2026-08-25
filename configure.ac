@@ -505,6 +505,7 @@ else
         for d in lib64 lib ; do
             if test -f "$with_gemmi/$d/libgemmi_cpp.so" || \
                test -f "$with_gemmi/$d/libgemmi_cpp.a" || \
+               test -f "$with_gemmi/$d/libgemmi_cpp.dll.a" || \
                test -f "$with_gemmi/$d/libgemmi_cpp.dylib" ; then
                 gemmi_libdir="$with_gemmi/$d"
                 break

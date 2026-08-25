@@ -1,6 +1,6 @@
 #!/bin/bash
 tmp_v1=`grep AC_INIT configure.ac`
-tmp_v2=`grep '<property name="version">' ui/coot-gtk4.ui`
+tmp_v2=`grep '<property name="version">' ui/coot.ui`
 ver1=$(echo "$tmp_v1" | tr -cd '[:digit:].')
 ver2=$(echo "$tmp_v2" | tr -cd '[:digit:].')
 echo version configure $ver1

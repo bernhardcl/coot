@@ -1080,6 +1080,10 @@ startup_application_activate(GtkApplication *application,
       // context and orphaned every mesh's VAO - crashing the HUD instanced draws.
 #ifdef HAVE_VTE
       setup_python_vte_terminal();
+#else
+      // we want to disable the AI button in the in main window
+      GtkWidget *ai_button = widget_from_builder("claude_ai_button", builder);
+      gtk_widget_set_sensitive(ai_button, false);
 #endif
 
       gtk_window_present(GTK_WINDOW(app_window));
