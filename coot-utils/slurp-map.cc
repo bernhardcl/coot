@@ -22,6 +22,9 @@
 #include <system_error>
 #include <chrono>
 #include <zlib.h>
+#include <cstring>
+#include <algorithm>
+#include <cerrno>
 
 #include "utils/coot-utils.hh"
 #include "slurp-map.hh"
@@ -96,12 +99,18 @@ coot::util::slurp_fill_xmap_from_map_file(const std::string &file_name,
       int fstat = stat(file_name.c_str(), &s);
       if (fstat == 0) {
          gzFile file = gzopen(file_name.c_str(), "rb");
+         if (! file) {
+            std::cout<<"WARNING::gzopen failed for " << file_name <<std::endl;
+            return slurp_map_result_t::FAIL;
+         }
          int z_status = Z_OK;
          voidp_buffer_t buff(4);
          size_t read_pos = 0;
+         const unsigned int max_chunk = 64u * 1024u * 1024u; // 64MB per call, safely under any int/uint limit
          while (! gzeof(file)) {
             size_t space_remaining = buff.size() - read_pos;
-            int bytes_read = gzread(file, (char *)buff.get() + read_pos, space_remaining);
+            unsigned int this_chunk = static_cast<unsigned int>(std::min(space_remaining, static_cast<size_t>(max_chunk)));
+            int bytes_read = gzread(file, (char *)buff.get() + read_pos, this_chunk);
             const char *error_message = gzerror(file, &z_status);
             if ((bytes_read == -1) || z_status != Z_OK) {
                std::cout << "WARNING:: gz read error for " << file_name << " "
@@ -145,6 +154,10 @@ coot::util::slurp_fill_xmap_from_map_file(const std::string &file_name,
          int fstat = stat(file_name.c_str(), &s);
          if (fstat == 0) {
             FILE *fptr = fopen(file_name.c_str(), "rb");
+            if (! fptr) {
+               std::cout << "WARNING:: failed to open " << file_name << " " << std::strerror(errno) << std::endl;
+               return slurp_map_result_t::FAIL;   // or status
+            }
             off_t st_size = s.st_size;
             // std::cout << "st_size: " << st_size << std::endl;
             try {
@@ -404,14 +417,14 @@ coot::util::slurp_parse_xmap_data(char *data,
       clipper::Coord_grid cg_1(gs.nu()-1, gs.nv()-1, section_stop-1);
       clipper::Grid_map grid(cg_0, cg_1);
       clipper::Xmap_base::Map_reference_coord ix(*xmap, grid.min()), iu, iv, iw;
-      unsigned int offset = section_start * n_rows * n_cols;
+      std::ptrdiff_t offset = static_cast<std::ptrdiff_t>(section_start) * n_rows * n_cols;
       unsigned int c_u = 0;
       for ( iu = ix; iu.coord().u() <= grid.max().u(); iu.next_u() ) {
          unsigned int c_v = 0;
          for ( iv = iu; iv.coord().v() <= grid.max().v(); iv.next_v() ) {
             unsigned int c_w = 0;
             for ( iw = iv; iw.coord().w() <= grid.max().w(); iw.next_w() ) {
-               unsigned int grid_offset = c_u * gs.nu() * gs.nv() + c_v * gs.nv() + c_w;
+               std::ptrdiff_t grid_offset = static_cast<std::ptrdiff_t>(c_u) * gs.nu() * gs.nv() + static_cast<std::ptrdiff_t>(c_v) * gs.nv() + c_w;
                const float f = *reinterpret_cast<const float *>(map_data + 4 * offset + 4 * grid_offset);
 
                if (true) { // debugging
@@ -443,7 +456,7 @@ coot::util::slurp_parse_xmap_data(char *data,
                                 std::atomic<bool> &print_lock) {
 
 
-                               int offset = start_stop_section_index.first * n_rows * n_cols;
+                               std::ptrdiff_t offset = static_cast<std::ptrdiff_t>(start_stop_section_index.first) * n_rows * n_cols;
                                int crs[3];  // col,row,sec coordinate
                                clipper::Xmap<float>::Map_reference_coord mrc(*xmap);
                                // this is unsigned int because split_indices returns unsigned int pairs.
@@ -506,7 +519,7 @@ coot::util::slurp_parse_xmap_data(char *data,
    if (n_threads < 2) single_thread_slurp = true;
 
    if (single_thread_slurp) {
-      int offset = 0;
+      std::ptrdiff_t offset = 0;
       int crs[3];  // col,row,sec coordinate
       clipper::Xmap<float>::Map_reference_coord mrc(xmap);
       std::cout << "info:: n_sections: " << n_secs  << std::endl;
@@ -692,7 +705,15 @@ coot::util::get_map_labels(const std::string &file_name) {
    int fstat = stat(file_name.c_str(), &s);
    if (fstat == 0) {
       FILE *fptr = fopen(file_name.c_str(), "rb");
+      if (! fptr) {
+         std::cout << "WARNING:: failed to open " << file_name << " " << std::strerror(errno) << std::endl;
+         return v;   // whatever this is, beter status
+      }
       off_t st_size = s.st_size;
+      if (st_size >=1024) {
+         // BL says:: only read the header!?
+         st_size = 1024;
+      }
       std::cout << "get_map_labels(): st_size: " << st_size << std::endl;
       try {
          // 20231006-PE as it used to be.
@@ -703,10 +724,11 @@ coot::util::get_map_labels(const std::string &file_name) {
          fclose(fptr);
          if (st_size_2 == 1) {
             // Happy Path
-            if (st_size > 1024) {
+            if (st_size >= 1024) {
                v = slurp_parse_get_labels(data);
             }
          }
+         delete [] space;
       }
       catch (const std::bad_alloc &e) {
          std::cout << "WARNING:: out-of-memory " << st_size+1 << " " << e.what() << std::endl;
