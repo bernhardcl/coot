@@ -25,6 +25,17 @@
 #include <cstring>
 #include <algorithm>
 #include <cerrno>
+#ifdef WINDOWS_MINGW
+// BL says:: on Windows we need to use this to check filesize reliably.
+#include <filesystem>
+// helper function for reading/recasting so far for windows only - consider generally!?
+template <typename T>
+static inline T read_raw(const char *p) {
+   T v;
+   std::memcpy(&v, p, sizeof(T));
+   return v;
+}
+#endif
 
 #include "utils/coot-utils.hh"
 #include "slurp-map.hh"
@@ -158,7 +169,20 @@ coot::util::slurp_fill_xmap_from_map_file(const std::string &file_name,
                std::cout << "WARNING:: failed to open " << file_name << " " << std::strerror(errno) << std::endl;
                return slurp_map_result_t::FAIL;   // or status
             }
+#if !defined WINDOWS_MINGW
             off_t st_size = s.st_size;
+#else
+            // BL says:: st_size is not working reliably on windows esp for large files
+            // so replace with filesystem file size check; could be a general change
+            std::error_code size_error;
+            auto st_size = std::filesystem::file_size(file_name, size_error);
+            if (size_error) {
+               // should bail here?!
+               std::cerr << "BL INFO:: Error getting file size: " << size_error.message() << std::endl;
+               fclose(fptr);
+               return slurp_map_result_t::FAIL; // FAIL
+            }
+#endif
             // std::cout << "st_size: " << st_size << std::endl;
             try {
                // 20231006-PE as it used to be.
@@ -425,7 +449,11 @@ coot::util::slurp_parse_xmap_data(char *data,
             unsigned int c_w = 0;
             for ( iw = iv; iw.coord().w() <= grid.max().w(); iw.next_w() ) {
                std::ptrdiff_t grid_offset = static_cast<std::ptrdiff_t>(c_u) * gs.nu() * gs.nv() + static_cast<std::ptrdiff_t>(c_v) * gs.nv() + c_w;
+#if !defined WINDOWS_MINGW
                const float f = *reinterpret_cast<const float *>(map_data + 4 * offset + 4 * grid_offset);
+#else
+               const float f = read_raw<float>(map_data + 4 * offset + 4 * grid_offset);
+#endif
 
                if (true) { // debugging
                   bool unlocked = false;
@@ -485,7 +513,14 @@ coot::util::slurp_parse_xmap_data(char *data,
                                                                           crs[axis_order_xyz[1]],
                                                                           crs[axis_order_xyz[2]]));
                                         if (data_size == 4) { // typical floating point data
+                                          // BL (and Claude) says: recasting may cause issues here esp if not compiled using
+                                          // -fno-strict-aliasing flag. Therefore we use memcpy (via helper function read_raw)
+                                          // to recast without allowing the optimiser to mess it up.
+#if !defined WINDOWS_MINGW
                                            float f = *reinterpret_cast<const float *>(map_data + 4 * offset);
+#else
+                                           float f = read_raw<float>(map_data + 4 * offset);
+#endif
                                            if (f >  10000) f = 0;
                                            if (f < -10000) f = 0;
                                            (*xmap)[mrc] = f;
@@ -530,7 +565,11 @@ coot::util::slurp_parse_xmap_data(char *data,
             for ( int icol = 0; icol < n_cols; icol++ ) {
                crs[0] = icol + nx_start;
                mrc.set_coord( clipper::Coord_grid( crs[axis_order_xyz[0]], crs[axis_order_xyz[1]], crs[axis_order_xyz[2]] ) );
+#if !defined WINDOWS_MINGW
                float f = *reinterpret_cast<float *>(map_data + 4 * offset);
+#else
+               float f = read_raw<float>(map_data + 4 * offset);
+#endif
                if (f >  10000) f = 0;
                if (f < -10000) f = 0;
                xmap[mrc] = f;
@@ -540,7 +579,12 @@ coot::util::slurp_parse_xmap_data(char *data,
       }
       status = slurp_map_result_t::OK;
    } else {
+#if !defined WINDOWS_MINGW
       std::vector<std::pair<unsigned int, unsigned int> > airs = atom_index_ranges(n_secs, n_threads);
+#else
+      // using a simpler version to get the ranges (maybe universially usable)
+      std::vector<std::pair<unsigned int, unsigned int> > airs = atom_index_ranges_mod(n_secs, n_threads);
+#endif
       std::vector<std::thread> threads;
       std::atomic<bool> print_lock(false);
       try {

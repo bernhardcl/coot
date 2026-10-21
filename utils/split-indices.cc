@@ -135,3 +135,31 @@ coot::atom_index_ranges(unsigned int n_atoms, unsigned int n_threads) {
    return v;
 
 }
+
+// BL says:: above seems to have issues in overlapping ranges and borders.
+// My french friend suggested this version based on standard, robust ceiling-division splitting
+// maybe should replace above in general.
+// not sure if there are issues elsewhere, so I only replace it in slurp_map.cc (and windows)
+// for now.
+std::vector<std::pair<unsigned int, unsigned int> >
+coot::atom_index_ranges_mod(unsigned int n_atoms, unsigned int n_threads) {
+
+   std::vector<std::pair<unsigned int, unsigned int> > v;
+
+   if (n_threads == 0) n_threads = 1;
+   if (n_threads > n_atoms) n_threads = n_atoms;  // don't create empty/degenerate ranges
+   if (n_atoms == 0) return v;
+
+   unsigned int base = n_atoms / n_threads;
+   unsigned int remainder = n_atoms % n_threads;
+
+   unsigned int start = 0;
+   for (unsigned int i = 0; i < n_threads; i++) {
+      unsigned int chunk = base + (i < remainder ? 1 : 0);  // distribute remainder across first threads
+      unsigned int stop = start + chunk;
+      v.push_back({start, stop});
+      start = stop;
+   }
+
+   return v;
+}

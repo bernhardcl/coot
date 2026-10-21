@@ -32,5 +32,7 @@ namespace coot {
 
    std::vector<std::pair<unsigned int, unsigned int> >
    atom_index_ranges(unsigned int n_atoms, unsigned int n_threads);
+   std::vector<std::pair<unsigned int, unsigned int> >
+   atom_index_ranges_mod(unsigned int n_atoms, unsigned int n_threads);
 
 }
