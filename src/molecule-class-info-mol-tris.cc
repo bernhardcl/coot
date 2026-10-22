@@ -165,7 +165,7 @@ molecule_class_info_t::add_molecular_representation(const std::string &atom_sele
       // depend on coot-utils), so resolve the helix reference template's absolute path
       // here instead - otherwise it only works when coot happens to be run from a
       // directory that happens to contain theor-helix-z-ori-v2.pdb.
-      std::string helix_template_pdb_file_name = std::filesystem::path(coot::package_data_dir()) / "theor-helix-z-ori-v2.pdb";
+      std::string helix_template_pdb_file_name = (std::filesystem::path(coot::package_data_dir()) / "theor-helix-z-ori-v2.pdb").string();
 
       coot::m2t::simple_mesh_t tubes_mesh =
          make_tubes_representation(atom_sel.mol, atom_selection, colour_scheme, radius_for_coil, Cn_for_coil,

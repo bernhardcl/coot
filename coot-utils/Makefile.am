@@ -140,7 +140,7 @@ libcoot_coord_extras_la_LIBADD = \
    $(top_builddir)/geometry/libcoot-geometry.la \
    $(top_builddir)/mini-mol/libcoot-mini-mol.la \
    $(top_builddir)/utils/libcoot-utils.la \
-   $(CLIPPER_LIBS)
+   $(CLIPPER_LIBS) $(RDKIT_LIBS)
 
 libcoot_coord_extras_la_LDFLAGS = $(SHARED_LDFLAGS)
 
@@ -174,6 +174,7 @@ libcoot_map_heavy_la_SOURCES = coot-map-heavy.cc coot-fffear.cc spherical-harmon
 libcoot_map_heavy_la_LIBADD = \
    libcoot-map-utils.la \
    libcoot-coord-utils.la \
+   $(top_builddir)/geometry/libcoot-geometry.la \
    $(top_builddir)/lidia-core/libcoot-lidia-core.la \
    $(top_builddir)/mini-mol/libcoot-mini-mol.la \
    $(top_builddir)/utils/libcoot-utils.la \

@@ -137,7 +137,8 @@ pyrogen_boost_la_LIBADD = libcoot_py_restraints.la \
                                 $(top_builddir)/geometry/libcoot-geometry.la       \
                                 $(top_builddir)/coords/libcoot-coords.la           \
 			        $(top_builddir)/lidia-core/libcoot-lidia-core.la   \
-                                $(MMDB_LIBS) $(RDKIT_LIBS) $(L_BOOST_PYTHON)
+                                $(MMDB_LIBS) $(RDKIT_LIBS) $(L_BOOST_PYTHON)	   \
+				$(PYTHON_LIBS)
 
 libpyrogen_boost_la_LIBDFLAGS = -no-undefined
 

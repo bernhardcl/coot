@@ -974,7 +974,7 @@ libcootsumo_la_LIBADD = $(OPENMP_CFLAGS) \
 		$(openal_LIBS)        \
 		$(SHARED_LDFLAGS)     \
 		$(COOT_WINDOWS_LDFLAGS)     \
-		-lpthread
+		-lz -lpthread
 
 # make freetype a configure variable FREETYPE_LIBS
 

@@ -55,8 +55,9 @@ libcoot_pli_la_LIBADD = $(top_builddir)/coot-utils/libcoot-coord-utils.la  \
 			$(top_builddir)/coot-utils/libcoot-coord-extras.la \
                         $(top_builddir)/geometry/libcoot-geometry.la       \
                         $(top_builddir)/lidia-core/libcoot-lidia-core.la   \
+			$(top_builddir)/utils/libcoot-utils.la \
                         $(CLIPPER_LIBS) $(MMDB_LIBS)                       \
-                        $(RDKIT_LIBS) $(BOOST_LDFLAGS)
+                        $(RDKIT_LIBS) $(BOOST_LDFLAGS) $(gsl_LIBS)
 
 libcoot_pli_la_LDFLAGS = $(SHARED_LDFLAGS)
 

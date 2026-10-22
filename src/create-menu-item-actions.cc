@@ -4267,7 +4267,7 @@ vertical_toolbar_style_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    int style = 0; // icons and labels
    if (s == "labels") style = 1;
    if (s == "icons")  style = 2;
-   set_vertical_toolbar_style(style); // sets the state of this action also
+   //set_vertical_toolbar_style(style); // sets the state of this action also
    save_preferences();                // persist the choice immediately
    graphics_info_t::graphics_grab_focus();
 }

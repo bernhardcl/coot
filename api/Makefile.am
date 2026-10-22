@@ -95,7 +95,7 @@ libcoot_api_la_LDFLAGS = $(SHARED_LDFLAGS)            \
    $(top_builddir)/mini-mol/libcoot-mini-mol.la       \
    $(top_builddir)/coords/libcoot-coords.la	      \
    $(top_builddir)/utils/libcoot-utils.la             \
-   $(CLIPPER_LIBS) $(LIBSSM_LIBS) $(MMDB_LIBS) $(SQLITE3_LIBS) $(gsl_LIBS) $(RDKIT_LIBS) $(CAIRO_LIBS) -lpthread
+   $(CLIPPER_LIBS) $(LIBSSM_LIBS) $(MMDB_LIBS) $(SQLITE3_LIBS) $(gsl_LIBS) $(RDKIT_LIBS) $(CAIRO_LIBS) $(GEMMI_LIBS) -lpthread
 
 check_PROGRAMS = test-molecules-container
 
