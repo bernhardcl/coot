@@ -1025,8 +1025,9 @@ coot::protein_geometry::pdbe_chem_comp_atom_depiction(mmdb::mmcif::PLoop mmCIFLo
          int idx = get_monomer_restraints_index(comp_id, imol_enc, true);
          if (idx >= 0) {
             dict_res_restraints[idx].second.depiction = d;
-            std::cout << "debug:: pdbe_chem_comp_atom_depiction() added depiction of "
-                      << dav.size() << " atoms " << std::endl;
+            if (false)
+               std::cout << "debug:: pdbe_chem_comp_atom_depiction() added depiction of "
+                         << dav.size() << " atoms " << std::endl;
          }
       }
    }
@@ -1126,7 +1127,8 @@ coot::protein_geometry::gphl_chem_comp_info(mmdb::mmcif::PStruct structure, int 
       int idx_rest = get_monomer_restraints_index(comp_id, imol_enc, true);
       if (idx_rest >= 0) {
          dict_res_restraints[idx_rest].second.gphl_chem_comp_info = gphl_chem_comp_info;
-         std::cout << "debug:: adding a gphl info for " << comp_id << " of size " << gphl_chem_comp_info.info.size() << std::endl;
+         if (false)
+            std::cout << "DEBUG:: adding a gphl info for " << comp_id << " of size " << gphl_chem_comp_info.info.size() << std::endl;
       }
    }
 }
@@ -2417,6 +2419,11 @@ coot::dictionary_residue_restraints_t::write_cif(const std::string &filename) co
       if (n_atoms_with_coords == 0)
          add_coordinates = false;
 
+      // if any atom knows its formal charge, write the charge column (for the whole loop)
+      bool have_formal_charges = false;
+      for (const auto &ai : atom_info)
+         if (ai.formal_charge.first) { have_formal_charges = true; break; }
+
       if (atom_info.size()) {
          rc = mmCIFData->AddLoop("_chem_comp_atom", mmCIFLoop);
          if (rc == mmdb::mmcif::CIFRC_Ok || rc == mmdb::mmcif::CIFRC_Created) {
@@ -2435,6 +2442,10 @@ coot::dictionary_residue_restraints_t::write_cif(const std::string &filename) co
                // std::cout << "up_type_energy: " << up_type_energy << std::endl;
                ss = up_type_energy.c_str();
                mmCIFLoop->PutString(ss, "type_energy", i);
+               if (have_formal_charges) {
+                  int fc = ai.formal_charge.first ? ai.formal_charge.second : 0;
+                  mmCIFLoop->PutInteger(fc, "charge", i);
+               }
                if (atom_info[i].partial_charge.first) {
                   float v = atom_info[i].partial_charge.second;
                   mmCIFLoop->PutReal(v, "partial_charge", i, 4);
@@ -2464,6 +2475,14 @@ coot::dictionary_residue_restraints_t::write_cif(const std::string &filename) co
             // nuclear_distances_flag means that we only have one distance - and it's the
             // nuclear distance. So we need to "invent" non-nuclear distance for bonds
             // to hydrogen atoms
+
+            // if any bond knows its aromaticity, write the acedrg-style
+            // "aromatic" y/n column (for the whole loop)
+            bool have_aromaticity = false;
+            for (unsigned int i=0; i<bond_restraint.size(); i++)
+               if (bond_restraint[i].aromaticity != dict_bond_restraint_t::UNASSIGNED)
+                  have_aromaticity = true;
+
             for (unsigned int i=0; i<bond_restraint.size(); i++) {
 
                const dict_bond_restraint_t &br = bond_restraint[i];
@@ -2482,9 +2501,25 @@ coot::dictionary_residue_restraints_t::write_cif(const std::string &filename) co
                mmCIFLoop->PutString(id_2.c_str(), "atom_id_2", i);
                std::string bond_type = bond_restraint[i].type();
                mmCIFLoop->PutString(bond_type.c_str(), "type", i);
+               if (have_aromaticity) {
+                  std::string arom = ".";
+                  if (br.aromaticity == dict_bond_restraint_t::AROMATIC)     arom = "y";
+                  if (br.aromaticity == dict_bond_restraint_t::NON_AROMATIC) arom = "n";
+                  mmCIFLoop->PutString(arom.c_str(), "aromatic", i);
+               }
                try {
 
-                  if (nuclear_distances_flag) {
+                  if (nuclear_distances_flag && br.nuclear_distance_is_set()) {
+
+                     // this bond has both distances (e.g. from the AceDRG tables), so
+                     // write them as they are
+
+                     mmCIFLoop->PutReal(br.value_dist(), "value_dist",     i, 5);
+                     mmCIFLoop->PutReal(br.value_esd(),  "value_dist_esd", i, 3);
+                     mmCIFLoop->PutReal(br.value_dist_nuclear(), "value_dist_nucleus",     i, 5);
+                     mmCIFLoop->PutReal(br.value_esd_nuclear(),  "value_dist_nucleus_esd", i, 3);
+
+                  } else if (nuclear_distances_flag) {
 
                      // Non-nuclear
 

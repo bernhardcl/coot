@@ -38,6 +38,7 @@
 #include "geometry/residue-and-atom-specs.hh"
 #include "graphics-info.h"
 #include "c-interface.h"
+#include "session-info.hh"
 #include "c-interface-gtk-widgets.h"
 #include "coot-fileselections.h"
 #include "gtk/gtkshortcut.h"
@@ -67,6 +68,11 @@ extern logging logger;
 // int graphics_info_t::scale_up_graphics = 1;
 // int graphics_info_t::scale_down_graphics = 1;
 
+
+// Rebuild the File -> Open Recent submenu from session.json. Defined below,
+// forward-declared here so the file-open response handlers can refresh the
+// list after a successful read.
+void update_open_recent_submenu();
 
 extern "C" G_MODULE_EXPORT
 void on_coords_filechooser_dialog_response_gtk4(GtkDialog *dialog,
@@ -121,7 +127,7 @@ void on_coords_filechooser_dialog_response_gtk4(GtkDialog *dialog,
             g.set_directory_for_filechooser_string(file_dir);
          }
       }
-
+      update_open_recent_submenu();
    }
    gtk_window_close(GTK_WINDOW(dialog));
    graphics_info_t::graphics_grab_focus();
@@ -151,7 +157,7 @@ void on_dataset_filechooser_dialog_response_gtk4(GtkDialog *dialog,
       } else {
          manage_column_selector(file_name); // try read a cif (strangely)
       }
-
+      update_open_recent_submenu();
    }
    gtk_window_close(GTK_WINDOW(dialog));
    graphics_info_t::graphics_grab_focus();
@@ -182,6 +188,7 @@ void on_map_filechooser_dialog_response(GtkDialog *dialog, int response) {
             }
          }
       }
+      update_open_recent_submenu();
    }
    gtk_window_close(GTK_WINDOW(dialog));
    graphics_info_t::graphics_grab_focus();
@@ -500,6 +507,7 @@ void on_cif_dictionary_filechooser_dialog_response_gtk4(GtkDialog *dialog,
       if (create_ligand) create_ligand =  true;
       // the monomer index is returned from handle_cif_dictionary_for_molecule()
       handle_cif_dictionary_for_molecule(file_name, imol_enc, create_ligand);
+      update_open_recent_submenu();
    }
    gtk_widget_set_visible(GTK_WIDGET(dialog), FALSE);
    graphics_info_t::graphics_grab_focus();
@@ -721,7 +729,7 @@ fetch_ligand_restraints_from_github_action(G_GNUC_UNUSED GSimpleAction *simple_a
       int imol = pp.second.first;
       const auto &atom_spec = pp.second.second;
       std::string rn = g.molecules[imol].get_residue_name(coot::residue_spec_t(atom_spec));
-      get_monomer_dictionary_in_subthread(rn, true);
+      get_monomer_dictionary_in_subthread(rn, false); // false: don't make a new ligand molecule
    }
 }
 
@@ -1418,9 +1426,12 @@ on_run_script_filechooser_dialog_response_gtk4(GtkDialog *dialog,
 
       std::cout << "Run this script file: " << file_name << std::endl;
       run_script(file_name);
-      gtk_widget_set_visible(GTK_WIDGET(dialog), FALSE);
-
+      g_free(file_name);
+      g_object_unref(file);
    }
+   // the dialog is made anew each time in run_script_action(), so destroy it
+   // for every response (Open, Cancel, or window-close)
+   gtk_window_destroy(GTK_WINDOW(dialog));
 }
 
 void
@@ -2370,6 +2381,65 @@ void geometric_distortions_for_ligand_action(G_GNUC_UNUSED GSimpleAction *simple
       int imol = pp.second.first;
       coot::residue_spec_t res_spec(pp.second.second);
       display_residue_distortions(imol, res_spec.chain_id, res_spec.res_no, res_spec.ins_code);
+   }
+   graphics_info_t::graphics_grab_focus();
+}
+
+// The two ligands come from the stored Range/Pair picks (as make_link_action).
+// The molecule with just one residue is the moving one; its ligand gets its
+// torsions matched to the reference ligand and is then overlapped onto it.
+// (superpose_ligands_action, above the Calculate menu, is the older
+// molecule-chooser python gui - this one acts on the picked pair.)
+void superpose_picked_ligands_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                              G_GNUC_UNUSED GVariant *parameter,
+                              G_GNUC_UNUSED gpointer user_data) {
+
+   graphics_info_t g;
+   int imol_1 = g.in_range_first_picked_atom.int_user_data;
+   int imol_2 = g.in_range_second_picked_atom.int_user_data;
+   bool done = false;
+
+   if (g.is_valid_model_molecule(imol_1) && g.is_valid_model_molecule(imol_2)) {
+      mmdb::Atom *at_1 = g.molecules[imol_1].get_atom(g.in_range_first_picked_atom);
+      mmdb::Atom *at_2 = g.molecules[imol_2].get_atom(g.in_range_second_picked_atom);
+      if (at_1 && at_2) {
+         if (imol_1 == imol_2) {
+            info_dialog("Residue selection problem:\nthe picked ligands are in the same molecule");
+            done = true;
+         } else {
+            int n_res_1 = g.molecules[imol_1].n_residues();
+            int n_res_2 = g.molecules[imol_2].n_residues();
+            int imol_moving = -1;
+            int imol_ref    = -1;
+            coot::residue_spec_t ref_spec;
+            if (n_res_1 == 1) {
+               imol_moving = imol_1;
+               imol_ref    = imol_2;
+               ref_spec = coot::residue_spec_t(g.in_range_second_picked_atom);
+            } else {
+               if (n_res_2 == 1) {
+                  imol_moving = imol_2;
+                  imol_ref    = imol_1;
+                  ref_spec = coot::residue_spec_t(g.in_range_first_picked_atom);
+               }
+            }
+            if (imol_moving == -1) {
+               info_dialog("Residue selection problem:\nneither of the picked molecules has just one residue\n(the moving molecule should contain just the ligand)");
+               done = true;
+            } else {
+               match_ligand_torsions(imol_moving, imol_ref, ref_spec.chain_id.c_str(), ref_spec.res_no);
+               overlap_ligands_internal(imol_moving, imol_ref, ref_spec.chain_id.c_str(), ref_spec.res_no, true);
+               g.graphics_draw();
+               done = true;
+            }
+         }
+      }
+   }
+
+   if (! done) {
+      std::string mess = "Use Range/Pair to pick the two ligands to superpose";
+      add_status_bar_text(mess);
+      g.ephemeral_overlay_label(mess);
    }
    graphics_info_t::graphics_grab_focus();
 }
@@ -3374,73 +3444,6 @@ bond_colours_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    graphics_info_t::graphics_grab_focus();
 }
 
-void
-grey_carbon_colours_action(G_GNUC_UNUSED GSimpleAction *simple_action,
-                           G_GNUC_UNUSED GVariant *parameter,
-                           G_GNUC_UNUSED gpointer user_data) {
-
-
-   graphics_info_t g;
-   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec();
-   if (pp.first) {
-      int imol = pp.second.first;
-      set_use_grey_carbons_for_molecule(imol, 1);
-   }
-   graphics_info_t::graphics_grab_focus();
-}
-
-void
-coloured_carbon_colours_action(G_GNUC_UNUSED GSimpleAction *simple_action,
-                               G_GNUC_UNUSED GVariant *parameter,
-                               G_GNUC_UNUSED gpointer user_data) {
-
-   graphics_info_t g;
-   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = g.active_atom_spec();
-   if (pp.first) {
-      int imol = pp.second.first;
-      set_use_grey_carbons_for_molecule(imol, 0);
-   }
-   graphics_info_t::graphics_grab_focus();
-}
-
-
-void
-bond_smoothness_action(G_GNUC_UNUSED GSimpleAction *simple_action,
-                       G_GNUC_UNUSED GVariant *parameter,
-                       G_GNUC_UNUSED gpointer user_data) {
-
-   gchar* mode_cstr;
-   g_variant_get(parameter, "s", &mode_cstr);
-   std::string mode(mode_cstr);
-   if (mode == "1") set_bond_smoothness_factor(1);
-   if (mode == "2") set_bond_smoothness_factor(2);
-   if (mode == "3") set_bond_smoothness_factor(3);
-   graphics_info_t::graphics_grab_focus();
-}
-
-void
-bond_smoothness_action_1(G_GNUC_UNUSED GSimpleAction *simple_action,
-                        G_GNUC_UNUSED GVariant *parameter,
-                        G_GNUC_UNUSED gpointer user_data) {
-
-   set_bond_smoothness_factor(1);
-}
-
-void
-bond_smoothness_action_2(G_GNUC_UNUSED GSimpleAction *simple_action,
-                        G_GNUC_UNUSED GVariant *parameter,
-                        G_GNUC_UNUSED gpointer user_data) {
-
-   set_bond_smoothness_factor(2);
-}
-
-void
-bond_smoothness_action_3(G_GNUC_UNUSED GSimpleAction *simple_action,
-                        G_GNUC_UNUSED GVariant *parameter,
-                        G_GNUC_UNUSED gpointer user_data) {
-
-   set_bond_smoothness_factor(3);
-}
 
 void
 bond_parameters_action(G_GNUC_UNUSED GSimpleAction *simple_action,
@@ -4252,6 +4255,23 @@ fullscreen_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    graphics_info_t::graphics_grab_focus();
 }
 
+// this action is a radio-item action - it comes from the right-click menu of the
+// vertical toolbar. The parameter is the target of the menu item.
+void
+vertical_toolbar_style_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                              GVariant *parameter,
+                              G_GNUC_UNUSED gpointer user_data) {
+
+   if (! parameter) return;
+   std::string s(g_variant_get_string(parameter, NULL));
+   int style = 0; // icons and labels
+   if (s == "labels") style = 1;
+   if (s == "icons")  style = 2;
+   set_vertical_toolbar_style(style); // sets the state of this action also
+   save_preferences();                // persist the choice immediately
+   graphics_info_t::graphics_grab_focus();
+}
+
 void
 gaussian_surface_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                         G_GNUC_UNUSED GVariant *parameter,
@@ -4512,6 +4532,73 @@ ribbons_colour_by_secondary_structure_action(G_GNUC_UNUSED GSimpleAction *simple
 }
 
 void
+worms_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+             G_GNUC_UNUSED GVariant *parameter,
+             G_GNUC_UNUSED gpointer user_data) {
+
+   // no header/calculated SSE, so the whole backbone is one uncomputed
+   // coil run - a thick uniform worm through the molecule, no distinct helices.
+   // "Chain" colours each chain's worm by a stable hash-derived hue.
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+   if (pp.first) {
+      int imol = pp.second.first;
+      std::string colour_scheme = "Chain";
+      std::string atom_selection = "//";
+      std::string style = "Tubes";
+      int secondary_structure_usage_flag = DONT_USE;
+      graphics_info_t g;
+      int status = g.add_molecular_representation(imol, atom_selection, colour_scheme, style,
+                                                  secondary_structure_usage_flag);
+   }
+   graphics_info_t::graphics_grab_focus();
+}
+
+
+void
+bendix_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+             G_GNUC_UNUSED GVariant *parameter,
+             G_GNUC_UNUSED gpointer user_data) {
+
+   // CALC_SECONDARY_STRUCTURE: helices are drawn as cylinders, coil as a thin tube.
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+   if (pp.first) {
+      int imol = pp.second.first;
+      std::string colour_scheme = "Helix";
+      std::string atom_selection = "//";
+      std::string style = "Tubes";
+      int secondary_structure_usage_flag = CALC_SECONDARY_STRUCTURE;
+      graphics_info_t g;
+      int status = g.add_molecular_representation(imol, atom_selection, colour_scheme, style,
+                                                  secondary_structure_usage_flag);
+   }
+   graphics_info_t::graphics_grab_focus();
+}
+
+
+void
+tube_helices_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                    G_GNUC_UNUSED GVariant *parameter,
+                    G_GNUC_UNUSED gpointer user_data) {
+
+   // Like Bendix, but each helix is one straight capped cylinder (PCA-fit axis
+   // through its CA atoms) rather than the reference helix superposed onto every
+   // residue triplet independently - a smooth rod instead of a visibly segmented worm.
+   std::pair<bool, std::pair<int, coot::atom_spec_t> > pp = active_atom_spec();
+   if (pp.first) {
+      int imol = pp.second.first;
+      std::string colour_scheme = "Helix";
+      std::string atom_selection = "//";
+      std::string style = "TubeHelices";
+      int secondary_structure_usage_flag = CALC_SECONDARY_STRUCTURE;
+      graphics_info_t g;
+      int status = g.add_molecular_representation(imol, atom_selection, colour_scheme, style,
+                                                  secondary_structure_usage_flag);
+   }
+   graphics_info_t::graphics_grab_focus();
+}
+
+
+void
 screenshot_action(G_GNUC_UNUSED GSimpleAction *simple_action,
                   G_GNUC_UNUSED GVariant *parameter,
                   G_GNUC_UNUSED gpointer user_data) {
@@ -4591,6 +4678,17 @@ scale_up_graphics_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    graphics_draw();
    graphics_info_t::graphics_grab_focus();
 
+}
+
+// So that we can see what the ephemeral overlay label looks like without
+// having to engineer one of the conditions that shows one.
+void
+test_ephemeral_overlay_label_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                                    G_GNUC_UNUSED GVariant *parameter,
+                                    G_GNUC_UNUSED gpointer user_data) {
+
+   graphics_info_t::ephemeral_overlay_label("This is an ephemeral overlay label - it hides itself after 2 seconds");
+   graphics_info_t::graphics_grab_focus();
 }
 
 void
@@ -5373,7 +5471,50 @@ refine_with_range_picked_atoms() {
                                 alt_conf, is_water_flag);
       }
    }
+}
 
+void
+refine_regularize_with_range_picked_atoms() {
+
+   graphics_info_t g;
+   std::string alt_conf; // needs to be set correctly
+   short int is_water_flag = false; // needs to be set correctly
+
+   const std::string &alt_conf_1 = g.in_range_first_picked_atom.alt_conf;
+   const std::string &alt_conf_2 = g.in_range_second_picked_atom.alt_conf;
+
+   if (alt_conf_1 == alt_conf_2)
+      if (! alt_conf_1.empty())
+         alt_conf = alt_conf_1;
+
+   int imol_1 = g.in_range_first_picked_atom.int_user_data;
+   int imol_2 = g.in_range_second_picked_atom.int_user_data;
+
+   const std::string &chain_id_1 = g.in_range_first_picked_atom.chain_id;
+   const std::string &chain_id_2 = g.in_range_second_picked_atom.chain_id;
+
+   int res_no_1 = g.in_range_first_picked_atom.res_no;
+   int res_no_2 = g.in_range_second_picked_atom.res_no;
+
+   const std::string &ins_code_1 = g.in_range_first_picked_atom.ins_code;
+   const std::string &ins_code_2 = g.in_range_second_picked_atom.ins_code;
+
+   if (g.is_valid_model_molecule(imol_1)) {
+
+      if (imol_1 == imol_2) {
+         int idx_1 = g.molecules[imol_1].atom_index_first_atom_in_residue(chain_id_1, res_no_1, ins_code_1);
+         int idx_2 = g.molecules[imol_1].atom_index_first_atom_in_residue(chain_id_2, res_no_2, ins_code_2);
+         if (idx_1 >= 0) {
+            if (idx_2 >= 0) {
+               g.regularize(imol_1, 0, idx_1, idx_2);
+            } else {
+               std::cout << "WARNING:: no atom index for second picked residue" << std::endl;
+            }
+         } else {
+            std::cout << "WARNING:: no atom index for first picked residue" << std::endl;
+         }
+      }
+   }
 }
 
 void
@@ -5382,7 +5523,7 @@ refine_range(G_GNUC_UNUSED GSimpleAction *simple_action,
              G_GNUC_UNUSED gpointer user_data) {
 
    graphics_info_t g;
-   std::cout << "in refine_range with in_range_define " << g.in_range_define << std::endl;
+   std::cout << "DEBUG:: in refine_range with in_range_define " << g.in_range_define << std::endl;
    if (g.in_range_define == 2) {
       // so what were the two atoms?
 
@@ -5420,6 +5561,24 @@ refine_regularize_tandem_3(G_GNUC_UNUSED GSimpleAction *simple_action,
    regularize_tandem_3();
 }
 
+
+void
+refine_regularize_range(G_GNUC_UNUSED GSimpleAction *simple_action,
+                G_GNUC_UNUSED GVariant *parameter,
+                G_GNUC_UNUSED gpointer user_data) {
+
+   graphics_info_t g;
+   std::cout << "DEBUG:: in refine_range with in_range_define " << g.in_range_define << std::endl;
+   if (g.in_range_define == 2) {
+      // so what were the two atoms?
+
+      refine_regularize_with_range_picked_atoms();
+
+   } else {
+      std::string m = "Use the Range button to define a residue range (pick 2 atoms)";
+      g.add_status_bar_text(m);
+   }
+}
 
 void
 refine_regularize_single_residue(G_GNUC_UNUSED GSimpleAction *simple_action,
@@ -6035,6 +6194,14 @@ delete_item(GSimpleAction *simple_action,
             GVariant *parameter,
             gpointer user_data) {
 
+   // ----------------------------------------------------
+   // -------------------- WARNING!!!!!!!! ---------------
+   // ----------------------------------------------------
+   //
+   // 20260912-PE this code is not called at the moment.
+   // Due to problems with target menu items
+   // 02ba47387a450010c211446c7109a42901472b80
+
    auto delete_residue_range = [] () {
 
       graphics_info_t g;
@@ -6182,6 +6349,7 @@ delete_item_water(GSimpleAction *simple_action,
          auto &m = g.molecules[imol];
          m.delete_water(atom_spec);
          handled = true;
+         graphics_draw();
       }
    }
 
@@ -6396,6 +6564,99 @@ void delete_item_pick_water_delete(GSimpleAction *simple_action,
    add_status_bar_text("Use Ctrl-click for multi-water delete");
 }
 
+// A compact menu label for a recent-files entry: the base filename, plus
+// the MTZ columns for maps so two column selections of the same file are
+// distinguishable.
+static std::string
+recent_file_menu_label(const coot::session::recent_file_t &rf) {
+
+   std::string base = coot::util::file_name_non_directory(rf.path);
+   if (rf.is_map()) {
+      std::string label = base;
+      std::string cols = rf.f_col;
+      if (! rf.phi_col.empty())
+         cols += "/" + rf.phi_col;
+      if (! cols.empty())
+         label += " (" + cols + ")";
+      if (rf.is_diff_map)
+         label += " [diff]";
+      return label;
+   }
+   if (rf.is_ccp4_map())
+      return base + (rf.is_diff_map ? " [diff map]" : " [map]");
+   if (rf.is_dictionary())
+      return base + " [dict]";
+   return base; // coordinates
+}
+
+// Rebuild the File -> Open Recent submenu from session.json. Each item
+// carries its index in the list as a string target for the parameterised
+// "open_recent_file_action".
+void
+update_open_recent_submenu() {
+
+   GMenu *menu = G_MENU(graphics_info_t::get_gobject_from_builder("open-recent-menu"));
+   if (! menu)
+      return;
+   g_menu_remove_all(menu);
+
+   std::vector<coot::session::recent_file_t> rfs = coot::session::get_recent_files();
+   if (rfs.empty()) {
+      // an action-less (and so insensitive) placeholder
+      GMenuItem *item = g_menu_item_new("(No recent files)", nullptr);
+      g_menu_append_item(menu, item);
+      g_object_unref(item);
+      return;
+   }
+
+   for (unsigned int i=0; i<rfs.size(); i++) {
+      std::string label = recent_file_menu_label(rfs[i]);
+      std::string target = std::to_string(i);
+      GMenuItem *item = g_menu_item_new(label.c_str(), nullptr);
+      g_menu_item_set_action_and_target_value(item, "app.open_recent_file_action",
+                                              g_variant_new_string(target.c_str()));
+      g_menu_append_item(menu, item);
+      g_object_unref(item);
+   }
+}
+
+void open_recent_file_action(G_GNUC_UNUSED GSimpleAction *simple_action,
+                             GVariant *parameter,
+                             G_GNUC_UNUSED gpointer user_data) {
+
+   if (! parameter)
+      return;
+   const char *s = g_variant_get_string(parameter, nullptr);
+   if (! s)
+      return;
+   int idx = atoi(s);
+   std::vector<coot::session::recent_file_t> rfs = coot::session::get_recent_files();
+   if (idx < 0 || idx >= static_cast<int>(rfs.size()))
+      return;
+
+   const coot::session::recent_file_t &rf = rfs[idx];
+
+   if (! std::filesystem::exists(rf.path)) {
+      std::string m = "File no longer exists: " + rf.path;
+      add_status_bar_text(m.c_str());
+      update_open_recent_submenu();
+      return;
+   }
+
+   if (rf.is_coordinates()) {
+      handle_read_draw_molecule_with_recentre(rf.path, 1);
+   } else if (rf.is_map()) {
+      make_and_draw_map(rf.path.c_str(), rf.f_col.c_str(), rf.phi_col.c_str(),
+                        rf.weight_col.c_str(), rf.use_weights, rf.is_diff_map);
+   } else if (rf.is_ccp4_map()) {
+      handle_read_ccp4_map(rf.path, rf.is_diff_map);
+   } else if (rf.is_dictionary()) {
+      read_cif_dictionary(rf.path);
+   }
+
+   update_open_recent_submenu(); // the just-opened file moves to the front
+}
+
 void
 create_actions(GtkApplication *application) {
 
@@ -6424,6 +6685,21 @@ create_actions(GtkApplication *application) {
       // g_object_unref(my_action);
    };
 
+   // an action with a string state - the menu items that use it (with a "target"
+   // attribute) are drawn as radio items.
+   auto add_stateful_string_action = [application] (const std::string &action_name,
+                                                    const std::string &initial_state,
+                                                    void (*action_function) (GSimpleAction *simple_action,
+                                                                             GVariant *parameter,
+                                                                             gpointer user_data)) {
+
+      GSimpleAction *simple_action = g_simple_action_new_stateful(action_name.c_str(),
+                                                                  G_VARIANT_TYPE_STRING,
+                                                                  g_variant_new_string(initial_state.c_str()));
+      g_action_map_add_action(G_ACTION_MAP(application), G_ACTION(simple_action));
+      g_signal_connect(simple_action, "activate", G_CALLBACK(action_function), NULL);
+   };
+
 
    // File
 
@@ -6432,6 +6708,8 @@ create_actions(GtkApplication *application) {
    add_action(         "open_dataset_action",          open_dataset_action);
    add_action(             "open_map_action",              open_map_action);
    add_action("import_cif_dictionary_action", import_cif_dictionary_action);
+   add_action_with_param("open_recent_file_action", open_recent_file_action);
+   update_open_recent_submenu(); // populate from session.json at startup
 
    add_action("get_monomer_action", get_monomer_action);
    add_action(     "curlew_action",      curlew_action);
@@ -6591,14 +6869,16 @@ create_actions(GtkApplication *application) {
    add_action( "background_semi_dark_grey_action", background_semi_dark_grey_action);
    add_action(          "background_white_action",          background_white_action);
 
-   add_action(       "grey_carbon_colours_action",       grey_carbon_colours_action);
-   add_action(   "coloured_carbon_colours_action",   coloured_carbon_colours_action);
-
    add_action(    "display_only_active_action",     display_only_active_action);
    add_action(        "bond_parameters_action",         bond_parameters_action);
    add_action(           "bond_colours_action",            bond_colours_action);
    add_action(             "fullscreen_action",              fullscreen_action);
    add_action(               "map_caps_action",                map_caps_action);
+
+   // the right-click menu of the vertical toolbar
+   add_stateful_string_action("vertical_toolbar_style_action", "icons-and-labels",
+                              vertical_toolbar_style_action);
+
    add_action(             "go_to_atom_action",              go_to_atom_action);
    add_action(         "label_CA_atoms_action",          label_CA_atoms_action);
    add_action(         "map_parameters_action",          map_parameters_action);
@@ -6628,11 +6908,15 @@ create_actions(GtkApplication *application) {
    add_action("sequence_view_action",                     sequence_view_action);
    add_action("scale_up_graphics_action",             scale_up_graphics_action);
    add_action("scale_down_graphics_action",         scale_down_graphics_action);
+   add_action("test_ephemeral_overlay_label_action", test_ephemeral_overlay_label_action);
    add_action("undo_symmetry_view_action",           undo_symmetry_view_action);
    add_action("undo_last_navigation_action",       undo_last_navigation_action);
    add_action("ribbons_colour_by_chain_action", ribbons_colour_by_chain_action);
    add_action("ribbons_colour_rainbow_action",   ribbons_colour_rainbow_action);
    add_action("ribbons_colour_by_secondary_structure_action", ribbons_colour_by_secondary_structure_action);
+   add_action(                           "worms_action",                             worms_action);
+   add_action(                          "bendix_action",                            bendix_action);
+   add_action(                     "tube_helices_action",                      tube_helices_action);
 
    add_action( "toggle_display_frames_per_second_action", toggle_display_frames_per_second_action);
 
@@ -6688,6 +6972,7 @@ create_actions(GtkApplication *application) {
    add_action("refine_regularize_sphere",         refine_regularize_sphere);
    add_action("refine_regularize_tandem_3",       refine_regularize_tandem_3);
    add_action("refine_regularize_single_residue", refine_regularize_single_residue);
+   add_action("refine_regularize_range",          refine_regularize_range);
 
    // Fix Atoms
 
@@ -6741,14 +7026,6 @@ create_actions(GtkApplication *application) {
    add_action("mutate_base_to_type_T", mutate_base_to_type_T);
    add_action("mutate_base_to_type_C", mutate_base_to_type_C);
    add_action("mutate_base_to_type_U", mutate_base_to_type_U);
-
-   // Draw menu
-   add_action_with_param("bond_smoothness_action", bond_smoothness_action);
-
-   // 2025-09-15 16:40 PE: hack functions
-   add_action("bond_smoothness_action_1", bond_smoothness_action_1);
-   add_action("bond_smoothness_action_2", bond_smoothness_action_2);
-   add_action("bond_smoothness_action_3", bond_smoothness_action_3);
 
    // Delete menu
    add_action_with_param("delete_item", delete_item);
@@ -6808,6 +7085,7 @@ create_actions(GtkApplication *application) {
    add_action("flev_action",                               flev_action);
    add_action("coot_contact_dots_for_ligand_action",       coot_contact_dots_for_ligand_action);
    add_action("geometric_distortions_for_ligand_action",   geometric_distortions_for_ligand_action);
+   add_action("superpose_picked_ligands_action",           superpose_picked_ligands_action);
    add_action("SMILES_to_3D_action",                       SMILES_to_3D_action);
    add_action("show_chemical_features_action",             show_chemical_features_action);
    // add_action("quick_ligand_validate_action",              quick_ligand_validate_action); // pythonic gui

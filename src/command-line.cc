@@ -81,6 +81,8 @@ void print_help() {
              << "            [--dictionary-with-mol cif-dictionary-file-name]\n"
              << "            [--script script-file-name]\n"
              << "            [--em]\n"
+             << "            [--code PDB-accession-code]\n"
+             << "            [--cod COD-ID]\n"
              << "            [--title some-title]\n"
              << "            [--command command-script]\n"
              << "            [--command-terminal]\n"
@@ -93,6 +95,7 @@ void print_help() {
              << "            [--show-ccp4i2-save-button]\n"
              << "            [--self-test]\n"
              << "            [--no-state-script]\n"
+             << "            [--run-state-script]\n"
              << "            [--no-startup-scripts]\n"
              << "            [--no-splash-screen]\n"
              << "            [--opengl-es]\n"
@@ -147,6 +150,7 @@ parse_command_line(int argc, char ** argv ) {
       {"dictionary", 1, 0, 0},
       {"dictionary-with-mol", 1, 0, 0},
       {"code",       1, 0, 0},
+      {"cod",        1, 0, 0},
       {"comp_id",    1, 0, 0},
       {"comp-id",    1, 0, 0},
       {"em",         0, 0, 0},
@@ -241,6 +245,9 @@ parse_command_line(int argc, char ** argv ) {
 	    }
 	    if (arg_str == "code") {
 	       cld.accession_codes.push_back(coot_optarg);
+	    }
+	    if (arg_str == "cod") {
+	       cld.cod_ids.push_back(coot_optarg);
 	    }
 	    if (arg_str == "emdb") {
 	       cld.emdb_codes.push_back(coot_optarg);

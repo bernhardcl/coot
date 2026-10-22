@@ -1,4 +1,4 @@
-/* src/c-interface-preferences.h
+/* src/atom-selection.hh
  * 
  * Copyright 2011 by the University of Oxford
  * Copyright 2015 by Medical Research Council

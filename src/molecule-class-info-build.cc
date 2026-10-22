@@ -36,6 +36,7 @@
 #include "coot-utils/reduce.hh"
 #include "coot-utils/reduce.hh"
 
+#include "geometry/protein-geometry.hh"
 #include "molecule-class-info.h"
 
 
@@ -112,7 +113,7 @@ molecule_class_info_t::make_fragment_chain(const std::vector<coot::residue_spec_
 	       if (at_ca)
 		  ca_pos = clipper::Coord_orth(at_ca->x, at_ca->y, at_ca->z);
 	       if (at_c)
-		  n_pos = clipper::Coord_orth( at_c->x,  at_c->y,  at_c->z);
+		  c_pos = clipper::Coord_orth( at_c->x,  at_c->y,  at_c->z);
 
 
 	       if (at_n && at_ca && at_c) { 
@@ -212,7 +213,8 @@ molecule_class_info_t::add_hydrogens_from_file(const std::string &reduce_pdb_out
 }
 
 void
-molecule_class_info_t::add_hydrogen_atoms_to_residue(const coot::residue_spec_t &rs) {
+molecule_class_info_t::add_hydrogen_atoms_to_residue(const coot::residue_spec_t &rs,
+                                                     coot::protein_geometry *geom_p) {
 
    make_backup(__FUNCTION__);
    mmdb::Residue *residue_this_p = get_residue(rs);
@@ -220,6 +222,7 @@ molecule_class_info_t::add_hydrogen_atoms_to_residue(const coot::residue_spec_t 
 
    bool go_nuclear = false;
    coot::reduce r(atom_sel.mol, imol_no);
+   r.add_geometry(geom_p);
    r.add_hydrogens_to_residue(residue_this_p, residue_prev_p, go_nuclear);
 
    have_unsaved_changes_flag = 1; // because we do a backup whatever...

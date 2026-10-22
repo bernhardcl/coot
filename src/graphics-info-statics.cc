@@ -84,6 +84,7 @@ int graphics_info_t::show_paths_in_display_manager_flag = 0;
 std::vector<std::string> graphics_info_t::command_line_scripts;
 coot::command_line_commands_t graphics_info_t::command_line_commands;
 std::vector<std::string> graphics_info_t::command_line_accession_codes;
+std::vector<std::string> graphics_info_t::command_line_cod_ids;
 
 std::vector<coot::lsq_range_match_info_t> *graphics_info_t::lsq_matchers;
 std::vector<coot::generic_text_object_t> graphics_info_t::generic_texts;
@@ -180,6 +181,9 @@ short int graphics_info_t::main_toolbar_show_hide_state = 1;
 
 // the main toolbar style
 short int graphics_info_t::main_toolbar_style_state = 2;
+
+// the vertical toolbar style: 0: icons and labels, 1: labels only, 2: icons only
+int graphics_info_t::vertical_toolbar_style = 0;
 
 // refmac option menu
 int graphics_info_t::refmac_molecule = -1;
@@ -1554,6 +1558,13 @@ float graphics_info_t::goodselliness = 0.3; // the pastelization factor
 std::map<unsigned int, lights_info_t> graphics_info_t::lights;
 
 std::vector<molecule_class_info_t> graphics_info_t::molecules;
+// These default materials must be defined *before* moving_atoms_molecule: it is a
+// static molecule_class_info_t whose constructor (setup_internal()) copies these into
+// its material_for_models/material_for_maps. Within this translation unit dynamic
+// initialization runs in definition order, so if they came later they would still be
+// zero-initialized (all-black) at that point, making the intermediate atoms render dark.
+Material graphics_info_t::default_material_for_maps;
+Material graphics_info_t::default_material_for_models;
 molecule_class_info_t graphics_info_t::moving_atoms_molecule;
 std::atomic<bool> molecule_class_info_t::draw_vector_sets_lock(false);
 
@@ -1875,10 +1886,14 @@ graphics_info_t::tomo_view_info_t graphics_info_t::tomo_view_info;
 coot::inchikey_store_t graphics_info_t::inchikey_store;
 coot::ptm_database_t graphics_info_t::ptm_database;
 
-std::pair<bool, std::string> graphics_info_t::servalcat_fofc    = std::pair<bool, std::string> (false, "");
-std::pair<bool, std::string> graphics_info_t::servalcat_refine  = std::pair<bool, std::string> (false, "");
+std::pair<bool, std::string> graphics_info_t::servalcat_fofc        = std::pair<bool, std::string> (false, "");
+std::pair<bool, std::string> graphics_info_t::servalcat_refine      = std::pair<bool, std::string> (false, "");
+std::pair<bool, std::string> graphics_info_t::servalcat_refine_xray = std::pair<bool, std::string> (false, "");
+coot::servalcat_refine_progress_t *graphics_info_t::servalcat_refine_progress_p = nullptr;
+std::string graphics_info_t::servalcat_refine_progress_stats_file_name;
 
 std::string graphics_info_t::current_alt_conf = "";
 
-Material graphics_info_t::default_material_for_maps;
+// default_material_for_maps and default_material_for_models are defined earlier in this
+// file (before moving_atoms_molecule) to avoid a static-initialization-order problem.
 

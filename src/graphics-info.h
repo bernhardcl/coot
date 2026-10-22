@@ -212,6 +212,8 @@ enum { N_ATOMS_MEANS_BIG_MOLECULE = 400 };
 
 const guint UPDATING_MAPS_TIMEOUT_FUNCTION_IDX_UNSET = 99999999;
 
+namespace coot { class servalcat_refine_progress_t; } // src/servalcat-refine-progress-gui.cc holds the graphs
+
 class graphics_info_t {
 
    static int n_molecules_max;
@@ -763,6 +765,10 @@ public:
    // flag for the main toolbar style
    static short int main_toolbar_style_state;
 
+   // how the buttons of the vertical toolbar (main_window_vbox_inner) are drawn:
+   // 0: icons and labels, 1: labels only, 2: icons only
+   static int vertical_toolbar_style;
+
    static short int do_lighting_flag;
    static bool do_flat_shading_for_solid_density_surface;
 
@@ -1160,6 +1166,7 @@ public:
    static coot::Cartesian smooth_scroll_target_point;
 
    static Material default_material_for_maps;
+   static Material default_material_for_models;
 
    // possibly for multi-threading, public access.
    void update_maps();
@@ -1909,6 +1916,7 @@ public:
    static std::vector<std::string> command_line_scripts;
    static coot::command_line_commands_t command_line_commands;
    static std::vector<std::string> command_line_accession_codes;
+   static std::vector<std::string> command_line_cod_ids;
 
    // background colour
    static glm::vec3 background_colour;
@@ -2729,6 +2737,8 @@ public:
    // is where the individual colour rotation steps are changed:
    static void bonds_colour_rotation_adjustment_changed(GtkAdjustment *adj,
 							GtkWidget *window);
+   // per-molecule "Grey Carbons" checkbutton in the Bond Colours dialog:
+   static void grey_carbons_checkbutton_toggled(GtkCheckButton *checkbutton, gpointer user_data);
    static int bond_parameters_molecule;
    static float bond_thickness_intermediate_atoms; // white atoms
    void set_bond_thickness_intermediate_atoms(float f);
@@ -4789,13 +4799,28 @@ string   static std::string sessionid;
 
    static std::pair<bool, std::string> servalcat_fofc;
    static std::pair<bool, std::string> servalcat_refine; // output "pdb" file name
+   static std::pair<bool, std::string> servalcat_refine_xray; // output "pdb" file name (async)
 
    // not static (for now?)
+   // the synchronous (blocking) interface:
    int servalcat_refine_xray_with_keywords(int imol, int imol_map, const std::string &output_prefix,
                                            const std::string &keyword_pairs_json);
 
+   // the asynchronous interface - the refined model is read in by an idle function
+   // when the servalcat subprocess (run in a detached thread) has finished:
+   void servalcat_refine_xray_with_keywords_async(int imol, int imol_map, const std::string &output_prefix,
+                                                  const std::string &keyword_pairs_json);
+
+   // Shared state for the live refinement-progress graphs (coot-utils/servalcat-refine-progress.hh).
+   // A pointer (allocated on first use) so that the coot-utils header need not be pulled into
+   // this widely-included header. The graphs are drawn in src/servalcat-refine-progress-gui.cc.
+   static coot::servalcat_refine_progress_t *servalcat_refine_progress_p;
+   static std::string servalcat_refine_progress_stats_file_name;
+
    static std::pair<bool, std::string> acedrg_link;
    static bool acedrg_running; // not link acedrg - this is acedrg from CCD
+   static std::string acedrg_link_command_output; // acedrg's own stdout/stderr from the last
+                                                   // (possibly failed) link-generation run
 
    static bool curmudgeon_mode; // default false, particles and faces
    static bool use_sounds; // default true

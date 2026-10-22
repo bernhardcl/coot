@@ -167,6 +167,8 @@ class molecules_container_t {
    bool use_torsion_restraints;
    float torsion_restraints_weight;
 
+   bool use_numerical_gradients; // for debugging the refinement
+
    ctpl::thread_pool thread_pool;
    bool show_timings;
 
@@ -697,6 +699,14 @@ public:
    //! @return a vector/list of non-standard residues
    std::vector<std::string> non_standard_residue_types_in_model(int imol) const;
 
+   //! Get non-standard residues in a model
+   //!
+   //! @param imol is the model molecule index
+   //!
+   //! @return a vector/list of residue specifiers - the residue name is encoded
+   //! in the `string_user_data` data item of the residue specifier
+   std::vector<coot::residue_spec_t> get_non_standard_residues_in_molecule(int imol) const;
+
 #ifdef MAKE_ENHANCED_LIGAND_TOOLS
 
    //! Extract ligand restraints from the dictionary store and make an encoded pickled rdkit molecule
@@ -777,6 +787,20 @@ public:
    //! @return the new molecule index on success and -1 on failure
    int read_pdbqt(const std::string &file_name);
 
+   //! Read a Gaussian/ORCA "cube" file as a new model molecule and a new map.
+   //!
+   //! A cube file (e.g. an ORCA molecular-orbital or density cube) contains both
+   //! the atoms of the molecule and a volumetric grid. The atoms are read as a
+   //! model molecule (in true, Angstrom-converted coordinates) and the grid is
+   //! read as a map molecule that registers with the model. Orbital cubes (with
+   //! a negative lobe) are flagged as difference maps so both lobes are drawn.
+   //!
+   //! @param file_name is the name of the cube file
+   //!
+   //! @return a pair {imol_model, imol_map}; either element is -1 if that part
+   //!         could not be made (e.g. imol_map is -1 for a non-orthogonal grid)
+   std::pair<int, int> read_cube(const std::string &file_name);
+
    //! Get the AutoDock Vina scores for a molecule read from a PDBQT docking result.
    //!
    //! @param imol is the model molecule index
@@ -784,12 +808,57 @@ public:
    //! @return one pose_score_t per model; empty if the molecule has no Vina scores
    std::vector<coot::pdbqt::pose_score_t> get_vina_scores(int imol) const;
 
+   //! Write a flexible receptor as the AutoDock/Vina pair of files (rigid + flex).
+   //!
+   //! The chosen residues' side chains become CA-rooted torsion trees in the flex
+   //! file (rotatable bonds from the dictionary, no RDKit); everything else, plus
+   //! those residues' backbone, is written to the rigid file. Give the two files
+   //! to Vina as --receptor and --flex.
+   //!
+   //! @param imol the model molecule index
+   //! @param flex_residues_cid a residue selection (cid) naming the flexible residues
+   //! @param rigid_file_name the output rigid-receptor PDBQT file name
+   //! @param flex_file_name the output flexible-side-chain PDBQT file name
+   //! @return the number of flexible side chains written (0 on failure)
+   int export_flexible_receptor_as_pdbqt(int imol, const std::string &flex_residues_cid,
+                                         const std::string &rigid_file_name,
+                                         const std::string &flex_file_name);
+
+   //! Write a flexible receptor, choosing the flexible side chains automatically as
+   //! the polymer residues (excluding GLY/ALA/PRO) with any atom within `radius` of
+   //! the given point - typically the docking-box centre.
+   //!
+   //! @param imol the model molecule index
+   //! @param x,y,z the reference point (e.g. the docking-box centre)
+   //! @param radius the selection radius (Angstroms)
+   //! @param rigid_file_name the output rigid-receptor PDBQT file name
+   //! @param flex_file_name the output flexible-side-chain PDBQT file name
+   //! @return the number of flexible side chains written (0 on failure)
+   int export_flexible_receptor_near_point_as_pdbqt(int imol, float x, float y, float z, float radius,
+                                                    const std::string &rigid_file_name,
+                                                    const std::string &flex_file_name);
+
    //! Read a small molecule CIF file
    //!
    //! @param file_name is the cif file-name
    //!
    //! @return the new molecule index on success and -1 on failure
    int read_small_molecule_cif(const std::string &file_name);
+
+   //! Read a SHELX-style small-molecule cif (for example a structure downloaded
+   //! from the Crystallography Open Database) and make maps.
+   //!
+   //! Such files embed a SHELX .res file and a SHELX .hkl reflection list.  The
+   //! model is read from the embedded res file and, because the reflections are
+   //! intensities (there are no phases), the maps are phased by the model: a
+   //! 2Fo-Fc map and an Fo-Fc difference map.
+   //!
+   //! @param file_name is the cif file-name
+   //!
+   //! @return a vector of the new molecule indices: {model, 2Fo-Fc map, Fo-Fc
+   //!         difference map}.  On failure the vector is empty; if only the
+   //!         model could be made the vector has a single entry.
+   std::vector<int> read_small_molecule_cif_and_make_map(const std::string &file_name);
 
    //! Read an Amber NetCDF trajectory file
    //!
@@ -1263,7 +1332,12 @@ public:
    void set_gltf_pbr_metalicity_factor(int imol, float metalicity);
 
    //! Initialise the OSPRay ray-tracing engine. Call this before ray_trace_image().
-   void ray_trace_init();
+   //!
+   //! @param n_threads (optional) caps the number of threads (cores) that
+   //! OSPRay/Embree may use. The default (<= 0) uses all available hardware
+   //! threads. This must be set at initialisation, so it is an argument here
+   //! rather than a ray_trace_image() JSON parameter.
+   void ray_trace_init(int n_threads = -1);
 
    //! Shut down the OSPRay ray-tracing engine.
    void ray_trace_shutdown();
@@ -1498,6 +1572,33 @@ public:
    //!
    //! @return a `simple_mesh_t`
    coot::simple_mesh_t get_chemical_features_mesh(int imol, const std::string &cid) const;
+
+   //! Chemical feature clustering
+   //!
+   //! Find the chemical features (donors, acceptors, aromatic rings, ...) of the ligands
+   //! in a set of models, and cluster them. The waters near the ligands are clustered too.
+   //!
+   //! @param mol_info_json is a JSON object, e.g.
+   //! `{"molecules": [[2, "LIG"], [3, "LIG"]], "molecules_are_superposed": false, "centre": [10, 20, 30]}`
+   //! "molecules" is a list of [imol, residue-name] pairs; the ligand in each model is the residue
+   //! with that name (the one closest to the centre if there is more than one and a centre is given).
+   //! The other keys are optional:
+   //! "molecules_are_superposed" (default true): if false, the models are superposed onto the
+   //! first model (the reference) by main-chain LSQ of the reference residues near the centre,
+   //! and positions are reported in the frame of the reference. The models are not moved.
+   //! "centre" ([x,y,z], in the frame of the reference): selects the residues for the
+   //! superposition. If it is not given, the centre of the ligand in the reference is used.
+   //! "superposition_radius" (default 10.0): the residue selection radius around the centre.
+   //!
+   //! @return a JSON string: an object with keys "reference_imol", "clusters" and "water_clusters".
+   //! Each item in "clusters" has keys "family", "type", "idx", "name", "pos" ([x,y,z]),
+   //! "contributing_points" (a list of [x,y,z]) and "imols" (a list of objects with keys
+   //! "imol", "chain_id", "res_no", "ins_code", "res_name").
+   //! Each item in "water_clusters" has keys "cluster_index", "centre" ([x,y,z]),
+   //! "mean_distance_from_centre" and "waters" (a list of objects with keys "imol",
+   //! "chain_id", "res_no", "ins_code", "pos").
+   //! Both lists are empty if there are no results ("reference_imol" is missing if there were no valid models).
+   std::string chemical_feature_clustering(const std::string &mol_info_json);
 
    //! get an (mmdb-style) atom
    //!
@@ -2268,9 +2369,11 @@ public:
    //! Delete atom using cid
    //!
    //! @param imol is the model molecule index
-   //! @param cid is the atom selection CID e.g "//A/15/OH" (atom OH in residue 15 of chain A)
+   //! @param cid is the atom selection CID e.g "//A/15/OH" (atom OH in residue 15 of chain A).
+   //!        If the `cid` matches multiple atoms, then the first one (only) is deleted.
    //!
-   //! @return 1 on successful deletion, return 0 on failure to delete.
+   //! @return first: 1 on successful deletion, return 0 on failure to delete.
+   //!         second: the new atom count
    std::pair<int, unsigned int> delete_atom_using_cid(int imol, const std::string &cid);
 
    //! Delete residue
@@ -2941,11 +3044,19 @@ public:
 
    //! Fix atoms during refinement
    //!
-   //! Does nothing at the moment
+   //! The atoms stay fixed in subsequent refinements and minimizations of this molecule
+   //! until `clear_fixed_atoms_during_refinement()` is called. Repeated calls add to the set.
    //!
    //! @param imol is the model molecule index
    //! @param atom_selection_cid is the selection CID e.g "//A/15/OH" (atom OH of residue 15 of chain A)
    void fix_atom_selection_during_refinement(int imol, const std::string &atom_selection_cid);
+
+   //! Clear the fixed atoms
+   //!
+   //! Un-fix all the atoms that were fixed with `fix_atom_selection_during_refinement()`
+   //!
+   //! @param imol is the model molecule index
+   void clear_fixed_atoms_during_refinement(int imol);
 
    //! Add or update restraint (if it has a pull restraint already)
    //!
@@ -2996,6 +3107,20 @@ public:
    //!
    //! @return the Ramachandran plot restraints weight
    float get_rama_plot_restraints_weight() const { return rama_plot_restraints_weight; }
+
+   //! Turn on or off the numerical gradients check (for debugging the refinement)
+   //!
+   //! When on, minimize() calculates numerical gradients each time that the
+   //! analytical gradients are calculated and writes both to the output
+   //! (one line per coordinate) - so that they can be compared. It is slow and verbose.
+   //!
+   //! @param state is True to mean that it is enabled
+   void set_use_numerical_gradients(bool state) { use_numerical_gradients = state; }
+
+   //! Get the state of the numerical gradients check
+   //!
+   //! @return the state
+   bool get_use_numerical_gradients() const { return use_numerical_gradients; }
 
    //! Turn on or off torsion restraints in refinement
    //!
@@ -3270,6 +3395,38 @@ public:
    //! @return a pair: the first is the status (1 for OK, 0 for failed to determine the distortion)
    std::pair<int, double> get_ligand_distortion(int imol, const std::string &ligand_cid, bool include_non_bonded_contacts);
 
+   //! Assess the protein-ligand interactions for a given ligand
+   //!
+   //! This uses the pli (protein-ligand interactions) functions to find the
+   //! hydrogen bonds (including to waters), metal contacts, covalent bonds and
+   //! halogen bonds (ligand C-X...A with X = Cl, Br, I) between the specified
+   //! ligand and its surrounding residues. Halogen bonds carry an `angles`
+   //! object with the C-X...A and X...A-R angles in degrees.
+   //!
+   //! Pi stacking (ring-ring, and cation-pi in both directions) is reported in a
+   //! separate `stackings` array. Detection uses Coot's pi-point overlap score
+   //! (`overlap_score`); each entry also gives the ring atoms on both sides,
+   //! `centroid_distance`, `plane_angle`, `normal_to_centroid_angle` and, for
+   //! ring-ring stacks, a `geometry` label: face-to-face, edge-to-face or
+   //! intermediate.
+   //!
+   //! @param imol is the model molecule index
+   //! @param ligand_cid is the selection CID for the ligand residue, e.g. "//B/900"
+   //! @param h_bond_dist_max is the maximum hydrogen-bond distance, e.g. 3.6
+   //!
+   //! Each bond reports the ligand atom and residue atom as heavy atoms and the
+   //! `bond_length` as the heavy-atom (donor to acceptor) distance, whether or not
+   //! the model has hydrogens. When an H-bond was found via an explicit hydrogen
+   //! (McDonald & Thornton), that hydrogen is reported as `hydrogen_atom` with
+   //! `h_a_distance`. H-bonds carry an `angles` object (D-H...A, H...A-AA,
+   //! D...A-AA, -1 if not available) and `geometry_warnings`: the McDonald &
+   //! Thornton limits the bond does not meet (H...A > 2.5 A, an acceptor-side
+   //! angle < 90 deg). Only D...A < 3.9 A and D-H...A >= 90 deg are used to
+   //! select H-bonds; the rest is reported so that the caller can filter.
+   //!
+   //! @return a JSON string describing the interactions; an empty string on failure
+   std::string get_ligand_interactions_as_json(int imol, const std::string &ligand_cid, float h_bond_dist_max);
+
    //! Match ligand torsions
    //!
    //! @param imol_ligand is the ligand molecule index
@@ -3514,6 +3671,8 @@ public:
    //! @param n_residue_per_residue_range is the number of residues in the residue range. 11
    //!        is a reasonable number for a smooth plot
    //! @param imol_map is the map molecule index
+   //! @return a vector of stats for the mainchain in first and
+   //!         a vector of stats for the sidechains in second
 #ifdef SWIG
 #else
    std::pair<std::map<coot::residue_spec_t, coot::util::density_correlation_stats_info_t>,
@@ -3901,14 +4060,6 @@ public:
    //! @return an svg string of the representation. On failure, return an empty string.
    std::string get_svg_for_2d_ligand_environment_view(int imol, const std::string &residue_cid, bool add_key);
 
-   //! Get non-standard residues in a model
-   //!
-   //! @param imol is the model molecule index
-   //!
-   //! @return a vector/list of residue specifiers - the residue name is encoded
-   //! in the `string_user_data` data item of the residue specifier
-   std::vector<coot::residue_spec_t> get_non_standard_residues_in_molecule(int imol) const;
-
    //! Try to read the dictionaries for any residue type in imol that as yet does not have
    //! a dictionary
    //!
@@ -4176,6 +4327,18 @@ public:
    //!        and molecule
    //! @return the new molecule index or -1 on failure
    int pyrogen_from_rdkit_mol_pickle_base64(const std::string &rdkit_mol_pickled_string, const std::string &compound_id);
+
+   //! Write a minimal CCD-style mmCIF from an RDKit molecule pickle (base64) -
+   //! the input format for external dictionary generators (acedrg -c,
+   //! pyrogen --mmcif). Atom names carried on the molecule are preserved.
+   //!
+   //! @param rdkit_mol_pickled_string base64-encoded RDKit binary pickle
+   //! @param compound_id the _chem_comp.id for the written file
+   //! @param file_name the output file name
+   //! @return 1 on success, 0 on failure
+   int write_acedrg_input_mmcif_from_rdkit_mol_pickle_base64(const std::string &rdkit_mol_pickled_string,
+                                                             const std::string &compound_id,
+                                                             const std::string &file_name);
 
    // -------------------------------- Other ---------------------------------------
 

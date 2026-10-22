@@ -70,6 +70,7 @@
 
 
 #include "graphics-info.h"
+#include "session-info.hh"
 
 #include "widget-headers.hh"
 
@@ -5195,11 +5196,11 @@ void c_accept_moving_atoms() {
    graphics_info_t g;
    while (g.continue_threaded_refinement_loop)
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
-   if (g.use_graphics_interface_flag) {
+   if (g.use_graphics_interface_flag)
       g.clear_hud_buttons();
-      g.accept_moving_atoms();
+   g.accept_moving_atoms();
+   if (g.use_graphics_interface_flag)
       g.clear_moving_atoms_object();
-   }
 
 }
 
@@ -5324,7 +5325,13 @@ int new_molecule_by_residue_type_selection(int imol_orig, const char *residue_ty
    return imol;
 }
 
-int new_molecule_by_atom_selection(int imol_orig, const char* atom_selection_str) {
+// The recentre flag is false when the caller means to move the new fragment itself -
+// otherwise the animated recentring set up here would fly the view off to where the
+// fragment used to be, leaving the moved fragment off-screen. (The view interpolation
+// is a tick-callback animation, so it outlives this function and its target is fixed
+// at the fragment's position at the time of the call.)
+//
+int new_molecule_by_atom_selection_inner(int imol_orig, const char* atom_selection_str, bool recentre) {
 
    auto recentre_on_new_fragment = [] (int imol) {
       graphics_info_t g;
@@ -5362,7 +5369,8 @@ int new_molecule_by_atom_selection(int imol_orig, const char* atom_selection_str
             g.molecules[imol].install_model(imol, asc, g.Geom_p(), name, 1, shelx_flag);
             g.molecules[imol].set_have_unsaved_changes_from_outside();
             update_go_to_atom_window_on_new_mol();
-            recentre_on_new_fragment(imol);
+            if (recentre)
+               recentre_on_new_fragment(imol);
          } else {
             std::cout << "in new_molecule_by_atom_selection "
                       << "Something bad happened - No atoms selected"
@@ -5399,6 +5407,11 @@ int new_molecule_by_atom_selection(int imol_orig, const char* atom_selection_str
                 << "model molecule" << std::endl;
    }
    return imol;
+}
+
+int new_molecule_by_atom_selection(int imol_orig, const char* atom_selection_str) {
+
+   return new_molecule_by_atom_selection_inner(imol_orig, atom_selection_str, true);
 }
 
 int new_molecule_by_sphere_selection(int imol_orig, float x, float y, float z, float r,
@@ -5820,6 +5833,9 @@ int handle_cif_dictionary_for_molecule(const std::string &filename, int imol_enc
       if (do_new_molecule)
          if (new_molecule_from_dictionary_cif_checkbutton_state)
             get_monomer_for_molecule_by_index(rmit.monomer_idx, imol_enc);
+
+      if (! graphics_info_t::disable_state_script_writing)
+         coot::session::note_recent_dictionary(filename);
    }
 
    graphics_draw();
@@ -5891,7 +5907,8 @@ void add_hydrogen_atoms_to_residue(int imol, std::string chain_id, int res_no, s
 
    if (is_valid_model_molecule(imol)) {
       coot::residue_spec_t rs(chain_id, res_no, ins_code);
-      graphics_info_t::molecules[imol].add_hydrogen_atoms_to_residue(rs);
+      graphics_info_t g;
+      g.molecules[imol].add_hydrogen_atoms_to_residue(rs, g.Geom_p());
       graphics_draw();
    }
 }
@@ -5902,7 +5919,8 @@ void add_hydrogen_atoms_to_residue_py(int imol, PyObject *residue_spec_py) {
 
    if (is_valid_model_molecule(imol)) {
       coot::residue_spec_t rs = residue_spec_from_py(residue_spec_py);
-      graphics_info_t::molecules[imol].add_hydrogen_atoms_to_residue(rs);
+      graphics_info_t g;
+      graphics_info_t::molecules[imol].add_hydrogen_atoms_to_residue(rs, g.Geom_p());
       graphics_draw();
    }
 }
@@ -5921,7 +5939,7 @@ int handle_cns_data_file_with_cell(const char *filename, int imol, float a, floa
    clipper::Cell_descr cell_d(a, b, c,
                               clipper::Util::d2rad(alpha),
                               clipper::Util::d2rad(beta),
-                              clipper::Util::d2rad(alpha));
+                              clipper::Util::d2rad(gamma));
    clipper::Spgr_descr sg_d(spg_info);
    cell.init(cell_d);
    sg.init(sg_d);

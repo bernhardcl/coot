@@ -1,36 +1,258 @@
 --- Items---
 
+o find arp warp persistance density for ligands
+
+o fix order of layla exit buttons
+
+o configure should fail if it can't find swig
+
+o Add an end-cap to worms mesh
+
+o EJD: Let me undock the validation buttons.
+
+o Impact statement for Moorhen.
+
+o Look at A1D0T ligand thumbnail - the methyls should not be wedged.
+
+o What to test for mmcif dictionaries to buster?
+  Generate restraints for new ligands with pyrogen, check that they work and hand them over.
+
+o the A1??? monomers are not correctly downloaded/stored
+  e.g. ~/.cache/Coot/monomers/a/A1DIB.cif. What puts them there? Old/dead code now?
+  the are OK in ~/.cache/Coot/A1???.cif
+
+o have another try to fix the specular light in fancy mode
+  (test with 4hhb molecular surface)
+
+o look at 23sr, 9i9k
+
+o Add a "view" that shows formal charges - on this residue - or whole molecule
+
+o use RDKit canonical SMILES for atom order and hence atom name.
+
+o make default bond smoothness be "smooth" (2, I think)
+
+o for agentic coot, create a function that does "validate_residue()" - combining metrics
+
+o Restart blank with session restore option in an overlay
+  modified by command line argument (--no-state-script
+  forces blank startup with no restore option).
+* Done.
+
+o gaussian surfaces should be drawn with model Material
+* Done. The material is copied over when the mesh is made.
+        Maybe not a good idea.
+
+o trying to change the model material - seems not to affect the drawing of
+  molecule2triangles objects (say, a surface)
+* The material are copied when the object is constructed.
+
+o check that the atom in the go-to-atom icon is round
+* Done. It is AFAICS.
+
+o do worms on 4hhb. The colour variation per chain needs to be larger.
+* Done.
+
+o if esd is more than 360 (200) then ignore that torsion during refinement.
+* Done.
+
+o look at carbohydrate building before release
+* Done.
+
+o in Range/Pair show the selection
+  on completion (second pick), flash the residue range.
+  The range show (`) doesn't account for for case where atom radius > bond radius. Looks strange.
+* Done - nice.
+
+o fix add_hydrogen_atoms_to_residue(): null geom_p
+* Done.
+
+o 7k00 - get the emdb code from the cif
+* Done.
+
+o make coot::molecule_t::fix_atom_selection_during_refinement(const std::string &atom_selection_cid)
+  work.
+* Done.
+
+o in Range/Pair show the selection
+  on completion (second pick), flash the residue range
+* Done.
+
+o remove this debugging:
+  was_xmap() replacing with empty
+* Done.
+
+o does coot_no_state_real_exit() flush the python buffer?
+* It dooes now.
+
+o does coot_no_state_real_exit() flush the python buffer?
+* Done.
+
+o --cod on the command line
+* Done. Nice.
+
+o did I lose the Go To Atom dialog edits?
+* On the stash, found and applied
+
+o did I lose the "Run Script" cancel button fix?
+* On the stash, found and applied
+
+o Fatter worms by default.
+* Done. Now user-settable.
+
+o add the servalcat graph progress
+* Done. Nice
+
+o make nice little svgs from bickerton et al (2012) functions
+  to help with QED manipulation.
+* Done.
+
+o HEM ligand still tangled. Exclude HEM
+* Done.
+
+o we are looking at a ligand with a nitrogen: 6RD, it would be nice to get
+  and fetch COD structures that have the same atom type (and possibly matching atom types
+  of the direct neighbours too) - i.e. there should be a database query for this.
+* Done.
+
+o average maps: simple usage fails
+* Done.
+
+o 1a31 fix the charge change (I think) so that the PTR-DT link can be made (the atom that is
+  deleted is the O3' on the ribose)
+* Done.
+
+o Regularize residue range
+* Done.
+
+o GPhL: check that pandda maps read into coot - do we need the rotation/translation in the header.
+
+o 5s9s FAD A 501 OA1 and O2A should have the same hydrogen bond type
+   (acceptor) see ener_lib.cif for O and OP. So the RDKit output
+   needs to be augmented.
+
+o look at FAD with hydrogens added pdb5s9s.ent,
+  oxygen-to-hydrogen bond needs an end-cap
+
+o add to the api - add dotted/dashed line between points
+  in ospray rendering
+* Meh. At some stage.
+
+o "upset plot" - intereseting!
+
+o (possibly) fix the origin shift for pandda maps. See map on pumble
+
+o branching from a branch called dev, i.e. double-dev, does it branch
+  from main, or from dev?
+* From dev.
+
+o fix installation of coot_headless_api in homebrew
+
+o what does prolif give us?
+
+o add helices as cylinders to MoleculesToTriangles
+
+o where did we get to with soi?
+
+o what did Clemens do with the rendering script and how do we use it for pandda
+* Done.
+
+o remove gemmi-sqlite from configure
+* Done.
+
+o when there is no ligand dictionary, don't draw bonds to hydrogens
+  beyond 1.2 A. See B210 P6G in 9qkh.
+* Done.
+
+o change the default shininess strength for models to 0.3
+* Done.
+
+o see 5e4a1e3dcb3d7e0643fb76f43f3c9489b335aa6e
+  if the H bond status can't be looked up, make it grey.
+  because both yellow and purple mean something now.
+* Done.
+
+o use modern bond info in the cif bond table (aromatic is a flag)
+* Done.
+
+o "Fetch Ligand Restraints" shouldn't create a new ligand molecule
+* Done.
+
+o Add "shoebox" generic object - and then make Rama plots with
+  planes on 3 sides. Low priority.
+
+o in Layla, the input should be "RDKit->mmCIF" - probably the default
+  where we do something like convert-pkl-to-mmcif.py - but
+  there is no need to pickle so just make the minimal input cif
+  for acedrg from the RDKit molecule.
+* Done.
+
+o remove this:
+if sequence view is displayed update highlighted position here C
+* Done.
+
+o fix the tiny molecule flev: e.g. erin-2
+* Done.
+
+o remove redundant json.hpp
+* Done.
+
+o You can tell which button has been presssed in "Difference Map Peaks"
+  button list, but not Unmodelled Blobs, or Outliers table.
+* Done. Nice.
+
+o transfer gemmi SQL commits to coot/pyrogen
+* Done.
+
+o add a key-binding for "clear atom labels"
+*  Done. Shift L. Nice.
+
+o Erin: check non-standard residues in molecule
+* seems OK.
+
+o "on_glarea_key_controller_key_pressed() key not found in map: 65505"
+should be an ephemeral message.
+* Meh.
+
+o add get_secondary_structure_information() json
+  with a param get-it-from-the-header or calculate-it
+
+o read in maps from mtz and set column labels for updating maps
+  turn on updating maps
+  refine something
+  -> Maps don't update
+
+o dnotes: Look at cowcat jholton github
+
+o for jordan: for each chi angle set for each residue
+  type find the number of observations in that basin
+
+o make a smoother copy of a difference map should
+  preserrve the difference map status in the new map.
+
+o for chapi scripts, chapi.spec_to_cid() would be convenient.
+
 o conformer generator in chapi
   Geneate many (10 * N) without energy minimization, then
   pick the top N, judged by non-bonded contacts
 
-o transfer gemmi SQL commits to coot/pyrogen
+o try to break bansu with AI
 
-o Angle filtering fixes for acedrg atom types validation
+o complex atom selections in coot
 
-o take a look at Avogadro JSON-RPC
-  (dnotes)
+o test clipper large maps - needs chat with stuart
 
-o ligand restraints accumulated per atom, not every
-  restraint
+o bring the pli interaction info into chapi as json
 
-o  superpose ligands? gui item seems to fail on hal
-* Done.
+o can I mutate a residue and get best rotamer without a map?
+  can I do that for a whole protein?
 
-o look at COD files from the last year, say. Can
-  they be read by Coot (chapi)?
-
-o scripting: add "delete all hetgroups"
-* Done.
-
-o scripting: delete all waters
-* Done.
+o in one of the ligand interaction analysis functions in chapi, add
+  charge-charge interactions. Check what autodock vina does for
+  the protein and use GM charges using the RDKit for ligands.
 
 o scripting: glob many monomer cifs and import them
   things slow down - fixable?
-
-o make a generic conformer generator - use the old style
-  with torsion sampling and energy minimization
 
 o in the ligand builder:
    if the molecule exists in the monomer library, import it from there.
@@ -38,22 +260,41 @@ o in the ligand builder:
 e.g. kaempferol
 https://www.ebi.ac.uk/chembl/api/data/molecule/CHEMBL150.json
 
+o Angle filtering fixes for acedrg atom types validation
+
+o ligand restraints accumulated per atom, not every
+  restraint
+
+o look at COD files from the last year, say. Can they be read by Coot (chapi)?
+  Try to extract the hkls
+
+o  superpose ligands? gui item seems to fail on hal
+* Done.
+
+o scripting: add "delete all hetgroups"
+* Done.
+
+o scripting: delete all waters
+* Done.
+
+o conformer generator in chapi
+  Geneate many (10 * N) without energy minimization, then
+  pick the top N, judged by non-bonded contacts
+* Done.
+
 o coot --no-crystallography or --molecular-modelling
 
 o delete in layla should change the cursor
 
-draw an indole and make one of the fused bond carbons a nitrogen
-
-o change difference map peaks buttons and blobs to togglebuttons so they are
-  visually distinct on "click"
+o draw an indole and make one of the fused bond carbons a nitrogen
 
 o add some sort of help/search in the python scripting.
 
 o think about adding extra residue to the ligand figures in ospray
 
 o read in a molecule with a new ligand e.g. 9ymp -> Fetch PDBe Ligand Description
-Ligand goes here: /home/paule/.local/share/A1AG3.cif
-Ahahaha! because I have (incorrectly?) set XDG_DATA_HOME
+   Ligand goes here: /home/paule/.local/share/A1AG3.cif
+   Ahahaha! because I have (incorrectly?) set XDG_DATA_HOME
 
 o "Send to CCP4i2" button replaces "Generate Restraints"
   with command line option to layla.
@@ -65,6 +306,7 @@ o ldaddr (?) for chapi to find its files on relocatable binaries.
   metals and inchikey db.
 
 o fix api documentation generation
+* Done.
 
 o add servalcat_refine_xray_with_keywords
   int servalcat_refine_xray_with_keywords(int imol, int imol_map, const std::string &output_prefix,

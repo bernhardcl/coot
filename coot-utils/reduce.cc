@@ -374,7 +374,7 @@ coot::reduce::add_riding_hydrogens(double bl_aliph,
                if (residue_p) {
                   std::string res_name = residue_p->GetResName();
                   if (res_name == "HIS") {
-                     find_best_his_protonation_orientation(residue_p);
+                     find_best_his_protonation_orientation(residue_p, imol);
                   }
                }
             }
@@ -986,9 +986,10 @@ coot::reduce::add_aromatic_hydrogen(const std::string &H_at_name,
          clipper::Coord_orth H_pos = position_by_bisection(at_n_1, at_n_2, at_n_3, bl);
          add_hydrogen_atom(H_at_name, H_pos, bf, alt_confs[i], residue_p);
       } else {
-         std::cout << "Fail Residue " << residue_spec_t(residue_p) << " " << residue_p->GetResName()
+         std::cout << "WARNING:: in add_aromatic_hydrogen() Residue " << residue_spec_t(residue_p)
+                   << " " << residue_p->GetResName()
                    << " alt-conf \"" << alt_confs[i] << "\""
-                   << " failed in add_aromatic_hydrogen " << std::endl;
+                   << " missing atom" << std::endl;
          if (false) { // 20240325-PE useful for debugging - but normally it's noise
             std::cout << "Fail to add " << neighb_at_name_1 << " at_1: " << at_n_1 << std::endl;
             std::cout << "            " << neighb_at_name_2 << " at_2: " << at_n_2 << std::endl;
@@ -1036,9 +1037,9 @@ coot::reduce::add_amino_hydrogens(const std::string &H_at_name_1,
             add_hydrogen_atom(H_at_name_2, Hp2, bf, alt_confs[i], residue_p);
          }
       } else {
-         std::cout << "Fail Residue " << residue_spec_t(residue_p) << " " << residue_p->GetResName()
-                   << " alt-conf \"" << alt_confs[i] << "\""
-                   << " failed in add_amino_hydrogens" << std::endl;
+         std::cout << "WARNING:: in add_amino_hydrogens() " << residue_spec_t(residue_p) << " "
+                   << residue_p->GetResName() << " alt-conf \"" << alt_confs[i] << "\""
+                   << " missing neighb atom" << std::endl;
          if (false) { // 20240325-PE useful for debugging - but normally it's noise
             std::cout << "Fail to add " << at_name_1 << " at_1: " << at_name_1 << " " << at_n_1 << std::endl;
             std::cout << "            " << at_name_2 << " at_2: " << at_name_2 << " " << at_n_2 << std::endl;
@@ -1089,9 +1090,9 @@ coot::reduce::add_guanidinium_hydrogens(mmdb::Residue *residue_p) {
          clipper::Coord_orth H_pos = position_by_bisection(at_n_1, at_n_2, at_n_3, bl);
          add_hydrogen_atom(H_at_name, H_pos, bf, alt_confs[i], residue_p);
       } else {
-         std::cout << "Fail Residue " << residue_spec_t(residue_p) << " " << residue_p->GetResName()
-                   << " alt-conf \"" << alt_confs[i] << "\""
-                   << " failed in add_guanidinium_hydrogens " << std::endl;
+         std::cout << "WARNING:: in add_guanidinium_hydrogens() " << residue_spec_t(residue_p)
+                   << " " << residue_p->GetResName() << " alt-conf \"" << alt_confs[i] << "\""
+                   << " missing neighb atom" << std::endl;
 
          if (false) { // 20240325-PE useful for debugging - but normally it's noise
             std::cout << "Fail to add guanidinium-H " << " CD " << " at_1: " << at_n_1 << std::endl;
@@ -1314,7 +1315,7 @@ coot::reduce::add_aromatic_hydrogen(const std::string &H_at_name,
 }
 
 void
-coot::reduce::find_best_his_protonation_orientation(mmdb::Residue *residue_p) {
+coot::reduce::find_best_his_protonation_orientation(mmdb::Residue *residue_p, int imol_enc) {
 
    // Put the H on the ND1 then on the NE2 - see which gives the best
    // score - choose that.
@@ -1327,7 +1328,6 @@ coot::reduce::find_best_his_protonation_orientation(mmdb::Residue *residue_p) {
          double bl = 0.86;
          std::vector<mmdb::Atom *> v = add_his_ring_H(" HE2", " CE1", "NE2", " CD2", bl, residue_p);
          std::vector<mmdb::Residue *> neighbs = coot::residues_near_residue(residue_p, mol, 5);
-         int imol_enc = protein_geometry::IMOL_ENC_ANY; // hack
          atom_overlaps_container_t ao_1(residue_p, neighbs, mol, imol_enc, geom_p, 0.5);
          atom_overlaps_dots_container_t aod_1 = ao_1.contact_dots_for_ligand(0.7);
          double s1 = aod_1.score();
@@ -1774,18 +1774,27 @@ coot::reduce::place_hydrogen_by_connected_atom_energy_type(const std::string &en
 
    if (energy_type == "NT1") {
 
-      bool choose_only_farthest_position = true; // we find two H positions, choose
-                                                 // the one farthest from the 2nd neighbs.
+      if (second_neighb_vec.size() == 3) {
 
-      // H atom on sp3 nitrogen connected to 2 sp3 carbon atoms, e.g. in piperidine
-      // choose equitorial orientation, not axial.  Which means, build both hydrogen positions
-      // and chose the one that is furthest from the average position of the second neighbours.
-      //
-      double angle_between_Hs = 107.0; // we could get this from the dictionary
-      std::string H_at_other = "Hdum";
-      add_2_sp3_hydrogens(H_at_name, H_at_other, first_neighb, second_neighb_vec,
-                          bl_amino, angle_between_Hs, residue_p, choose_only_farthest_position);
-      v.push_back(H_at_name);
+         // H atom on a protonated tertiary amine (N+ with 3 carbon atoms)
+         add_tetrahedral_hydrogen(H_at_name, first_neighb, second_neighb_vec, bl_amino, residue_p);
+         v.push_back(H_at_name);
+
+      } else {
+
+         bool choose_only_farthest_position = true; // we find two H positions, choose
+                                                    // the one farthest from the 2nd neighbs.
+
+         // H atom on sp3 nitrogen connected to 2 sp3 carbon atoms, e.g. in piperidine
+         // choose equitorial orientation, not axial.  Which means, build both hydrogen positions
+         // and chose the one that is furthest from the average position of the second neighbours.
+         //
+         double angle_between_Hs = 107.0; // we could get this from the dictionary
+         std::string H_at_other = "Hdum";
+         add_2_sp3_hydrogens(H_at_name, H_at_other, first_neighb, second_neighb_vec,
+                             bl_amino, angle_between_Hs, residue_p, choose_only_farthest_position);
+         v.push_back(H_at_name);
+      }
    }
 
    if (energy_type == "NT2") {

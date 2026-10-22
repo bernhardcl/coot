@@ -435,6 +435,11 @@ namespace coot {
          refmac_r_free_flag_sensible = false;
          use_bespoke_grey_colour_for_carbon_atoms = false;
          really_do_backups = true;
+         // Backup file names are built from this stub. Left as the default
+         // "placeholder", every molecule wrote coot-backup/placeholder-<n>, so
+         // molecules overwrote each other's backups and undo() could restore a
+         // different molecule. imol_no is unique within the container.
+         modification_info.mol_name = "imol-" + std::to_string(imol_no);
 
          radial_map_colour_saturation = 0.5;
          radial_map_colour_invert_flag = false;
@@ -1362,12 +1367,15 @@ namespace coot {
                    int n_cycles,
                    bool do_rama_plot_restraints, float rama_plot_weight,
                    bool do_torsion_restraints, float torsion_weight, bool refinement_is_quiet,
-                   coot::protein_geometry *geom_p);
+                   coot::protein_geometry *geom_p,
+                   bool do_numerical_gradients=false);
 
       bool shiftfield_b_factor_refinement(const clipper::HKL_data<clipper::data32::F_sigF> &F_sigF,
                                           const clipper::HKL_data<clipper::data32::Flag> &free_flag);
 
       void fix_atom_selection_during_refinement(const std::string &atom_selection_cid);
+
+      void clear_fixed_atoms_during_refinement() { fixed_atom_specs.clear(); }
 
       // refine all of this molecule - the links and non-bonded contacts will be determined from mol_ref;
       void init_all_molecule_refinement(int imol_ref_mol, coot::protein_geometry &geom,

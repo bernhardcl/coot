@@ -671,6 +671,7 @@ libcootsumo_la_SOURCES = \
 	graphics-info-statics.cc \
 	graphics-info-superpose.cc	\
 	graphics-info-servalcat.cc	\
+	servalcat-refine-progress-gui.cc	\
 	graphics-info-tick-function.cc \
 	graphics-info-trackball.cc	\
 	graphics-info-utils.cc	 \
@@ -817,6 +818,9 @@ libcootsumo_la_SOURCES = \
 	sdf-interface.hh         \
 	sdf-internal.hh          \
 	select-atom-info.hh      \
+	servalcat-refine-progress-gui.hh \
+	session-info.cc          \
+	session-info.hh          \
 	Shader.cc Shader.hh      \
 	simple-distance-object.hh \
 	sound.cc                 \
@@ -867,8 +871,7 @@ libcootsumo_la_SOURCES = \
 	new-centre.hh            \
 	widget-headers.hh        \
 	widget-from-builder.hh   \
-	widget-from-builder.cc   \
-	json.hpp
+	widget-from-builder.cc
 
 
 # 20220228-PE this appeared in a merge - not sure if it's needed (or should be included directly)
@@ -928,9 +931,9 @@ if OS_WIN32
 WinCoot_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
 else
 if OS_DARWIN
-MacCoot_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
+MacCoot_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC) $(GEMMI_RPATH)
 else
-coot_1_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC)
+coot_1_LDFLAGS = $(EXPORT_DYNAMIC_FLAG_SPEC) $(GEMMI_RPATH)
 endif
 endif
 

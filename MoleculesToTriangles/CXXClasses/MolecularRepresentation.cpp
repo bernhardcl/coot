@@ -358,6 +358,15 @@ int MolecularRepresentation::drawDishyBases()
     shared_ptr<CylindersPrimitive>cylinder(new CylindersPrimitive());
     cylinder->setAngularSampling(intParameters["dishStyleAngularSampling"]);
 
+    //Each bond here is worth about 1000 vertices at the dishy sampling of 32, so a whole
+    //ribosome in one primitive asks generateArrays() for a couple of hundred megabytes in a
+    //single contiguous block - which fails, intermittently, on a heap that has been in use
+    //for a while. Batch it as drawBondsAsCylinders() above already does, but in smaller
+    //groups because the sampling here is higher. A base's bonds are whole two-point
+    //segments, so a boundary between batches never splits a cylinder.
+    const unsigned int maxBondsPerCylinder = 200;
+    unsigned int nBondsThisCylinder = 0;
+
     float cylinderRadius = floatParameters[std::string("cylindersStyleCylinderRadius")];
     float ballRadius = floatParameters[std::string("cylindersStyleBallRadius")];
 
@@ -400,6 +409,7 @@ int MolecularRepresentation::drawDishyBases()
                 auto atom2 = dishyBaseIter->ribose_atoms[bond->second];
                 FCXXCoord atom2Color =  colorScheme->colorForAtom(atom2, handles);
                 cylinder->addHalfAtomBond(atom1, atom1Color, atom2, atom2Color, cylinderRadius);
+                nBondsThisCylinder++;
             }
             // Draw a stick from ribose_atoms[1] to 1/3 of the way to
             // centre.
@@ -410,10 +420,20 @@ int MolecularRepresentation::drawDishyBases()
             cylinder->addHalfAtomBondWithCoords(atom1Coord, dishyBaseIter->ribose_atoms[1], atom1Color,
                                                 basePseudoAtomPosition, dishyBaseIter->ribose_atoms[1], atom1Color,
                                                 cylinderRadius);
+            nBondsThisCylinder++;
+
+            if (nBondsThisCylinder >= maxBondsPerCylinder){
+                displayPrimitives.push_back(cylinder);
+                cylinder = shared_ptr<CylindersPrimitive>(new CylindersPrimitive());
+                cylinder->setAngularSampling(intParameters["dishStyleAngularSampling"]);
+                nBondsThisCylinder = 0;
+            }
 
         }
     }
-    displayPrimitives.push_back(cylinder);
+    if (nBondsThisCylinder > 0){
+        displayPrimitives.push_back(cylinder);
+    }
     if (balls->getBalls().size()%100 != 0){
         displayPrimitives.push_back(balls);
     }
@@ -535,6 +555,7 @@ int MolecularRepresentation::drawRibbon()
     float radiusTwoDNARNA = floatParameters["ribbonStyleCoilThickness"];
     float radiusOneArrow  = floatParameters["ribbonStyleArrowWidth"];
     float radiusTwoArrow  = floatParameters["ribbonStyleCoilThickness"];
+    bool hideHelixGeometry = (intParameters["hideHelixGeometry"] != 0);
 
     mmdb::Manager *mmdb = myMolecule->getMmdb();
     //selection->describe();
@@ -632,32 +653,34 @@ int MolecularRepresentation::drawRibbon()
                 float radiusOne = radiusOneNone * radiusMultiplier;
                 float radiusTwo = radiusTwoNone * radiusMultiplier;
                 if (currentSSE == mmdb::SSE_Helix) {
-                    if (i<subdivisionsPerCalpha/2){
-                        if (currentSSE == lastSSE) {
-                            radiusOne = radiusOneHelix;
-                            radiusTwo = radiusTwoHelix;
+                    if (! hideHelixGeometry) {
+                        if (i<subdivisionsPerCalpha/2){
+                            if (currentSSE == lastSSE) {
+                                radiusOne = radiusOneHelix;
+                                radiusTwo = radiusTwoHelix;
+                            }
+                            else {
+                                float factor = (float)i / ((float)subdivisionsPerCalpha/2.f);
+                                radiusOne = radiusOneNone + factor * (radiusOneHelix-radiusOneNone);
+                                radiusTwo = radiusTwoNone + factor * (radiusTwoHelix-radiusTwoNone);
+                            }
                         }
                         else {
-                            float factor = (float)i / ((float)subdivisionsPerCalpha/2.f);
-                            radiusOne = radiusOneNone + factor * (radiusOneHelix-radiusOneNone);
-                            radiusTwo = radiusTwoNone + factor * (radiusTwoHelix-radiusTwoNone);
+                            if (currentSSE == nextSSE) {
+                                radiusOne = radiusOneHelix;
+                                radiusTwo = radiusTwoHelix;
+                            }
+                            else {
+                                float factor = (float)(i-(subdivisionsPerCalpha/2)) / ((float)subdivisionsPerCalpha/2.f);
+                                radiusOne = radiusOneHelix - factor * (radiusOneHelix-radiusOneNone);
+                                radiusTwo = radiusTwoHelix - factor * (radiusTwoHelix-radiusTwoNone);
+                            }
                         }
+                        radiusOne *= radiusMultiplier;
+                        radiusTwo *= radiusMultiplier;
+                        CylinderPoint cylinderPoint(coord, color, normalOne, normalTwo, radiusOne, radiusTwo, calpha);
+                        currentCylinder->addPoint(cylinderPoint);
                     }
-                    else {
-                        if (currentSSE == nextSSE) {
-                            radiusOne = radiusOneHelix;
-                            radiusTwo = radiusTwoHelix;
-                        }
-                        else {
-                            float factor = (float)(i-(subdivisionsPerCalpha/2)) / ((float)subdivisionsPerCalpha/2.f);
-                            radiusOne = radiusOneHelix - factor * (radiusOneHelix-radiusOneNone);
-                            radiusTwo = radiusTwoHelix - factor * (radiusTwoHelix-radiusTwoNone);
-                        }
-                    }
-                    radiusOne *= radiusMultiplier;
-                    radiusTwo *= radiusMultiplier;
-                    CylinderPoint cylinderPoint(coord, color, normalOne, normalTwo, radiusOne, radiusTwo, calpha);
-                    currentCylinder->addPoint(cylinderPoint);
                 }
                 else if (currentSSE == 32767) {
                     if (i<subdivisionsPerCalpha/2){
@@ -803,8 +826,12 @@ int MolecularRepresentation::drawRibbon()
                 radiusTwo = radiusTwoNone * anisoMultiplierTwo;
             }
             CylinderPoint cylinderPoint(coord, color, normalOne, normalTwo, radiusOne, radiusTwo, calpha);
+            // This "end of residue" delimiter point is separate from the main per-subdivision
+            // loop above (which already respects hideHelixGeometry) - without the same gate
+            // here, one wide-elliptical-radius point per helix residue still gets added to
+            // currentCylinder, showing up as a sparse ghost of the suppressed helix geometry.
             if (currentSSE == mmdb::SSE_Strand) currentBoxSection->addPoint(cylinderPoint);
-            else currentCylinder->addPoint(cylinderPoint);
+            else if (! (hideHelixGeometry && currentSSE == mmdb::SSE_Helix)) currentCylinder->addPoint(cylinderPoint);
         }
         if (currentSSE == mmdb::SSE_Strand) displayPrimitives.push_back(currentBoxSection);
         else if (currentSSE != -32767) displayPrimitives.push_back(currentCylinder);

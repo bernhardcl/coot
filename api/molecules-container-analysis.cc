@@ -44,6 +44,9 @@
 #include "coot-utils/read-amber-trajectory.hh"
 #include "coot-utils/json.hpp"
 
+#include "pli/protein-ligand-interactions.hh"
+#include "pli/pi-stacking.hh"
+
 #include "coords/Bond_lines.hh"
 #include "coords/mmdb.hh"
 #include "coords/mmdb-extras.hh"
@@ -63,7 +66,7 @@ molecules_container_t::rotamer_analysis(int imol_model) const {
 
    coot::validation_information_t r;
    r.name = "Rotamer analysis";
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
    r.type = "PROBABILITY";
 #else
    r.type = coot::PROBABILITY;
@@ -160,7 +163,7 @@ molecules_container_t::ramachandran_analysis(int imol_model) const {
 
    coot::validation_information_t vi;
    vi.name = "Ramachandran plot Probability";
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
    vi.type = "PROBABILITY";
 #else
    vi.type = coot::PROBABILITY;
@@ -194,11 +197,12 @@ molecules_container_t::ramachandran_analysis_for_chain(int imol_model, const std
 
    coot::validation_information_t vi;
    vi.name = "Ramachandran plot Probability";
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
    vi.type = "PROBABILITY";
 #else
    vi.type = coot::PROBABILITY;
 #endif
+
    std::vector<coot::phi_psi_prob_t> rv = ramachandran_validation(imol_model);
 
    for (unsigned int i=0; i<rv.size(); i++) {
@@ -228,7 +232,7 @@ molecules_container_t::peptide_omega_analysis(int imol) const {
 
    coot::validation_information_t vi;
    vi.name = "Peptide Omega Deviation";
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
    vi.type = "TORSION_ANGLE";
 #else
    vi.type = coot::TORSION_ANGLE;
@@ -621,6 +625,159 @@ molecules_container_t::get_ligand_distortion(int imol, const std::string &ligand
       std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
    }
    return std::make_pair(status, d);
+}
+
+// Assess the protein-ligand interactions (H-bonds, metal contacts and covalent
+// bonds) for the given ligand, returning the result as JSON.
+std::string
+molecules_container_t::get_ligand_interactions_as_json(int imol, const std::string &ligand_cid,
+                                                       float h_bond_dist_max) {
+
+   // map the pli::fle_ligand_bond_t bond_type enum to a human/tool-readable string
+   auto bond_type_to_string = [] (int bond_type) {
+      switch (bond_type) {
+         case pli::fle_ligand_bond_t::H_BOND_DONOR_MAINCHAIN:    return std::string("H-bond donor (main-chain)");
+         case pli::fle_ligand_bond_t::H_BOND_DONOR_SIDECHAIN:    return std::string("H-bond donor (side-chain)");
+         case pli::fle_ligand_bond_t::H_BOND_ACCEPTOR_MAINCHAIN: return std::string("H-bond acceptor (main-chain)");
+         case pli::fle_ligand_bond_t::H_BOND_ACCEPTOR_SIDECHAIN: return std::string("H-bond acceptor (side-chain)");
+         case pli::fle_ligand_bond_t::METAL_CONTACT_BOND:        return std::string("metal");
+         case pli::fle_ligand_bond_t::BOND_COVALENT:             return std::string("covalent");
+         case pli::fle_ligand_bond_t::HALOGEN_BOND:              return std::string("halogen bond");
+         default:                                                return std::string("other");
+      }
+   };
+
+   std::string s;
+
+   if (! is_valid_model_molecule(imol)) {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): not a valid model molecule " << imol << std::endl;
+      return s;
+   }
+
+   mmdb::Manager *mol = molecules[imol].atom_sel.mol;
+   mmdb::Residue *residue_p = molecules[imol].cid_to_residue(ligand_cid);
+   if (! residue_p) {
+      std::cout << "WARNING:: " << __FUNCTION__ << "(): no residue for CID " << ligand_cid
+                << " in molecule " << imol << std::endl;
+      return s;
+   }
+
+   std::vector<pli::fle_ligand_bond_t> bonds =
+      pli::protein_ligand_interactions(residue_p, mol, &geom, imol, h_bond_dist_max);
+
+   nlohmann::json j;
+   coot::residue_spec_t lig_spec(residue_p);
+   j["ligand"] = { {"chain_id", lig_spec.chain_id},
+                   {"res_no",   lig_spec.res_no},
+                   {"ins_code", lig_spec.ins_code},
+                   {"res_name", std::string(residue_p->GetResName()) } };
+
+   nlohmann::json bond_list = nlohmann::json::array();
+   for (const auto &b : bonds) {
+      nlohmann::json jb;
+      jb["bond_type"]   = bond_type_to_string(b.bond_type);
+      jb["bond_length"] = b.bond_length;
+      jb["ligand_atom"] = { {"atom_name", b.ligand_atom_spec.atom_name},
+                            {"alt_conf",  b.ligand_atom_spec.alt_conf} };
+      jb["residue"]     = { {"chain_id", b.res_spec.chain_id},
+                            {"res_no",   b.res_spec.res_no},
+                            {"ins_code", b.res_spec.ins_code} };
+      jb["residue_atom"] = { {"atom_name", b.interacting_residue_atom_spec.atom_name},
+                             {"alt_conf",  b.interacting_residue_atom_spec.alt_conf} };
+      jb["is_water"] = b.is_H_bond_to_water;
+      if (b.is_H_bond_to_water)
+         jb["water_protein_length"] = b.water_protein_length;
+      if (b.bond_type <= pli::fle_ligand_bond_t::H_BOND_ACCEPTOR_SIDECHAIN) {
+         // McDonald & Thornton geometry: reported in full, with the limits the
+         // bond fails listed as warnings rather than used to drop it (-1 = not
+         // available, e.g. no hydrogen, or no acceptor antecedent for a water)
+         if (b.has_hydrogen_atom)
+            jb["h_a_distance"] = b.h_a_distance;
+         jb["angles"] = { {"D-H...A", b.angle_1},
+                          {"H...A-AA", b.angle_2},
+                          {"D...A-AA", b.angle_3} };
+         jb["geometry_warnings"] = b.geometry_warnings;
+      }
+      if (b.bond_type == pli::fle_ligand_bond_t::HALOGEN_BOND) {
+         // ligand_atom is the halogen X, residue_atom is the acceptor A
+         jb["angles"] = { {"C-X...A", b.angle_1},
+                          {"X...A-R", b.angle_2} }; // -1 if A has no heavy neighbour (e.g. water)
+      }
+      if (b.has_hydrogen_atom) {
+         // the explicit hydrogen through which this H-bond was found; it belongs
+         // either to the ligand atom or to the residue atom
+         coot::residue_spec_t h_res_spec(b.hydrogen_atom_spec);
+         jb["hydrogen_atom"] = { {"chain_id",  h_res_spec.chain_id},
+                                 {"res_no",    h_res_spec.res_no},
+                                 {"ins_code",  h_res_spec.ins_code},
+                                 {"atom_name", b.hydrogen_atom_spec.atom_name},
+                                 {"alt_conf",  b.hydrogen_atom_spec.alt_conf} };
+      }
+      bond_list.push_back(jb);
+   }
+   j["bonds"] = bond_list;
+   j["n_bonds"] = bonds.size();
+
+   // ---------------- pi stacking -------------------
+   //
+   // Detection is Coot's Clark & Labute style pi-point overlap score; the
+   // geometry (centroid distance, plane angle, normal-to-centroid angle) is
+   // reported so that the result can be compared with other tools, and
+   // "geometry" classifies ring-ring stacks by plane angle: face-to-face
+   // (< 35 degrees), edge-to-face (> 50 degrees) or intermediate.
+   //
+   auto stacking_type_to_string = [] (pli::pi_stacking_instance_t::stacking_t t) {
+      switch (t) {
+         case pli::pi_stacking_instance_t::PI_PI_STACKING:     return std::string("pi-pi");
+         case pli::pi_stacking_instance_t::PI_CATION_STACKING: return std::string("pi-cation"); // protein cation, ligand ring
+         case pli::pi_stacking_instance_t::CATION_PI_STACKING: return std::string("cation-pi"); // ligand cation, protein ring
+         default:                                              return std::string("none");
+      }
+   };
+   auto trimmed_names = [] (const std::vector<std::string> &names) {
+      nlohmann::json a = nlohmann::json::array();
+      for (const auto &n : names) a.push_back(coot::util::remove_whitespace(n));
+      return a;
+   };
+
+   std::vector<pli::pi_stacking_instance_t> stackings = pli::get_pi_stackings(residue_p, mol, geom, imol);
+   nlohmann::json stacking_list = nlohmann::json::array();
+   for (const auto &st : stackings) {
+      nlohmann::json js;
+      js["type"] = stacking_type_to_string(st.type);
+      coot::residue_spec_t rs(st.res);
+      js["residue"] = { {"chain_id", rs.chain_id},
+                        {"res_no",   rs.res_no},
+                        {"ins_code", rs.ins_code},
+                        {"res_name", std::string(st.res->GetResName())} };
+      if (st.type == pli::pi_stacking_instance_t::CATION_PI_STACKING)
+         js["ligand_cation_atom"] = coot::util::remove_whitespace(st.ligand_cationic_atom_name);
+      else
+         js["ligand_ring_atoms"] = trimmed_names(st.ligand_ring_atom_names);
+      if (st.type == pli::pi_stacking_instance_t::PI_CATION_STACKING)
+         js["residue_cation_atom"] = coot::util::remove_whitespace(st.residue_cation_atom_name);
+      else
+         js["residue_ring_atoms"] = trimmed_names(st.residue_ring_atom_names);
+      js["overlap_score"] = st.overlap_score;
+      js["centroid_distance"] = st.centroid_distance;
+      js["normal_to_centroid_angle"] = st.normal_to_centroid_angle;
+      if (st.type == pli::pi_stacking_instance_t::PI_PI_STACKING) {
+         js["plane_angle"] = st.plane_angle;
+         std::string g = "unknown";
+         if (st.plane_angle >= 0.0) {
+            if (st.plane_angle < 35.0) g = "face-to-face";
+            else if (st.plane_angle > 50.0) g = "edge-to-face";
+            else g = "intermediate";
+         }
+         js["geometry"] = g;
+      }
+      stacking_list.push_back(js);
+   }
+   j["stackings"] = stacking_list;
+   j["n_stackings"] = stackings.size();
+
+   s = j.dump(2);
+   return s;
 }
 
 #include "coot-utils/find-water-baddies.hh"

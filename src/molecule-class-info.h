@@ -328,6 +328,7 @@ class molecule_class_info_t {
 				  // color-by-molecule-number.
 
    float bond_width;
+   // are you looking for atom_radius_scale_factor?
    std::vector<float> bond_colour_internal;
    //
    int draw_hydrogens_flag;
@@ -3290,11 +3291,14 @@ public:        //                      public
    bool is_an_opaque_map() const { return density_surface_opacity == 1.0; } // needs explicit assignment to 1.0
                                                                             // elsewhere in the code, e.g. in
                                                                             // the adjustment handler.
+   float worm_tube_radius; // default 1.0
+   float get_worm_tube_radius() const { return worm_tube_radius; }
+   void set_worm_tube_radius(float wtr) { worm_tube_radius = wtr; }
 
    Material material_for_maps;
    Material material_for_models;
 
-void draw_map_molecule(stereo_eye_t eye,
+   void draw_map_molecule(stereo_eye_t eye,
                           bool draw_transparent_maps,
                           Shader &shader, // unusual reference.. .change to pointer for consistency?
                           const glm::mat4 &mvp,
@@ -3438,7 +3442,8 @@ void draw_map_molecule(stereo_eye_t eye,
    bool draw_animated_ligand_interactions_flag; // tweaked by outside function
    void add_hydrogens_from_file(const std::string &reduce_pdb_out);
 
-   void add_hydrogen_atoms_to_residue(const coot::residue_spec_t &rs);
+   void add_hydrogen_atoms_to_residue(const coot::residue_spec_t &rs,
+                                      coot::protein_geometry *geom); // this is what reduce wants
 
    std::pair<bool, clipper::Coord_orth>
    residue_centre(const coot::residue_spec_t &spec) const;

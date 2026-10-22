@@ -124,6 +124,7 @@
 
 // #include "xmap-interface.h"
 #include "graphics-info.h"
+#include "session-info.hh"
 
 #include "skeleton/BuildCas.h"
 
@@ -159,7 +160,7 @@ int git_revision_count();
 
 #include "validation-graphs/sequence-view-widget.hh"
 
-#include "json.hpp"
+#include "coot-utils/json.hpp"
 using json = nlohmann::json;
 
 #include "utils/logging.hh"
@@ -958,6 +959,9 @@ int handle_read_draw_molecule_with_recentre(const std::string &filename,
 	 r =  -1;
       }
    }
+   if (r >= 0)
+      if (! graphics_info_t::disable_state_script_writing)
+         coot::session::note_recent_coordinates(filename);
    return r;
 }
 
@@ -7896,15 +7900,21 @@ run_command_line_scripts() {
    graphics_info_t g;
    for (unsigned int i=0; i<graphics_info_t::command_line_accession_codes.size(); i++) {
       const std::string &code = g.command_line_accession_codes[i];
-      std::cout << "run_command_line_scripts(): get accession code " << code << std::endl;
+      std::cout << "DEBUG:: run_command_line_scripts(): get accession code " << code << std::endl;
       network_get_accession_code_entity(code, 0); // mode 0 means "not mtz"
       network_get_accession_code_entity(code, 1); // mtz mode
+   }
+   for (unsigned int i=0; i<graphics_info_t::command_line_cod_ids.size(); i++) {
+      const std::string &code = g.command_line_cod_ids[i];
+      std::cout << "DEBUG:: run_command_line_scripts(): get COD ID " << code << std::endl;
+      fetch_cod_entry(code);
    }
 
    // clear so that a second call (e.g. from a second realize) does not re-run
    graphics_info_t::command_line_scripts.clear();
    graphics_info_t::command_line_commands.commands.clear();
    graphics_info_t::command_line_accession_codes.clear();
+   graphics_info_t::command_line_cod_ids.clear();
 }
 
 void run_update_self_maybe() { // called when --update-self given at command line
@@ -9505,15 +9515,19 @@ void make_generic_surface(int imol, const char *selection_str, int mode) {
                                         smesh.vertices[i].normal,
                                         smesh.vertices[i].color);
       }
-      std::string object_name = type + " Surface " + std::to_string(imol) +
-         std::string(" ") + std::string(selection_string);
+      // the Display Manager already scopes this row to molecule imol, so the label
+      // itself doesn't need to repeat the molecule number or the raw selection string
+      std::string object_name = type + " Surface";
+      if (selection_string != "//" && !selection_string.empty())
+         object_name += " (" + selection_string + ")";
       int obj_mesh = new_generic_object_number(object_name);
       meshed_generic_display_object &obj = g.generic_display_objects[obj_mesh];
       obj.imol = imol;
       obj.mesh.name = object_name;
       obj.mesh.set_draw_mesh_state(true);
       obj.mesh.import(vertices, smesh.triangles);
-      obj.mesh.set_material_specularity(0.7, 128);
+      // obj.mesh.set_material_specularity(0.7, 128); 20261007-PE
+      obj.mesh.set_material(g.molecules[imol].material_for_models);
       obj.mesh.setup_buffers();
 
       update_display_control_mesh_toggles(imol);

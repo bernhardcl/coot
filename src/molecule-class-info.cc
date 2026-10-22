@@ -28,9 +28,7 @@
 #include <Python.h> // before system includes to stop "POSIX_C_SOURCE" redefined problems
 #endif
 
-#ifndef EMSCRIPTEN
 #include <epoxy/gl.h>
-#endif
 
 #include "compat/coot-sysdep.h"
 
@@ -287,14 +285,16 @@ molecule_class_info_t::setup_internal() { // init
    map_mesh_first_time = true;
    model_mesh_first_time = true;
 
+   worm_tube_radius = 1.0;
+
    // material_for_maps.do_specularity = false;
    // material_for_maps.specular_strength = 0.5; // non-shiny maps by default.
 
    // this can be set by the user now.
    material_for_maps = graphics_info_t::default_material_for_maps;
 
-   material_for_models.do_specularity = true;
-   material_for_models.specular_strength = 1.0;
+   // this can be set by the user now.
+   material_for_models = graphics_info_t::default_material_for_models;
 
    map_as_mesh.set_name("empty map molecule mesh");
    model_molecule_meshes.set_name("empty model molecule mesh");
@@ -1757,15 +1757,12 @@ molecule_class_info_t::draw_parallel_plane_restraints_representation() {
 void
 molecule_class_info_t::set_show_unit_cell(bool state) {
 
-#ifndef EMSCRIPTEN
    if (state)
       setup_unit_cell();
-#endif
    show_unit_cell_flag = state;
 
 }
 
-#ifndef EMSCRIPTEN
 void
 molecule_class_info_t::setup_unit_cell() {
 
@@ -1800,9 +1797,7 @@ molecule_class_info_t::setup_unit_cell() {
    }
 
 }
-#endif
 
-#ifndef EMSCRIPTEN
 void
 molecule_class_info_t::draw_unit_cell(Shader *shader_p,
                                       const glm::mat4 &mvp) {
@@ -1828,7 +1823,6 @@ molecule_class_info_t::draw_unit_cell(Shader *shader_p,
 
 
 }
-#endif
 
 // --------------------------------------------------------------------
 //   Conversion functions
@@ -3293,7 +3287,6 @@ coot::additional_representations_t::info_string() const {
    return s;
 }
 
-#ifndef EMSCRIPTEN
 int
 molecule_class_info_t::add_additional_representation(int representation_type,
                                                      const int &bonds_box_type,
@@ -3348,7 +3341,6 @@ molecule_class_info_t::add_additional_representation(int representation_type,
 
    return n_rep;
 }
-#endif
 
 
 // representation_number should be an unsigned int.
@@ -4982,7 +4974,6 @@ molecule_class_info_t::single_model_view_next_model_number() {
    return model_no;
 }
 
-#ifndef EMSCRIPTEN
 void
 molecule_class_info_t::update_additional_representations(const gl_context_info_t &gl_info,
                                                          const coot::protein_geometry *geom) {
@@ -5011,7 +5002,6 @@ molecule_class_info_t::update_additional_representations(const gl_context_info_t
       }
    }
 }
-#endif
 
 
 void
@@ -7079,8 +7069,9 @@ molecule_class_info_t::close_yourself() {
       // delete [] diff_map_draw_vectors;
       // diff_map_draw_vectors = NULL;
 
-      std::cout << ":::::::::::::::::::::::::::: was_xmap() replacing with empty  ====================="
-                << std::endl;
+      if (false)
+         std::cout << ":::::::::::::::::::::::::::: was_xmap() replacing with empty  ====================="
+                   << std::endl;
 
       xmap = clipper::Xmap<float>(); // clear xmap
    }
@@ -9812,19 +9803,11 @@ molecule_class_info_t::nearest_atom(const coot::Cartesian &pos) const {
 // mol, 3 elements and 6
 // elements for a
 // difference map
-#ifndef EMSCRIPTEN
 std::pair<GdkRGBA, GdkRGBA>
 molecule_class_info_t::get_map_colours() const {
 
    return std::pair<GdkRGBA, GdkRGBA> (map_colour, map_colour_negative_level);
 }
-#else
-std::pair<coot::colour_holder, coot::colour_holder>
-molecule_class_info_t::get_map_colours() const {
-
-   return std::pair<coot::colour_holder, coot::colour_holder> (map_colour, map_colour_negative_level);
-}
-#endif
 
 // perhaps there is a better place for this?
 //

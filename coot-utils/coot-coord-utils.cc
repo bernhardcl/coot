@@ -43,6 +43,10 @@
 #include "geometry/mol-utils.hh"
 #include "geometry/residue-and-atom-specs.hh"
 
+#ifdef USE_GEMMI
+#include "coot-coord-utils-gemmi.hh" // for write_coords_cif_via_gemmi()
+#endif
+
 #include "utils/logging.hh"
 extern logging logger;
 
@@ -2014,10 +2018,10 @@ coot::util::chains_in_atom_selection(mmdb::Manager *mol, int model_number, const
 
 
 // Match on graph
-// 
+//
 // Return the orientation matrix moving res_moving to res_reference
 // and a flag letting us know that the match worked OK.
-// 
+//
 coot::graph_match_info_t
 coot::graph_match(mmdb::Residue *res_moving,
                   mmdb::Residue *res_reference,
@@ -2026,10 +2030,10 @@ coot::graph_match(mmdb::Residue *res_moving,
 
    std::cout << "DEBUG:: graph_match() called with match_hydrogens_also " << match_hydrogens_also << std::endl;
 
-  clipper::Mat33<double> m_dum(1,0,0,0,1,0,0,0,1);
-  clipper::Coord_orth pt_dum(0,0,0);
-  clipper::RTop_orth rtop(m_dum, pt_dum);
-   bool success = 0;
+   clipper::Mat33<double> m_dum(1,0,0,0,1,0,0,0,1);
+   clipper::Coord_orth pt_dum(0,0,0);
+   clipper::RTop_orth rtop(m_dum, pt_dum);
+   bool success = false;
    std::vector<std::pair<std::pair<std::string, std::string>, std::pair<std::string, std::string> > > best_matching_atoms;
 
    mmdb::math::Graph graph1;
@@ -2049,7 +2053,7 @@ coot::graph_match(mmdb::Residue *res_moving,
    }
 
    // debug
-   if (true) {
+   if (false) {
       int n_residue_atoms_1;
       mmdb::PPAtom residue_atoms_1;
       cleaned_res_moving->GetAtomTable(residue_atoms_1, n_residue_atoms_1);
@@ -2058,7 +2062,8 @@ coot::graph_match(mmdb::Residue *res_moving,
       cleaned_res_moving->GetAtomTable(residue_atoms_2, n_residue_atoms_2);
       // are these the same atoms?
       for (int i=0; i<4; i++) {
-         std::cout << "moving and ref atoms: " << residue_atoms_1[i] <<  " " << residue_atoms_2[i]
+         std::cout << "graph_match(): moving and ref atoms: " << i << "  "
+                   << residue_atoms_1[i] <<  " " << residue_atoms_2[i]
                    << std::endl;
       }
    }
@@ -2127,8 +2132,8 @@ coot::graph_match(mmdb::Residue *res_moving,
             mmdb::ivector FV1, FV2;
             match.GetMatch(imatch, FV1, FV2, n, p1, p2); // n p1 p2 set
 //             For understanding only:
-//          if (true)
-               std::cout << "Match number: " << imatch << "  " << p1*100 << "% "
+            if (false)
+               std::cout << "DEBUG:: graph_(): Match number: " << imatch << "  " << p1*100 << "% "
                          << p2*100 << "% "<< std::endl;
             std::vector<clipper::Coord_orth> coords_1_local;
             std::vector<clipper::Coord_orth> coords_2_local;
@@ -2136,7 +2141,7 @@ coot::graph_match(mmdb::Residue *res_moving,
                mmdb::math::PVertex V1 = graph1.GetVertex ( FV1[ipair] );
                mmdb::math::PVertex V2 = graph2.GetVertex ( FV2[ipair] );
                if ((!V1) || (!V2))  {
-                  std::cout << "Can't get vertices for match "
+                  std::cout << "WARNING:: graph_match(): Can't get vertices for match "
                             << ipair << std::endl;
                } else  {
                   //                   printf(" %4i.  [%4s] <-> [%4s]\n",
@@ -4671,6 +4676,12 @@ coot::util::deep_copy_this_residue(mmdb::Residue *residue) {
       rres->seqNum = residue->GetSeqNum();
       strcpy(rres->name, residue->name);
       strncpy(rres->insCode, residue->GetInsCode(), 3);
+      // a deep copy should not drop the label fields (they are needed for
+      // mmCIF interchange - cf. 11fc5e63b)
+      rres->label_seq_id    = residue->label_seq_id;
+      rres->label_entity_id = residue->label_entity_id;
+      strcpy(rres->label_comp_id, residue->label_comp_id);
+      strcpy(rres->label_asym_id, residue->label_asym_id);
 
       mmdb::PPAtom residue_atoms = 0;
       int nResidueAtoms;
@@ -4706,6 +4717,12 @@ coot::util::deep_copy_this_residue(mmdb::Residue *residue,
       strcpy(rres->name, residue->name);
       // BL says:: should copy insCode too, maybe more things...
       strncpy(rres->insCode, residue->GetInsCode(), 3);
+      // a deep copy should not drop the label fields (they are needed for
+      // mmCIF interchange - cf. 11fc5e63b)
+      rres->label_seq_id    = residue->label_seq_id;
+      rres->label_entity_id = residue->label_entity_id;
+      strcpy(rres->label_comp_id, residue->label_comp_id);
+      strcpy(rres->label_asym_id, residue->label_asym_id);
 
       mmdb::PPAtom residue_atoms = 0;
       int nResidueAtoms;
@@ -7216,6 +7233,41 @@ coot::write_coords_cif(mmdb::Manager *mol, const std::string &file_name) {
 
    util::remove_wrong_cis_peptides(mol);
    // util::correct_link_distances(mol);  // this duplicates the molecule.  Needs investigation - GetLink()?
+
+   // Both mmCIF writers take the atom name from label_atom_id, but atoms that Coot
+   // makes or renames with SetAtomName(name) have only the (auth) name set - so they
+   // would be written with blank (or old) names. Copy auth to label before writing.
+   for (int imod=1; imod<=mol->GetNumberOfModels(); imod++) {
+      mmdb::Model *model_p = mol->GetModel(imod);
+      if (! model_p) continue;
+      int n_chains = model_p->GetNumberOfChains();
+      for (int ichain=0; ichain<n_chains; ichain++) {
+         mmdb::Chain *chain_p = model_p->GetChain(ichain);
+         int n_res = chain_p->GetNumberOfResidues();
+         for (int ires=0; ires<n_res; ires++) {
+            mmdb::Residue *residue_p = chain_p->GetResidue(ires);
+            if (! residue_p) continue;
+            int n_atoms = residue_p->GetNumberOfAtoms();
+            for (int iat=0; iat<n_atoms; iat++) {
+               mmdb::Atom *at = residue_p->GetAtom(iat);
+               if (! at) continue;
+               if (at->isTer()) continue;
+               std::string name = util::remove_leading_spaces(util::remove_trailing_whitespace(at->name));
+               strncpy(at->label_atom_id, name.c_str(), sizeof(mmdb::AtomName)-1);
+               at->label_atom_id[sizeof(mmdb::AtomName)-1] = '\0';
+            }
+         }
+      }
+   }
+
+#ifdef USE_GEMMI
+   // mmdb's WriteCIFASCII() serializes TER pseudo-atoms as junk atom rows
+   // (the Ter guard in mmdb::Atom::MakeCIF() is commented out) - so prefer
+   // gemmi for the conversion and writing.
+   if (write_coords_cif_via_gemmi(mol, file_name) == 0)
+      return 0;
+   // gemmi failed - fall back to mmdb's writer
+#endif
    int r = mol->WriteCIFASCII(file_name.c_str());
    return r;
 }

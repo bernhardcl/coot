@@ -28,6 +28,7 @@
 #include <iostream>
 #include <sstream>
 #include "coot-utils/simple-mesh.hh"
+#include "geometry/residue-and-atom-specs.hh"
 #include "mmdb2/mmdb_atom.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -4589,6 +4590,9 @@ coot::molecule_t::clear_refinement() {
 void
 coot::molecule_t::fix_atom_selection_during_refinement(const std::string &atom_selection_cid) {
 
+   // 20261011-PE I could add a test here that the atom spec is not already in the vector.
+   // Slows things down, prevents dupicates.
+
    // get atoms in atom selection.
    // match those with thatom in the refinement and mark them as fixed. c.f. fixed (anchored) atom
    int selHnd = atom_sel.mol->NewSelection();
@@ -4598,6 +4602,13 @@ coot::molecule_t::fix_atom_selection_during_refinement(const std::string &atom_s
    atom_sel.mol->GetSelIndex(selHnd, SelAtom, nSelAtoms);
    for (int i=0; i<nSelAtoms; i++) {
       mmdb::Atom *at = SelAtom[i];
+      if (at) {
+         if (! at->isTer()) {
+            atom_spec_t spec(at);
+            if (std::find(fixed_atom_specs.begin(), fixed_atom_specs.end(), spec) == fixed_atom_specs.end())
+               fixed_atom_specs.push_back(spec);
+         }
+      }
    }
    atom_sel.mol->DeleteSelection(selHnd);
 }
@@ -4637,7 +4648,6 @@ coot::molecule_t::init_all_molecule_refinement(int imol_ref_mol, coot::protein_g
    };
 
    std::vector<mmdb::Residue *> rv = get_all_residues_in_molecule(atom_sel.mol);
-   std::vector<coot::atom_spec_t> fixed_atom_specs;
    std::vector<std::pair<bool,mmdb::Residue *> > local_residues;
    for (const auto &r : rv)
       local_residues.push_back(std::make_pair(false, r));
@@ -4930,6 +4940,7 @@ coot::molecule_t::match_torsions(mmdb::Residue *res_reference,
 
    if (res_ligand) { // the local (moving) residue is xxx_ligand
       std::string res_name_ligand(res_ligand->GetResName());
+      std::cout << "DEBUG:: res_ligand " << coot::residue_spec_t(res_ligand) << " \"" << res_name_ligand << "\"" << std::endl;
       std::pair<bool, coot::dictionary_residue_restraints_t> ligand_restraints_info =
          geom.get_monomer_restraints(res_name_ligand, imol_no);
       if (ligand_restraints_info.first) {
@@ -4945,10 +4956,10 @@ coot::molecule_t::match_torsions(mmdb::Residue *res_reference,
             n_torsions_moved = mt.match(tr_ligand, tr_ref_res);
             atom_sel.mol->FinishStructEdit();
          } else {
-            std::cout << "WARNING torsion restraints of ligand: size 0" << std::endl;
+            std::cout << "WARNING:: torsion restraints of ligand: size 0" << std::endl;
          }
       } else {
-         std::cout << "WARNING ligand_restraints_info.first failed " << std::endl;
+         std::cout << "WARNING:: ligand_restraints_info.first failed res-name: \"" << res_name_ligand << "\" " << imol_no << std::endl;
       }
    } else {
       std::cout << "WARNING:: null ligand residue (trying to get first) " << std::endl;
@@ -5667,6 +5678,7 @@ std::vector<coot::simple_mesh_t> coot::molecule_t::get_cavities(const protein_ge
    float grid_scale    = 2.0;
    float b_factor      = 2.0;
    unsigned int min_points_for_mesh = 50;
+   min_points_for_mesh = 100; // updated 2026-09-04
 
    for (unsigned int ic=0; ic<gb.cavities.size(); ic++) {
       const coot::grid_balls_t::cavity_t &cav = gb.cavities[ic];

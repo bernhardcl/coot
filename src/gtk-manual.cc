@@ -716,10 +716,17 @@ void update_display_control_mesh_toggles(int imol) {
    auto &mol = graphics_info_t::molecules[imol];
    auto &gdo = graphics_info_t::generic_display_objects;
 
-   // Count existing toggle buttons in mesh_vbox
-   int n_existing = 0;
-   for (GtkWidget *w = gtk_widget_get_first_child(mesh_vbox); w; w = gtk_widget_get_next_sibling(w))
-      n_existing++;
+   // Rebuild the toggle list from scratch each time, rather than diffing by count:
+   // mol.meshes can shrink as well as grow (e.g. a "Ribbons: X" click replaces a
+   // previous ribbon mesh rather than piling up on top of it), so a stale checkbutton
+   // left over from before would otherwise show the wrong label against a mesh_idx
+   // that no longer refers to the same representation.
+   GtkWidget *child = gtk_widget_get_first_child(mesh_vbox);
+   while (child) {
+      GtkWidget *next = gtk_widget_get_next_sibling(child);
+      gtk_box_remove(GTK_BOX(mesh_vbox), child);
+      child = next;
+   }
 
    // Count how many toggles we need: molecule meshes + generic display objects for this imol
    int n_mol_meshes = mol.meshes.size();
@@ -736,44 +743,34 @@ void update_display_control_mesh_toggles(int imol) {
       return;
    }
 
-   // Only add new toggles beyond what already exists.
    // Molecule meshes come first, then generic display objects.
-   int toggle_idx = 0;
 
    // Add toggle buttons for molecule meshes
    for (unsigned int j = 0; j < mol.meshes.size(); j++) {
-      if (toggle_idx >= n_existing) {
-         const auto &mesh = mol.meshes[j];
-         std::string label = mesh.name;
-         GtkWidget *cb = gtk_check_button_new_with_label(label.c_str());
-         gtk_check_button_set_active(GTK_CHECK_BUTTON(cb), mesh.get_draw_this_mesh());
-         g_object_set_data(G_OBJECT(cb), "imol",     GINT_TO_POINTER(imol));
-         g_object_set_data(G_OBJECT(cb), "mesh_idx", GINT_TO_POINTER(j));
-         g_signal_connect(G_OBJECT(cb), "toggled",
-                          G_CALLBACK(on_display_control_mesh_toggle_toggled), nullptr);
-         gtk_box_append(GTK_BOX(mesh_vbox), cb);
-         gtk_widget_set_visible(cb, TRUE);
-         gtk_widget_set_margin_start(cb, 4);
-      }
-      toggle_idx++;
+      const auto &mesh = mol.meshes[j];
+      GtkWidget *cb = gtk_check_button_new_with_label(mesh.name.c_str());
+      gtk_check_button_set_active(GTK_CHECK_BUTTON(cb), mesh.get_draw_this_mesh());
+      g_object_set_data(G_OBJECT(cb), "imol",     GINT_TO_POINTER(imol));
+      g_object_set_data(G_OBJECT(cb), "mesh_idx", GINT_TO_POINTER(j));
+      g_signal_connect(G_OBJECT(cb), "toggled",
+                       G_CALLBACK(on_display_control_mesh_toggle_toggled), nullptr);
+      gtk_box_append(GTK_BOX(mesh_vbox), cb);
+      gtk_widget_set_visible(cb, TRUE);
+      gtk_widget_set_margin_start(cb, 4);
    }
 
    // Add toggle buttons for generic display objects belonging to this molecule
    for (unsigned int i = 0; i < gdo.size(); i++) {
       if (gdo[i].imol == imol && !gdo[i].mesh.name.empty()) {
-         if (toggle_idx >= n_existing) {
-            std::string label = gdo[i].mesh.name;
-            GtkWidget *cb = gtk_check_button_new_with_label(label.c_str());
-            gtk_check_button_set_active(GTK_CHECK_BUTTON(cb), gdo[i].mesh.get_draw_this_mesh());
-            g_object_set_data(G_OBJECT(cb), "imol",               GINT_TO_POINTER(imol));
-            g_object_set_data(G_OBJECT(cb), "generic_object_idx", GINT_TO_POINTER(i));
-            g_signal_connect(G_OBJECT(cb), "toggled",
-                             G_CALLBACK(on_display_control_generic_object_toggle_toggled), nullptr);
-            gtk_box_append(GTK_BOX(mesh_vbox), cb);
-            gtk_widget_set_visible(cb, TRUE);
-            gtk_widget_set_margin_start(cb, 4);
-         }
-         toggle_idx++;
+         GtkWidget *cb = gtk_check_button_new_with_label(gdo[i].mesh.name.c_str());
+         gtk_check_button_set_active(GTK_CHECK_BUTTON(cb), gdo[i].mesh.get_draw_this_mesh());
+         g_object_set_data(G_OBJECT(cb), "imol",               GINT_TO_POINTER(imol));
+         g_object_set_data(G_OBJECT(cb), "generic_object_idx", GINT_TO_POINTER(i));
+         g_signal_connect(G_OBJECT(cb), "toggled",
+                          G_CALLBACK(on_display_control_generic_object_toggle_toggled), nullptr);
+         gtk_box_append(GTK_BOX(mesh_vbox), cb);
+         gtk_widget_set_visible(cb, TRUE);
+         gtk_widget_set_margin_start(cb, 4);
       }
    }
    if (mesh_scrolled_window)

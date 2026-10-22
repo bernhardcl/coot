@@ -26,6 +26,9 @@
           <attribute name="label">Import CIF dictionary...</attribute>
           <attribute name="action">app.import_cif_dictionary_action</attribute>
         </item>
+        <submenu id="open-recent-menu">
+          <attribute name="label">Open Recent</attribute>
+        </submenu>
       </section>
       <section>
         <item>
@@ -684,31 +687,48 @@
             <attribute name="action">app.bond_parameters_action</attribute>
           </item>
 
+          <item>
+            <attribute name="label">Gaussian Surface...</attribute>
+            <attribute name="action">app.gaussian_surface_action</attribute>
+          </item>
+          <item>
+            <attribute name="label">Molecular Surface</attribute>
+            <attribute name="action">app.molecular_surface_action</attribute>
+          </item>
+              <item>
+            <attribute name="label">Worms</attribute>
+            <attribute name="action">app.worms_action</attribute>
+          </item>
+          <item>
+            <attribute name="label">Bendix (helices)</attribute>
+            <attribute name="action">app.bendix_action</attribute>
+          </item>
+          <item>
+            <attribute name="label">Tube (helices)</attribute>
+            <attribute name="action">app.tube_helices_action</attribute>
+          </item>
+          <item>
+            <attribute name="label">Map Caps</attribute>
+            <attribute name="action">app.map_caps_action</attribute>
+          </item>
+          <item>
+            <!-- this needs an atom selection overlay -->
+            <attribute name="label">Electrostatic Surface</attribute>
+            <attribute name="action">app.electrostatic_surface_action</attribute>
+          </item>
           <submenu>
-            <attribute name="label">Bond Smoothness</attribute>
+            <attribute name="label">Ribbons...</attribute>
             <item>
-              <attribute name="label">Default</attribute>
-              <attribute name="action">app.bond_smoothness_action_1</attribute>
+              <attribute name="label">By Chain</attribute>
+              <attribute name="action">app.ribbons_colour_by_chain_action</attribute>
             </item>
             <item>
-              <attribute name="label">Smooth</attribute>
-              <attribute name="action">app.bond_smoothness_action_2</attribute>
+              <attribute name="label">Rainbow</attribute>
+              <attribute name="action">app.ribbons_colour_rainbow_action</attribute>
             </item>
             <item>
-              <attribute name="label">Fine</attribute>
-              <attribute name="action">app.bond_smoothness_action_3</attribute>
-            </item>
-          </submenu>
-
-          <submenu>
-            <attribute name="label">Carbon Colours</attribute>
-            <item>
-              <attribute name="label">Grey Carbon Colours</attribute>
-              <attribute name="action">app.grey_carbon_colours_action</attribute>
-            </item>
-            <item>
-              <attribute name="label">Coloured Carbon Colours</attribute>
-              <attribute name="action">app.coloured_carbon_colours_action</attribute>
+              <attribute name="label">Sec. Struct.</attribute>
+              <attribute name="action">app.ribbons_colour_by_secondary_structure_action</attribute>
             </item>
           </submenu>
 
@@ -778,7 +798,7 @@
           </item>
         </section>
         <section>
-          <item>
+          <!-- <item>
             <attribute name="label">Gaussian Surface...</attribute>
             <attribute name="action">app.gaussian_surface_action</attribute>
           </item>
@@ -789,13 +809,12 @@
           <item>
             <attribute name="label">Map Caps</attribute>
             <attribute name="action">app.map_caps_action</attribute>
-          </item>
-          <item>
-            <!-- this needs an atom selection overlay -->
+          </item> -->
+          <!-- <item>
             <attribute name="label">Electrostatic Surface</attribute>
             <attribute name="action">app.electrostatic_surface_action</attribute>
-          </item>
-          <item>
+          </item> -->
+          <!-- <item>
             <attribute name="label">Ribbons: By Chain</attribute>
             <attribute name="action">app.ribbons_colour_by_chain_action</attribute>
           </item>
@@ -806,7 +825,8 @@
           <item>
             <attribute name="label">Ribbons: Sec. Struct.</attribute>
             <attribute name="action">app.ribbons_colour_by_secondary_structure_action</attribute>
-          </item>
+          </item> -->
+      
         </section>
         <section>
           <item>
@@ -1016,6 +1036,10 @@
         <attribute name="action">app.refine_regularize_single_residue</attribute>
       </item>
       <item>
+        <attribute name="label" translatable="yes">Regularize Range</attribute>
+        <attribute name="action">app.refine_regularize_range</attribute>
+      </item>
+      <item>
         <attribute name="label" translatable="yes">Regularize Fragment</attribute>
         <attribute name="action">app.refine_regularize_fragment</attribute>
       </item>
@@ -1118,6 +1142,27 @@
     </section>
   </menu>
 
+  <!-- the right-click (context) menu for the vertical toolbar (main_window_vbox_inner) -->
+  <menu id="vertical-toolbar-style-menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Icons and Labels</attribute>
+        <attribute name="action">app.vertical_toolbar_style_action</attribute>
+        <attribute name="target">icons-and-labels</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Labels Only</attribute>
+        <attribute name="action">app.vertical_toolbar_style_action</attribute>
+        <attribute name="target">labels</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Icons Only</attribute>
+        <attribute name="action">app.vertical_toolbar_style_action</attribute>
+        <attribute name="target">icons</attribute>
+      </item>
+    </section>
+  </menu>
+
   <menu id="rotate-translate-menu">
     <section>
       <item>
@@ -1154,10 +1199,6 @@
         <attribute name="action">app.delete_item_water</attribute>
       </item>
       <item>
-        <attribute name="label" translatable="yes">All Waters</attribute>
-        <attribute name="action">app.delete_item_all_waters</attribute>
-      </item>
-      <item>
         <attribute name="label" translatable="yes">Side-chain</attribute>
         <attribute name="action">app.delete_item_side_chain</attribute>
       </item>
@@ -1188,6 +1229,10 @@
       <item>
         <attribute name="label" translatable="yes">Chain</attribute>
         <attribute name="action">app.delete_item_chain</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">All Waters</attribute>
+        <attribute name="action">app.delete_item_all_waters</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">All Carbohydrate</attribute>
@@ -1341,6 +1386,14 @@
       <item>
         <attribute name="label" translatable="no">Geometric Distortions</attribute>
         <attribute name="action">app.geometric_distortions_for_ligand_action</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="no">Superpose Ligands</attribute>
+        <attribute name="action">app.superpose_picked_ligands_action</attribute>
+      </item>
+      <item>
+          <attribute name="label">Superpose Ligand GUI...</attribute>
+          <attribute name="action">app.superpose_ligands_action</attribute>
       </item>
       <item>
         <attribute name="label" translatable="no">Jiggle Fit Residue</attribute>
@@ -2748,6 +2801,73 @@ Calculate a skeleton now?
                 <child type="label">
                   <object class="GtkLabel" id="label307">
                     <property name="label" translatable="yes">Molecule Bond Width:</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkFrame" id="frame_atom_radius_scale">
+                <child>
+                  <object class="GtkBox" id="hbox_atom_radius_scale">
+                    <child>
+                      <object class="GtkScale" id="bond_parameters_atom_radius_scale_hscale">
+                        <signal name="value-changed" handler="bond_parameters_atom_radius_scale_hscale_changed"/>
+                        <property name="can-focus">1</property>
+                        <property name="draw-value">true</property>
+                        <property name="round-digits">1</property>
+                        <property name="digits">1</property>
+                        <property name="value-pos">top</property>
+                        <property name="hexpand">1</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child type="label">
+                  <object class="GtkLabel" id="label_atom_radius_scale">
+                    <property name="label" translatable="yes">Atom Radius Scale (Ball and Stick):</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkFrame" id="frame_bond_smoothness">
+                <child>
+                  <object class="GtkBox" id="vbox_bond_smoothness">
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkCheckButton" id="bond_smoothness_default_radiobutton">
+                        <property name="label" translatable="yes">Default</property>
+                        <property name="can-focus">1</property>
+                        <property name="use-underline">1</property>
+                        <property name="active">1</property>
+                        <signal name="toggled" handler="on_bond_smoothness_default_radiobutton_toggled" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="bond_smoothness_smooth_radiobutton">
+                        <property name="label" translatable="yes">Smooth</property>
+                        <property name="can-focus">1</property>
+                        <property name="use-underline">1</property>
+                        <property name="group">bond_smoothness_default_radiobutton</property>
+                        <signal name="toggled" handler="on_bond_smoothness_smooth_radiobutton_toggled" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="bond_smoothness_fine_radiobutton">
+                        <property name="label" translatable="yes">Fine</property>
+                        <property name="can-focus">1</property>
+                        <property name="use-underline">1</property>
+                        <property name="group">bond_smoothness_default_radiobutton</property>
+                        <signal name="toggled" handler="on_bond_smoothness_fine_radiobutton_toggled" swapped="no"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child type="label">
+                  <object class="GtkLabel" id="label_bond_smoothness">
+                    <property name="label" translatable="yes">Bond Smoothness:</property>
                   </object>
                 </child>
               </object>
@@ -5048,6 +5168,7 @@ that you wish to delete.               </property>
                             <property name="can-focus">1</property>
                             <property name="primary-icon-activatable">0</property>
                             <property name="secondary-icon-activatable">0</property>
+                            <signal name="activate" handler="on_environment_distance_min_entry_activate" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -5072,6 +5193,7 @@ that you wish to delete.               </property>
                             <property name="can-focus">1</property>
                             <property name="primary-icon-activatable">0</property>
                             <property name="secondary-icon-activatable">0</property>
+                            <signal name="activate" handler="on_environment_distance_max_entry_activate" swapped="no"/>
                           </object>
                         </child>
                         <child>
@@ -6572,6 +6694,7 @@ Do you want to continue?
                             <property name="can-focus">1</property>
                             <property name="primary-icon-activatable">0</property>
                             <property name="secondary-icon-activatable">0</property>
+                            <signal name="activate" handler="on_go_to_atom_chain_entry_activate" swapped="no"/>
                             <layout>
                               <property name="column">0</property>
                               <property name="row">0</property>
@@ -6584,6 +6707,7 @@ Do you want to continue?
                             <property name="can-focus">1</property>
                             <property name="primary-icon-activatable">0</property>
                             <property name="secondary-icon-activatable">0</property>
+                            <signal name="activate" handler="on_go_to_atom_residue_entry_activate" swapped="no"/>
                             <layout>
                               <property name="column">0</property>
                               <property name="row">1</property>
@@ -6596,6 +6720,7 @@ Do you want to continue?
                             <property name="can-focus">1</property>
                             <property name="primary-icon-activatable">0</property>
                             <property name="secondary-icon-activatable">0</property>
+                            <signal name="activate" handler="on_go_to_atom_atom_name_entry_activate" swapped="no"/>
                             <layout>
                               <property name="column">0</property>
                               <property name="row">2</property>
@@ -7651,6 +7776,62 @@ Do you want to continue?
             </child>
 
             <child type="overlay">
+              <object class="GtkFrame" id="servalcat-refine-progress-frame">
+                <property name="halign">end</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox" id="servalcat_refine_progress_vbox">
+                    <property name="orientation">vertical</property>
+                    <property name="margin-start">6</property>
+                    <property name="margin-end">6</property>
+                    <property name="margin-top">6</property>
+                    <property name="margin-bottom">6</property>
+                    <property name="spacing">4</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Servalcat Refinement Progress</property>
+                        <property name="halign">start</property>
+                        <attributes>
+                          <attribute name="weight" value="bold"/>
+                        </attributes>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkDrawingArea" id="servalcat-refine-progress-drawing-area">
+                        <property name="content-width">300</property>
+                        <property name="content-height">220</property>
+                        <property name="hexpand">False</property>
+                        <property name="vexpand">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="halign">end</property>
+                        <property name="spacing">6</property>
+                        <child>
+                          <object class="GtkButton" id="servalcat-refine-progress-popout-button">
+                            <property name="label" translatable="yes">Pop out…</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="servalcat-refine-progress-close-button">
+                            <property name="label" translatable="yes">Close</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
               <object class="GtkFrame" id="ncs-ligand-frame">
                 <property name="halign">center</property>
                 <property name="valign">start</property>
@@ -8261,6 +8442,80 @@ Do you want to continue?
                             <style>
                               <class name="suggested-action"/>
                             </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkFrame" id="run_state_script_frame">
+                <property name="halign">center</property>
+                <property name="valign">start</property>
+                <property name="visible">False</property>
+                <property name="margin-bottom">5</property>
+                <property name="margin-end">5</property>
+                <property name="margin-start">5</property>
+                <property name="margin-top">5</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">2</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Run State Script?</property>
+                        <property name="justify">center</property>
+                        <property name="margin-start">4</property>
+                        <property name="margin-end">4</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="run_state_script_info_label">
+                        <property name="label" translatable="yes"></property>
+                        <property name="justify">left</property>
+                        <property name="margin-start">4</property>
+                        <property name="margin-end">4</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="margin-top">2</property>
+                        <property name="margin-bottom">2</property>
+                        <property name="margin-start">4</property>
+                        <property name="margin-end">4</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">2</property>
+                        <property name="halign">end</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <object class="GtkButton" id="run_state_script_no_button">
+                            <signal name="clicked" handler="on_run_state_script_no_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes"> No </property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="run_state_script_yes_button">
+                            <signal name="clicked" handler="on_run_state_script_yes_button_clicked" swapped="no"/>
+                            <property name="label" translatable="yes">Yes</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">4</property>
+                            <property name="margin-bottom">10</property>
                           </object>
                         </child>
                       </object>
@@ -9136,6 +9391,8 @@ Do you want to continue?
 				 <object class="GtkEntry" id="acedrg_link_first_residue_name_entry">
 				   <property name="can-focus">1</property>
 				   <property name="hexpand">False</property>
+				   <property name="placeholder-text">e.g. PTR, then press Enter</property>
+				   <property name="tooltip-text">Type the 3-letter code, then press Enter to load its atoms</property>
                                    <signal name="activate" handler="on_acedrg_link_first_residue_activate" />
 				 </object>
 			       </child>
@@ -9192,6 +9449,28 @@ Do you want to continue?
                                    <property name="sensitive">False</property>
 				   <property name="margin-bottom">2</property>
 				   <property name="margin-start">6</property>
+				 </object>
+			       </child>
+			       <child>
+				 <object class="GtkLabel">
+				   <property name="label"> to </property>
+				   <property name="margin-end">0</property>
+				   <property name="margin-start">0</property>
+				 </object>
+			       </child>
+			       <child>
+				 <object class="GtkComboBoxText" id="acedrg_link_first_change_charge_value_combobox">
+                                   <property name="sensitive">False</property>
+				   <property name="margin-bottom">2</property>
+				   <property name="margin-start">6</property>
+				   <property name="active">2</property>
+				   <items>
+				     <item translatable="yes">-2</item>
+				     <item translatable="yes">-1</item>
+				     <item translatable="yes">0</item>
+				     <item translatable="yes">1</item>
+				     <item translatable="yes">2</item>
+				   </items>
 				 </object>
 			       </child>
 			     </object>
@@ -9289,6 +9568,8 @@ Do you want to continue?
 				 <object class="GtkEntry" id="acedrg_link_second_residue_name_entry">
 				   <property name="can-focus">1</property>
 				   <property name="hexpand">False</property>
+				   <property name="placeholder-text">e.g. DT, then press Enter</property>
+				   <property name="tooltip-text">Type the 3-letter code, then press Enter to load its atoms</property>
                                    <signal name="activate" handler="on_acedrg_link_second_residue_activate" />
 				 </object>
 			       </child>
@@ -9345,6 +9626,28 @@ Do you want to continue?
                                    <property name="sensitive">False</property>
 				   <property name="margin-bottom">2</property>
 				   <property name="margin-start">6</property>
+				 </object>
+			       </child>
+			       <child>
+				 <object class="GtkLabel">
+				   <property name="label"> to </property>
+				   <property name="margin-end">0</property>
+				   <property name="margin-start">0</property>
+				 </object>
+			       </child>
+			       <child>
+				 <object class="GtkComboBoxText" id="acedrg_link_second_change_charge_value_combobox">
+                                   <property name="sensitive">False</property>
+				   <property name="margin-bottom">2</property>
+				   <property name="margin-start">6</property>
+				   <property name="active">2</property>
+				   <items>
+				     <item translatable="yes">-2</item>
+				     <item translatable="yes">-1</item>
+				     <item translatable="yes">0</item>
+				     <item translatable="yes">1</item>
+				     <item translatable="yes">2</item>
+				   </items>
 				 </object>
 			       </child>
 			     </object>
@@ -11071,7 +11374,7 @@ Do you want to continue?
                     <property name="spacing">5</property>
                     <child>
                       <object class="GtkImage">
-
+                        <property name="icon-name">coot-configuration</property>
                       </object>
                     </child>
                     <child>
@@ -11094,7 +11397,7 @@ Do you want to continue?
                     <property name="spacing">5</property>
                     <child>
                       <object class="GtkImage">
-
+                        <property name="icon-name">map</property>
                       </object>
                     </child>
                     <child>
@@ -11118,7 +11421,7 @@ Do you want to continue?
                     <property name="halign">start</property>
                     <child>
                       <object class="GtkImage">
-
+                        <property name="icon-name">range-pair</property>
                       </object>
                     </child>
                     <child>
@@ -11141,7 +11444,7 @@ Do you want to continue?
                     <property name="halign">start</property>
                     <child>
                       <object class="GtkImage">
-
+                        <property name="icon-name">refine-1</property>
                       </object>
                     </child>
                     <child>
@@ -11428,7 +11731,7 @@ Do you want to continue?
                     <property name="spacing">5</property>
                     <child>
                       <object class="GtkImage">
-                        <property name="icon-name">edit-delete-symbolic</property>
+                        <property name="icon-name">coot-delete</property>
                       </object>
                     </child>
                     <child>
@@ -11449,7 +11752,7 @@ Do you want to continue?
                     <property name="spacing">5</property>
                     <child>
                       <object class="GtkImage">
-                        <property name="icon-name">edit-undo-symbolic</property>
+                        <property name="icon-name">coot-undo</property>
                       </object>
                     </child>
                     <child>
@@ -11471,7 +11774,7 @@ Do you want to continue?
                     <property name="spacing">5</property>
                     <child>
                       <object class="GtkImage">
-                        <property name="icon-name">edit-redo-symbolic</property>
+                        <property name="icon-name">coot-redo</property>
                       </object>
                     </child>
                     <child>
@@ -19262,6 +19565,12 @@ Move a copy?</property>
               <object class="GtkShortcutsShortcut">
                 <property name="accelerator">l</property>
                 <property name="title" translatable="yes">Toggle Atom Label</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="accelerator">&lt;Shift&gt;L</property>
+                <property name="title" translatable="yes">Remove All Atom Labels</property>
               </object>
             </child>
             <child>

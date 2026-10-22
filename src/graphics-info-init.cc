@@ -135,6 +135,17 @@ graphics_info_t::init() {
 
       on_going_updating_map_lock = false;
 
+      // the default material for models - the user can change these before
+      // a model is read in (see set_default_model_material_*()).
+      default_material_for_models.do_specularity = true;
+      default_material_for_models.specular_strength = 0.45; // 0.25 was the new default.
+                                                            // 1.00 was too shiny it seems
+
+      // moving_atoms_molecule is a static that was constructed (and copied
+      // default_material_for_models into its material_for_models) before this runs,
+      // so refresh it here to pick up the specularity settings above.
+      moving_atoms_molecule.material_for_models = default_material_for_models;
+
       find_ligand_ligand_mols_ = new std::vector<std::pair<int, bool> >;
       geom_p = new coot::protein_geometry;
       geom_p->set_verbose(true); // was false

@@ -59,12 +59,13 @@ coot::atom_overlaps_container_t::atom_overlaps_container_t(mmdb::Residue *res_ce
 coot::atom_overlaps_container_t::atom_overlaps_container_t(mmdb::Residue *res_central_in,
                                                            mmdb::Residue *neighbour,
                                                            mmdb::Manager *mol_in,
+                                                           int imol_enc_in,
                                                            const protein_geometry *geom_p_in) {
    geom_p = geom_p_in;
    res_central = res_central_in;
    neighbours.push_back(neighbour);
    mol = mol_in;
-   imol_enc = protein_geometry::IMOL_ENC_ANY; // hack
+   imol_enc = imol_enc_in;
    clash_spike_length = 0.5;
    init();
 
@@ -96,6 +97,7 @@ coot::atom_overlaps_container_t::atom_overlaps_container_t(mmdb::Residue *res_ce
 // this can throw a std::out_of_range (missing residue from dictionary)
 // /default args for clash_spike_length_in and probe_radius_in.
 coot::atom_overlaps_container_t::atom_overlaps_container_t(mmdb::Manager *mol_in,
+                                                           int imol_enc_in,
                                                            const protein_geometry *geom_p_in,
                                                            bool ignore_water_contacts_flag_in,
                                                            double clash_spike_length_in,
@@ -104,7 +106,7 @@ coot::atom_overlaps_container_t::atom_overlaps_container_t(mmdb::Manager *mol_in
    geom_p = geom_p_in;
    res_central = 0;
    mol = mol_in;
-   imol_enc = protein_geometry::IMOL_ENC_ANY; // hack
+   imol_enc = imol_enc_in;
    clash_spike_length = 0.5;
    probe_radius = probe_radius_in;
    ignore_water_contacts_flag = ignore_water_contacts_flag_in;
@@ -148,7 +150,7 @@ coot::atom_overlaps_container_t::init() {
             // std::cout << "testing for " << residue_name << std::endl;
             d = geom_p->get_monomer_restraints(residue_name, imol_enc);
             if (! d.first) {
-               std::cout << "WARNING:: Overlap fail. Failed to get dictionary for name "
+               std::cout << "WARNING:: atom_overlaps_container_t::init(): Overlap fail. Failed to get dictionary for name "
                          << residue_name << std::endl;
                have_dictionary = false;
                break;
@@ -566,7 +568,9 @@ coot::atom_overlaps_container_t::make_overlaps() {
 
                if (d < (r_1 + r_2 + probe_radius)) {
                   double o = get_overlap_volume(d, r_2, r_1);
-                  bool h_bond_flag = false;
+                  // as in make_all_atom_overlaps(): a donor/acceptor pair of heavy atoms
+                  // is a hydrogen bond as well as an H...acceptor contact is
+                  bool h_bond_flag = hbi.is_h_bond_donor_and_acceptor;
                   if (hbi.is_h_bond_H_and_acceptor) {
                      h_bond_flag = true;
                      if (hbi.H_is_first_atom_flag) {
@@ -787,6 +791,9 @@ coot::atom_overlaps_container_t::make_all_atom_overlaps() {
                                  // symmetric in its two atoms.)
                                  h_bond_info_t hbi(at_1, at_2, udd_h_bond_type_handle);
                                  if (hbi.is_h_bond_H_and_acceptor)
+                                    ao.is_h_bond = true;
+                                 // a donor/acceptor pair of heavy atoms is a hydrogen bond too
+                                 if (hbi.is_h_bond_donor_and_acceptor)
                                     ao.is_h_bond = true;
                                  overlaps.push_back(ao);
                               }

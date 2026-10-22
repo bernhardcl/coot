@@ -2284,6 +2284,17 @@ int read_small_molecule_data_cif(const char *file_name) {
    return imol;
 }
 
+// Read a SHELX-style small-molecule cif (e.g. from the COD): make the model
+// and, from the embedded reflections, model-phased 2Fo-Fc and Fo-Fc maps.
+//
+int read_small_molecule_cif_and_make_map(const char *file_name) {
+
+   int imol = read_small_molecule_cif(file_name);
+   if (is_valid_model_molecule(imol))
+      read_small_molecule_data_cif_and_make_map_using_coords(file_name, imol);
+   return imol;
+}
+
 int read_small_molecule_data_cif_and_make_map_using_coords(const char *file_name,
 							   int imol_coords) {
 
@@ -2301,6 +2312,10 @@ int read_small_molecule_data_cif_and_make_map_using_coords(const char *file_name
       int n_selected_atoms = asc.n_selected_atoms;
       coot::smcif smcif;
       bool state = smcif.read_data_sm_cif(file_name);
+      if (! state) {
+         std::cout << "INFO:: no reflection data in " << file_name << " - no map made" << std::endl;
+         return imol_map;
+      }
 
       std::pair<clipper::Xmap<float>, clipper::Xmap<float> > maps =
 	 smcif.sigmaa_maps_by_calc_sfs(atom_selection, n_selected_atoms);
@@ -3924,7 +3939,7 @@ void coot_all_atom_contact_dots_old(int imol) {
       mmdb::Manager *mol = g.molecules[imol].atom_sel.mol;
       // spike-length ball-radius
       bool ignore_waters = g.all_atom_contact_dots_ignore_water_flag;
-      coot::atom_overlaps_container_t overlaps(mol, g.Geom_p(), ignore_waters, 0.5, 0.25); // spike length, ball radius
+      coot::atom_overlaps_container_t overlaps(mol, imol, g.Geom_p(), ignore_waters, 0.5, 0.25); // spike length, ball radius
       // dot density
       float dd = graphics_info_t::contact_dots_density;
       coot::atom_overlaps_dots_container_t c = overlaps.all_atom_contact_dots(dd, true);

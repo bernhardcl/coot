@@ -271,6 +271,10 @@ namespace coot {
          else
             throw std::runtime_error("value_esd(): unset target-distance");
       }
+      // the nuclear (as opposed to electron-cloud/X-ray) distance, if it was set
+      bool nuclear_distance_is_set() const { return dist_nuclear_was_set; }
+      double value_dist_nuclear() const { return dist_nuclear_; }
+      double value_esd_nuclear()  const { return dist_nuclear_esd_; }
       bool matches_names(const dict_bond_restraint_t &r) const {
          if (atom_id_1() == r.atom_id_1())
             if (atom_id_2() == r.atom_id_2())
@@ -282,6 +286,7 @@ namespace coot {
       }
       void set_atom_1_atom_id(const std::string &id) { set_atom_id_1(id); }
       void set_atom_2_atom_id(const std::string &id) { set_atom_id_2(id); }
+      void set_type(const std::string &t) { type_ = t; }
       // this function called by dictionary parser after all the bonds have been read
       void set_only_bond(const std::string &pos, bool b) {
          if (pos == "first")  atom_has_only_this_non_hydrogen_bond_first  = b;
@@ -926,7 +931,7 @@ namespace coot {
       // trying to match the names of the atoms of ref.  Do graph
       // matching to find the set of atom names that match/need to be
       // changed.
-      // 
+      //
 
       // If new_comp_id is "auto", suggest_new_comp_id() is called to
       // generate a comp_id string.
@@ -977,7 +982,7 @@ namespace coot {
 #ifdef HAVE_CCP4SRS
       bool fill_using_ccp4srs(ccp4srs::Manager *srs_manager, const std::string &monomer_type);
 #endif // HAVE_CCP4SRS
-      
+
    };
    std::ostream& operator<<(std::ostream &s, const dictionary_residue_restraints_t &rest);
 

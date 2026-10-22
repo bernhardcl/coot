@@ -31,6 +31,7 @@
 #include <Python.h>
 #endif
 #include "graphics-info.h"
+#include "session-info.hh"
 #include "cc-interface.hh"
 
 #include "coot-utils/coot-map-utils.hh"
@@ -85,6 +86,8 @@ handle_read_ccp4_map(const std::string &filename, int is_diff_map_flag) {
       if (istate > -1) { // if not a failure ...
 	 g.scroll_wheel_map = imol_new;  // change the current scrollable map.
 	 g.activate_scroll_radio_button_in_display_manager(imol_new);
+         if (! graphics_info_t::disable_state_script_writing)
+            coot::session::note_recent_ccp4_map(filename, is_diff_map_flag);
       } else {
 	 g.erase_last_molecule();
 	 // std::cout << "Read map " << filename << " failed" << std::endl;
@@ -197,7 +200,7 @@ SCM map_to_model_correlation_stats_per_residue_range_scm(int imol, const std::st
       SCM spec_scm = residue_spec_to_scm(spec);
       SCM stats_scm = scm_list_2(scm_from_int(stats.n), scm_from_double(stats.correlation()));
       SCM item = scm_list_2(spec_scm, stats_scm);
-      r_0 = scm_cons(r_0, item);
+      r_0 = scm_cons(item, r_0);
    }
    for (it=m.second.begin(); it!=m.second.end(); ++it) {
       const coot::residue_spec_t &spec(it->first);
@@ -205,9 +208,9 @@ SCM map_to_model_correlation_stats_per_residue_range_scm(int imol, const std::st
       SCM spec_scm = residue_spec_to_scm(spec);
       SCM stats_scm = scm_list_2(scm_from_int(stats.n), scm_from_double(stats.correlation()));
       SCM item = scm_list_2(spec_scm, stats_scm);
-      r_1 = scm_cons(r_1, item);
+      r_1 = scm_cons(item, r_1);
    }
-   return scm_list_2(r_0, r_1);
+   return scm_list_2(scm_reverse(r_0), scm_reverse(r_1));
 }
 #endif
 
@@ -410,6 +413,18 @@ int servalcat_refine_xray_with_keywords(int imol, int imol_map, const std::strin
 
    graphics_info_t g;
    return g.servalcat_refine_xray_with_keywords(imol, imol_map, output_prefix, keyword_pairs_json);
+}
+
+//! Use servalcat for refinement for x-ray data (asynchronous/non-blocking version).
+//!
+//! As servalcat_refine_xray_with_keywords(), but the GUI is not blocked while
+//! servalcat runs - the refined model is read in when the refinement has finished.
+//!
+void servalcat_refine_xray_with_keywords_async(int imol, int imol_map, const std::string &output_prefix,
+                                               const std::string &keyword_pairs_json) {
+
+   graphics_info_t g;
+   g.servalcat_refine_xray_with_keywords_async(imol, imol_map, output_prefix, keyword_pairs_json);
 }
 
 

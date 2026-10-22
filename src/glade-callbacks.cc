@@ -57,6 +57,7 @@
 #include "validation-graphs/validation-graphs.hh"
 
 #include "widget-from-builder.hh"
+#include "utils/xdg-base.hh"
 
 #include "fit-loop-gui.hh"
 #include "c-interface-refine.hh"
@@ -453,6 +454,36 @@ on_go_to_atom_apply_button_clicked (GtkButton       *button,
 
 }
 
+
+extern "C" G_MODULE_EXPORT
+void
+on_go_to_atom_chain_entry_activate(GtkEntry *entry,
+                                   gpointer  user_data)
+{
+   // same as pressing Apply
+   GtkWidget *widget = widget_from_builder("goto_atom_window");
+   apply_go_to_atom_from_widget(widget);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_go_to_atom_residue_entry_activate(GtkEntry *entry,
+                                     gpointer  user_data)
+{
+   // same as pressing Apply
+   GtkWidget *widget = widget_from_builder("goto_atom_window");
+   apply_go_to_atom_from_widget(widget);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_go_to_atom_atom_name_entry_activate(GtkEntry *entry,
+                                       gpointer  user_data)
+{
+   // same as pressing Apply
+   GtkWidget *widget = widget_from_builder("goto_atom_window");
+   apply_go_to_atom_from_widget(widget);
+}
 
 extern "C" G_MODULE_EXPORT
 void
@@ -2084,6 +2115,24 @@ on_environment_distance_dialog_ok_button_clicked
 
 }
 
+// Pressing Enter in the min or max distance entry: apply the settings
+// (as "OK" does) but leave the dialog open.
+extern "C" G_MODULE_EXPORT
+void
+on_environment_distance_min_entry_activate(GtkEntry *entry,
+                                           gpointer  user_data)
+{
+   execute_environment_settings(GTK_WIDGET(entry));
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_environment_distance_max_entry_activate(GtkEntry *entry,
+                                           gpointer  user_data)
+{
+   execute_environment_settings(GTK_WIDGET(entry));
+}
+
 
 extern "C" G_MODULE_EXPORT
 void
@@ -2490,6 +2539,38 @@ on_run_state_file_cancel_button_clicked (GtkButton       *button,
   GtkWidget *dialog = widget_from_builder("run_state_file_dialog");
   gtk_widget_set_visible(dialog, FALSE);
   gtk_widget_set_visible(dialog, FALSE);
+}
+
+// the "Run State Script?" overlay shown at startup - see show_run_state_script_frame_maybe()
+extern "C" G_MODULE_EXPORT
+void
+on_run_state_script_no_button_clicked(GtkButton *button,
+                                      gpointer   user_data) {
+
+   GtkWidget *frame = widget_from_builder("run_state_script_frame");
+   if (frame)
+      gtk_widget_set_visible(frame, FALSE);
+   graphics_info_t::graphics_grab_focus();
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_run_state_script_yes_button_clicked(GtkButton *button,
+                                       gpointer   user_data) {
+
+   GtkWidget *frame = widget_from_builder("run_state_script_frame");
+   if (frame)
+      gtk_widget_set_visible(frame, FALSE);
+
+   xdg_t xdg;
+   std::pair<bool, std::filesystem::path> script = xdg.get_python_state_script();
+   if (script.first) {
+      run_python_script(script.second.string().c_str());
+      graphics_info_t::state_file_was_run_flag = true;
+   } else {
+      add_status_bar_text("State script not found");
+   }
+   graphics_info_t::graphics_grab_focus();
 }
 
 
@@ -3441,6 +3522,30 @@ on_draw_hydrogens_no_radiobutton_toggled(GtkToggleButton *togglebutton,
 
 extern "C" G_MODULE_EXPORT
 void
+on_bond_smoothness_default_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                               gpointer         user_data) {
+   if (gtk_check_button_get_active(checkbutton))
+      set_bond_smoothness_factor(1);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_bond_smoothness_smooth_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                              gpointer         user_data) {
+   if (gtk_check_button_get_active(checkbutton))
+      set_bond_smoothness_factor(2);
+}
+
+extern "C" G_MODULE_EXPORT
+void
+on_bond_smoothness_fine_radiobutton_toggled(GtkCheckButton *checkbutton,
+                                            gpointer         user_data) {
+   if (gtk_check_button_get_active(checkbutton))
+      set_bond_smoothness_factor(3);
+}
+
+extern "C" G_MODULE_EXPORT
+void
 on_renumber_residues_molecule_combobox_changed(GtkComboBox     *combobox,
                                                                    gpointer         user_data) {
 
@@ -4025,6 +4130,26 @@ void
 on_draw_ncs_ghosts_no_radiobutton_toggled(GtkToggleButton *togglebutton,
                                           gpointer         user_data) {
 
+}
+
+extern "C" G_MODULE_EXPORT
+void
+bond_parameters_atom_radius_scale_hscale_changed(GtkScale *range,
+                                                 gpointer  user_data) {
+
+   GtkWidget *bond_parameters_molecule_comboboxtext = widget_from_builder("bond_parameters_molecule_comboboxtext");
+   if (bond_parameters_molecule_comboboxtext) {
+      GtkAdjustment *adjustment = gtk_range_get_adjustment(GTK_RANGE(range));
+      float fvalue = gtk_adjustment_get_value(adjustment);
+      graphics_info_t g;
+      if (g.n_molecules() > 0) { // protection from occuring at start-up
+         int imol = g.combobox_get_imol(GTK_COMBO_BOX(bond_parameters_molecule_comboboxtext));
+         if (is_valid_model_molecule(imol)) {
+            graphics_info_t::molecules[imol].set_atom_radius_scale_factor(fvalue);
+            g.graphics_draw();
+         }
+      }
+   }
 }
 
 extern "C" G_MODULE_EXPORT
@@ -4997,7 +5122,7 @@ on_refine_params_use_peptide_omegas_checkbutton_toggled
                                         gpointer         user_data)
 {
   if (gtk_check_button_get_active(checkbutton)) {
-    add_omega_torsion_restriants();
+    add_omega_torsion_restraints();
   } else {
     remove_omega_torsion_restriants();
   }

@@ -40,6 +40,9 @@
 #include "glibconfig.h"
 #include "utils/xdg-base.hh"
 
+#include <sys/stat.h>
+#include <ctime>
+
 #include "graphics-info.h"
 #include "create-menu-item-actions.hh"
 #include "setup-gui-components.hh"
@@ -798,13 +801,144 @@ handle_start_scripts() {
       }
    }
 #endif
+   // 20261016-PE Coot now starts blank. The state script is run here only
+   // with --run-state-script (status 2). For the default (status 1) the user
+   // is offered the state script with the run_state_script_frame overlay -
+   // see show_run_state_script_frame_maybe().
    if (graphics_info_t::run_startup_scripts_flag) {
-      if (graphics_info_t::run_state_file_status) {
+      if (graphics_info_t::run_state_file_status == 2) {
          std::pair<bool, std::filesystem::path> script = xdg.get_python_state_script();
          if (script.first) {
             run_python_script(script.second.string().c_str());
+            graphics_info_t::state_file_was_run_flag = true;
          }
       }
+   }
+}
+
+// The text for run_state_script_info_label: when the state script was saved
+// and what it would load - from the ";;molecule-info:" comment lines that
+// save_state_data_and_models() writes into the script.
+// The returned string is Pango markup.
+std::string
+run_state_script_info_text(const std::filesystem::path &script_path) {
+
+   std::string s;
+
+   struct stat buf;
+   if (stat(script_path.string().c_str(), &buf) == 0) {
+      char time_buf[64];
+      std::time_t mtime = buf.st_mtime;
+      std::tm *tm_local_p = std::localtime(&mtime); // startup, main thread - not reentrant is OK
+      if (tm_local_p)
+         if (std::strftime(time_buf, sizeof(time_buf), "%a %d %b %Y %H:%M", tm_local_p) > 0)
+            s += "Saved " + std::string(time_buf) + "\n";
+   }
+
+   graphics_info_t g;
+   std::vector<std::string> items = g.save_state_data_and_models(script_path.string(), coot::PYTHON_SCRIPT);
+
+   if (items.empty()) {
+      s += "No models or maps - settings only";
+   } else {
+
+      // show $HOME as "~"
+      auto collapse_home = [] (const std::string &dir) {
+         const char *home = getenv("HOME");
+         if (home) {
+            std::string h(home);
+            if (! h.empty() && dir.compare(0, h.size(), h) == 0)
+               if (dir.size() == h.size() || dir[h.size()] == '/')
+                  return "~" + dir.substr(h.size());
+         }
+         return dir;
+      };
+
+      // Each item is "name" or (newer scripts) "name Dir: /the/directory"
+      std::vector<std::pair<std::string, std::string> > names_and_dirs;
+      for (const auto &item : items) {
+         std::string it = coot::util::remove_leading_spaces(item);
+         std::string dir;
+         std::string::size_type idir = it.rfind(" Dir: ");
+         if (idir != std::string::npos) {
+            dir = collapse_home(it.substr(idir + 6));
+            it = it.substr(0, idir);
+         }
+         names_and_dirs.push_back(std::make_pair(it, dir));
+      }
+
+      // file names and directories are shown in a monospace font, so that
+      // they look like file names, not prose. They must be escaped, because
+      // the label is Pango markup.
+      auto tt = [] (const std::string &file_text) {
+         gchar *e = g_markup_escape_text(file_text.c_str(), -1);
+         std::string r = "<tt>" + std::string(e) + "</tt>";
+         g_free(e);
+         return r;
+      };
+      // "Dictionary: LIG.cif" - only the file name part is a file name
+      auto item_markup = [tt] (const std::string &name) {
+         const std::string dict_prefix = "Dictionary: ";
+         if (name.compare(0, dict_prefix.size(), dict_prefix) == 0)
+            return dict_prefix + tt(name.substr(dict_prefix.size()));
+         return tt(name);
+      };
+
+      // if all the files are in the same directory, say so once, at the top
+      bool common_dir = ! names_and_dirs[0].second.empty();
+      for (const auto &nd : names_and_dirs)
+         if (nd.second != names_and_dirs[0].second)
+            common_dir = false;
+      if (common_dir)
+         s += "Dir: " + tt(names_and_dirs[0].second) + "\n";
+
+      const unsigned int n_max = 10; // don't make a huge overlay
+      for (unsigned int i=0; i<names_and_dirs.size(); i++) {
+         if (i == n_max) {
+            s += "... and " + std::to_string(names_and_dirs.size() - n_max) + " more\n";
+            break;
+         }
+         s += "   " + item_markup(names_and_dirs[i].first);
+         if (! common_dir && ! names_and_dirs[i].second.empty())
+            s += "   Dir: " + tt(names_and_dirs[i].second);
+         s += "\n";
+      }
+      if (! s.empty() && s.back() == '\n')
+         s.pop_back();
+   }
+   return s;
+}
+
+// Show the "Run State Script?" overlay if we are in the default mode
+// (neither --no-state-script nor --run-state-script) and there is a state
+// script in the XDG state directory. Not if the command line gave us
+// files or scripts - the user has already said what they want to work on.
+void
+show_run_state_script_frame_maybe(const command_line_data &cld) {
+
+   if (! graphics_info_t::use_graphics_interface_flag) return;
+   if (! graphics_info_t::run_startup_scripts_flag) return;
+   if (graphics_info_t::run_state_file_status != 1) return;
+
+   bool command_line_has_work = ! (cld.coords.empty()         && cld.maps.empty()            &&
+                                   cld.datasets.empty()       && cld.auto_datasets.empty()   &&
+                                   cld.script.empty()         && cld.command.empty()         &&
+                                   cld.dictionaries.empty()   && cld.dictionaries_with_mol.empty() &&
+                                   cld.accession_codes.empty() && cld.cod_ids.empty()        &&
+                                   cld.emdb_codes.empty()     && cld.comp_ids.empty());
+   if (command_line_has_work) return;
+
+   xdg_t xdg;
+   std::pair<bool, std::filesystem::path> script = xdg.get_python_state_script();
+   if (script.first) {
+      GtkWidget *label = widget_from_builder("run_state_script_info_label");
+      if (label) {
+         std::string info = run_state_script_info_text(script.second);
+         gtk_label_set_markup(GTK_LABEL(label), info.c_str());
+      }
+      GtkWidget *frame = widget_from_builder("run_state_script_frame");
+      if (frame)
+         gtk_widget_set_visible(frame, TRUE);
    }
 }
 
@@ -852,7 +986,7 @@ startup_create_splash_screen_window() {
    GtkWidget *splash_screen_window = gtk_window_new();
    gtk_window_set_title(GTK_WINDOW(splash_screen_window), "Coot-Splash");
    gtk_window_set_decorated(GTK_WINDOW(splash_screen_window), FALSE);
-   GtkWidget *picture = create_local_picture("coot-1.3.3.png");
+   GtkWidget *picture = create_local_picture("coot-1.3.4.png");
 
    gtk_widget_set_hexpand(GTK_WIDGET(picture),TRUE);
    gtk_widget_set_vexpand(GTK_WIDGET(picture),TRUE);
@@ -1096,6 +1230,18 @@ startup_application_activate(GtkApplication *application,
          }
       }), nullptr);
 
+      // Route a window-manager close (the "X" button) through the same
+      // checked-exit path as File -> Exit, so that both save state and both
+      // raise the unsaved-changes dialog. Without this, closing via the
+      // window manager fell out of main() with no save and no prompt.
+      // coot_checked_exit() returns TRUE (veto the close) when there are
+      // unsaved changes; when there are none it does not return - it saves
+      // state and hard-exits.
+      g_signal_connect(app_window, "close-request",
+                       G_CALLBACK(+[](GtkWindow *w, gpointer user_data) -> gboolean {
+         return coot_checked_exit(0);
+      }), nullptr);
+
       // gtk_widget_set_visible(window, TRUE);
 
       GtkWidget *gl_area = startup_create_glarea_widget();
@@ -1275,6 +1421,8 @@ startup_application_activate(GtkApplication *application,
 
       // now we are ready to show graphical objects made from reading files:
       handle_command_line_data(activate_data->cld);
+
+      show_run_state_script_frame_maybe(activate_data->cld);
 
 
       // 20251019-PE is this the first time Coot-1 has been started?

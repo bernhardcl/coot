@@ -751,6 +751,25 @@ pli::make_key(const lig_build::pos_t &key_pos) {
    svgc.add(t14);
    svgc.add(t15);
 
+   // The key is a fixed-width layout drawn with raw strings via add(std::string),
+   // which does not update the container bounds. Set the bounds explicitly here so
+   // that the caller's svgc_outer.add(svgc_key) folds the key's extents into the
+   // bounding box - the key is often the widest part of the image (a small ligand
+   // is narrower than the key). See flev.cc where the key is added.
+   //
+   // Output-space x is used directly for all elements; the leftmost content is the
+   // arrow labels at key_pos.x - x_bit*1.9 (= x0 - 1.33), the rightmost is the third
+   // column text at x0 + 22.4 plus the widest label ("Substitution Contour",
+   // ~20 chars at font-size 0.05em ~ 0.45 units/char ~ 9 units).
+   // Output-space y is +ve downwards, with the key starting at -key_pos.y.
+   double x0 = key_pos.x;
+   double Y  = -key_pos.y; // top of the key in output space
+   double key_min_x = x0 - 1.5;
+   double key_max_x = x0 + 32.0;
+   double key_min_y = Y - 1.0;
+   double key_max_y = Y + 11.0;
+   svgc.set_bounds(key_min_x, key_min_y, key_max_x, key_max_y);
+
    return svgc;
 }
 
@@ -1029,8 +1048,9 @@ pli::fle_view_with_rdkit_internal(mmdb::Manager *mol,
                      double y = -svgc_outer.max_y;
                      lig_build::pos_t key_pos(x, y); // top left
                      svg_container_t svgc_key = make_key(key_pos);
+                     // make_key() sets its own bounds (including the fixed key width),
+                     // so add() folds the key's x- and y-extents into svgc_outer.
                      svgc_outer.add(svgc_key);
-                     svgc_outer.add_to_y_bounds(11.0);
                   }
                }
             }
@@ -1589,6 +1609,9 @@ flev_t::draw_bonds_to_ligand() {
                if (residue_circles[ic].bonds_to_ligand[ib].bond_type == bond_to_ligand_t::BOND_COVALENT) {
                   // dash = goo_canvas_line_dash_new (2, 2.7, 0.1);
                   stroke_colour = "#bb00bb";
+               }
+               if (residue_circles[ic].bonds_to_ligand[ib].bond_type == bond_to_ligand_t::HALOGEN_BOND) {
+                  stroke_colour = "#008888"; // teal, no arrow heads
                }
 
                if (residue_circles[ic].residue_type == "HOH") {

@@ -108,18 +108,13 @@ coot::molecule_t::setup_dots(instanced_mesh_t &im,
                              float ball_size, unsigned int num_subdivisions,
                              const std::string &molecule_name_stub) const {
 
-   instanced_geometry_t ig_empty;
-   im.add(ig_empty);
-   instanced_geometry_t &ig = im.geom.back();
-
    // -------------------vertices and triangles  --------------
 
    std::pair<std::vector<glm::vec3>, std::vector<g_triangle> > octaphere_geom =
       tessellate_octasphere(num_subdivisions);
-   ig.vertices.resize(octaphere_geom.first.size());
+   std::vector<api::vn_vertex> octasphere_vertices(octaphere_geom.first.size());
    for (unsigned int i=0; i<octaphere_geom.first.size(); i++)
-      ig.vertices[i] = api::vn_vertex(octaphere_geom.first[i], octaphere_geom.first[i]);
-   ig.triangles = octaphere_geom.second;
+      octasphere_vertices[i] = api::vn_vertex(octaphere_geom.first[i], octaphere_geom.first[i]);
 
    // -------------------instancing --------------
 
@@ -150,8 +145,16 @@ coot::molecule_t::setup_dots(instanced_mesh_t &im,
       float point_size = ball_size;
       if (type == "vdw-surface") point_size = 0.06; // 0.03 seems too small
       // if (type == "vdw-surface") specular_strength= 0.1; // dull, reduces zoomed out speckles
-      std::string mesh_name = molecule_name_stub + type; // instanced_geometry_t doesn't have a name holder
-      ig.name = mesh_name + std::string(" ") + type;
+      // One instanced geometry per dot type, so that consumers can tell the
+      // types apart. Previously all the types were appended into a single
+      // geometry whose name was both scrambled ("Molecule 4big-overlap
+      // big-overlap") and overwritten by each type in turn.
+      instanced_geometry_t ig_empty;
+      im.add(ig_empty);
+      instanced_geometry_t &ig = im.geom.back();
+      ig.vertices  = octasphere_vertices;
+      ig.triangles = octaphere_geom.second;
+      ig.name = molecule_name_stub + std::string(" ") + type;
 
       glm::vec3 size(point_size, point_size, point_size);
       for (unsigned int i=0; i<v.size(); i++) {
@@ -234,15 +237,14 @@ coot::molecule_t::all_molecule_contact_dots(coot::protein_geometry &geom,
    bool ignore_waters_flag = false;
 
    int read_number = 50;
-   int imol_enc = coot::protein_geometry::IMOL_ENC_ANY;
    std::vector<residue_spec_t> hetgroups = get_hetgroups();
    for (const auto &hetgroup : hetgroups) {
       const std::string res_name = hetgroup.string_user_data;
-      geom.check_and_try_dynamic_add(res_name, imol_enc, read_number);
+      geom.check_and_try_dynamic_add(res_name, imol_no, read_number);
       read_number++;
    }
 
-   coot::atom_overlaps_container_t overlaps(mol, &geom, ignore_waters_flag, 0.5, 0.25);
+   coot::atom_overlaps_container_t overlaps(mol, imol_no, &geom, ignore_waters_flag, 0.5, 0.25);
 
    bool make_vdw_surface_flag = false;
    coot::atom_overlaps_dots_container_t c = overlaps.all_atom_contact_dots(cdd, make_vdw_surface_flag);
@@ -859,7 +861,7 @@ coot::molecule_t::get_atom_overlaps(protein_geometry *geom_p) {
    std::vector<coot::plain_atom_overlap_t> v;
    if (atom_sel.mol) {
       bool ignore_water_contacts_flag = false;
-      atom_overlaps_container_t aoc(atom_sel.mol, geom_p, ignore_water_contacts_flag);
+      atom_overlaps_container_t aoc(atom_sel.mol, imol_no, geom_p, ignore_water_contacts_flag);
       aoc.make_all_atom_overlaps();
       auto vv = aoc.overlaps;
       v.resize(vv.size());
@@ -880,7 +882,7 @@ coot::molecule_t::get_atom_overlap_score(protein_geometry *geom_p) const {
 
    mmdb::Manager *mol = atom_sel.mol;
    bool ignore_waters_flag = false;
-   coot::atom_overlaps_container_t ao(mol, geom_p, ignore_waters_flag);
+   coot::atom_overlaps_container_t ao(mol, imol_no, geom_p, ignore_waters_flag);
    ao.make_all_atom_overlaps();
    float s = ao.score();
    return s;
@@ -922,7 +924,7 @@ coot::molecule_t::get_overlap_dots(protein_geometry *geom_p) {
    atom_overlaps_dots_container_t aodc;
    if (atom_sel.mol) {
       bool ignore_water_contacts_flag = false;
-      atom_overlaps_container_t aoc(atom_sel.mol, geom_p, ignore_water_contacts_flag);
+      atom_overlaps_container_t aoc(atom_sel.mol, imol_no, geom_p, ignore_water_contacts_flag);
       aoc.make_all_atom_overlaps();
       aodc = aoc.all_atom_contact_dots();
    }

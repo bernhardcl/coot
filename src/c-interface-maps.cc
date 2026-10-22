@@ -45,6 +45,7 @@
 #include "c-interface-python.hh"
 
 #include "graphics-info.h"
+#include "session-info.hh"
 #include "cc-interface.hh"
 #include "c-interface.h"
 #include "c-interface-gui.hh"
@@ -602,6 +603,13 @@ int make_and_draw_map_with_reso_with_refmac_params(const char *mtz_file_name,
       }
    }
    if (imol != -1) {
+
+      if (! graphics_info_t::disable_state_script_writing)
+         coot::session::note_recent_map(mtz_file_name,
+                                        f_col ? std::string(f_col) : std::string(),
+                                        phi_col ? std::string(phi_col) : std::string(),
+                                        weight_col ? std::string(weight_col) : std::string(),
+                                        use_weights, is_diff_map);
 
       // We reset some strings if we weren't given refmac params -
       // otherwise we quote garbage or unallocated memory.
@@ -3008,8 +3016,8 @@ b_factor_from_map(int imol_map) {
       std::cout << "b_factor_from_map() with data.size() " << data.size() << std::endl;
       std::pair<bool, float> l1(true,  0.05); // 4.5A
       std::pair<bool, float> l2(false, 0.29); // 1.8A
-      float b = coot::util::b_factor(data, l1, l2);
-      std::cout << "### b-factor: " << b << std::endl;
+      b_factor = coot::util::b_factor(data, l1, l2);
+      std::cout << "### b-factor: " << b_factor << std::endl;
    }
    return b_factor;
 }

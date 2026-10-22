@@ -30,6 +30,7 @@
 
 #include <cstring>  // Fixes ::strchr complaints on 4.4.7 (hal)
 #include <queue>
+#include <memory>
 #include "utils/coot-utils.hh"
 #include "rdkit-interface.hh"
 #include <GraphMol/Chirality.h>  // for CIP ranks
@@ -3318,6 +3319,217 @@ coot::charge_phosphates(RDKit::RWMol *rdkm) {
    }
 }
 
+RDKit::ROMol *
+coot::hydrogen_transformations(const RDKit::ROMol &mol) {
+
+
+   // debug_rdkit_molecule(&mol);
+   RDKit::RWMol *r = new RDKit::RWMol(mol);
+
+   std::unique_ptr<RDKit::ROMol> query_cooh             (RDKit::SmartsToMol("[C^2](=O)O[H]"));
+   std::unique_ptr<RDKit::ROMol> query_primary_amine_n  (RDKit::SmartsToMol("[N^3;H2]"));
+   std::unique_ptr<RDKit::ROMol> query_secondary_amine_n(RDKit::SmartsToMol("[N^3;H1;+0;!$(N-S(=O)=O)]"));
+   std::unique_ptr<RDKit::ROMol> query_tertiary_amine_n (RDKit::SmartsToMol("[N^3;H0;+0;!$(N-S(=O)=O)]"));
+   std::vector<RDKit::MatchVectType>  matches_cooh;
+   std::vector<RDKit::MatchVectType>  matches_primary_amine_n;
+   std::vector<RDKit::MatchVectType>  matches_secondary_amine_n;
+   std::vector<RDKit::MatchVectType>  matches_tertiary_amine_n;
+   bool recursionPossible = true;
+   bool useChirality = true;
+   bool uniquify = true;
+
+   // Note that we get the atom indexing using mol, but we change the
+   // molecule r (I hope that the atoms are equivalently indexed).
+
+   RDKit::SubstructMatch(mol, *query_cooh,              matches_cooh,              uniquify, recursionPossible, useChirality);
+   RDKit::SubstructMatch(mol, *query_primary_amine_n,   matches_primary_amine_n,   uniquify, recursionPossible, useChirality);
+   RDKit::SubstructMatch(mol, *query_secondary_amine_n, matches_secondary_amine_n, uniquify, recursionPossible, useChirality);
+   RDKit::SubstructMatch(mol, *query_tertiary_amine_n,  matches_tertiary_amine_n,  uniquify, recursionPossible, useChirality);
+
+   // delete atoms after they have all been identified otherwise the indexing goes haywire.
+   //
+   std::vector<const RDKit::Atom *> atoms_to_be_deleted;
+
+   if (true) // this is useful info (at the moment at least)
+      std::cout << "Hydrogen_transformations:"
+		<< "\n    number of COOH matches: " << matches_cooh.size()
+		<< "\n    number of NH2  matches: " << matches_primary_amine_n.size()
+		<< "\n    number of NH   matches: " << matches_secondary_amine_n.size()
+		<< "\n    number of N    matches: " << matches_tertiary_amine_n.size()
+		<< "\n";
+
+   if (true) {  // debugging
+      for (unsigned int imatch_cooh=0; imatch_cooh<matches_cooh.size(); imatch_cooh++) {
+	 std::cout << "INFO:: Removable hydrogen COOH matches: ";
+	 for (unsigned int i=0; i<matches_cooh[imatch_cooh].size(); i++) {
+	    std::cout << " [" << matches_cooh[imatch_cooh][i].first
+		      << ": "  << matches_cooh[imatch_cooh][i].second
+		      << "]";
+	 }
+	 std::cout << std::endl;
+      }
+   }
+
+   for (unsigned int imatch_cooh=0; imatch_cooh<matches_cooh.size(); imatch_cooh++) {
+
+      const RDKit::Atom *at_c  = (*r)[matches_cooh[imatch_cooh][0].second];
+      const RDKit::Atom *at_o1 = (*r)[matches_cooh[imatch_cooh][1].second];
+      RDKit::Atom       *at_o2 = (*r)[matches_cooh[imatch_cooh][2].second];
+      const RDKit::Atom *at_h  = (*r)[matches_cooh[imatch_cooh][3].second];
+
+      std::string at_c_name, at_o1_name, at_o2_name, at_h_name;
+
+      at_c->setProp( "type_energy", "C");
+      at_o1->setProp("type_energy", "OC");
+      at_o2->setProp("type_energy", "OC");
+
+      RDKit::Bond *bond_1 = r->getBondBetweenAtoms(at_c->getIdx(), at_o1->getIdx());
+      RDKit::Bond *bond_2 = r->getBondBetweenAtoms(at_c->getIdx(), at_o2->getIdx());
+      RDKit::Bond *bond_3 = r->getBondBetweenAtoms(at_h->getIdx(), at_o2->getIdx());
+
+#if 0 // 20261016-PE maybe (probably, actually) I don't want to do this now that the
+      // writer has changed.
+
+      if (bond_1) {
+	 if (bond_2) {
+
+	    // We can't make the bonds deloc in combination with a
+	    // setting of the formal charge on the at_o2 because
+	    // molecule then fails the Oxygen atom valence test in
+	    // sanitization.
+	    //
+	    bond_1->setBondType(RDKit::Bond::ONEANDAHALF);
+	    bond_2->setBondType(RDKit::Bond::ONEANDAHALF);
+	 }
+      }
+#endif
+
+      at_o2->setFormalCharge(-1); // C=O and C-O(-), as AceDRG does
+      if (bond_3)
+	 r->removeBond(at_o2->getIdx(), at_h->getIdx());
+      else
+	 std::cout << "DEBUG:: hydrogen_transformations(): no bond_3 (O-H bond) found!" << std::endl;
+      atoms_to_be_deleted.push_back(at_h);
+   }
+
+   // addAtom() puts a new atom at the origin in each conformer, so put a new H
+   // (bonded to the N) 1A from the N, away from the N's other neighbours
+   //
+   auto place_new_h = [r] (unsigned int n_idx, unsigned int h_idx) {
+      for (auto it=r->beginConformers(); it!=r->endConformers(); ++it) {
+         RDKit::Conformer &conf = **it;
+         RDGeom::Point3D n_pos = conf.getAtomPos(n_idx);
+         RDGeom::Point3D sum(0,0,0);
+         for (const auto &nbr : r->atomNeighbors(r->getAtomWithIdx(n_idx)))
+            if (nbr->getIdx() != h_idx)
+               sum += conf.getAtomPos(nbr->getIdx()) - n_pos;
+         RDGeom::Point3D dir = sum * -1.0;
+         if (dir.length() < 0.01) dir = RDGeom::Point3D(0,0,1); // arbitrary
+         dir.normalize();
+         conf.setAtomPos(h_idx, n_pos + dir);
+      }
+   };
+
+   for (unsigned int imatch_n=0; imatch_n<matches_primary_amine_n.size(); imatch_n++) {
+      unsigned int n_idx = matches_primary_amine_n[imatch_n][0].second;
+      RDKit::Atom *at_n  = (*r)[n_idx];
+      unsigned int degree = at_n->getDegree();
+      at_n->setFormalCharge(+1);
+
+      if (false) {  // debugging
+         std::string name;
+         at_n->getProp("name", name);
+         std::cout << "debug:: N-atom idx " << n_idx << " " << name << " has degree " << degree
+                   << std::endl;
+      }
+
+      if (degree == 4) {
+         // it has its 2 hydrogens already
+         at_n->setProp("type_energy", "NT2"); // also set to NT3 by SMARTS match in pyrogen.py
+      }
+
+      if (degree == 3) {
+         at_n->setProp("type_energy", "NT3"); // also set to NT3 by SMARTS match in pyrogen.py
+         // add a hydrogen atom and a bond to the nitrogen.
+         //
+         RDKit::Atom *new_h_at = new RDKit::Atom(1);
+         // we want to find the idx of this added H, so we do that by
+         // keeping hold of the pointer (otherwise the atom gets copied
+         // on addAtom() and we lose the handle on the new H atom in the
+         // molecule).
+         bool updateLabel=true;
+         bool takeOwnership=true;
+         r->addAtom(new_h_at, updateLabel, takeOwnership);
+         unsigned int h_idx = new_h_at->getIdx();
+         if (h_idx != n_idx) {
+	    r->addBond(n_idx, h_idx, RDKit::Bond::SINGLE);
+            place_new_h(n_idx, h_idx);
+         } else {
+	    std::cout << "OOOPs: bad indexing on adding an amine H " << h_idx << std::endl;
+         }
+      }
+   }
+
+   // protonate a (neutral, sp3) secondary or tertiary amine N: add an H, set the
+   // charge and the types (the atom typers do not overwrite types set here)
+   //
+   auto protonate_amine_n = [r, place_new_h] (unsigned int n_idx, const std::string &n_type, const std::string &h_type) {
+      RDKit::Atom *at_n = (*r)[n_idx];
+      at_n->setFormalCharge(+1);
+      at_n->setProp("type_energy", n_type);
+      RDKit::Atom *new_h_at = new RDKit::Atom(1);
+      bool updateLabel = true;
+      bool takeOwnership = true;
+      r->addAtom(new_h_at, updateLabel, takeOwnership); // new_h_at is the atom in r
+      new_h_at->setProp("type_energy", h_type);
+      r->addBond(n_idx, new_h_at->getIdx(), RDKit::Bond::SINGLE);
+      place_new_h(n_idx, new_h_at->getIdx());
+   };
+
+   for (const auto &match : matches_secondary_amine_n)
+      protonate_amine_n(match[0].second, "NT2", "HNT2");
+
+   for (const auto &match : matches_tertiary_amine_n)
+      protonate_amine_n(match[0].second, "NT1", "HNT1");
+
+#if 0
+   for(unsigned int idel=0; idel<atoms_to_be_deleted.size(); idel++)
+      r->removeAtom(atoms_to_be_deleted[idel]);
+#endif
+
+   std::vector<RDKit::Atom *> non_const_atoms_to_be_deleted(atoms_to_be_deleted.size(), nullptr);
+   for(unsigned int idel=0; idel<atoms_to_be_deleted.size(); idel++)
+      non_const_atoms_to_be_deleted[idel] = const_cast<RDKit::Atom *>(atoms_to_be_deleted[idel]);
+   for(unsigned int idel=0; idel<atoms_to_be_deleted.size(); idel++)
+      r->removeAtom(non_const_atoms_to_be_deleted[idel]);
+
+   // Here do_deloc_bonds should be false when we deal with PDBe input
+   //
+   bool do_deloc_bonds = false;
+   remove_phosphate_hydrogens(r, do_deloc_bonds);
+   remove_sulphate_hydrogens (r, do_deloc_bonds);
+
+   // debug
+   if (false)
+       std::cout << "DEBUG:: hydrogen_transformations calling sanitizeMol() "
+                 << std::endl;
+   // do we neet to sanitize? Yes, we do because we go on to minimize this molecule
+   RDKit::MolOps::sanitizeMol(*r);
+   if (false)
+       std::cout << "DEBUG:: hydrogen_transformations back from sanitizeMol() "
+                 << std::endl;
+
+   // delocalize_guanidinos(r); // not yet.
+
+   RDKit::ROMol *ro_mol = new RDKit::ROMol(*r);
+   if (false)
+      std::cout << "hydrogen_transformations returns mol: " << RDKit::MolToSmiles(*ro_mol)
+                << std::endl;
+   delete r;
+   return ro_mol;
+
+}
+
 // return the number of atoms added (e.g. -2)
 int
 coot::remove_phosphate_hydrogens(RDKit::RWMol *m, bool deloc_bonds) { 
@@ -4009,6 +4221,7 @@ mmdb::Residue *coot::residue_from_rdkit_mol(const RDKit::ROMol &mol, int conf_id
             try {
                std::string name;
                rat->getProp("name", name); // They must have been made by caller
+               std::string label_name = name; // unaligned, for label_atom_id
                // this name extraction code is common code
                if (name.size() == 1) name = " " + name + "  ";
                if (name.size() == 2) name = " " + name + " ";
@@ -4017,6 +4230,11 @@ mmdb::Residue *coot::residue_from_rdkit_mol(const RDKit::ROMol &mol, int conf_id
                   std::cout << "DEBUG:: extracted residue atom " << i << " \"" << name
                             << "\" at " << p.x << " " << p.y << " " << p.z << std::endl;
                at->SetAtomName(name.c_str());
+               // gemmi's copy_from_mmdb() (and the mmCIF writer) take the atom
+               // name from label_atom_id - without this, atoms of molecules
+               // made here lose their names on mmCIF interchange (e.g. for
+               // servalcat refinement)
+               strncpy(at->label_atom_id, label_name.c_str(), sizeof(mmdb::AtomName)-1);
             }
             catch (const KeyErrorException &kee) {
                // std::cout << "DEBUG:: residue_from_rdkit_mol(): " << kee.what() << std::endl;
@@ -4024,18 +4242,28 @@ mmdb::Residue *coot::residue_from_rdkit_mol(const RDKit::ROMol &mol, int conf_id
                // OK, there was no atom name, let's invent one.
                std::string name = ele;
                name += std::to_string(ele_count[ele]);
+               std::string label_name = name; // unaligned, for label_atom_id
                if (name.size() == 2) name = " " + name + " ";
                if (name.size() == 3) name = " " + name;
                if (false)
                   std::cout << "DEBUG:: residue atom " << i << " with invented name \"" << name
                             << "\" at " << p.x << " " << p.y << " " << p.z << std::endl;
                at->SetAtomName(name.c_str());
+               strncpy(at->label_atom_id, label_name.c_str(), sizeof(mmdb::AtomName)-1);
             }
             atoms.push_back(at);
          }
          if (! atoms.empty()) {
             r = new mmdb::Residue;
             r->SetResID(new_comp_id.c_str(), 1, "");
+            // as for the atom label_atom_id above - and matching 11fc5e63b
+            // (GetResidue() of dictionary_residue_restraints_t) - the label
+            // fields need setting too, else mmCIF interchange writes
+            // placeholders ("---", -32767) for this residue
+            r->label_seq_id = 1;
+            if (new_comp_id.length() < 20) // see the typedef in mmdb_defs.h
+               strcpy(r->label_comp_id, new_comp_id.c_str());
+            strcpy(r->label_asym_id, "A");
             for (unsigned int i=0; i<atoms.size(); i++) {
                mmdb::Atom *at = atoms[i];
                r->AddAtom(at);

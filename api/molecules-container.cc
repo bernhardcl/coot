@@ -109,6 +109,8 @@ molecules_container_t::init() {
    use_rama_plot_restraints = false;
    rama_plot_restraints_weight = 1.0;
 
+   use_numerical_gradients = false;
+
    use_torsion_restraints = false;
    torsion_restraints_weight = 1.0;
 
@@ -967,6 +969,48 @@ molecules_container_t::read_small_molecule_cif(const std::string &file_name) {
 }
 
 
+std::vector<int>
+molecules_container_t::read_small_molecule_cif_and_make_map(const std::string &file_name) {
+
+   std::vector<int> imols;
+
+   coot::smcif cif;
+   mmdb::Manager *mol = cif.read_sm_cif(file_name);
+   if (! mol)
+      return imols;
+
+   int imol = molecules.size();
+   atom_selection_container_t asc = make_asc(mol);
+   molecules.push_back(coot::molecule_t(asc, imol, file_name));
+   imols.push_back(imol);
+
+   // The reflections are intensities, so the maps have to be phased by the
+   // model.  Work on a copy of the atoms because the atom selection can get
+   // disturbed when the structure factors are calculated.
+   //
+   bool have_data = cif.read_data_sm_cif(file_name);
+   if (have_data) {
+      mmdb::Manager *mol_for_sfs = new mmdb::Manager;
+      mol_for_sfs->Copy(mol, mmdb::MMDBFCM_All);
+      atom_selection_container_t asc_for_sfs = make_asc(mol_for_sfs);
+      std::pair<clipper::Xmap<float>, clipper::Xmap<float> > maps =
+         cif.sigmaa_maps_by_calc_sfs(asc_for_sfs.atom_selection, asc_for_sfs.n_selected_atoms);
+      if (! maps.first.is_null()) {
+         bool is_em_map = false;
+         int imol_2fofc = molecules.size();
+         molecules.push_back(coot::molecule_t(file_name + " 2Fo-Fc", imol_2fofc, maps.first, is_em_map));
+         imols.push_back(imol_2fofc);
+         int imol_fofc = molecules.size();
+         coot::molecule_t m_diff(file_name + " Fo-Fc", imol_fofc, maps.second, is_em_map);
+         m_diff.set_map_is_difference_map(true);
+         molecules.push_back(m_diff);
+         imols.push_back(imol_fofc);
+      }
+   }
+   return imols;
+}
+
+
 int
 molecules_container_t::read_amber_trajectory(int imol_coords,
                                              const std::string &trajectory_file_name,
@@ -1516,6 +1560,21 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
       }
    };
 
+   // 20260906-PE also associate the observed data with the created map
+   // molecule, so that (e.g.) servalcat_refine_xray() works on a map from
+   // auto_read_mtz() without further ado. Stored as plain labels (the
+   // clipper-facing consumer strips the /crystal/dataset/ part itself and
+   // servalcat wants them plain).
+   auto associate_fobs = [this, mtz_file_name] (int imol, const auto_read_mtz_info_t &armi) {
+      if (! armi.F_obs.empty() && ! armi.sigF_obs.empty() && ! armi.Rfree.empty()) {
+         std::string fo = coot::util::file_name_non_directory(armi.F_obs);
+         std::string sf = coot::util::file_name_non_directory(armi.sigF_obs);
+         std::string fr = coot::util::file_name_non_directory(armi.Rfree);
+         if (is_valid_map_molecule(imol))
+            molecules[imol].associate_data_mtz_file_with_map(mtz_file_name, fo, sf, fr);
+      }
+   };
+
    // 20221001-PE if there is one F and one PHI col, read that also (and it is not a difference map)
    coot::mtz_column_types_info_t r = coot::get_mtz_columns(mtz_file_name);
 
@@ -1550,6 +1609,7 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
 	      if (is_valid_map_molecule(imol)) {
             auto_read_mtz_info_t armi(imol, b.f_col, b.phi_col);
             add_Fobs(&armi, armi_fobs);
+            associate_fobs(imol, armi);
 	         mol_infos.push_back(armi);
          }
       }
@@ -1560,6 +1620,7 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
          int imol = read_mtz(mtz_file_name, r.f_cols[0].column_label, r.phi_cols[0].column_label, "", false, false);
          auto_read_mtz_info_t armi(imol, r.f_cols[0].column_label, r.phi_cols[0].column_label);
          add_Fobs(&armi, armi_fobs);
+         associate_fobs(imol, armi);
          mol_infos.push_back(auto_read_mtz_info_t(armi));
       }
    }
@@ -1578,6 +1639,7 @@ molecules_container_t::auto_read_mtz(const std::string &mtz_file_name) {
                if (is_valid_map_molecule(imol)) {
                   auto_read_mtz_info_t armi(imol, f_col, phi_col);
                   add_Fobs(&armi, armi_fobs);
+                  associate_fobs(imol, armi);
                   mol_infos.push_back(armi);
                }
 	         }
