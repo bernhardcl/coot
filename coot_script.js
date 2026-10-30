@@ -2,6 +2,7 @@
 
 $(document).ready(function () {
       GetLatestReleaseInfo();
+      GetLatest09ReleaseInfo();
    });
 
 function GetLatestReleaseInfo() {
@@ -32,6 +33,39 @@ function GetLatestReleaseInfo() {
          $(".coot-download-info").attr("value", "Download " + release.name);
          $(".release-info").text(releaseInfo);
          $(".version-info").text(release.name);
+      });
+}
+
+function GetLatest09ReleaseInfo() {
+   // /releases/latest only gives the newest (1.x) release, so take the
+   // newest stable 0.9 release with assets from the full release list.
+   // N.B. class names starting with a digit (09-...) are not valid in a
+   // plain CSS class selector, so use attribute selectors instead.
+
+   $.getJSON("https://api.github.com/repos/bernhardcl/coot/releases?per_page=100").done(function (json) {
+         var release = null;
+         for (var i = 0; i < json.length; i++) {
+            var r = json[i];
+            if (r.prerelease || r.draft || r.assets.length === 0) {
+               continue;
+            }
+            var versionMatch = r.tag_name.match(/(\d+)\.(\d+)/) ||
+                               r.name.match(/(\d+)\.(\d+)/);
+            if (versionMatch && versionMatch[1] === "0" && versionMatch[2] === "9") {
+               if (release === null || new Date(r.published_at) > new Date(release.published_at)) {
+                  release = r;
+               }
+            }
+         }
+         if (release === null) {
+            return;
+         }
+
+         var asset = release.assets[0];
+         $("[class~='09-coot-download-href']").attr("href", asset.browser_download_url);
+         $("[class~='09-coot-download-action']").attr("action", asset.browser_download_url);
+         $("[class~='09-coot-download-info']").attr("value", "Download " + release.name);
+         $("[class~='09-version-info']").text(release.name);
       });
 }
 
