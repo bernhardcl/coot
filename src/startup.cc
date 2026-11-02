@@ -1418,6 +1418,7 @@ startup_application_activate(GtkApplication *application,
 
       // setup of the preferences (in GUI) after we read them in (in startup script)...
       setup_preferences_gui();
+      apply_vertical_toolbar_style();
 
       // now we are ready to show graphical objects made from reading files:
       handle_command_line_data(activate_data->cld);

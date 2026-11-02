@@ -430,6 +430,12 @@ void initialize_preferences() {
           []() -> preferences_value { graphics_info_t gg; return gg.user_defined_rotation_centre_crosshairs_size_scale_factor;},
     g.user_defined_rotation_centre_crosshairs_size_scale_factor);
 
+    // vertical toolbat style
+    coot_preferences.register_preference("vertical_toolbar_style", [](const preferences_value& value) {
+       set_vertical_toolbar_style(std::get<int>(value));},
+          []() -> preferences_value { return vertical_toolbar_style_state();},
+    g.vertical_toolbar_style);
+
 }
 
 /* FIXME: check ref counting as well, could this just be void!? or we could/should return something
@@ -917,6 +923,41 @@ void save_preferences() {
 
 }
 
+void set_vertical_toolbar_style(int style) {
+
+   if (style < 0) style = 0;
+   if (style > 2) style = 2;
+   graphics_info_t::vertical_toolbar_style = style;
+
+#if 0
+   // I don't think we can do this - it is in the Coot-1 gui functions - not part of libcootsumo
+   // So maybe this function should be part of Coot-1 gui functions, not here, and not
+   // in c-interface-preferences.h
+
+   apply_vertical_toolbar_style(); // does nothing if the toolbar has not been made yet -
+                                   // setup_gui_components() applies the style in that case.
+#endif
+
+   // keep the radio items of the toolbar's right-click menu in step with the style
+   GtkApplication *application = graphics_info_t::application;
+   if (application) {
+      GAction *action = g_action_map_lookup_action(G_ACTION_MAP(application),
+                                                   "vertical_toolbar_style_action");
+      if (action) {
+         const char *state = "icons-and-labels";
+         if (style == 1) state = "labels";
+         if (style == 2) state = "icons";
+         g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_string(state));
+      }
+   }
+   // coot_preferences.set_preference("vertical_toolbar_style", style);
+}
+
+
+int vertical_toolbar_style_state() {
+
+   return graphics_info_t::vertical_toolbar_style;
+}
 
 GtkWidget *popup_window(const char *str) {
 

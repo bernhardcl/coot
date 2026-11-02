@@ -4255,6 +4255,7 @@ fullscreen_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    graphics_info_t::graphics_grab_focus();
 }
 
+#include "setup-gui-components.hh"
 // this action is a radio-item action - it comes from the right-click menu of the
 // vertical toolbar. The parameter is the target of the menu item.
 void
@@ -4267,8 +4268,10 @@ vertical_toolbar_style_action(G_GNUC_UNUSED GSimpleAction *simple_action,
    int style = 0; // icons and labels
    if (s == "labels") style = 1;
    if (s == "icons")  style = 2;
+   coot_preferences.set_preference("vertical_toolbar_style", style);
    //set_vertical_toolbar_style(style); // sets the state of this action also
    save_preferences();                // persist the choice immediately
+   apply_vertical_toolbar_style();
    graphics_info_t::graphics_grab_focus();
 }
 

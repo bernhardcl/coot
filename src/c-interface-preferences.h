@@ -100,6 +100,13 @@ void show_hide_preferences_tabs(GtkToggleToolButton *toggletoolbutton, int prefe
 void update_preference_gui();
 void save_preferences();
 
+/*! \brief set how the buttons of the vertical toolbar are drawn
+
+  style 0: icons and labels, 1: labels only, 2: icons only.  A button that has no icon
+  shows its label whatever the style. */
+void set_vertical_toolbar_style(int style);
+/*! \brief the current vertical toolbar style */
+int vertical_toolbar_style_state();
 
 #endif /* C_INTERFACE_PREFERENCES_H */
 
