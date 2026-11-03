@@ -108,6 +108,7 @@ coot::util::slurp_fill_xmap_from_map_file(const std::string &file_name,
       slurp_map_result_t status = slurp_map_result_t::UNRESOLVED;
       struct stat s;
       int fstat = stat(file_name.c_str(), &s);
+      if (fstat != 0 && errno == EOVERFLOW) fstat = 0; // file > 2GB: stat() can't describe it, gzopen() can
       if (fstat == 0) {
          gzFile file = gzopen(file_name.c_str(), "rb");
          if (! file) {
@@ -163,6 +164,7 @@ coot::util::slurp_fill_xmap_from_map_file(const std::string &file_name,
       } else {
          struct stat s;
          int fstat = stat(file_name.c_str(), &s);
+         if (fstat != 0 && errno == EOVERFLOW) fstat = 0; // file > 2GB: stat() can't describe it
          if (fstat == 0) {
             FILE *fptr = fopen(file_name.c_str(), "rb");
             if (! fptr) {
@@ -747,6 +749,7 @@ coot::util::get_map_labels(const std::string &file_name) {
 
    struct stat s;
    int fstat = stat(file_name.c_str(), &s);
+   if (fstat != 0 && errno == EOVERFLOW) { s.st_size = 1024; fstat = 0; } // big file: only the header is read
    if (fstat == 0) {
       FILE *fptr = fopen(file_name.c_str(), "rb");
       if (! fptr) {
